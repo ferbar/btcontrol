@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <MVDData version="1.3">
-    <DesignDocument designVersion="MIDP-2" uidCounter="22">
+    <DesignDocument designVersion="MIDP-2" uidCounter="28">
         <DesignComponent id="$MobileDevice" typeid="MIDP:$MobileDevice" uid="0"/>
         <DesignComponent id="$StartPoint" typeid="MIDP:$StartPoint" uid="1">
             <Property name="targetDisplayable" value="helloForm"/>
@@ -42,34 +42,32 @@
             <Property name="timeout" value="-2"/>
             <Property name="image"/>
         </DesignComponent>
-        <DesignComponent id="controllForm" typeid="MIDP:javax.microedition.lcdui.Form" uid="10">
+        <DesignComponent id="controllForm" typeid="MIDP:javax.microedition.lcdui.Canvas" uid="10">
             <ContainerProperty name="commands"/>
-            <ContainerProperty name="items"/>
         </DesignComponent>
         <DesignComponent id="listServer" typeid="MIDP:javax.microedition.lcdui.List" uid="11">
             <Property name="title" value="STRING:gefundene Server"/>
             <Property name="choiceType" value="IMPLICIT"/>
             <Property name="selectCommandAction" value="$SelectCommandAction1"/>
-            <Property name="selectCommand" value="itemCommandSelect"/>
+            <Property name="selectCommand" value="screenCommand2"/>
             <Property name="indexBasedSwitch" value="true"/>
             <ContainerProperty name="commands">
                 <ContainerPropertyItem value="$CommandAction4"/>
+                <ContainerPropertyItem value="$CommandAction5"/>
             </ContainerProperty>
-            <ContainerProperty name="elements"/>
+            <ContainerProperty name="elements">
+                <ContainerPropertyItem value="Midp2ListElementDC1"/>
+                <ContainerPropertyItem value="Midp2ListElementDC2"/>
+            </ContainerProperty>
         </DesignComponent>
         <DesignComponent id="$SelectCommandAction1" typeid="MIDP:SelectCommandAction" uid="12">
             <Property name="targetDisplayable"/>
             <Property name="targetForwardDisplayable"/>
             <Property name="actionOrigin" value="listServer"/>
-            <Property name="selectCommand" value="itemCommandSelect"/>
+            <Property name="selectCommand" value="screenCommand2"/>
         </DesignComponent>
         <DesignComponent id="itemCommandDetail" typeid="MIDP:javax.microedition.lcdui.Command" uid="13">
             <Property name="label" value="STRING:Details"/>
-            <Property name="priority" value="1"/>
-            <Property name="type" value="ITEM"/>
-        </DesignComponent>
-        <DesignComponent id="itemCommandSelect" typeid="MIDP:javax.microedition.lcdui.Command" uid="14">
-            <Property name="label" value="STRING:Select"/>
             <Property name="priority" value="1"/>
             <Property name="type" value="ITEM"/>
         </DesignComponent>
@@ -106,18 +104,52 @@
             <Property name="actionSource" value="backCommand2"/>
             <Property name="actionOrigin" value="listServer"/>
         </DesignComponent>
+        <DesignComponent id="screenCommand2" typeid="MIDP:javax.microedition.lcdui.Command" uid="22">
+            <Property name="label" value="STRING:controllForm"/>
+            <Property name="priority" value="1"/>
+            <Property name="type" value="SCREEN"/>
+        </DesignComponent>
+        <DesignComponent id="$CommandAction5" typeid="MIDP:CommandAction" uid="23">
+            <Property name="targetDisplayable" value="controllForm"/>
+            <Property name="targetForwardDisplayable"/>
+            <Property name="actionSource" value="screenCommand2"/>
+            <Property name="actionOrigin" value="listServer"/>
+        </DesignComponent>
+        <DesignComponent id="Midp2ListElementDC1" typeid="MIDP:GROUP-org.netbeans.modules.mvd.model.midp2.Midp2ListElementDC" uid="24">
+            <Property name="string" value="STRING:List Element"/>
+            <Property name="image"/>
+            <Property name="selected" value="true"/>
+            <Property name="commandAction" value="$SelectCaseCommandAction1"/>
+        </DesignComponent>
+        <DesignComponent id="$SelectCaseCommandAction1" typeid="MIDP:SelectCaseCommandAction" uid="25">
+            <Property name="targetDisplayable"/>
+            <Property name="targetForwardDisplayable"/>
+            <Property name="actionHolder" value="Midp2ListElementDC1"/>
+        </DesignComponent>
+        <DesignComponent id="Midp2ListElementDC2" typeid="MIDP:GROUP-org.netbeans.modules.mvd.model.midp2.Midp2ListElementDC" uid="26">
+            <Property name="string" value="STRING:List Element2"/>
+            <Property name="image"/>
+            <Property name="selected" value="false"/>
+            <Property name="commandAction" value="$SelectCaseCommandAction2"/>
+        </DesignComponent>
+        <DesignComponent id="$SelectCaseCommandAction2" typeid="MIDP:SelectCaseCommandAction" uid="27">
+            <Property name="targetDisplayable"/>
+            <Property name="targetForwardDisplayable"/>
+            <Property name="actionHolder" value="Midp2ListElementDC2"/>
+        </DesignComponent>
     </DesignDocument>
     <FlowDocument version="1.1">
         <Node id="$MobileDevice" location="160,336" order=",$StartPoint,,,,,,,,,$ExitPoint,,,,,"/>
+        <Node id="helloForm" location="392,336" order="$CommandAction,$CommandAction1,$CommandAction3,,,,,,,,$Default,,,,,"/>
         <Node id="help" location="576,336" order=",,,,$CommandAction1$Output,$CommandAction1$Input,,,,,$Default,,,,,"/>
         <Node id="controllForm" location="328,128" order=",,,,,,,,,,$Default,,,,,"/>
-        <Node id="helloForm" location="392,336" order="$CommandAction,$CommandAction1,$CommandAction3,,,,,,,,$Default,,,,,"/>
-        <Node id="listServer" location="128,128" order="$CommandAction4,,,,,,,,,,$Default,,,,,"/>
+        <Node id="listServer" location="128,128" order="$CommandAction4,$CommandAction5,$SelectCaseCommandAction1,$SelectCaseCommandAction2,,,,,,,$Default,,,,,"/>
         <Link id="$StartPoint$ActionLink" path="200,312,352,312"/>
         <Link id="$CommandAction$ActionLink" path="432,328,509,328,509,371,47,371,47,312,120,312"/>
-        <Link id="$CommandAction1$ForwardLink" path="600,264,600,181,300,181,300,312,352,312"/>
         <Link id="$CommandAction1$ActionLink" path="432,312,509,312,509,196,584,196,584,264"/>
-        <Link id="$CommandAction4$ActionLink" path="168,120,233,120,233,158,300,158,300,312,352,312"/>
         <Link id="$CommandAction3$ActionLink" path="432,296,499,296,499,166,65,166,65,104,88,104"/>
+        <Link id="$CommandAction4$ActionLink" path="168,120,254,120,328,312,352,312"/>
+        <Link id="$CommandAction5$ActionLink" path="168,104,254,104,249,104,288,104"/>
+        <Link id="$CommandAction1$ForwardLink" path="600,264,600,181,300,181,300,312,352,312"/>
     </FlowDocument>
 </MVDData>
