@@ -14,11 +14,11 @@ import javax.microedition.io.Connector;
 import javax.microedition.io.StreamConnection;
 //import javax.microedition.io.*; // input stream, output stream
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
+// import java.io.DataInputStream;
+// import java.io.DataOutputStream;
 
 // fürn timer:
-import java.util.*;
+// import java.util.*;
 
 /**
  *
@@ -37,44 +37,13 @@ public class HelloMidlet extends MIDlet implements CommandListener {
 	private Form controllForm;
 	private List listServer;
 	private Command itemCommandDetail;
-	private Command itemCommandSelect;
 	private Command okCommand1;
 	private Command screenCommand1;
-	private Command backCommand2;//GEN-END:MVDFields
+	private Command backCommand2;
+	private Command screenCommand2;//GEN-END:MVDFields
     
+	BTcommThread btcomm;
 
-	/**
-	 * tut zeile lesen
-	 * @param buffer bitte gross genug machen sonst gibts exception
-	 * @return nchars
-	 *
-	 */
-	public int myReadLn(DataInputStream iStream, byte[] buffer) throws java.io.IOException 
-	{
-		int n=0;
-		byte b;
-		while((b=iStream.readByte()) != '\n') {
-			buffer[n]=b;
-			n++;
-		}
-		return n;
-	}
-	
-	public class PingDing extends TimerTask {
-		Object notifyObject;
-		public PingDing(Object notifyObject) {
-			this.notifyObject=notifyObject;
-		}
-		public void run() {
-			System.out.println( "Running the task" );
-			// HelloMidlet h =
-			synchronized(this.notifyObject) {
-				// helloForm.append("timer ");
-				this.notifyObject.notify();
-				// helloForm.append("done\n");
-			}
-		}
-	}
 //GEN-LINE:MVDMethods
     
     private void debugDataElement(DataElement attr, int level)
@@ -126,6 +95,7 @@ public class HelloMidlet extends MIDlet implements CommandListener {
         helloForm.setTitle("bt scan...");
         // Insert post-init code here
         try {
+//			getKeyStates();
             PrintClient client=new PrintClient(helloForm);
             ServiceRecord sr=client.findPrinter();
             System.out.println("findPrinter() done");
@@ -145,8 +115,8 @@ public class HelloMidlet extends MIDlet implements CommandListener {
                 DataElement de = sr.getAttributeValue(primaryLanguageBase + serviceNameOffset);
                 String srvName = null;
                 if(de != null && de.getDataType() == DataElement.STRING) {
-                        srvName = (String)de.getValue();
-                        helloForm.append("service: "+srvName+")");
+					srvName = (String)de.getValue();
+					helloForm.append("service: "+srvName+")");
                 } else {
 					helloForm.append("no service name ");
 				}
@@ -159,96 +129,18 @@ public class HelloMidlet extends MIDlet implements CommandListener {
                     helloForm.append("[\""+ids[i]+"\"] type="+attr.getDataType());
                     debugDataElement(attr,0);
                 }
-                try {
+				try {
                     StreamConnection connection = (StreamConnection)Connector.open(connectionURL);
                     // DataInputStream input = (InputConnection) connection.openDataInputStream();
                     // DataOutputStream output = connection.openDataOutputStream();
-					DataInputStream iStream;
-					DataOutputStream oStream;
-					iStream = connection.openDataInputStream();
-					oStream = connection.openDataOutputStream();
-					// geht nicht: oStream.writeChars("hallo vom handy...\n");
-					String s="hallo vom handy...\n";
-					byte[] buffer = s.getBytes();
-					oStream.write(buffer);
-					/*
-					for (int n = 0; n < stream.length; ++n) {
-						oStream.writeByte(stream[n]);
-					} */
-					oStream.flush();
-					helloForm.append("writeChars done\n");
-					Timer timer = new Timer();
-					Object timerwait=new Object();
-					TimerTask task = new PingDing(timerwait);
-					int timeout=1000;
-					timer.schedule(task, timeout, timeout);
-					buffer=new byte[50];
-					int commandNr=0;
-					StringItem pingtext=new StringItem("pingtext","");
-					StringItem sendtext=new StringItem("sendtext","");
-					StringItem readtext=new StringItem("readtext","");
-					StringItem pingstat=new StringItem("pingstat","");
-					helloForm.append(pingtext);
-					helloForm.append(sendtext);
-					helloForm.append(readtext);
-					helloForm.append(pingstat);
-					int minTPing=10000;
-					int maxTPing=0;
-					int avgTPing=0;
-					while(true) {
-						synchronized(timerwait) {
-							try {
-								// helloForm.append("wait...");
-								timerwait.wait();
-								// helloForm.append("...wait done\n");
-							} catch (Exception e) {
-								helloForm.append("wait exception ("+e.toString()+')');
-								return;
-							}
-						}
-						long startTime = System.currentTimeMillis();
-						s=commandNr+" nop\n";
-						oStream.write(s.getBytes()); oStream.flush();
-						// helloForm.append("sent: "+s);
-						sendtext.setText("sent: "+s);
-						boolean found=false;
-						while(!found) {
-							int n =myReadLn(iStream,buffer);
-							s=new String(buffer,0,n);
-							// helloForm.append("read done ("+n+"): "+s+'\n');
-							readtext.setText("read done ("+n+"): "+s+'\n');
-							if(n<=1) {
-								helloForm.append("read 0 bytes?!?!?");
-								return;
-							}
-							String sreply_commandNr="";
-							n=0;
-							char c;
-							
-							while(n < s.length() && Character.isDigit(c=s.charAt(n))) {
-								sreply_commandNr+=c;
-								n++;
-							}
-							// helloForm.append("rx: "+sreply_commandNr+'\n');
-							pingtext.setText("rx: "+sreply_commandNr+'\n');
-							if(sreply_commandNr.length() == 0)
-								continue;
-							int reply_commandNr=Integer.parseInt(sreply_commandNr);
-							if(reply_commandNr==commandNr)
-								found=true;
-						}
-						commandNr++;
-						long endTime = System.currentTimeMillis();
-						int t=(int) (endTime-startTime);
-						if(t < minTPing) minTPing = t;
-						if(t > maxTPing) maxTPing = t;
-						avgTPing+=t;
-						pingstat.setText("min: "+minTPing+" max:"+maxTPing+" avg:"+(avgTPing/commandNr));
-						
-					}
-                } catch (java.io.IOException e) {
+					
+					btcomm = new BTcommThread(helloForm, connection.openDataInputStream(), connection.openDataOutputStream());
+					Thread t = new Thread(btcomm);
+					t.start();
+				} catch (java.io.IOException e) {
 					helloForm.append("exception("+e.toString()+")\n");
-                }
+				}						
+
             }
         } catch (BluetoothStateException e) {
             helloForm.append("exception: ("+e.toString()+')');
@@ -285,8 +177,15 @@ public class HelloMidlet extends MIDlet implements CommandListener {
 				// Insert pre-action code here
 				getDisplay().setCurrent(get_helloForm());//GEN-LINE:MVDCAAction21
 				// Insert post-action code here
-			}//GEN-BEGIN:MVDCACase21
-		}//GEN-END:MVDCACase21
+			} else if (command == screenCommand2) {//GEN-LINE:MVDCACase21
+				// Insert pre-action code here
+				getDisplay().setCurrent(new MIDPCanvas(btcomm));
+				/*
+				getDisplay().setCurrent(get_controllForm());//GEN-LINE:MVDCAAction23
+				*/
+				// Insert post-action code here
+			}//GEN-BEGIN:MVDCACase23
+		}//GEN-END:MVDCACase23
         // Insert global post-action code here
 }//GEN-LINE:MVDCAEnd
     
@@ -360,18 +259,6 @@ public class HelloMidlet extends MIDlet implements CommandListener {
 		return help;
 	}//GEN-END:MVDGetEnd9
 
-	/** This method returns instance for controllForm component and should be called instead of accessing controllForm field directly.//GEN-BEGIN:MVDGetBegin10
-	 * @return Instance for controllForm component
-	 */
-	public Form get_controllForm() {
-		if (controllForm == null) {//GEN-END:MVDGetBegin10
-			// Insert pre-init code here
-			controllForm = new Form(null, new Item[0]);//GEN-LINE:MVDGetInit10
-			// Insert post-init code here
-		}//GEN-BEGIN:MVDGetEnd10
-		return controllForm;
-	}//GEN-END:MVDGetEnd10
-
 	/** This method returns instance for listServer component and should be called instead of accessing listServer field directly.//GEN-BEGIN:MVDGetBegin11
 	 * @return Instance for listServer component
 	 */
@@ -380,10 +267,13 @@ public class HelloMidlet extends MIDlet implements CommandListener {
 			// Insert pre-init code here
 			listServer = new List("gefundene Server", Choice.IMPLICIT, new String[0], new Image[0]);//GEN-BEGIN:MVDGetInit11
 			listServer.addCommand(get_backCommand2());
+			listServer.addCommand(get_screenCommand2());
 			listServer.setCommandListener(this);
 			listServer.setSelectedFlags(new boolean[0]);
-			listServer.setSelectCommand(get_itemCommandSelect());//GEN-END:MVDGetInit11
+			listServer.setSelectCommand(get_screenCommand2());//GEN-END:MVDGetInit11
+			
 			// Insert post-init code here
+			listServer.append("test",null);
 		}//GEN-BEGIN:MVDGetEnd11
 		return listServer;
 	}//GEN-END:MVDGetEnd11
@@ -399,19 +289,7 @@ public class HelloMidlet extends MIDlet implements CommandListener {
 		}//GEN-BEGIN:MVDGetEnd13
 		return itemCommandDetail;
 	}//GEN-END:MVDGetEnd13
-
-	/** This method returns instance for itemCommandSelect component and should be called instead of accessing itemCommandSelect field directly.//GEN-BEGIN:MVDGetBegin14
-	 * @return Instance for itemCommandSelect component
-	 */
-	public Command get_itemCommandSelect() {
-		if (itemCommandSelect == null) {//GEN-END:MVDGetBegin14
-			// Insert pre-init code here
-			itemCommandSelect = new Command("Select", Command.ITEM, 1);//GEN-LINE:MVDGetInit14
-			// Insert post-init code here
-		}//GEN-BEGIN:MVDGetEnd14
-		return itemCommandSelect;
-	}//GEN-END:MVDGetEnd14
-
+	
 	/** This method returns instance for okCommand1 component and should be called instead of accessing okCommand1 field directly.//GEN-BEGIN:MVDGetBegin15
 	 * @return Instance for okCommand1 component
 	 */
@@ -447,9 +325,21 @@ public class HelloMidlet extends MIDlet implements CommandListener {
 		}//GEN-BEGIN:MVDGetEnd20
 		return backCommand2;
 	}//GEN-END:MVDGetEnd20
-    
-    public void startApp() {
-        initialize();
+
+	/** This method returns instance for screenCommand2 component and should be called instead of accessing screenCommand2 field directly.//GEN-BEGIN:MVDGetBegin22
+	 * @return Instance for screenCommand2 component
+	 */
+	public Command get_screenCommand2() {
+		if (screenCommand2 == null) {//GEN-END:MVDGetBegin22
+			// Insert pre-init code here
+			screenCommand2 = new Command("controllForm", Command.SCREEN, 1);//GEN-LINE:MVDGetInit22
+			// Insert post-init code here
+		}//GEN-BEGIN:MVDGetEnd22
+		return screenCommand2;
+	}//GEN-END:MVDGetEnd22
+//GEN-LINE:MVDGetEnd10
+    public void startApp() {//GEN-LINE:MVDGetInit10
+        initialize();//GEN-LINE:MVDGetBegin10
     }
     
     public void pauseApp() {
