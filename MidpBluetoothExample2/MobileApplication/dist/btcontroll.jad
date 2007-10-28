@@ -1,0 +1,8 @@
+MIDlet-1: HelloMidlet, ,btcontroll.HelloMidlet
+MIDlet-Jar-Size: 18834
+MIDlet-Jar-URL: btcontroll.jar
+MIDlet-Name: btcontroll
+MIDlet-Vendor: ferbsi
+MIDlet-Version: 0.1
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
