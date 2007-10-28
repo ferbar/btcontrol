@@ -1,4 +1,4 @@
-MIDlet-1: HelloMidlet, , hello.HelloMidlet
+MIDlet-1: HelloMidlet, ,btcontroll.HelloMidlet
 MIDlet-Vendor: ferbsi
 MIDlet-Version: 0.1
 MIDlet-Name: btcontroll
