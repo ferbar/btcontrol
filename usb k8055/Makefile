@@ -1,3 +1,3 @@
 
 all:
-	gcc k8055.c -o k8055 -lusb
+	g++ -g k8055.cpp main.cpp -o k8055 -lusb
