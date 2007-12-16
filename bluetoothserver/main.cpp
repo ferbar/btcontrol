@@ -15,6 +15,8 @@
 #include <bluetooth/hci_lib.h>
 #include <bluetooth/rfcomm.h>
 
+#include "../usb k8055/k8055.h"
+
 static int auth = 0;
 static int encryption = 0;
 static int secure = 0;
@@ -71,6 +73,15 @@ static void cmd_listen(int ctl, int dev, bdaddr_t *bdaddr, int rc_channel)
 		return;
 	}
 
+	K8055 *platine=NULL;
+	try {
+		platine=new K8055(1,false);
+		printf("init platine\n");
+		platine->write_output(0, 128, 255);
+	}catch(const char *errormsg) {
+		fprintf(stderr,"ansteuer platine error: %s\n",errormsg);
+	}
+
 	printf("Waiting for connection on channel %d\n", laddr.rc_channel);
 
 	listen(sk, 10);
@@ -87,7 +98,12 @@ static void cmd_listen(int ctl, int dev, bdaddr_t *bdaddr, int rc_channel)
 	printf("socket accepted sending welcome msg\n");
 	write(nsk,"hallo\n",6);
 
+	ba2str(&req.dst, dst);
+	printf("Connection from %s to %s\n", dst, devname);
+
+
 	int x=0;
+	int speed=0;
 	while(1) {
 		char buffer[256];
 		int size;
@@ -95,16 +111,59 @@ static void cmd_listen(int ctl, int dev, bdaddr_t *bdaddr, int rc_channel)
 			printf("error reading bla\n");
 			break;
 		}
+		buffer[size]='\0';
 		printf("%.*s",size,buffer);
 		if(size != write(nsk,buffer,size)) {
 			printf("error writing bla\n");
 			break;
 		}
+		
+		int nr=0;
+		char cmd[sizeof(buffer)]="";
+		sscanf(buffer,"%d %s",&nr,&cmd);
+		printf("cmd=%s\n",cmd);
+		if(cmd) {
+			if(memcmp(cmd,"up",2)==0) {
+				speed+=10;
+				if(speed > 255)
+					speed=255;
+			}
+			if(memcmp(cmd,"down",4)==0) {
+				speed-=10;
+				if(speed < 0)
+					speed=0;
+			}
+		} else {
+			printf("no command?????");
+		}
+		if(platine) {
+			int ia1=speed;
+			int ia2=0;
+			int id8=0;
+			printf("speed=%d: ",speed);
+			for(int i=1; i < 9; i++) {
+				printf("%d ",255*i/(9));
+				if( speed >= 255*i/(9)) {
+					id8 |= 1 << (i-1);
+				}
+			}
+			printf("\n");
+			if(speed==0) { // lauflicht anzeigen
+				int a=1 << (nr&3);
+				id8=a | a << 4;
+			}
+			platine->write_output(ia1, ia2, id8);
+		}
+
 		/*
 		if((x++)%10==0) {
 			write(nsk,"101010\n",7);
 		}
 		*/
+	}
+
+	if(platine) {
+		delete platine;
 	}
 
 
@@ -170,8 +229,6 @@ static void cmd_listen(int ctl, int dev, bdaddr_t *bdaddr, int rc_channel)
 	close(sk);
 	close(nsk);
 
-	ba2str(&req.dst, dst);
-	printf("Connection from %s to %s\n", dst, devname);
 	printf("Press CTRL-C for hangup\n");
 
 /*
