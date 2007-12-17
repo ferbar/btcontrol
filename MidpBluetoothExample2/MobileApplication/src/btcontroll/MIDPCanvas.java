@@ -6,6 +6,8 @@
 
 package btcontroll;
 
+import java.util.Timer;
+import java.util.TimerTask;
 import javax.microedition.lcdui.*;
 
 /**
@@ -13,17 +15,36 @@ import javax.microedition.lcdui.*;
  * @author  chris
  * @version
  */
-public class MIDPCanvas extends Canvas implements CommandListener {
-	private int n=0;
+public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.Callback {
 	public BTcommThread btcomm;
 	String err="";
 	private Command exitCommand = new Command("Exit", Command.EXIT, 1);
-			
+	
+	// ... damit eine gedrückte taste öfter gezählt wird
+	Timer timer;
+	Object timerwait;
+	TimerTask task=null;
+	public class HoldDownKeyTask extends TimerTask {
+		Object notifyObject;
+		private String cmd;
+		public HoldDownKeyTask(String cmd, Object notifyObject) {
+			this.notifyObject=notifyObject;
+			this.cmd=cmd;
+		}
+		public void run() {
+			btcomm.addCmdToQueue(cmd);
+		}
+	}
+	
+	public void BTCallback() {
+		this.repaint();
+	}
+	
 	/**
 	 * constructor
 	 */
 	public MIDPCanvas(BTcommThread btcomm) {
-		this.btcomm=btcomm;
+		update(btcomm);
 		/*
 		try {
 			// Set up this canvas to listen to command events
@@ -36,17 +57,26 @@ public class MIDPCanvas extends Canvas implements CommandListener {
 		 */
 	}
 	
+	public void update(BTcommThread btcomm)  {
+		this.btcomm=btcomm;
+		this.btcomm.notifyObject=this;
+	}
+	
 	/**
 	 * paint
 	 */
 	public void paint(Graphics g) {
-		g.setColor(0xffffff);
-		g.fillRect(0, 0, getWidth(), getHeight());
-		g.setColor(0x0000ff);
-		g.drawString("Sample Text ("+n+")",0,20,Graphics.TOP|Graphics.LEFT);
-		g.drawString("isDoubleBuffered: "+this.isDoubleBuffered(),0,40,Graphics.TOP|Graphics.LEFT);
-		if(err!="") {
-			g.drawString("error: "+err,0,60,Graphics.TOP|Graphics.LEFT);
+		try {
+			g.setColor(0xffffff);
+			g.fillRect(0, 0, getWidth(), getHeight());
+			g.setColor(0x0000ff);
+			g.drawString("Speed:"+btcomm.speed,0,20,Graphics.TOP|Graphics.LEFT);
+			g.drawString("isDoubleBuffered: "+this.isDoubleBuffered(),0,40,Graphics.TOP|Graphics.LEFT);
+			if(err!="") {
+				g.drawString("error: "+err,0,60,Graphics.TOP|Graphics.LEFT);
+			}
+		} catch (Exception e) {
+			g.drawString("canvas::paint exception("+e.toString()+")",0,20,Graphics.TOP|Graphics.LEFT);
 		}
 	}
 	
@@ -76,10 +106,18 @@ public class MIDPCanvas extends Canvas implements CommandListener {
 					// leave unchanged
 			}
 			btcomm.addCmdToQueue(cmd + " ("+keyCode+")");
+			// init holdDownKey
+			if(task != null) {
+				timer.cancel();
+			}
+			timer = new Timer();
+			timerwait=new Object();
+			task = new HoldDownKeyTask(cmd,timerwait);
+			int timeout=250; // 4*/s senden
+			timer.schedule(task, timeout, timeout);
 		} else {
 			err="no btcomm";
 		}
-		this.n++;
 		this.repaint();
 	}
 	
@@ -87,6 +125,7 @@ public class MIDPCanvas extends Canvas implements CommandListener {
 	 * Called when a key is released.
 	 */
 	protected  void keyReleased(int keyCode) {
+		timer.cancel();
 	}
 	
 	/**

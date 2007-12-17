@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <signal.h>
+#include <assert.h>
 
 
 #include <bluetooth/bluetooth.h>
@@ -22,6 +24,8 @@ static int encryption = 0;
 static int secure = 0;
 static int master = 0;
 static int linger = 0;
+	
+K8055 *platine=NULL;
 
 #define MAXPATHLEN 255
 /**
@@ -73,11 +77,11 @@ static void cmd_listen(int ctl, int dev, bdaddr_t *bdaddr, int rc_channel)
 		return;
 	}
 
-	K8055 *platine=NULL;
 	try {
+		assert(!platine);
 		platine=new K8055(1,false);
 		printf("init platine\n");
-		platine->write_output(0, 128, 255);
+		platine->write_output(0, 128, 0xaa);
 	}catch(const char *errormsg) {
 		fprintf(stderr,"ansteuer platine error: %s\n",errormsg);
 	}
@@ -113,29 +117,36 @@ static void cmd_listen(int ctl, int dev, bdaddr_t *bdaddr, int rc_channel)
 		}
 		buffer[size]='\0';
 		printf("%.*s",size,buffer);
-		if(size != write(nsk,buffer,size)) {
-			printf("error writing bla\n");
-			break;
-		}
-		
 		int nr=0;
 		char cmd[sizeof(buffer)]="";
 		sscanf(buffer,"%d %s",&nr,&cmd);
 		printf("cmd=%s\n",cmd);
+		
 		if(cmd) {
 			if(memcmp(cmd,"up",2)==0) {
 				speed+=10;
 				if(speed > 255)
 					speed=255;
-			}
-			if(memcmp(cmd,"down",4)==0) {
+			} else if(memcmp(cmd,"down",4)==0) {
 				speed-=10;
 				if(speed < 0)
 					speed=0;
+			} else if(memcmp(cmd,"invalid_key",10)==0) {
+				printf("notaus\n");
+				speed=0;
 			}
 		} else {
 			printf("no command?????");
 		}
+
+		// REPLY SENDEN -----------------
+		snprintf(buffer,sizeof(buffer),"%d %d\n",nr,speed);
+		if(strlen(buffer) != write(nsk,buffer,strlen(buffer))) {
+			printf("error writing bla\n");
+			break;
+		}
+
+		// PLATINE ANSTEUERN ------------
 		if(platine) {
 			int ia1=speed;
 			int ia2=0;
@@ -163,7 +174,7 @@ static void cmd_listen(int ctl, int dev, bdaddr_t *bdaddr, int rc_channel)
 	}
 
 	if(platine) {
-		delete platine;
+		platine->write_output(0, 128, 0xaa);
 	}
 
 
@@ -285,13 +296,28 @@ release:
 	close(sk);
 }
 
+void signalHandler(int signo, siginfo_t *p, void *ucontext)
+{
+	printf("signalHandler\n"); 
+	platine->write_output(0, 128, 0xaa);
+	exit(0);
+}
+
 int main(int argc, char *argv[])
 {
+	struct sigaction sa;
+	memset(&sa,0,sizeof(sa));
+	sa.sa_sigaction=signalHandler;
+	sa.sa_flags=SA_SIGINFO;
+	sigaction(SIGINT,&sa,NULL);
+	sigaction(SIGTERM,&sa,NULL);
 	printf("dudl\n");
 	bdaddr_t bdaddr;
 	bacpy(&bdaddr, BDADDR_ANY);
 
 	int ctl=1000;
 	cmd_listen(ctl, 30, &bdaddr, 30);
+	if(platine)
+		delete platine;
 
 }

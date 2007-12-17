@@ -34,19 +34,21 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
     public HelloMidlet() {
     }
     
-	private Form helloForm;//GEN-BEGIN:MVDFields
+	private Form helloForm;
 	private Command exitCommand;
 	private Command helpCommand1;
 	private Alert help;
-	private Form controllForm;
+	private Canvas controllForm;
 	private List listServer;
 	private Command itemCommandDetail;
 	private Command okCommand1;
-	private Command screenCommand1;
+	private Command screenCommand1 = new Command("ShowList", Command.SCREEN, 1);
 	private Command backCommand2;
-	private Command screenCommand2;
-//GEN-END:MVDFields
-    
+	private Command screenCommand_startConrtollCanvas;
+	private Command itemCommandBlah1;
+    private Command clearCommand=new Command("clear", Command.SCREEN, 1);
+	private Command screenCommand_startControllCanvas=new Command("connect", Command.ITEM, 1);
+	
 	private Canvas controllCanvas;
 	BTcommThread btcomm;
 	Hashtable availServices = new Hashtable(); // indexda = index im listServer
@@ -140,7 +142,7 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 	 */
 	private void initialize() {//GEN-END:MVDInitBegin
         // Insert pre-init code here
-        System.out.println("dlub");
+        System.out.println("System.out.println");
         
 		getDisplay().setCurrent(get_helloForm());//GEN-LINE:MVDInitInit
         helloForm.setTitle("bt scan...");
@@ -179,21 +181,29 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 				// Insert pre-action code here
 				// Do nothing//GEN-LINE:MVDCAAction16
 				// Insert post-action code here
+			} else if (command == clearCommand) {
+				helloForm.deleteAll();
 			}//GEN-BEGIN:MVDCACase16
 		} else if (displayable == listServer) {
 			if (command == backCommand2) {//GEN-END:MVDCACase16
-				// Insert pre-action code here
-				getDisplay().setCurrent(get_helloForm());//GEN-LINE:MVDCAAction21
-				// Insert post-action code here
-			} else if (command == screenCommand2) {//GEN-LINE:MVDCACase21
+				// Insert pre-action code here//GEN-LINE:MVDCACase34
+				getDisplay().setCurrent(get_helloForm());//GEN-LINE:MVDCAAction34
+				// Insert post-action code here//GEN-LINE:MVDCAAction21
+				//GEN-LINE:MVDCACase21
+			} else if (command == screenCommand_startControllCanvas) {
+				if(btcomm != null && !btcomm.isAlive()) {
+					helloForm.append("btcomm not alive -> deleting object");
+					btcomm.close();
+					btcomm=null;
+				}
 				if(btcomm == null) {
 					helloForm.setTitle("connecting ...");
 					try {
 						String connectionURL=listServer.getString(listServer.getSelectedIndex());
-						StreamConnection connection = (StreamConnection)Connector.open(connectionURL);
+						StreamConnection BTStreamConnection = (StreamConnection)Connector.open(connectionURL);
 						// DataInputStream input = (InputConnection) connection.openDataInputStream();
 						// DataOutputStream output = connection.openDataOutputStream();
-						btcomm = new BTcommThread(helloForm, connection.openDataInputStream(), connection.openDataOutputStream());
+						btcomm = new BTcommThread(helloForm, BTStreamConnection);
 						Thread t = new Thread(btcomm);
 						t.start();
 						helloForm.setTitle("connected");
@@ -203,7 +213,7 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 					} 
 				}
 				// Insert pre-action code here
-				getDisplay().setCurrent(get_controllCanvas());
+				getDisplay().setCurrent(get_controllCanvas(btcomm));
 				/*
 				getDisplay().setCurrent(get_controllForm());//GEN-LINE:MVDCAAction23
 				*/
@@ -252,27 +262,31 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
         notifyDestroyed();
     }//GEN-LAST:MVDExitMidlet
     
-	/** This method returns instance for helloForm component and should be called instead of accessing helloForm field directly.//GEN-BEGIN:MVDGetBegin2
+	/** This method returns instance for helloForm component and should be called instead of accessing helloForm field directly.                        
 	 * @return Instance for helloForm component
 	 */
 	public Form get_helloForm() {
-		if (helloForm == null) {//GEN-END:MVDGetBegin2
+		if (helloForm == null) {
             // Insert pre-init code here
-			helloForm = new Form(null, new Item[0]);//GEN-BEGIN:MVDGetInit2
-			helloForm.addCommand(get_exitCommand());
+			helloForm = new Form(null, new Item[0]);
+			helloForm.addCommand(screenCommand1);
+			helloForm.addCommand(clearCommand);
 			helloForm.addCommand(get_helpCommand1());
-			helloForm.addCommand(get_screenCommand1());
-			helloForm.setCommandListener(this);//GEN-END:MVDGetInit2
+			helloForm.addCommand(get_exitCommand());
+			helloForm.setCommandListener(this);
             // Insert post-init code here
-		}//GEN-BEGIN:MVDGetEnd2
+			
+		}
 		return helloForm;
-	}//GEN-END:MVDGetEnd2
+	}                    
     
-	public Canvas get_controllCanvas() {
+	public Canvas get_controllCanvas(BTcommThread btcomm) {
 		if(controllCanvas==null) {
 			controllCanvas=new MIDPCanvas(btcomm);
 			controllCanvas.setCommandListener(this);
 			controllCanvas.addCommand(exitCommand);
+		} else {
+			((MIDPCanvas) controllCanvas).update(btcomm);
 		}
 		return controllCanvas;
 	}
@@ -315,23 +329,23 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 		return help;
 	}//GEN-END:MVDGetEnd9
 
-	/** This method returns instance for listServer component and should be called instead of accessing listServer field directly.//GEN-BEGIN:MVDGetBegin11
+	/** This method returns instance for listServer component and should be called instead of accessing listServer field directly.                         
 	 * @return Instance for listServer component
 	 */
 	public List get_listServer() {
-		if (listServer == null) {//GEN-END:MVDGetBegin11
+		if (listServer == null) {
 			// Insert pre-init code here
-			listServer = new List("gefundene Server", Choice.IMPLICIT, new String[0], new Image[0]);//GEN-BEGIN:MVDGetInit11
+			listServer = new List("gefundene Server", Choice.IMPLICIT, new String[0], new Image[0]);
 			listServer.addCommand(get_backCommand2());
-			listServer.addCommand(get_screenCommand2());
+			listServer.addCommand(screenCommand_startControllCanvas);
 			listServer.setCommandListener(this);
 			listServer.setSelectedFlags(new boolean[0]);
-			listServer.setSelectCommand(get_screenCommand2());//GEN-END:MVDGetInit11
+			listServer.setSelectCommand(screenCommand_startControllCanvas);
 			listServer.addCommand(itemCommandShowServiceRecord);
 			// Insert post-init code here
-		}//GEN-BEGIN:MVDGetEnd11
+		}
 		return listServer;
-	}//GEN-END:MVDGetEnd11
+	}                     
 
 	/** This method returns instance for itemCommandDetail component and should be called instead of accessing itemCommandDetail field directly.//GEN-BEGIN:MVDGetBegin13
 	 * @return Instance for itemCommandDetail component
@@ -357,18 +371,6 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 		return okCommand1;
 	}//GEN-END:MVDGetEnd15
 
-	/** This method returns instance for screenCommand1 component and should be called instead of accessing screenCommand1 field directly.//GEN-BEGIN:MVDGetBegin17
-	 * @return Instance for screenCommand1 component
-	 */
-	public Command get_screenCommand1() {
-		if (screenCommand1 == null) {//GEN-END:MVDGetBegin17
-			// Insert pre-init code here
-			screenCommand1 = new Command("ShowList", Command.SCREEN, 1);//GEN-LINE:MVDGetInit17
-			// Insert post-init code here
-		}//GEN-BEGIN:MVDGetEnd17
-		return screenCommand1;
-	}//GEN-END:MVDGetEnd17
-
 	/** This method returns instance for backCommand2 component and should be called instead of accessing backCommand2 field directly.//GEN-BEGIN:MVDGetBegin20
 	 * @return Instance for backCommand2 component
 	 */
@@ -381,17 +383,6 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 		return backCommand2;
 	}//GEN-END:MVDGetEnd20
 
-	/** This method returns instance for screenCommand2 component and should be called instead of accessing screenCommand2 field directly.//GEN-BEGIN:MVDGetBegin22
-	 * @return Instance for screenCommand2 component
-	 */
-	public Command get_screenCommand2() {
-		if (screenCommand2 == null) {//GEN-END:MVDGetBegin22
-			// Insert pre-init code here
-			screenCommand2 = new Command("controllForm", Command.SCREEN, 1);//GEN-LINE:MVDGetInit22
-			// Insert post-init code here
-		}//GEN-BEGIN:MVDGetEnd22
-		return screenCommand2;
-	}//GEN-END:MVDGetEnd22
 //GEN-LINE:MVDGetEnd10
     public void startApp() {//GEN-LINE:MVDGetInit10
         initialize();//GEN-LINE:MVDGetBegin10

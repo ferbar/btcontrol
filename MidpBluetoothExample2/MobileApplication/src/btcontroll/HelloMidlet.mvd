@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <MVDData version="1.3">
-    <DesignDocument designVersion="MIDP-2" uidCounter="33">
+    <DesignDocument designVersion="MIDP-2" uidCounter="35">
         <DesignComponent id="$MobileDevice" typeid="MIDP:$MobileDevice" uid="0"/>
         <DesignComponent id="$StartPoint" typeid="MIDP:$StartPoint" uid="1">
             <Property name="targetDisplayable" value="helloForm"/>
@@ -11,7 +11,9 @@
                 <ContainerPropertyItem value="$CommandAction"/>
                 <ContainerPropertyItem value="$CommandAction1"/>
                 <ContainerPropertyItem value="$CommandAction3"/>
+                <ContainerPropertyItem value="$CommandAction6"/>
             </ContainerProperty>
+            <Property name="lazyInitialized" value="false"/>
             <ContainerProperty name="items"/>
         </DesignComponent>
         <DesignComponent id="$CommandAction" typeid="MIDP:CommandAction" uid="3">
@@ -24,11 +26,13 @@
             <Property name="label" value="STRING:Exit"/>
             <Property name="priority" value="1"/>
             <Property name="type" value="EXIT"/>
+            <Property name="lazyInitialized" value="false"/>
         </DesignComponent>
         <DesignComponent id="helpCommand1" typeid="MIDP:javax.microedition.lcdui.Command" uid="6">
             <Property name="label" value="STRING:Help"/>
             <Property name="priority" value="1"/>
             <Property name="type" value="HELP"/>
+            <Property name="lazyInitialized" value="false"/>
         </DesignComponent>
         <DesignComponent id="$CommandAction1" typeid="MIDP:CommandAction" uid="8">
             <Property name="targetDisplayable" value="help"/>
@@ -49,7 +53,7 @@
             <Property name="title" value="STRING:gefundene Server"/>
             <Property name="choiceType" value="IMPLICIT"/>
             <Property name="selectCommandAction" value="$SelectCommandAction1"/>
-            <Property name="selectCommand" value="screenCommand_starConrtollCanvas"/>
+            <Property name="selectCommand" value="screenCommand_startConrtollCanvas"/>
             <Property name="indexBasedSwitch" value="true"/>
             <ContainerProperty name="commands">
                 <ContainerPropertyItem value="$CommandAction4"/>
@@ -64,7 +68,7 @@
             <Property name="targetDisplayable"/>
             <Property name="targetForwardDisplayable"/>
             <Property name="actionOrigin" value="listServer"/>
-            <Property name="selectCommand" value="screenCommand_starConrtollCanvas"/>
+            <Property name="selectCommand" value="screenCommand_startConrtollCanvas"/>
         </DesignComponent>
         <DesignComponent id="itemCommandDetail" typeid="MIDP:javax.microedition.lcdui.Command" uid="13">
             <Property name="label" value="STRING:Details"/>
@@ -83,14 +87,15 @@
             <Property name="actionOrigin" value="helloForm"/>
         </DesignComponent>
         <DesignComponent id="screenCommand1" typeid="MIDP:javax.microedition.lcdui.Command" uid="17">
-            <Property name="label" value="STRING:ShowList"/>
+            <Property name="label" value="STRING:a ShowList"/>
             <Property name="priority" value="1"/>
             <Property name="type" value="SCREEN"/>
+            <Property name="lazyInitialized" value="false"/>
         </DesignComponent>
         <DesignComponent id="$CommandAction3" typeid="MIDP:CommandAction" uid="18">
             <Property name="targetDisplayable" value="listServer"/>
             <Property name="targetForwardDisplayable"/>
-            <Property name="actionSource" value="screenCommand1"/>
+            <Property name="actionSource" value="screenCommand_startConrtollCanvas"/>
             <Property name="actionOrigin" value="helloForm"/>
         </DesignComponent>
         <DesignComponent id="backCommand2" typeid="MIDP:javax.microedition.lcdui.Command" uid="20">
@@ -104,7 +109,7 @@
             <Property name="actionSource" value="backCommand2"/>
             <Property name="actionOrigin" value="listServer"/>
         </DesignComponent>
-        <DesignComponent id="screenCommand_starConrtollCanvas" typeid="MIDP:javax.microedition.lcdui.Command" uid="22">
+        <DesignComponent id="screenCommand_startConrtollCanvas" typeid="MIDP:javax.microedition.lcdui.Command" uid="22">
             <Property name="label" value="STRING:controllForm"/>
             <Property name="priority" value="1"/>
             <Property name="type" value="SCREEN"/>
@@ -112,7 +117,7 @@
         <DesignComponent id="$CommandAction5" typeid="MIDP:CommandAction" uid="23">
             <Property name="targetDisplayable" value="controllForm"/>
             <Property name="targetForwardDisplayable"/>
-            <Property name="actionSource" value="screenCommand_starConrtollCanvas"/>
+            <Property name="actionSource" value="screenCommand_startConrtollCanvas"/>
             <Property name="actionOrigin" value="listServer"/>
         </DesignComponent>
         <DesignComponent id="Midp2ListElementDC1" typeid="MIDP:GROUP-org.netbeans.modules.mvd.model.midp2.Midp2ListElementDC" uid="24">
@@ -142,19 +147,31 @@
             <Property name="priority" value="1"/>
             <Property name="type" value="ITEM"/>
         </DesignComponent>
+        <DesignComponent id="clearCommand" typeid="MIDP:javax.microedition.lcdui.Command" uid="33">
+            <Property name="label" value="STRING:Command"/>
+            <Property name="priority" value="1"/>
+            <Property name="type" value="OK"/>
+            <Property name="lazyInitialized" value="false"/>
+        </DesignComponent>
+        <DesignComponent id="$CommandAction6" typeid="MIDP:CommandAction" uid="34">
+            <Property name="targetDisplayable"/>
+            <Property name="targetForwardDisplayable"/>
+            <Property name="actionSource" value="clearCommand"/>
+            <Property name="actionOrigin" value="helloForm"/>
+        </DesignComponent>
     </DesignDocument>
     <FlowDocument version="1.1">
         <Node id="$MobileDevice" location="160,336" order=",$StartPoint,,,,,,,,,$ExitPoint,,,,,"/>
-        <Node id="help" location="576,336" order=",,,,$CommandAction1$Output,$CommandAction1$Input,,,,,$Default,,,,,"/>
         <Node id="controllForm" location="328,128" order=",,,,,,,,,,$Default,,,,,"/>
         <Node id="listServer" location="120,128" order="$CommandAction4,$CommandAction5,$SelectCaseCommandAction1,$SelectCaseCommandAction2,,,,,,,$Default,,,,,"/>
-        <Node id="helloForm" location="392,336" order="$CommandAction,$CommandAction1,$CommandAction3,,,,,,,,$Default,,,,,"/>
-        <Link id="$StartPoint$ActionLink" path="200,312,352,312"/>
-        <Link id="$CommandAction$ActionLink" path="432,328,509,328,509,371,47,371,47,312,120,312"/>
-        <Link id="$CommandAction1$ActionLink" path="432,312,509,312,509,196,584,196,584,264"/>
-        <Link id="$CommandAction3$ActionLink" path="432,296,499,296,499,166,57,166,57,104,80,104"/>
-        <Link id="$CommandAction4$ActionLink" path="160,120,247,120,247,158,300,158,300,312,352,312"/>
+        <Node id="help" location="576,336" order=",,,,$CommandAction1$Output,$CommandAction1$Input,,,,,$Default,,,,,"/>
+        <Node id="helloForm" location="376,336" order="$CommandAction,$CommandAction1,$CommandAction3,$CommandAction6,,,,,,,$Default,,,,,"/>
+        <Link id="$StartPoint$ActionLink" path="200,312,336,312"/>
+        <Link id="$CommandAction$ActionLink" path="416,328,510,328,510,371,47,371,47,312,120,312"/>
+        <Link id="$CommandAction1$ActionLink" path="416,312,510,312,510,196,584,196,584,264"/>
+        <Link id="$CommandAction4$ActionLink" path="160,120,247,120,247,158,292,158,292,312,336,312"/>
+        <Link id="$CommandAction1$ForwardLink" path="600,264,600,181,292,181,292,312,336,312"/>
+        <Link id="$CommandAction3$ActionLink" path="416,296,501,296,501,166,57,166,57,104,80,104"/>
         <Link id="$CommandAction5$ActionLink" path="160,104,288,104"/>
-        <Link id="$CommandAction1$ForwardLink" path="600,264,600,181,300,181,300,312,352,312"/>
     </FlowDocument>
 </MVDData>
