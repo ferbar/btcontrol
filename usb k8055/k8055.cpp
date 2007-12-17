@@ -148,8 +148,8 @@ int K8055::takeover_device( int interface )
 	*/
 	if( usb_claim_interface(xsv_handle, interface) <0 ) {
 	
-		fprintf( stderr,"%s\nif prog is runnung as non-root chmod -R a+w /dev/bus/usb/%s/\nmight help\n",
-			usb_strerror(),cfg_devHandle->filename);
+		fprintf( stderr,"%s\nif prog is runnung as non-root chmod -R a+w /dev/bus/usb/%s/%s\nmight help\n",
+			usb_strerror(),cfg_devHandle->bus,cfg_devHandle->filename);
 		return false;
 		
 	} else if ( debug ) 
