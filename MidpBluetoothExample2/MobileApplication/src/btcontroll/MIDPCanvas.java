@@ -69,9 +69,23 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		try {
 			g.setColor(0xffffff);
 			g.fillRect(0, 0, getWidth(), getHeight());
+			g.setColor(0xff0000);
+			g.fillRect(0, 20, btcomm.speed * getWidth() / 255, 20);
 			g.setColor(0x0000ff);
 			g.drawString("Speed:"+btcomm.speed,0,20,Graphics.TOP|Graphics.LEFT);
-			g.drawString("isDoubleBuffered: "+this.isDoubleBuffered(),0,40,Graphics.TOP|Graphics.LEFT);
+			//g.drawString("isDoubleBuffered: "+this.isDoubleBuffered(),0,40,Graphics.TOP|Graphics.LEFT);
+			if(btcomm.timeout) {
+				g.setColor(0xff0000);
+				g.fillRect(0, 40, getWidth(), 20);
+				g.setColor(0x000000);
+				g.drawString("timeout",0,40,Graphics.TOP|Graphics.LEFT);
+			}
+			if(btcomm.isAlive()==false) {
+				g.setColor(0xff0000);
+				g.fillRect(0, 60, getWidth(), 20);
+				g.setColor(0x000000);
+				g.drawString("disconnected",0,60,Graphics.TOP|Graphics.LEFT);
+			}
 			if(err!="") {
 				g.drawString("error: "+err,0,60,Graphics.TOP|Graphics.LEFT);
 			}

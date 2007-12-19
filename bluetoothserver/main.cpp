@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <signal.h>
 #include <assert.h>
+#include <math.h>
 
 
 #include <bluetooth/bluetooth.h>
@@ -24,8 +25,15 @@ static int encryption = 0;
 static int secure = 0;
 static int master = 0;
 static int linger = 0;
-	
+bool cfg_debug=false;
+
 K8055 *platine=NULL;
+
+void resetPlatine()
+{
+	if(platine)
+		platine->write_output(255, 128, 0xaa);
+}
 
 #define MAXPATHLEN 255
 /**
@@ -43,7 +51,7 @@ static void cmd_listen(int ctl, int dev, bdaddr_t *bdaddr, int rc_channel)
 	sigset_t sigs;
 	socklen_t alen;
 	char dst[18], devname[MAXPATHLEN]="";
-	int sk, nsk, fd, lm, ntry = 30;
+	int sk, nsk, lm, ntry = 30;
 
 	laddr.rc_family = AF_BLUETOOTH;
 	bacpy(&laddr.rc_bdaddr, bdaddr);
@@ -79,16 +87,17 @@ static void cmd_listen(int ctl, int dev, bdaddr_t *bdaddr, int rc_channel)
 
 	try {
 		assert(!platine);
-		platine=new K8055(1,false);
+		platine=new K8055(1,cfg_debug);
 		printf("init platine\n");
-		platine->write_output(0, 128, 0xaa);
-	}catch(const char *errormsg) {
+		resetPlatine();
+	} catch(const char *errormsg) {
 		fprintf(stderr,"ansteuer platine error: %s\n",errormsg);
 	}
 
-	printf("Waiting for connection on channel %d\n", laddr.rc_channel);
 
 	listen(sk, 10);
+while(1) {
+	printf("Waiting for connection on channel %d\n", laddr.rc_channel);
 
 	alen = sizeof(raddr);
 	nsk = accept(sk, (struct sockaddr *) &raddr, &alen);
@@ -124,11 +133,11 @@ static void cmd_listen(int ctl, int dev, bdaddr_t *bdaddr, int rc_channel)
 		
 		if(cmd) {
 			if(memcmp(cmd,"up",2)==0) {
-				speed+=10;
+				speed+=5;
 				if(speed > 255)
 					speed=255;
 			} else if(memcmp(cmd,"down",4)==0) {
-				speed-=10;
+				speed-=5;
 				if(speed < 0)
 					speed=0;
 			} else if(memcmp(cmd,"invalid_key",10)==0) {
@@ -148,17 +157,20 @@ static void cmd_listen(int ctl, int dev, bdaddr_t *bdaddr, int rc_channel)
 
 		// PLATINE ANSTEUERN ------------
 		if(platine) {
-			int ia1=speed;
+			// geschwindigkeit 
+			double f_speed=sqrt(sqrt((double)speed/255.0))*255.0;
+			int ia1=255-(int)f_speed;
+			printf("speed: %d (%f)\n",ia1,f_speed);
 			int ia2=0;
 			int id8=0;
-			printf("speed=%d: ",speed);
+			// printf("speed=%d: ",speed);
 			for(int i=1; i < 9; i++) {
-				printf("%d ",255*i/(9));
+				// printf("%d ",255*i/(9));
 				if( speed >= 255*i/(9)) {
 					id8 |= 1 << (i-1);
 				}
 			}
-			printf("\n");
+			// printf("\n");
 			if(speed==0) { // lauflicht anzeigen
 				int a=1 << (nr&3);
 				id8=a | a << 4;
@@ -173,10 +185,11 @@ static void cmd_listen(int ctl, int dev, bdaddr_t *bdaddr, int rc_channel)
 		*/
 	}
 
-	if(platine) {
-		platine->write_output(0, 128, 0xaa);
-	}
+	resetPlatine();
 
+	printf("Disconnected\n");
+	close(nsk);
+}
 
 #if 0 
 	if (linger) {
@@ -238,9 +251,7 @@ static void cmd_listen(int ctl, int dev, bdaddr_t *bdaddr, int rc_channel)
 #endif
 
 	close(sk);
-	close(nsk);
 
-	printf("Press CTRL-C for hangup\n");
 
 /*
 	memset(&sa, 0, sizeof(sa));
@@ -280,11 +291,11 @@ static void cmd_listen(int ctl, int dev, bdaddr_t *bdaddr, int rc_channel)
 /*
 	sa.sa_handler = NULL;
 	sigaction(SIGTERM, &sa, NULL);
-	sigaction(SIGINT,  &sa, NULL); */
-
-	printf("Disconnected\n");
-
+	sigaction(SIGINT,  &sa, NULL);
 	close(fd);
+	*/
+
+
 	return;
 
 release:
@@ -299,12 +310,17 @@ release:
 void signalHandler(int signo, siginfo_t *p, void *ucontext)
 {
 	printf("signalHandler\n"); 
-	platine->write_output(0, 128, 0xaa);
+	resetPlatine();
 	exit(0);
 }
 
 int main(int argc, char *argv[])
 {
+	if(argc > 1) {
+		if(strcmp(argv[1],"-debug")==0) {
+			cfg_debug=1;
+		}
+	}
 	struct sigaction sa;
 	memset(&sa,0,sizeof(sa));
 	sa.sa_sigaction=signalHandler;

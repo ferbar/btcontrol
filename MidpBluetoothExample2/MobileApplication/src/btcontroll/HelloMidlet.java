@@ -204,8 +204,8 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 						// DataInputStream input = (InputConnection) connection.openDataInputStream();
 						// DataOutputStream output = connection.openDataOutputStream();
 						btcomm = new BTcommThread(helloForm, BTStreamConnection);
-						Thread t = new Thread(btcomm);
-						t.start();
+						//Thread t = new Thread(btcomm); t.start(); -> da is isAlive auf einmal nicht gesetzt
+						btcomm.start();
 						helloForm.setTitle("connected");
 					} catch (java.io.IOException e) {
 						helloForm.append("exception("+e.toString()+")\n");
