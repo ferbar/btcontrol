@@ -35,6 +35,30 @@ public class BTcommThread extends Thread{
 	
 	
 	String my_queue[];
+	
+	// sachen fürn timeout:
+	boolean timeout=false;
+	Timer timeoutTimer;
+	TimeoutTask timeoutTask;
+	public class TimeoutTask extends TimerTask {
+		boolean called=false;
+		public TimeoutTask() {
+			
+		}
+		public void run() {
+			System.out.println( "TimeoutTask" );
+			called=true;
+			timeout=true;
+			if(notifyObject != null) {
+				try {
+					notifyObject.BTCallback();
+				} catch (Exception e) {
+					debugForm.append("BTCallback exception: "+e.toString()+"\n");
+				}
+			}
+		}
+	}
+	
 
 	// sachen fürs pingding:
 	Timer timer;
@@ -120,8 +144,8 @@ public class BTcommThread extends Thread{
 		timer = new Timer();
 		timerwait=new Object();
 		task = new PingDing(timerwait);
-		int timeout=5000;
-		timer.schedule(task, timeout, timeout);
+		int pingTimeout=2000;
+		timer.schedule(task, pingTimeout, pingTimeout);
 		my_queue=new String[2];
 		
 		try {
@@ -168,11 +192,14 @@ public class BTcommThread extends Thread{
 						s=commandNr+" nop\n";
 					}
 				}
+				timeoutTimer = new Timer();
+				timeoutTask = new TimeoutTask();
+				timeoutTimer.schedule(timeoutTask,1000); // timeout 1s
 				oStream.write(s.getBytes()); oStream.flush();
 				// helloForm.append("sent: "+s);
 				sendtext.setText("sent: "+s);
 				boolean found=false;
-				while(!found) {
+				while(!found) { // so lange lesen bis zeile mit cmdnr anfängt
 					int n =myReadLn(iStream,buffer);
 					s=new String(buffer,0,n);
 					// helloForm.append("read done ("+n+"): "+s+'\n');
@@ -204,7 +231,7 @@ public class BTcommThread extends Thread{
 					} catch (Exception e) {
 						debugForm.append("parseint:"+ e.toString()+"\n");
 					}
-						
+					
 					if(notifyObject != null) {
 						try {
 							notifyObject.BTCallback();
@@ -227,6 +254,10 @@ public class BTcommThread extends Thread{
 				if(t > maxTPing) maxTPing = t;
 				avgTPing+=t;
 				pingstat.setText("min: "+minTPing+" max:"+maxTPing+" avg:"+(avgTPing/commandNr));
+				if(!timeoutTask.called) {
+					this.timeout=false;
+				}
+				timeoutTimer.cancel();
 			}
 		} catch (java.io.IOException e) {
 			debugForm.append("IO exception("+e.toString()+")\n");
@@ -235,5 +266,6 @@ public class BTcommThread extends Thread{
 		}
 		debugForm.append("BT comm thread ended\n");
 		close();
+		timer.cancel(); // ping timer stoppen sonst gibts eventuell irgendwann 2 davon ...
 	}
 }
