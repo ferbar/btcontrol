@@ -21,11 +21,16 @@ import javax.microedition.lcdui.*;
  * @author chris
  */
 public class BTcommThread extends Thread{
+	interface DisplayOutput {
+		public void debug(String text);
+		public void debug(StringItem text);
+		public void vibrate(int ms);
+	}
 	DataInputStream iStream;
 	DataOutputStream oStream;
 	StreamConnection BTStreamConnection;
 	
-	private Form debugForm;  
+	private DisplayOutput debugForm;  
 	public int speed=0; // schreibta da rein, ruft notiry auf
 	interface Callback {
 		public void BTCallback();
@@ -53,9 +58,10 @@ public class BTcommThread extends Thread{
 				try {
 					notifyObject.BTCallback();
 				} catch (Exception e) {
-					debugForm.append("BTCallback exception: "+e.toString()+"\n");
+					debugForm.debug("BTCallback exception: "+e.toString()+"\n");
 				}
 			}
+			debugForm.vibrate(100);
 		}
 	}
 	
@@ -103,7 +109,7 @@ public class BTcommThread extends Thread{
 	 * @param iStream
 	 * @param oStream
 	 */
-	public BTcommThread(Form debugForm, StreamConnection BTStreamConnection) throws java.io.IOException {
+	public BTcommThread(DisplayOutput debugForm, StreamConnection BTStreamConnection) throws java.io.IOException {
 		this.debugForm=debugForm;
 		this.BTStreamConnection=BTStreamConnection;
 		this.iStream=BTStreamConnection.openDataInputStream();
@@ -112,19 +118,20 @@ public class BTcommThread extends Thread{
 	
 	protected void close()
 	{
-		debugForm.append("BTcommThread::close");
+		debugForm.debug("BTcommThread::close");
 		try {
 			this.iStream.close();
 			this.oStream.close();
 		} catch(Exception e) {
-			debugForm.append("BTcommThread::close exception ("+e.toString()+")");
+			debugForm.debug("BTcommThread::close exception ("+e.toString()+")");
 		}
 		try {
 			BTStreamConnection.close();
 		} catch(Exception e) {
-			debugForm.append("BTcommThread::close2 exception ("+e.toString()+")");
+			debugForm.debug("BTcommThread::close2 exception ("+e.toString()+")");
 		}
-		debugForm.append("BTcommThread::close done");
+		debugForm.debug("BTcommThread::close done");
+		debugForm.vibrate(1000);
 	}
 	
 	public void addCmdToQueue(String cmd) {
@@ -158,17 +165,17 @@ public class BTcommThread extends Thread{
 				oStream.writeByte(stream[n]);
 			} */
 			oStream.flush();
-			debugForm.append("writeChars done\n");
+			debugForm.debug("writeChars done\n");
 			buffer=new byte[50];
 			int commandNr=0;
 			StringItem pingtext=new StringItem("pingtext","");
 			StringItem sendtext=new StringItem("sendtext","");
 			StringItem readtext=new StringItem("readtext","");
 			StringItem pingstat=new StringItem("pingstat","");
-			debugForm.append(pingtext);
-			debugForm.append(sendtext);
-			debugForm.append(readtext);
-			debugForm.append(pingstat);
+			debugForm.debug(pingtext);
+			debugForm.debug(sendtext);
+			debugForm.debug(readtext);
+			debugForm.debug(pingstat);
 			int minTPing=10000;
 			int maxTPing=0;
 			int avgTPing=0;
@@ -179,7 +186,7 @@ public class BTcommThread extends Thread{
 						timerwait.wait();
 						// helloForm.append("...wait done\n");
 					} catch (Exception e) {
-						debugForm.append("wait exception ("+e.toString()+')');
+						debugForm.debug("wait exception ("+e.toString()+')');
 						return;
 					}
 				}
@@ -205,7 +212,7 @@ public class BTcommThread extends Thread{
 					// helloForm.append("read done ("+n+"): "+s+'\n');
 					readtext.setText("read done ("+n+"): "+s+'\n');
 					if(n<=1) {
-						debugForm.append("read 0 bytes?!?!? ("+n+")");
+						debugForm.debug("read 0 bytes?!?!? ("+n+")");
 						return;
 					}
 					String sreply_commandNr="";
@@ -229,14 +236,14 @@ public class BTcommThread extends Thread{
 					try {
 						this.speed=Integer.parseInt(sreply);
 					} catch (Exception e) {
-						debugForm.append("parseint:"+ e.toString()+"\n");
+						debugForm.debug("parseint:"+ e.toString()+"\n");
 					}
 					
 					if(notifyObject != null) {
 						try {
 							notifyObject.BTCallback();
 						} catch (Exception e) {
-							debugForm.append("BTCallback exception: "+e.toString()+"\n");
+							debugForm.debug("BTCallback exception: "+e.toString()+"\n");
 						}
 					}
 					// helloForm.append("rx: "+sreply_commandNr+'\n');
@@ -260,11 +267,11 @@ public class BTcommThread extends Thread{
 				timeoutTimer.cancel();
 			}
 		} catch (java.io.IOException e) {
-			debugForm.append("IO exception("+e.toString()+")\n");
+			debugForm.debug("IO exception("+e.toString()+")\n");
 		} catch (Exception e) {
-			debugForm.append("exception("+e.toString()+")\n");
+			debugForm.debug("exception("+e.toString()+")\n");
 		}
-		debugForm.append("BT comm thread ended\n");
+		debugForm.debug("BT comm thread ended\n");
 		close();
 		timer.cancel(); // ping timer stoppen sonst gibts eventuell irgendwann 2 davon ...
 	}

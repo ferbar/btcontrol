@@ -26,7 +26,8 @@ import javax.microedition.io.StreamConnection;
  *
  * @author chris
  */
-public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages, PrintClient.iAddAvailService {
+public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages, PrintClient.iAddAvailService, 
+		BTcommThread.DisplayOutput {
     
 
 	
@@ -137,7 +138,30 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
     public void debug(String text) {
         helloForm.append(text);
     }
-    
+	public void debug(StringItem text) {
+        helloForm.append(text);
+    }
+	
+	/**
+	 * vibriert - blocking oder non-blocking ???
+	 */
+    public void vibrate(int ms) {
+		getDisplay().vibrate(ms);
+/*
+		try {
+       // Nokia
+       Class.forName("com.nokia.mid.sound.Sound");
+       try
+       {
+           Class test=Class.forName("com.nokia.mid.ui.DeviceControl");
+           com.nokia.mid.ui.DeviceControl.setLights(0,100);
+       }
+       catch(Exception ex2){}
+   }
+		catch(Exception ex){}
+*/
+	}
+	
 	/** This method initializes UI of the application.//GEN-BEGIN:MVDInitBegin
 	 */
 	private void initialize() {//GEN-END:MVDInitBegin
@@ -147,14 +171,15 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 		getDisplay().setCurrent(get_helloForm());//GEN-LINE:MVDInitInit
         helloForm.setTitle("bt scan...");
         // Insert post-init code here
+		PrintClient client;
         try {
-//			getKeyStates();
-            PrintClient client=new PrintClient(this,this);
-			client.findPrinter();
+            client=new PrintClient(this,this);
         } catch (BluetoothStateException e) {
-            helloForm.append("exception: ("+e.toString()+')');
+            helloForm.append("exception: ("+e.toString()+") bluetooth disabled?");
             e.printStackTrace();
-        }
+			return;
+		}
+		client.findPrinter();
 	}//GEN-LINE:MVDInitEnd
     
 	/** Called by the system to indicate that a command has been invoked on a particular displayable.//GEN-BEGIN:MVDCABegin
@@ -203,7 +228,7 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 						StreamConnection BTStreamConnection = (StreamConnection)Connector.open(connectionURL);
 						// DataInputStream input = (InputConnection) connection.openDataInputStream();
 						// DataOutputStream output = connection.openDataOutputStream();
-						btcomm = new BTcommThread(helloForm, BTStreamConnection);
+						btcomm = new BTcommThread(this, BTStreamConnection);
 						//Thread t = new Thread(btcomm); t.start(); -> da is isAlive auf einmal nicht gesetzt
 						btcomm.start();
 						helloForm.setTitle("connected");

@@ -67,12 +67,20 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	 */
 	public void paint(Graphics g) {
 		try {
+			int width=getWidth();
 			g.setColor(0xffffff);
-			g.fillRect(0, 0, getWidth(), getHeight());
-			g.setColor(0xff0000);
-			g.fillRect(0, 20, btcomm.speed * getWidth() / 255, 20);
-			g.setColor(0x0000ff);
-			g.drawString("Speed:"+btcomm.speed,0,20,Graphics.TOP|Graphics.LEFT);
+			g.fillRect(0, 0, width, getHeight());
+			g.setColor(0x00ff00);
+			int speed_len=(Math.abs(btcomm.speed) * width/2 / 255);
+			if(btcomm.speed >= 0) {
+				g.fillRect(width/2, 20, speed_len, 20);
+				g.setColor(0x0000ff);
+				g.drawString("Speed:"+btcomm.speed,width/2,20,Graphics.TOP|Graphics.LEFT);
+			} else {
+				g.fillRect(width/2 - speed_len, 20, speed_len, 20);
+				g.setColor(0x0000ff);
+				g.drawString("Speed:"+btcomm.speed,0,20,Graphics.TOP|Graphics.LEFT);
+			}
 			//g.drawString("isDoubleBuffered: "+this.isDoubleBuffered(),0,40,Graphics.TOP|Graphics.LEFT);
 			if(btcomm.timeout) {
 				g.setColor(0xff0000);

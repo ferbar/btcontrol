@@ -9,7 +9,9 @@
 
 package btcontroll;
 
-
+/**
+ * fürs debug zeug + title ....
+ */
 public interface iMyMessages {
 	public void updateStatus(String text);
 	public void debug(String text);
