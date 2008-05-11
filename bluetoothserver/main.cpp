@@ -20,6 +20,8 @@
 
 #include "../usb k8055/k8055.h"
 
+#include "srcp.h"
+
 static int auth = 0;
 static int encryption = 0;
 static int secure = 0;
@@ -28,12 +30,21 @@ static int linger = 0;
 bool cfg_debug=false;
 
 K8055 *platine=NULL;
+SRCP *srcp=NULL;
 
 void resetPlatine()
 {
 	if(platine)
-		platine->write_output(255, 128, 0xaa);
+		platine->write_output(255, 255, 0xaa);
 }
+
+#define STREQ(s1,s2) (strcmp(s1,s2)==0)
+
+#define sendToPhone(text) \
+		if(strlen(text) != write(nsk,text,strlen(text))) { \
+			printf("error writing bla\n"); \
+			break; \
+		} \
 
 #define MAXPATHLEN 255
 /**
@@ -94,6 +105,16 @@ static void cmd_listen(int ctl, int dev, bdaddr_t *bdaddr, int rc_channel)
 		fprintf(stderr,"ansteuer platine error: %s\n",errormsg);
 	}
 
+	if(!platine) {
+		assert(!srcp);
+		try {
+			srcp=new SRCP();
+			printf("init erddcd\n");
+		} catch(const char *errormsg) {
+			fprintf(stderr,"error connecting to erddcd (%s)\n",errormsg);
+		}
+	}
+
 
 	listen(sk, 10);
 while(1) {
@@ -117,9 +138,14 @@ while(1) {
 
 	int x=0;
 	int speed=0;
+	int addr=3;
+	int nFunc=4;
+	bool func[4]={false,false,false,false};
 	while(1) {
 		char buffer[256];
 		int size;
+		bool emergencyStop=false;
+
 		if((size = read(nsk, buffer, sizeof(buffer))) <= 0) {
 			printf("error reading bla\n");
 			break;
@@ -128,8 +154,9 @@ while(1) {
 		printf("%.*s",size,buffer);
 		int nr=0;
 		char cmd[sizeof(buffer)]="";
-		sscanf(buffer,"%d %s",&nr,&cmd);
-		printf("cmd=%s\n",cmd);
+		char param[sizeof(buffer)]="";
+		sscanf(buffer,"%d %s %s",&nr,&cmd, &param);
+		printf("cmd=%s param=%s\n",cmd,param);
 		
 		if(cmd) {
 			if(memcmp(cmd,"up",2)==0) {
@@ -138,11 +165,51 @@ while(1) {
 					speed=255;
 			} else if(memcmp(cmd,"down",4)==0) {
 				speed-=5;
-				if(speed < 0)
-					speed=0;
-			} else if(memcmp(cmd,"invalid_key",10)==0) {
-				printf("notaus\n");
+				if(speed < -255)
+					speed=-255;
+			} else if(cmd[0] == 'f') {
+				int fnr=atoi(&cmd[1]);
+				if(fnr >= 0 && fnr < nFunc) {
+					func[fnr] = !func[fnr];
+				}
+			} else if(STREQ(cmd,"list")) { // liste mit eingetragenen loks abrufen, format: <name>;<adresse>;...\n
+				sendToPhone(" lok1;1\n");
+				sendToPhone(" lok2;2\n");
+				sendToPhone(" lok3;3\n");
+				sendToPhone(" Ge 4/4 I;4\n");
+				sendToPhone(" lok5;5\n");
+				sendToPhone(" Ge 4/4 II;7\n");
+				sendToPhone(" Ge 6/6 II;6\n");
+				sendToPhone(" Ge 2/4;12\n");
+				sendToPhone(" schoema;14\n");
+			} else if(STREQ(cmd,"stop")) {
+				printf("stop\n");
 				speed=0;
+			} else if(STREQ(cmd,"select")) { // ret = lokname
+				addr=atoi(param);
+				printf("neue lok addr:%d\n",addr);
+				char buffer[32];
+				snprintf(buffer,sizeof(buffer),"lok%d\n",addr);
+				sendToPhone(buffer);
+			} else if(STREQ(cmd,"pwr_off")) {
+				if(srcp) srcp->pwrOff();
+			} else if(STREQ(cmd,"pwr_on")) {
+				if(srcp) srcp->pwrOn();
+			} else if(memcmp(cmd,"invalid_key",10)==0) {
+				printf("param: %s\n",param);
+				if(strcmp(param,"(49)")==0) {
+					func[0] = ! func[0];
+				} else if(strcmp(param,"(55)")==0) {
+					func[1] = ! func[1];
+				} else if(strcmp(param,"(51)")==0) {
+					func[2] = ! func[2];
+				} else if(strcmp(param,"(57)")==0) {
+					func[3] = ! func[3];
+				} else {
+					printf("notaus\n");
+					speed=0;
+					emergencyStop=true;
+				}
 			}
 		} else {
 			printf("no command?????");
@@ -158,15 +225,18 @@ while(1) {
 		// PLATINE ANSTEUERN ------------
 		if(platine) {
 			// geschwindigkeit 
-			double f_speed=sqrt(sqrt((double)speed/255.0))*255.0;
+			// double f_speed=sqrt(sqrt((double)speed/255.0))*255.0; // für üperhaupt keine elektronik vorm motor gut (schienentraktor)
+			unsigned int a_speed=abs(speed);
+			double f_speed=a_speed;
+
 			int ia1=255-(int)f_speed;
 			printf("speed: %d (%f)\n",ia1,f_speed);
-			int ia2=0;
+			int ia2=speed < 0 ? 255 : 0; // 255 -> relais zieht an
 			int id8=0;
 			// printf("speed=%d: ",speed);
 			for(int i=1; i < 9; i++) {
 				// printf("%d ",255*i/(9));
-				if( speed >= 255*i/(9)) {
+				if( a_speed >= 255*i/(9)) {
 					id8 |= 1 << (i-1);
 				}
 			}
@@ -176,13 +246,16 @@ while(1) {
 				id8=a | a << 4;
 			}
 			platine->write_output(ia1, ia2, id8);
+		} else if(srcp) { // erddcd/srcp/dcc:
+			int dir= speed < 0 ? 0 : 1;
+			if(emergencyStop) {
+				dir=2;
+			}
+			int nFahrstufen = 14;
+			int dccSpeed = abs(speed) * 14 / 255;
+			srcp->send(addr, dir, nFahrstufen, dccSpeed, nFunc, func);
 		}
 
-		/*
-		if((x++)%10==0) {
-			write(nsk,"101010\n",7);
-		}
-		*/
 	}
 
 	resetPlatine();
@@ -311,6 +384,10 @@ void signalHandler(int signo, siginfo_t *p, void *ucontext)
 {
 	printf("signalHandler\n"); 
 	resetPlatine();
+	if(srcp) {
+		delete(srcp);
+		srcp=NULL;
+	}
 	exit(0);
 }
 
