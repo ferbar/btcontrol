@@ -514,25 +514,25 @@ mydebug.debug("servicesDiscovered n:"+servRecord.length+"\n");;
 /**
  * The RFCOMMPrinterClient will make a connection using the connection string
  * provided and send a message to the server to print the data sent.
- */
+ *
 class RFCOMMPrinterClient {
 
-    /**
+    **
      * Keeps the connection string in case the application would like to make
      * multiple connections to a printer.
-     */
+     *
     private String serverConnectionString;
 
-    /**
+    **
      * Creates an RFCOMMPrinterClient that will send print jobs to a printer.
      *
      * @param server the connection string used to connect to the server
-     */
+     *
     RFCOMMPrinterClient(String server) {
         serverConnectionString = server;
     }
 
-    /**
+    **
      * Sends the data to the printer to print.  This method will establish a
      * connection to the server and send the String in bytes to the printer.
      * This method will send the data in the default encoding scheme used by
@@ -542,26 +542,20 @@ class RFCOMMPrinterClient {
      *
      * @return true if the data was printed; false if the data failed to be
      * printed
-     */
+     *
     public boolean printJob(String data) {
         OutputStream os = null;
         StreamConnection con = null;
 
         try {
-            /*
-             * Open the connection to the server
-             */
+            // Open the connection to the server
            con =(StreamConnection)Connector.open(serverConnectionString);
 
-           /*
-            * Sends data to remote device
-            */
+           // Sends data to remote device
            os = con.openOutputStream();
            os.write(data.getBytes());
 
-           /*
-            * Close all resources
-            */
+           // Close all resources
            os.close();
            con.close();
         } catch (IOException e2) {
@@ -573,30 +567,31 @@ class RFCOMMPrinterClient {
         return true;
    }
 }
+	 */
 
 /**
  * The L2CAPPrinterClient will make a connection using the connection string
  * provided and send a message to the server to print the data sent.
- */
+ *
 class L2CAPPrinterClient {
 
-    /**
+    **
      * Keeps the connection string in case the application would like to make
      * multiple connections to a printer.
-     */
+     *
     private String serverConnectionString;
 
-    /**
+    **
      * Creates an L2CAPPrinterClient object that will allow an application to
      * send multiple print jobs to a Bluetooth printer.
      *
      * @param server the connection string used to connect to the server
-     */
+     *
     L2CAPPrinterClient(String server) {
         serverConnectionString = server;
     }
 
-    /**
+    **
      * Sends a print job to the server.  The print job will print the message
      * provided.
      *
@@ -604,7 +599,7 @@ class L2CAPPrinterClient {
      *
      * @return true if the message was printed; false if the message was not
      * printed
-     */
+     *
     public boolean printJob(String msg) {
         L2CAPConnection con = null;
         byte[] data = null;
@@ -612,28 +607,22 @@ class L2CAPPrinterClient {
         byte[] temp = null;
 
         try {
-            /*
-             * Create a connection to the server
-             */
+            // Create a connection to the server
             con = (L2CAPConnection)Connector.open(serverConnectionString);
 
-            /*
-             * Determine the maximum amount of data I can send to the server.
-             */
+            // Determine the maximum amount of data I can send to the server.
             int MaxOutBufSize = con.getTransmitMTU();
             temp = new byte[MaxOutBufSize];
 
-            /*
-             * Send as many packets as are needed to send the data
-             */
+            // Send as many packets as are needed to send the data
             data = msg.getBytes();
 
             while (index < data.length) {
 
-                /*
+                *
                  * Determine if this is the last packet to send or if there
                  * will be additional packets
-                 */
+                 *
                 if ((data.length - index) < MaxOutBufSize) {
                     temp = new byte[data.length - index];
                     System.arraycopy(data, index, temp, 0, data.length - index);
@@ -647,9 +636,7 @@ class L2CAPPrinterClient {
                 index += MaxOutBufSize;
             }
 
-            /*
-             * Close the connection to the server
-             */
+            // Close the connection to the server
             con.close();
         } catch (BluetoothConnectionException e) {
             System.out.println("Failed to print message");
@@ -666,4 +653,4 @@ class L2CAPPrinterClient {
 
 } // End of class L2CAPPrinterClient
 
-
+*/

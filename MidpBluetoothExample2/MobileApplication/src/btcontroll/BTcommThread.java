@@ -10,6 +10,7 @@ package btcontroll;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.lang.Exception;
 import java.util.Timer;
 import java.util.TimerTask;
 import javax.microedition.io.StreamConnection;
@@ -38,8 +39,13 @@ public class BTcommThread extends Thread{
 	// wenn daten empfangen werden wird notify() aufgerufen
 	public Callback notifyObject=null;
 	
-	
+
+	// FIXME: riesen pfusch das !!!!!!!!!!
 	String my_queue[];
+	Object queue_wait=new Object(); // thread macht nachn senden ein notify -> kamma neues reinschreiben
+	boolean returnReply=false;
+	String reply=null;
+	Object reply_sync=new Object();
 	
 	// sachen fürn timeout:
 	boolean timeout=false;
@@ -134,13 +140,60 @@ public class BTcommThread extends Thread{
 		debugForm.vibrate(1000);
 	}
 	
-	public void addCmdToQueue(String cmd) {
-		synchronized(my_queue) {
+	public void addCmdToQueue(String cmd) throws Exception {
+		synchronized(queue_wait) {
+			if(my_queue[0] != "") { // queue nicht leet
+				try {
+					debugForm.debug("addCmdToQueue need wait");
+					queue_wait.wait(); // ... dann auf das nächste notify warten
+				} catch (Exception e) {
+					debugForm.debug("addCmdToQueue exception ("+e.toString()+")");
+				}
+			}
+			if(my_queue[0] != "") {
+				throw new Exception("addCmdToQueue: queue not empty");
+			}
 			my_queue[0]=cmd;
 		}
+		
 		synchronized(this.timerwait) {
 			this.timerwait.notify();
 		}
+	}
+	
+	/**
+	 * sendet ein command und liefert die antwort zurück
+	 */
+	public String execCmd(String cmd) throws Exception {
+		debugForm.debug("execCmd "+cmd+"\n");
+		addCmdToQueue(cmd);
+		if(this.reply != null) { // ganz schlecht
+			debugForm.debug("execCmd: reply scho gesetzt!\n");
+			throw new Exception("reply != null");
+		}
+		this.reply=new String();
+		this.returnReply=true;
+		String ret="undef";
+
+		debugForm.debug("execCmd: wait 4 reply\n");
+		synchronized(this.reply_sync) {
+	
+			try {
+				this.reply_sync.wait();
+			} catch (InterruptedException ex) {
+				debugForm.debug("execCmd: wait exception\n");
+				ex.printStackTrace();
+			}
+	 
+			debugForm.debug("execCmd: wait done\n");
+			this.returnReply=false;
+			ret = this.reply;
+			this.reply=null;
+		}
+
+		debugForm.debug("execCmd: return: \""+ret+"\"\n");
+		return ret;
+	
 	}
 	
 	/**
@@ -180,21 +233,26 @@ public class BTcommThread extends Thread{
 			int maxTPing=0;
 			int avgTPing=0;
 			while(true) {
-				synchronized(timerwait) {
-					try {
-						// helloForm.append("wait...");
-						timerwait.wait();
-						// helloForm.append("...wait done\n");
-					} catch (Exception e) {
-						debugForm.debug("wait exception ("+e.toString()+')');
-						return;
+				if(my_queue[0]=="") { // kein befehl in der queue -> auf timerwait warten (= entweder timeout/nop oder ein neuer befehl
+					synchronized(timerwait) {
+						try {
+							// helloForm.append("wait...");
+							timerwait.wait();
+							// helloForm.append("...wait done\n");
+						} catch (Exception e) {
+							debugForm.debug("wait exception ("+e.toString()+')');
+							return;
+						}
 					}
 				}
 				long startTime = System.currentTimeMillis();
-				synchronized(my_queue) {
+				boolean returnReply=false;
+				synchronized(queue_wait) {
+					
 					if(my_queue[0]!= "") {
 						s=commandNr+" "+my_queue[0]+"\n";
 						my_queue[0]="";
+						queue_wait.notify();
 					} else {
 						s=commandNr+" nop\n";
 					}
@@ -207,12 +265,18 @@ public class BTcommThread extends Thread{
 				sendtext.setText("sent: "+s);
 				boolean found=false;
 				while(!found) { // so lange lesen bis zeile mit cmdnr anfängt
+					// debugForm.debug("readln for cmd "+commandNr+"\n");
 					int n =myReadLn(iStream,buffer);
 					s=new String(buffer,0,n);
 					// helloForm.append("read done ("+n+"): "+s+'\n');
-					readtext.setText("read done ("+n+"): "+s+'\n');
+					if(s==null) {
+						debugForm.debug("BT comm thread: s==null\n");;
+						return;
+					}
+					// debugForm.debug("read done ("+n+"): \""+s+"\"\n");
+					readtext.setText("read done ("+n+"): \""+s+"\"\n");
 					if(n<=1) {
-						debugForm.debug("read 0 bytes?!?!? ("+n+")");
+						debugForm.debug("BT comm thread: read 0 bytes?!?!? ("+n+")");
 						return;
 					}
 					String sreply_commandNr="";
@@ -220,6 +284,7 @@ public class BTcommThread extends Thread{
 					n=0;
 					char c;
 
+					// nr einlesen ...
 					while(n < s.length() && Character.isDigit(c=s.charAt(n))) {
 						sreply_commandNr+=c;
 						n++;
@@ -233,26 +298,48 @@ public class BTcommThread extends Thread{
 						sreply+=c;
 						n++;
 					}
+					// debugForm.debug("cmd parse done\n");
+					
+					// --> mehrzeilige antwort mit spaces am anfang:
+					if(sreply_commandNr.length() == 0) {
+						debugForm.debug("no cmd end received!: \""+s+"\"\n");
+						if(this.returnReply) {
+							debugForm.debug("returnReply\n");
+							this.reply += s.substring(1) + '\n'; // readline filterts ja raus ....
+						}
+						continue;
+					}
+					// sreply_commandNr angegeben -> cmd ende und speed steht auch da
+					int reply_commandNr=Integer.parseInt(sreply_commandNr);
+					if(reply_commandNr==commandNr)
+						found=true;
+
+					// debugForm.debug("read speed\n");
+					// speed auslesen - gibts nur wenn commandNr angegeben wurde
 					try {
 						this.speed=Integer.parseInt(sreply);
 					} catch (Exception e) {
-						debugForm.debug("parseint:"+ e.toString()+"\n");
+						debugForm.debug("parsespeed:"+ e.toString()+"\n");
 					}
 					
-					if(notifyObject != null) {
+					// debugForm.debug("notify\n");
+					if(this.notifyObject != null) {
 						try {
 							notifyObject.BTCallback();
 						} catch (Exception e) {
 							debugForm.debug("BTCallback exception: "+e.toString()+"\n");
 						}
 					}
+					// debugForm.debug("notify done\n");
 					// helloForm.append("rx: "+sreply_commandNr+'\n');
 					pingtext.setText("rx: "+sreply_commandNr+'\n');
-					if(sreply_commandNr.length() == 0)
-						continue;
-					int reply_commandNr=Integer.parseInt(sreply_commandNr);
-					if(reply_commandNr==commandNr)
-						found=true;
+				}
+				if(this.returnReply){
+					synchronized(this.reply_sync) {
+						// debugForm.debug("reply.notify\n");
+						this.reply_sync.notify();
+						this.returnReply=false;
+					}
 				}
 				commandNr++;
 				long endTime = System.currentTimeMillis();
@@ -265,13 +352,19 @@ public class BTcommThread extends Thread{
 					this.timeout=false;
 				}
 				timeoutTimer.cancel();
+				// debugForm.debug("done ("+commandNr+")\n");
 			}
 		} catch (java.io.IOException e) {
-			debugForm.debug("IO exception("+e.toString()+")\n");
+			debugForm.debug("BT comm thread: IO exception("+e.toString()+")\n");
 		} catch (Exception e) {
-			debugForm.debug("exception("+e.toString()+")\n");
+			debugForm.debug("BT comm thread: exception("+e.toString()+")\n");
 		}
-		debugForm.debug("BT comm thread ended\n");
+		if(this.returnReply){
+			synchronized(this.reply_sync) { // sicher is sicher ...
+				this.reply_sync.notify();
+			}
+		}
+		debugForm.debug("BT comm thread: ended\n");
 		close();
 		timer.cancel(); // ping timer stoppen sonst gibts eventuell irgendwann 2 davon ...
 	}

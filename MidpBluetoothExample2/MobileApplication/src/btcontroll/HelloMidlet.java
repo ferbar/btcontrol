@@ -29,10 +29,12 @@ import javax.microedition.io.StreamConnection;
 public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages, PrintClient.iAddAvailService, 
 		BTcommThread.DisplayOutput {
     
-
+	static public Display display;
 	
     /** Creates a new instance of HelloMidlet */
-    public HelloMidlet() {
+    public HelloMidlet()
+	{
+		display=this.getDisplay();
     }
     
 	private Form helloForm;
@@ -48,7 +50,9 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 	private Command screenCommand_startConrtollCanvas;
 	private Command itemCommandBlah1;
     private Command clearCommand=new Command("clear", Command.SCREEN, 1);
+    private Command btScanCommand=new Command("erneute BT suche", Command.SCREEN, 2);
 	private Command screenCommand_startControllCanvas=new Command("connect", Command.ITEM, 1);
+
 	
 	private Canvas controllCanvas;
 	BTcommThread btcomm;
@@ -215,7 +219,7 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 				getDisplay().setCurrent(get_helloForm());//GEN-LINE:MVDCAAction34
 				// Insert post-action code here//GEN-LINE:MVDCAAction21
 				//GEN-LINE:MVDCACase21
-			} else if (command == screenCommand_startControllCanvas) {
+			} else if (command == screenCommand_startControllCanvas) { // verbinden!
 				if(btcomm != null && !btcomm.isAlive()) {
 					helloForm.append("btcomm not alive -> deleting object");
 					btcomm.close();
@@ -257,15 +261,23 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 				debug("sr done--------\n");
 			}//GEN-BEGIN:MVDCACase23
 		}//GEN-END:MVDCACase23
-		else if(displayable == controllCanvas) {
-			if(command == exitCommand) {
-				getDisplay().setCurrent(get_helloForm());
+		if (command == btScanCommand) {  // neue BT suche
+			PrintClient client;
+			this.listServer = null;
+			try {
+				client=new PrintClient(this,this);
+			} catch (BluetoothStateException e) {
+				helloForm.append("exception: ("+e.toString()+") bluetooth disabled?");
+				e.printStackTrace();
+				return;
 			}
-		}
+			client.findPrinter();
+		} 
+		
 		// Insert global post-action code here
 		} catch(Exception e) {
 			Alert alert;
-			alert = new Alert("Exception",e.getMessage(),null,null);
+			alert = new Alert("commandActioon","Exception:"+e.toString(),null,null);
 			alert.setTimeout(Alert.FOREVER);
 			getDisplay().setCurrent(alert);
 		}
@@ -296,6 +308,7 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 			helloForm = new Form(null, new Item[0]);
 			helloForm.addCommand(screenCommand1);
 			helloForm.addCommand(clearCommand);
+			helloForm.addCommand(btScanCommand);
 			helloForm.addCommand(get_helpCommand1());
 			helloForm.addCommand(get_exitCommand());
 			helloForm.setCommandListener(this);
@@ -307,9 +320,8 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
     
 	public Canvas get_controllCanvas(BTcommThread btcomm) {
 		if(controllCanvas==null) {
-			controllCanvas=new MIDPCanvas(btcomm);
-			controllCanvas.setCommandListener(this);
-			controllCanvas.addCommand(exitCommand);
+			controllCanvas=new MIDPCanvas(this, btcomm);
+
 		} else {
 			((MIDPCanvas) controllCanvas).update(btcomm);
 		}
@@ -364,9 +376,10 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 			listServer.addCommand(get_backCommand2());
 			listServer.addCommand(screenCommand_startControllCanvas);
 			listServer.setCommandListener(this);
-			listServer.setSelectedFlags(new boolean[0]);
+			// macht exception am neuen sony .... listServer.setSelectedFlags(new boolean[0]);
 			listServer.setSelectCommand(screenCommand_startControllCanvas);
 			listServer.addCommand(itemCommandShowServiceRecord);
+			listServer.addCommand(btScanCommand);
 			// Insert post-init code here
 		}
 		return listServer;
@@ -422,14 +435,25 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
     }
 
 	public void AddAvailService(ServiceRecord sr) {
+		this.debug("isbtservice?\n");
 		if(isBtControllService(sr)) {
+			this.debug("adding service...\n");
 			String url=sr.getConnectionURL(0,false);
 			int p=url.indexOf(";");
-			url=url.substring(0,p);
-			int index = this.get_listServer().append(url,null);
-			availServices.put(url,sr);
+			if(p >= 0)
+				url=url.substring(0,p);
+			try {
+				List mylist = this.get_listServer();
+				this.debug("service add: getlist\n");
+				int index = mylist.append(url,null);
+				this.debug("service added ("+index+")\n");
+				availServices.put(url,sr);
+			} catch(Exception e) {
+				this.debug("service-add Exception: "+e.toString()+"\n");				
+			}
+		} else {
+			this.debug("service not added\n");
 		}
-		
 	}
 
 	/**
