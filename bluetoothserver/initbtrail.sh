@@ -8,3 +8,11 @@ sdptool setattr 0x10005 0x100 "btrail"
 
 # port 30 auf /dev... mappen
 # rfcomm -r listen /dev/rfcomm30 30
+
+# wenn pc master kann er bis zu 7 connections machen
+hciconfig hci0 lm master
+
+# verbindungen anzeigen
+# hcitool con
+# verbindungsqualität anzeigen
+# watch hcitool rssi 00:12:EE:21:20:63

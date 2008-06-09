@@ -68,21 +68,30 @@ void SRCP::pwrOff()
 
 void SRCP::send(int addr, int dir, int nFahrstufen, int speed, int nFunc, bool *func)
 {
-	assert(nFunc==4);
-	const char *proto = addr > 32 ? "N2" : "N1";
+	// const char *proto = addr > 32 ? "N2" : "N1";
+	const char *proto=NULL;
+	switch(nFahrstufen) {
+		case 14: proto = "NB"; break;
+		case 28: proto = addr < 32 ? "N1" : "N3"; break;
+		case 127: proto = addr < 32 ? "N2" : "N4"; break;
+		default: assert(nFahrstufen == 14 || nFahrstufen == 28 || nFahrstufen == 127);
+	}
 	const int CMDBUFLEN=256;
 	char buf[CMDBUFLEN];
-	snprintf(buf,CMDBUFLEN-1,"SET GL %s %d %d %d " /* nFahrstufen*/ "%d " /* licht ein:*/ "%d " /*nFunc:*/ "%d %d %d %d %d\n",
+	snprintf(buf,CMDBUFLEN-1,"SET GL %s %d %d %d " /* nFahrstufen*/ "%d " /* licht ein:*/ "%d " /*nFunc:*/ "%d",
 			proto,
 			addr,
 			dir,
 			speed,
 			nFahrstufen,
 			1,
-			nFunc,
-			func[0],func[1],
-			func[2],func[3]);
-	printf("cmp: %s", buf);
+			nFunc);
+	for(int i=0; i < nFunc; i++) {
+		int pos=strlen(buf);
+		snprintf(buf+pos,CMDBUFLEN-1-pos," %d",func[i]); 
+	}
+	strcat(buf,"\n");
+	printf("cmd: %s", buf);
 	write(so,buf,strlen(buf));
 
 }

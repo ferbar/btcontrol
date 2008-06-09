@@ -12,11 +12,14 @@
 #include <assert.h>
 #include <math.h>
 
+#include <pthread.h>
 
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/hci.h>
 #include <bluetooth/hci_lib.h>
 #include <bluetooth/rfcomm.h>
+
+#include <map>
 
 #include "../usb k8055/k8055.h"
 
@@ -32,6 +35,43 @@ bool cfg_debug=false;
 K8055 *platine=NULL;
 SRCP *srcp=NULL;
 
+struct startupdata_t {
+	int clientID;
+	int so;
+};
+
+struct func_t {
+	const char *name;
+	bool pulse; // nur einmal einschalten dann gleich wieder aus
+	bool ison;
+};
+
+
+struct lokdef_t {
+	int addr;
+	char name[12];
+	int nFunc;
+	func_t func[16];
+	int currspeed;
+};
+
+static lokdef_t lokdef[16] = {
+//	{1,"lok1"},
+//	{2,"lok2"},
+//	{3,"lok3",4,{{"func1"},{"func2"},{"func3"},{"func4"}}},
+// die funk 5-12 werden extra übertragen -> sollten nicht stören
+	{3,"lok3",12,{{"func1"},{"func2"},{"func3"},{"func4"},{"func5"},{"func6"},{"func7"},{"func8"},{"func9"},{"func10"},{"func11"},{"func12"}}},
+	{4,"Ge 4/4 I",12,{{"sPfeife",true},{"sBremse",true},{"sPfeife+Echo"},{"sAnsage"},{"sAggregat ein/aus",false},{"sSound ein/aus",false},{"lFührerstand"},{"Rangiergang"},{"Ansage",true},
+		{"sLufthahn"},{"Pantho"},{"Pantho"},{"sKompressor"},{"sVakuumpumpe"},{"sStufenschalter"},{"schaltbare Verzögerung"}}},
+	{5,"lok5"},
+	{6,"Ge 6/6 II",8,{{"sSound ein/aus"},{"sPfeife"},{"sRangierpfiff"},{"sKompressor"},{"sPressluft"},{"Rangiergang"}}},
+	{413,"Ge 6/6 I",12,{{"lFührerstand"},{"2"},{"3"},{"lFührerstand"},{"sPfeife",true},{"s6"},{"s7"},{"sSound ein/aus"},{"sPfeife"},{"sRangierpfiff"},{"sKompressor"},{"sPressluft"}}},
+	{7,"Ge 4/4 II",8,{{"lFührerstand"},{"lFührerstand"},{"lSchweizer Rücklicht"},{"???"}}},
+	{12,"Ge 2/4"},
+	{14,"schoema",4,{{""},{"lblink"},{"lblink"},{""}}},
+	{0}
+};
+
 void resetPlatine()
 {
 	if(platine)
@@ -41,12 +81,222 @@ void resetPlatine()
 #define STREQ(s1,s2) (strcmp(s1,s2)==0)
 
 #define sendToPhone(text) \
-		if(strlen(text) != write(nsk,text,strlen(text))) { \
-			printf("error writing bla\n"); \
+		if(strlen(text) != write(startupdata->so,text,strlen(text))) { \
+			printf("%d:error writing message (%s)\n",startupdata->clientID, strerror(errno)); \
 			break; \
-		} \
+		} else { \
+			printf("%d: ->%s",startupdata->clientID,text); \
+		}
 
 #define MAXPATHLEN 255
+
+/**
+ * für jedes handy ein eigener thread...
+ */
+void *phoneClient(void *data)
+{
+	startupdata_t *startupdata=(startupdata_t *)data;
+	printf("%d:new client ID=%d\n",startupdata->clientID,startupdata->clientID);
+	printf("%d:socket accepted sending welcome msg\n",startupdata->clientID);
+	write(startupdata->so,"hallo\n",6);
+
+
+	int x=0;
+	int speed=0;
+	int addr=3;
+	while(1) {
+		char buffer[256];
+		int size;
+		bool emergencyStop=false;
+
+		if((size = read(startupdata->so, buffer, sizeof(buffer))) <= 0) {
+			printf("%d:error reading message\n",startupdata->clientID);
+			break;
+		}
+		buffer[size]='\0';
+		printf("%.*s",size,buffer);
+		int nr=0;
+		char cmd[sizeof(buffer)]="";
+		char param1[sizeof(buffer)]="";
+		char param2[sizeof(buffer)]="";
+		sscanf(buffer,"%d %s %s %s",&nr,&cmd, &param1, &param2);
+		printf("%d:<- %s p1=%s p2=%s\n",startupdata->clientID,cmd,param1,param2);
+		
+		if(cmd) {
+			if(memcmp(cmd,"up",2)==0) {
+				speed+=5;
+				if(speed > 255)
+					speed=255;
+			} else if(memcmp(cmd,"down",4)==0) {
+				speed-=5;
+				if(speed < -255)
+					speed=-255;
+			} else if(STREQ(cmd,"list")) { // liste mit eingetragenen loks abrufen, format: <name>;<adresse>;...\n
+				int i=0;
+				char buffer[32];
+				while(lokdef[i].addr) {
+					snprintf(buffer,sizeof(buffer)," %d;%s\n",lokdef[i].addr,lokdef[i].name);
+					sendToPhone(buffer);
+					i++;
+				}
+				/*
+				sendToPhone(" lok2;2\n");
+				sendToPhone(" lok3;3\n");
+				sendToPhone(" Ge 4/4 I;4\n");
+				sendToPhone(" lok5;5\n");
+				sendToPhone(" Ge 4/4 II;7\n");
+				sendToPhone(" Ge 6/6 II;6\n");
+				sendToPhone(" Ge 2/4;12\n");
+				sendToPhone(" schoema;14\n");
+				*/
+			} else if(STREQ(cmd,"funclist")) {
+				int i=0;
+				printf("funclist for addr %d\n");
+				while(lokdef[i].addr) {
+					if(lokdef[i].addr==addr) {
+						char buffer[32];
+						for(int j=0; j < lokdef[i].nFunc; j++) {
+							snprintf(buffer,sizeof(buffer)," %d;%d;%s\n",j+1,lokdef[i].func[j].ison,lokdef[i].func[j].name);
+							sendToPhone(buffer);
+						}
+						break;
+					}
+					i++;
+				}
+			} else if(STREQ(cmd,"func")) { // wenn cmd kürzer als 5 zeichen bricht der ja beim \0 ab -> ok
+				char *endptr=NULL;
+				int funcNr=atol(param1); // geht von 1..16
+				int i=0;
+				while(lokdef[i].addr) {
+					if(lokdef[i].addr==addr) {
+						if(funcNr > 0 && funcNr <= lokdef[i].nFunc) {
+							if(STREQ(param2,"on"))
+								lokdef[i].func[funcNr-1].ison = true;
+							else
+								lokdef[i].func[funcNr-1].ison = false;
+						} else {
+							printf("%d:invalid funcNr out of bounds(%d)\n",startupdata->clientID,funcNr);
+						}
+						break;
+					}
+					i++;
+				}
+			} else if(STREQ(cmd,"stop")) {
+				printf("stop\n");
+				speed=0;
+			} else if(STREQ(cmd,"select")) { // ret = lokname
+				addr=atoi(param1);
+				printf("%d:neue lok addr:%d\n",startupdata->clientID,addr);
+				int i=0;
+				bool found=false;
+				while(lokdef[i].addr) {
+					if(lokdef[i].addr==addr) {
+						char buffer[32];
+						snprintf(buffer,sizeof(buffer)," %s\n",lokdef[i].name);
+						sendToPhone(buffer);
+						found=true;
+						break;
+					}
+					i++;
+				}
+				if(!found)
+					sendToPhone(" invalid id\n");
+			} else if(STREQ(cmd,"pwr_off")) {
+				if(srcp) srcp->pwrOff();
+			} else if(STREQ(cmd,"pwr_on")) {
+				if(srcp) srcp->pwrOn();
+			} else if(memcmp(cmd,"invalid_key",10)==0) {
+				printf("%d:invalid key ! param1: %s\n",startupdata->clientID,param1);
+				int i=0;
+				int row=-1;
+				while(lokdef[i].addr) {
+					if(lokdef[i].addr==addr) {
+						row=i;
+						break;
+					}
+					i++;
+				}
+				bool notaus=false;
+				if(row >= 0) {
+					if(strcmp(param1,"(49)")==0) {
+						lokdef[i].func[0].ison = ! lokdef[i].func[0].ison;
+					} else if(strcmp(param1,"(55)")==0) {
+						lokdef[i].func[1].ison = ! lokdef[i].func[1].ison;
+					} else if(strcmp(param1,"(51)")==0) {
+						lokdef[i].func[2].ison = ! lokdef[i].func[2].ison;
+					} else if(strcmp(param1,"(57)")==0) {
+						lokdef[i].func[3].ison = ! lokdef[i].func[3].ison;
+					} else {
+						notaus=true;
+					}
+				} else {
+					notaus=true;
+				}
+				if(notaus) {
+					printf("notaus\n");
+					speed=0;
+					emergencyStop=true;
+				}
+			}
+		} else {
+			printf("%d:no command?????",startupdata->clientID);
+		}
+
+		// REPLY SENDEN -----------------
+		snprintf(buffer,sizeof(buffer),"%d %d\n",nr,speed);
+		sendToPhone(buffer);
+
+		// PLATINE ANSTEUERN ------------
+		if(platine) {
+			// geschwindigkeit 
+			// double f_speed=sqrt(sqrt((double)speed/255.0))*255.0; // für üperhaupt keine elektronik vorm motor gut (schienentraktor)
+			unsigned int a_speed=abs(speed);
+			double f_speed=a_speed;
+
+			int ia1=255-(int)f_speed;
+			printf("%d:speed: %d (%f)\n",startupdata->clientID,ia1,f_speed);
+			int ia2=speed < 0 ? 255 : 0; // 255 -> relais zieht an
+			int id8=0;
+			// printf("speed=%d: ",speed);
+			for(int i=1; i < 9; i++) {
+				// printf("%d ",255*i/(9));
+				if( a_speed >= 255*i/(9)) {
+					id8 |= 1 << (i-1);
+				}
+			}
+			// printf("\n");
+			if(speed==0) { // lauflicht anzeigen
+				int a=1 << (nr&3);
+				id8=a | a << 4;
+			}
+			platine->write_output(ia1, ia2, id8);
+		} else if(srcp) { // erddcd/srcp/dcc:
+			int dir= speed < 0 ? 0 : 1;
+			if(emergencyStop) {
+				dir=2;
+			}
+			int i=0;
+			bool found=false;
+			while(lokdef[i].addr) {
+				if(lokdef[i].addr==addr) {
+					// int nFahrstufen = 14;
+					int nFahrstufen = 127;
+					int dccSpeed = abs(speed) * nFahrstufen / 255;
+					bool func[16];
+					for(int j=0; j < lokdef[i].nFunc; j++) {
+						func[j]=lokdef[i].func[j].ison;
+					}
+					srcp->send(addr, dir, nFahrstufen, dccSpeed, lokdef[i].nFunc, func);
+					found=true;
+					break;
+				}
+				i++;
+			}
+		}
+	}
+	printf("%d:client exit\n",startupdata->clientID);
+}
+
 /**
  *
  *
@@ -115,6 +365,8 @@ static void cmd_listen(int ctl, int dev, bdaddr_t *bdaddr, int rc_channel)
 		}
 	}
 
+	int clientID_counter=1;
+	std::map<int,pthread_t> clients;
 
 	listen(sk, 10);
 while(1) {
@@ -123,138 +375,28 @@ while(1) {
 	alen = sizeof(raddr);
 	nsk = accept(sk, (struct sockaddr *) &raddr, &alen);
 
+// brauch ma das noch für irgendwas????
 	alen = sizeof(laddr);
 	if (getsockname(nsk, (struct sockaddr *)&laddr, &alen) < 0) {
 		perror("Can't get RFCOMM socket name");
 		close(nsk);
 		return;
 	}
-	printf("socket accepted sending welcome msg\n");
-	write(nsk,"hallo\n",6);
 
+	memset(&req, 0, sizeof(req));
+	bacpy(&req.src, &laddr.rc_bdaddr);
+	bacpy(&req.dst, &raddr.rc_bdaddr);
+	req.channel = raddr.rc_channel;
 	ba2str(&req.dst, dst);
 	printf("Connection from %s to %s\n", dst, devname);
 
-
-	int x=0;
-	int speed=0;
-	int addr=3;
-	int nFunc=4;
-	bool func[4]={false,false,false,false};
-	while(1) {
-		char buffer[256];
-		int size;
-		bool emergencyStop=false;
-
-		if((size = read(nsk, buffer, sizeof(buffer))) <= 0) {
-			printf("error reading bla\n");
-			break;
-		}
-		buffer[size]='\0';
-		printf("%.*s",size,buffer);
-		int nr=0;
-		char cmd[sizeof(buffer)]="";
-		char param[sizeof(buffer)]="";
-		sscanf(buffer,"%d %s %s",&nr,&cmd, &param);
-		printf("cmd=%s param=%s\n",cmd,param);
-		
-		if(cmd) {
-			if(memcmp(cmd,"up",2)==0) {
-				speed+=5;
-				if(speed > 255)
-					speed=255;
-			} else if(memcmp(cmd,"down",4)==0) {
-				speed-=5;
-				if(speed < -255)
-					speed=-255;
-			} else if(cmd[0] == 'f') {
-				int fnr=atoi(&cmd[1]);
-				if(fnr >= 0 && fnr < nFunc) {
-					func[fnr] = !func[fnr];
-				}
-			} else if(STREQ(cmd,"list")) { // liste mit eingetragenen loks abrufen, format: <name>;<adresse>;...\n
-				sendToPhone(" lok1;1\n");
-				sendToPhone(" lok2;2\n");
-				sendToPhone(" lok3;3\n");
-				sendToPhone(" Ge 4/4 I;4\n");
-				sendToPhone(" lok5;5\n");
-				sendToPhone(" Ge 4/4 II;7\n");
-				sendToPhone(" Ge 6/6 II;6\n");
-				sendToPhone(" Ge 2/4;12\n");
-				sendToPhone(" schoema;14\n");
-			} else if(STREQ(cmd,"stop")) {
-				printf("stop\n");
-				speed=0;
-			} else if(STREQ(cmd,"select")) { // ret = lokname
-				addr=atoi(param);
-				printf("neue lok addr:%d\n",addr);
-				char buffer[32];
-				snprintf(buffer,sizeof(buffer),"lok%d\n",addr);
-				sendToPhone(buffer);
-			} else if(STREQ(cmd,"pwr_off")) {
-				if(srcp) srcp->pwrOff();
-			} else if(STREQ(cmd,"pwr_on")) {
-				if(srcp) srcp->pwrOn();
-			} else if(memcmp(cmd,"invalid_key",10)==0) {
-				printf("param: %s\n",param);
-				if(strcmp(param,"(49)")==0) {
-					func[0] = ! func[0];
-				} else if(strcmp(param,"(55)")==0) {
-					func[1] = ! func[1];
-				} else if(strcmp(param,"(51)")==0) {
-					func[2] = ! func[2];
-				} else if(strcmp(param,"(57)")==0) {
-					func[3] = ! func[3];
-				} else {
-					printf("notaus\n");
-					speed=0;
-					emergencyStop=true;
-				}
-			}
-		} else {
-			printf("no command?????");
-		}
-
-		// REPLY SENDEN -----------------
-		snprintf(buffer,sizeof(buffer),"%d %d\n",nr,speed);
-		if(strlen(buffer) != write(nsk,buffer,strlen(buffer))) {
-			printf("error writing bla\n");
-			break;
-		}
-
-		// PLATINE ANSTEUERN ------------
-		if(platine) {
-			// geschwindigkeit 
-			// double f_speed=sqrt(sqrt((double)speed/255.0))*255.0; // für üperhaupt keine elektronik vorm motor gut (schienentraktor)
-			unsigned int a_speed=abs(speed);
-			double f_speed=a_speed;
-
-			int ia1=255-(int)f_speed;
-			printf("speed: %d (%f)\n",ia1,f_speed);
-			int ia2=speed < 0 ? 255 : 0; // 255 -> relais zieht an
-			int id8=0;
-			// printf("speed=%d: ",speed);
-			for(int i=1; i < 9; i++) {
-				// printf("%d ",255*i/(9));
-				if( a_speed >= 255*i/(9)) {
-					id8 |= 1 << (i-1);
-				}
-			}
-			// printf("\n");
-			if(speed==0) { // lauflicht anzeigen
-				int a=1 << (nr&3);
-				id8=a | a << 4;
-			}
-			platine->write_output(ia1, ia2, id8);
-		} else if(srcp) { // erddcd/srcp/dcc:
-			int dir= speed < 0 ? 0 : 1;
-			if(emergencyStop) {
-				dir=2;
-			}
-			int nFahrstufen = 14;
-			int dccSpeed = abs(speed) * 14 / 255;
-			srcp->send(addr, dir, nFahrstufen, dccSpeed, nFunc, func);
-		}
+// client thread vorbereiten + starten
+	startupdata_t *startupdata=(startupdata_t*) calloc(sizeof(startupdata_t),1);
+	startupdata->clientID=clientID_counter++;
+	startupdata->so=nsk;
+	pthread_t &newThread=clients[startupdata->clientID];
+	bzero(&newThread,sizeof(newThread));
+	pthread_create(&newThread, NULL, phoneClient, (void *)startupdata);
 
 	}
 
@@ -262,7 +404,6 @@ while(1) {
 
 	printf("Disconnected\n");
 	close(nsk);
-}
 
 #if 0 
 	if (linger) {
