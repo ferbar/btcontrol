@@ -1,3 +1,7 @@
+/**
+ * hint: http://www.mulliner.org/bluetooth/btchat/
+ * 
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,6 +28,16 @@
 #include "../usb k8055/k8055.h"
 
 #include "srcp.h"
+
+// macht aus blah "blah"
+#define     _STR(x)   _VAL(x)
+#define     _VAL(x)   #x
+
+
+// mit -D `svnversion` übergeben
+#ifndef SVNVERSION
+#define SVNVERSION unknown
+#endif
 
 static int auth = 0;
 static int encryption = 0;
@@ -535,8 +549,21 @@ void signalHandler(int signo, siginfo_t *p, void *ucontext)
 int main(int argc, char *argv[])
 {
 	if(argc > 1) {
-		if(strcmp(argv[1],"-debug")==0) {
+		if(strcmp(argv[1],"--debug")==0) {
 			cfg_debug=1;
+		}
+		if(strcmp(argv[1],"--version")==0) {
+			printf("btserver version %s\n", _STR(SVNVERSION));
+			exit(0);
+		}
+		if(strcmp(argv[1],"--help")==0) {
+			printf("btserver\n"
+				"	--debug\n"
+				"	--version\n"
+				"	--help\n"
+				"\n"
+				"connected zur conrad usb platine (PWM) oder erdcc (DCC)\n");
+			exit(0);
 		}
 	}
 	struct sigaction sa;
