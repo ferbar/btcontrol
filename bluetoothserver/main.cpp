@@ -60,31 +60,52 @@ struct func_t {
 	bool ison;
 };
 
+#define F_DEFAULT 0
+#define F_LGB_DEC 1
 
 struct lokdef_t {
 	int addr;
+	int flags;		// LGB loks mit 14 fahrstufen ansteuern
 	char name[12];
 	int nFunc;
 	func_t func[16];
 	int currspeed;
 };
 
+// darf kein pointer sein weil .currspeed und func wird ja geändert
 static lokdef_t lokdef[16] = {
 //	{1,"lok1"},
 //	{2,"lok2"},
 //	{3,"lok3",4,{{"func1"},{"func2"},{"func3"},{"func4"}}},
 // die funk 5-12 werden extra übertragen -> sollten nicht stören
-	{3,"lok3",12,{{"func1"},{"func2"},{"func3"},{"func4"},{"func5"},{"func6"},{"func7"},{"func8"},{"func9"},{"func10"},{"func11"},{"func12"}}},
-	{4,"Ge 4/4 I",12,{{"sPfeife",true},{"sBremse",true},{"sPfeife+Echo"},{"sAnsage"},{"sAggregat ein/aus",false},{"sSound ein/aus",false},{"lFührerstand"},{"Rangiergang"},{"Ansage",true},
+	{3,  F_DEFAULT,"lok3",12,{{"func1"},{"func2"},{"func3"},{"func4"},{"func5"},{"func6"},{"func7"},{"func8"},{"func9"},{"func10"},{"func11"},{"func12"}}},
+	{4,  F_DEFAULT,"Ge 4/4 I",12,{{"sPfeife",true},{"sBremse",true},{"sPfeife+Echo"},{"sAnsage"},{"sAggregat ein/aus",false},{"sSound ein/aus",false},{"lFührerstand"},{"Rangiergang"},{"Ansage",true},
 		{"sLufthahn"},{"Pantho"},{"Pantho"},{"sKompressor"},{"sVakuumpumpe"},{"sStufenschalter"},{"schaltbare Verzögerung"}}},
-	{5,"lok5"},
-	{6,"Ge 6/6 II",8,{{"sSound ein/aus"},{"sPfeife"},{"sRangierpfiff"},{"sKompressor"},{"sPressluft"},{"Rangiergang"}}},
-	{413,"Ge 6/6 I",12,{{"lFührerstand"},{"2"},{"3"},{"lFührerstand"},{"sPfeife",true},{"s6"},{"s7"},{"sSound ein/aus"},{"sPfeife"},{"sRangierpfiff"},{"sKompressor"},{"sPressluft"}}},
-	{7,"Ge 4/4 II",8,{{"lFührerstand"},{"lFührerstand"},{"lSchweizer Rücklicht"},{"???"}}},
-	{12,"Ge 2/4"},
-	{14,"schoema",4,{{""},{"lblink"},{"lblink"},{""}}},
+	{5,  F_DEFAULT,"lok5"},
+	{6,  F_DEFAULT,"Ge 6/6 II",8,{{"sSound ein/aus"},{"sPfeife"},{"sRangierpfiff"},{"sKompressor"},{"sPressluft"},{"Rangiergang"}}},
+	{413,F_DEFAULT,"Ge 6/6 I",12,{{"lFührerstand"},{"2"},{"3"},{"lFührerstand"},{"sPfeife",true},{"s6"},{"s7"},{"sSound ein/aus"},{"sPfeife"},{"sRangierpfiff"},{"sKompressor"},{"sPressluft"}}},
+	{7,  F_DEFAULT,"Ge 4/4 II",8,{{"lFührerstand"},{"lFührerstand"},{"lSchweizer Rücklicht"},{"???"}}},
+	{12, F_LGB_DEC,"Ge 2/4"},
+	{14, F_DEFAULT,"schoema",4,{{""},{"lblink"},{"lblink"},{""}}},
 	{0}
 };
+
+/**
+ * liefert den index
+ * @return < 0 wenn lok nicht gefunden
+ *
+ */
+int getAddrIndex(int addr)
+{
+	int i=0;
+	while(lokdef[i].addr) {
+		if(lokdef[i].addr==addr) {
+			return i;
+		}
+		i++;
+	}
+	return -1;
+}
 
 void resetPlatine()
 {
@@ -116,9 +137,12 @@ void *phoneClient(void *data)
 
 
 	int x=0;
-	int speed=0;
+	// int speed=0;
 	int addr=3;
 	while(1) {
+		int addr_index=getAddrIndex(addr);
+		// addr_index sollte immer gültig sin - sonst gibts an segv ....
+		
 		char buffer[256];
 		int size;
 		bool emergencyStop=false;
@@ -138,13 +162,13 @@ void *phoneClient(void *data)
 		
 		if(cmd) {
 			if(memcmp(cmd,"up",2)==0) {
-				speed+=5;
-				if(speed > 255)
-					speed=255;
+				lokdef[addr_index].currspeed+=5;
+				if(lokdef[addr_index].currspeed > 255)
+					lokdef[addr_index].currspeed=255;
 			} else if(memcmp(cmd,"down",4)==0) {
-				speed-=5;
-				if(speed < -255)
-					speed=-255;
+				lokdef[addr_index].currspeed-=5;
+				if(lokdef[addr_index].currspeed < -255)
+					lokdef[addr_index].currspeed=-255;
 			} else if(STREQ(cmd,"list")) { // liste mit eingetragenen loks abrufen, format: <name>;<adresse>;...\n
 				int i=0;
 				char buffer[32];
@@ -164,57 +188,42 @@ void *phoneClient(void *data)
 				sendToPhone(" schoema;14\n");
 				*/
 			} else if(STREQ(cmd,"funclist")) {
-				int i=0;
 				printf("funclist for addr %d\n");
-				while(lokdef[i].addr) {
-					if(lokdef[i].addr==addr) {
-						char buffer[32];
-						for(int j=0; j < lokdef[i].nFunc; j++) {
-							snprintf(buffer,sizeof(buffer)," %d;%d;%s\n",j+1,lokdef[i].func[j].ison,lokdef[i].func[j].name);
-							sendToPhone(buffer);
-						}
-						break;
-					}
-					i++;
+				char buffer[32];
+				for(int j=0; j < lokdef[addr_index].nFunc; j++) {
+					snprintf(buffer,sizeof(buffer)," %d;%d;%s\n",j+1,lokdef[addr_index].func[addr_index].ison,lokdef[addr_index].func[addr_index].name);
+					sendToPhone(buffer);
 				}
 			} else if(STREQ(cmd,"func")) { // wenn cmd kürzer als 5 zeichen bricht der ja beim \0 ab -> ok
 				char *endptr=NULL;
 				int funcNr=atol(param1); // geht von 1..16
-				int i=0;
-				while(lokdef[i].addr) {
-					if(lokdef[i].addr==addr) {
-						if(funcNr > 0 && funcNr <= lokdef[i].nFunc) {
-							if(STREQ(param2,"on"))
-								lokdef[i].func[funcNr-1].ison = true;
-							else
-								lokdef[i].func[funcNr-1].ison = false;
-						} else {
-							printf("%d:invalid funcNr out of bounds(%d)\n",startupdata->clientID,funcNr);
-						}
-						break;
+
+				if(lokdef[addr_index].addr==addr) {
+					if(funcNr > 0 && funcNr <= lokdef[addr_index].nFunc) {
+						if(STREQ(param2,"on"))
+							lokdef[addr_index].func[funcNr-1].ison = true;
+						else
+							lokdef[addr_index].func[funcNr-1].ison = false;
+					} else {
+						printf("%d:invalid funcNr out of bounds(%d)\n",startupdata->clientID,funcNr);
 					}
-					i++;
+					break;
 				}
 			} else if(STREQ(cmd,"stop")) {
 				printf("stop\n");
-				speed=0;
+				lokdef[addr_index].currspeed=0;
 			} else if(STREQ(cmd,"select")) { // ret = lokname
-				addr=atoi(param1);
-				printf("%d:neue lok addr:%d\n",startupdata->clientID,addr);
-				int i=0;
-				bool found=false;
-				while(lokdef[i].addr) {
-					if(lokdef[i].addr==addr) {
-						char buffer[32];
-						snprintf(buffer,sizeof(buffer)," %s\n",lokdef[i].name);
-						sendToPhone(buffer);
-						found=true;
-						break;
-					}
-					i++;
-				}
-				if(!found)
+				int new_addr=atoi(param1);
+				printf("%d:neue lok addr:%d\n",startupdata->clientID,new_addr);
+				int new_addr_index=getAddrIndex(new_addr);
+				if(new_addr_index >= 0) {
+					addr=new_addr;
+					addr_index=new_addr_index;
+					snprintf(buffer,sizeof(buffer)," %s\n",lokdef[addr_index].name);
+					sendToPhone(buffer);
+				} else {
 					sendToPhone(" invalid id\n");
+				}
 			} else if(STREQ(cmd,"pwr_off")) {
 				if(srcp) srcp->pwrOff();
 			} else if(STREQ(cmd,"pwr_on")) {
@@ -248,7 +257,7 @@ void *phoneClient(void *data)
 				}
 				if(notaus) {
 					printf("notaus\n");
-					speed=0;
+					lokdef[addr_index].currspeed=0;
 					emergencyStop=true;
 				}
 			}
@@ -257,21 +266,21 @@ void *phoneClient(void *data)
 		}
 
 		// REPLY SENDEN -----------------
-		snprintf(buffer,sizeof(buffer),"%d %d\n",nr,speed);
+		snprintf(buffer,sizeof(buffer),"%d %d\n",nr,lokdef[addr_index].currspeed);
 		sendToPhone(buffer);
 
 		// PLATINE ANSTEUERN ------------
 		if(platine) {
 			// geschwindigkeit 
-			// double f_speed=sqrt(sqrt((double)speed/255.0))*255.0; // für üperhaupt keine elektronik vorm motor gut (schienentraktor)
-			unsigned int a_speed=abs(speed);
+			// double f_speed=sqrt(sqrt((double)lokdef[addr_index].currspeed/255.0))*255.0; // für üperhaupt keine elektronik vorm motor gut (schienentraktor)
+			unsigned int a_speed=abs(lokdef[addr_index].currspeed);
 			double f_speed=a_speed;
 
 			int ia1=255-(int)f_speed;
-			printf("%d:speed: %d (%f)\n",startupdata->clientID,ia1,f_speed);
-			int ia2=speed < 0 ? 255 : 0; // 255 -> relais zieht an
+			printf("%d:lokdef[addr_index].currspeed: %d (%f)\n",startupdata->clientID,ia1,f_speed);
+			int ia2=lokdef[addr_index].currspeed < 0 ? 255 : 0; // 255 -> relais zieht an
 			int id8=0;
-			// printf("speed=%d: ",speed);
+			// printf("lokdef[addr_index].currspeed=%d: ",lokdef[addr_index].currspeed);
 			for(int i=1; i < 9; i++) {
 				// printf("%d ",255*i/(9));
 				if( a_speed >= 255*i/(9)) {
@@ -279,33 +288,27 @@ void *phoneClient(void *data)
 				}
 			}
 			// printf("\n");
-			if(speed==0) { // lauflicht anzeigen
+			if(lokdef[addr_index].currspeed==0) { // lauflicht anzeigen
 				int a=1 << (nr&3);
 				id8=a | a << 4;
 			}
 			platine->write_output(ia1, ia2, id8);
 		} else if(srcp) { // erddcd/srcp/dcc:
-			int dir= speed < 0 ? 0 : 1;
+			int dir= lokdef[addr_index].currspeed < 0 ? 0 : 1;
 			if(emergencyStop) {
 				dir=2;
 			}
-			int i=0;
-			bool found=false;
-			while(lokdef[i].addr) {
-				if(lokdef[i].addr==addr) {
-					// int nFahrstufen = 14;
-					int nFahrstufen = 127;
-					int dccSpeed = abs(speed) * nFahrstufen / 255;
-					bool func[16];
-					for(int j=0; j < lokdef[i].nFunc; j++) {
-						func[j]=lokdef[i].func[j].ison;
-					}
-					srcp->send(addr, dir, nFahrstufen, dccSpeed, lokdef[i].nFunc, func);
-					found=true;
-					break;
-				}
-				i++;
+			// int nFahrstufen = 14;
+			int nFahrstufen = 127;
+			if(lokdef[addr_index].flags & F_LGB_DEC) {
+				nFahrstufen = 14;
 			}
+			int dccSpeed = abs(lokdef[addr_index].currspeed) * nFahrstufen / 255;
+			bool func[16];
+			for(int j=0; j < lokdef[addr_index].nFunc; j++) {
+				func[j]=lokdef[addr_index].func[j].ison;
+			}
+			srcp->send(addr, dir, nFahrstufen, dccSpeed, lokdef[addr_index].nFunc, func);
 		}
 	}
 	printf("%d:client exit\n",startupdata->clientID);
@@ -572,7 +575,7 @@ int main(int argc, char *argv[])
 	sa.sa_flags=SA_SIGINFO;
 	sigaction(SIGINT,&sa,NULL);
 	sigaction(SIGTERM,&sa,NULL);
-	printf("dudl\n");
+	printf("btserver starting...\n");
 	bdaddr_t bdaddr;
 	bacpy(&bdaddr, BDADDR_ANY);
 
