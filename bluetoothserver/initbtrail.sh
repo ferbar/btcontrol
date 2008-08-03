@@ -10,9 +10,16 @@ sdptool setattr 0x10005 0x100 "btrail"
 # rfcomm -r listen /dev/rfcomm30 30
 
 # wenn pc master kann er bis zu 7 connections machen
-hciconfig hci0 lm master
+/usr/sbin/hciconfig hci0 lm master
 
 # verbindungen anzeigen
 # hcitool con
 # verbindungsqualität anzeigen
 # watch hcitool rssi 00:12:EE:21:20:63
+
+# checken ob piscan eingeschalten ist:
+/usr/sbin/hciconfig hci0 | grep ISCAN
+rc=$?
+if [ $rc != 0 ]; then
+	echo "bluetooth ISCAN nicht eingeschalten!" > /dev/stderr
+fi
