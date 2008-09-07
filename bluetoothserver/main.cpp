@@ -177,37 +177,24 @@ void *phoneClient(void *data)
 					sendToPhone(buffer);
 					i++;
 				}
-				/*
-				sendToPhone(" lok2;2\n");
-				sendToPhone(" lok3;3\n");
-				sendToPhone(" Ge 4/4 I;4\n");
-				sendToPhone(" lok5;5\n");
-				sendToPhone(" Ge 4/4 II;7\n");
-				sendToPhone(" Ge 6/6 II;6\n");
-				sendToPhone(" Ge 2/4;12\n");
-				sendToPhone(" schoema;14\n");
-				*/
 			} else if(STREQ(cmd,"funclist")) {
-				printf("funclist for addr %d\n");
+				printf("funclist for addr %d\n",addr);
 				char buffer[32];
 				for(int j=0; j < lokdef[addr_index].nFunc; j++) {
-					snprintf(buffer,sizeof(buffer)," %d;%d;%s\n",j+1,lokdef[addr_index].func[addr_index].ison,lokdef[addr_index].func[addr_index].name);
+					snprintf(buffer,sizeof(buffer)," %d;%d;%s\n",j+1,lokdef[addr_index].func[j].ison,lokdef[addr_index].func[j].name);
 					sendToPhone(buffer);
 				}
 			} else if(STREQ(cmd,"func")) { // wenn cmd kürzer als 5 zeichen bricht der ja beim \0 ab -> ok
 				char *endptr=NULL;
 				int funcNr=atol(param1); // geht von 1..16
 
-				if(lokdef[addr_index].addr==addr) {
-					if(funcNr > 0 && funcNr <= lokdef[addr_index].nFunc) {
-						if(STREQ(param2,"on"))
-							lokdef[addr_index].func[funcNr-1].ison = true;
-						else
-							lokdef[addr_index].func[funcNr-1].ison = false;
-					} else {
-						printf("%d:invalid funcNr out of bounds(%d)\n",startupdata->clientID,funcNr);
-					}
-					break;
+				if(funcNr > 0 && funcNr <= lokdef[addr_index].nFunc) {
+					if(STREQ(param2,"on"))
+						lokdef[addr_index].func[funcNr-1].ison = true;
+					else
+						lokdef[addr_index].func[funcNr-1].ison = false;
+				} else {
+					printf("%d:invalid funcNr out of bounds(%d)\n",startupdata->clientID,funcNr);
 				}
 			} else if(STREQ(cmd,"stop")) {
 				printf("stop\n");
