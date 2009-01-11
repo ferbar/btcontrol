@@ -84,7 +84,9 @@ static lokdef_t lokdef[16] = {
 	{5,  F_DEFAULT,"lok5"},
 	{6,  F_DEFAULT,"Ge 6/6 II",8,{{"sSound ein/aus"},{"sPfeife"},{"sRangierpfiff"},{"sKompressor"},{"sPressluft"},{"Rangiergang"}}},
 	{413,F_DEFAULT,"Ge 6/6 I",12,{{"lFührerstand"},{"2"},{"3"},{"lFührerstand"},{"sPfeife",true},{"s6"},{"s7"},{"sSound ein/aus"},{"sPfeife"},{"sRangierpfiff"},{"sKompressor"},{"sPressluft"}}},
+	{108,F_DEFAULT,"G 4/5",12,{{"lFührerstand"},{"2"},{"3"},{"lFührerstand"},{"sPfeife",true},{"s6"},{"s7"},{"sSound ein/aus"},{"sPfeife"},{"sRangierpfiff"},{"sKompressor"},{"sPressluft"}}},
 	{7,  F_DEFAULT,"Ge 4/4 II",8,{{"lFührerstand"},{"lFührerstand"},{"lSchweizer Rücklicht"},{"???"}}},
+	{647,F_DEFAULT,"Ge 4/4 III",12,{{"lFührerstand"},{"2"},{"3"},{"lFührerstand"},{"sPfeife",true},{"s6"},{"s7"},{"sSound ein/aus"},{"sPfeife"},{"sRangierpfiff"},{"sKompressor"},{"sPressluft"}}},
 	{12, F_LGB_DEC,"Ge 2/4"},
 	{14, F_DEFAULT,"schoema",4,{{""},{"lblink"},{"lblink"},{""}}},
 	{0}
@@ -148,7 +150,7 @@ void *phoneClient(void *data)
 		bool emergencyStop=false;
 
 		if((size = read(startupdata->so, buffer, sizeof(buffer))) <= 0) {
-			printf("%d:error reading message\n",startupdata->clientID);
+			printf("%d:error reading message size=%d \"%.*s\"\n",startupdata->clientID,size,size >= 0 ? buffer : NULL);
 			break;
 		}
 		buffer[size]='\0';
@@ -189,7 +191,7 @@ void *phoneClient(void *data)
 				int funcNr=atol(param1); // geht von 1..16
 
 				if(funcNr > 0 && funcNr <= lokdef[addr_index].nFunc) {
-					if(STREQ(param2,"on"))
+					if(STREQ(param2,"on") || STREQ(param2,"down"))
 						lokdef[addr_index].func[funcNr-1].ison = true;
 					else
 						lokdef[addr_index].func[funcNr-1].ison = false;
@@ -217,6 +219,8 @@ void *phoneClient(void *data)
 				if(srcp) srcp->pwrOn();
 			} else if(memcmp(cmd,"invalid_key",10)==0) {
 				printf("%d:invalid key ! param1: %s\n",startupdata->clientID,param1);
+				bool notaus=false;
+				/*
 				int i=0;
 				int row=-1;
 				while(lokdef[i].addr) {
@@ -226,7 +230,6 @@ void *phoneClient(void *data)
 					}
 					i++;
 				}
-				bool notaus=false;
 				if(row >= 0) {
 					if(strcmp(param1,"(49)")==0) {
 						lokdef[i].func[0].ison = ! lokdef[i].func[0].ison;
@@ -242,6 +245,7 @@ void *phoneClient(void *data)
 				} else {
 					notaus=true;
 				}
+				*/
 				if(notaus) {
 					printf("notaus\n");
 					lokdef[addr_index].currspeed=0;
@@ -253,7 +257,14 @@ void *phoneClient(void *data)
 		}
 
 		// REPLY SENDEN -----------------
-		snprintf(buffer,sizeof(buffer),"%d %d\n",nr,lokdef[addr_index].currspeed);
+		int funcbits=0;
+		for(int i=0; i < lokdef[addr_index].nFunc; i++) {
+			if(lokdef[addr_index].func[i].ison) {
+				funcbits |= (1 << i);
+			}
+		}
+		snprintf(buffer,sizeof(buffer),"%d %d %d %04x\n",nr,
+			lokdef[addr_index].addr,lokdef[addr_index].currspeed,funcbits);
 		sendToPhone(buffer);
 
 		// PLATINE ANSTEUERN ------------
@@ -564,6 +575,7 @@ int main(int argc, char *argv[])
 	sigaction(SIGTERM,&sa,NULL);
 	printf("btserver starting...\n");
 	bdaddr_t bdaddr;
+	// bzero(&bdaddr, sizeof(bdaddr));
 	bacpy(&bdaddr, BDADDR_ANY);
 
 	int ctl=1000;

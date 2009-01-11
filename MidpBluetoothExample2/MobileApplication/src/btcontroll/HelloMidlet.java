@@ -141,6 +141,10 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 	}
     public void debug(String text) {
         helloForm.append(text);
+		try {
+			// this.btcomm.addCmdToQueue("debug "+text+"\n");
+		}catch(Exception e) {
+		}
     }
 	public void debug(StringItem text) {
         helloForm.append(text);
@@ -183,7 +187,7 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
             e.printStackTrace();
 			return;
 		}
-		client.findPrinter();
+		client.findPrinter(false);
 	}//GEN-LINE:MVDInitEnd
     
 	/** Called by the system to indicate that a command has been invoked on a particular displayable.//GEN-BEGIN:MVDCABegin
@@ -271,7 +275,7 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 				e.printStackTrace();
 				return;
 			}
-			client.findPrinter();
+			client.findPrinter(true);
 		} 
 		
 		// Insert global post-action code here
@@ -435,79 +439,25 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
     }
 
 	public void AddAvailService(ServiceRecord sr) {
-		this.debug("isbtservice?\n");
-		if(isBtControllService(sr)) {
-			this.debug("adding service...\n");
-			String url=sr.getConnectionURL(0,false);
-			int p=url.indexOf(";");
-			if(p >= 0)
-				url=url.substring(0,p);
-			try {
-				List mylist = this.get_listServer();
-				this.debug("service add: getlist\n");
-				int index = mylist.append(url,null);
-				this.debug("service added ("+index+")\n");
-				availServices.put(url,sr);
-			} catch(Exception e) {
-				this.debug("service-add Exception: "+e.toString()+"\n");				
-			}
-		} else {
-			this.debug("service not added\n");
+		this.debug("adding service...\n");
+		String url=sr.getConnectionURL(0,false);
+		int p=url.indexOf(";");
+		if(p >= 0)
+			url=url.substring(0,p);
+		try {
+			List mylist = this.get_listServer();
+			this.debug("service add: getlist\n");
+			int index = mylist.append(url,null);
+			this.debug("service added ("+index+")\n");
+			availServices.put(url,sr);
+		} catch(Exception e) {
+			this.debug("service-add Exception: "+e.toString()+"\n");				
 		}
+	}
+	
+	public int CountAvailServices() {
+		return availServices.size();
+	
 	}
 
-	/**
-	 *
-	 * bissi mühsamer code damit ma sr["4"]=dataseq[1]=dataseq[1]=int bekommt 
-	 * TODO: das attr[nummer] kapseln ...
-	 *
-	 */
-	public boolean isBtControllService(ServiceRecord sr) {
-		try {
-			DataElement attr=sr.getAttributeValue(4);
-			if(DataElement.DATSEQ == attr.getDataType()) {
-				java.util.Enumeration en = (java.util.Enumeration) attr.getValue();
-				int n=0;
-				while (en.hasMoreElements()) {
-					DataElement attr1 = (DataElement) en.nextElement();
-					if(n==1) {
-						if(DataElement.DATSEQ == attr1.getDataType()) {
-							java.util.Enumeration en1 = (java.util.Enumeration) attr1.getValue();
-							n=0;
-							while (en1.hasMoreElements()) {
-								DataElement attr2 = (DataElement) en1.nextElement();
-								if(n==1) {
-									if(DataElement.U_INT_1 == attr2.getDataType()){
-										long port=attr2.getLong();
-										// debug("isBtControllService port:"+port+"\n");
-										if(port==30) // endlich meinen port gefunden !!!
-											return true;
-										else
-											return false;
-									} else {
-										debug("attr[0][1][1] != INT ("+attr2.getDataType()+")");
-										return false;
-									}
-								}
-								n++;
-							}
-							debug("isBtControllService fuk!\n");
-							return false;
-						} else {
-							debug("attr[0][1] != DATASEQ\n");
-							return false;
-						}
-					}
-					n++;
-				}
-			} else {
-				debug("attr[0] != DATASEQ\n");
-				return false;
-			}
-		} catch (Exception e) {
-			debug("exception: "+e.toString()+"\n");
-		}
-		debug("isBtControllService fuk2\n");
-		return false;
-	}
 }

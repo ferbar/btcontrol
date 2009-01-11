@@ -72,8 +72,8 @@ void SRCP::send(int addr, int dir, int nFahrstufen, int speed, int nFunc, bool *
 	const char *proto=NULL;
 	switch(nFahrstufen) {
 		case 14: proto = "NB"; break;
-		case 28: proto = addr < 32 ? "N1" : "N3"; break;
-		case 127: proto = addr < 32 ? "N2" : "N4"; break;
+		case 28: proto = addr < 128 ? "N1" : "N3"; break;
+		case 127: proto = addr < 128 ? "N2" : "N4"; break;
 		default: assert(nFahrstufen == 14 || nFahrstufen == 28 || nFahrstufen == 127);
 	}
 	const int CMDBUFLEN=256;

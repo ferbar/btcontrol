@@ -20,6 +20,7 @@ public class PrintClient implements DiscoveryListener {
 
 	public interface iAddAvailService {
 		public void AddAvailService(ServiceRecord sr);
+		public int CountAvailServices();
 	}
 	
 			
@@ -209,43 +210,46 @@ System.out.println("Done Waiting " + serviceSearchCount);
                 }
             }
         }
-		return true;
+		return addAvailService.CountAvailServices() > 0;
     }
 
     /**
      * Finds the first printer that is available to print to.
-     *
+     * @param fullSearch true => cache ignorieren
+	 *
      * @return the service record of the printer that was found; null if no
      * printer service was found
      */
-    public boolean findPrinter() {
+    public boolean findPrinter(boolean fullSearch) {
+        RemoteDevice[] devList;
+		if(!fullSearch) {
+			/*
+			 * If there are any devices that have been found by a recent inquiry,
+			 * we don't need to spend the time to complete an inquiry.
+			 */
+			devList = agent.retrieveDevices(DiscoveryAgent.CACHED);
+			if (devList != null) {
+				if (searchServices(devList)) {
+					System.out.println("findPrinter() return cached");
+					mydebug.updateStatus(devList.length+" devices cached");
+					return true;
+				}
+			}
 
-        /*
-         * If there are any devices that have been found by a recent inquiry,
-         * we don't need to spend the time to complete an inquiry.
-         */
-        RemoteDevice[] devList = agent.retrieveDevices(DiscoveryAgent.CACHED);
-        if (devList != null) {
-            if (searchServices(devList)) {
-                System.out.println("findPrinter() return cached");
-				mydebug.updateStatus(deviceList.size()+" devices cached");
-                return true;
-            }
-        }
-
-        /*
-         * Did not find any printer services from the list of cached devices.
-         * Will try to find a printer service in the list of pre-known
-         * devices.
-         */
-        devList = agent.retrieveDevices(DiscoveryAgent.PREKNOWN);
-        if (devList != null) {
-            if (searchServices(devList)) {
-				mydebug.updateStatus(deviceList.size()+" devices preknown");
-                System.out.println("findPrinter() preknown");
-                return true;
-            }
-        }
+			/*
+			 * Did not find any printer services from the list of cached devices.
+			 * Will try to find a printer service in the list of pre-known
+			 * devices.
+			 */
+			devList = agent.retrieveDevices(DiscoveryAgent.PREKNOWN);
+			if (devList != null) {
+				if (searchServices(devList)) {
+					mydebug.updateStatus(devList.length+" devices preknown");
+					System.out.println("findPrinter() preknown");
+					return true;
+				}
+			}
+		}
 
         /*
          * Did not find a printer service in the list of pre-known or cached
@@ -272,6 +276,8 @@ System.out.println("Done Waiting " + serviceSearchCount);
         } catch (BluetoothStateException e) {
 
             System.out.println("Unable to find devices to search");
+			mydebug.debug("Unable to find devices to search");
+			mydebug.updateStatus("Unable to search (ex)");
         }
 
         System.out.println("findPrinter() size="+deviceList.size());
@@ -279,6 +285,7 @@ System.out.println("Done Waiting " + serviceSearchCount);
        
        
         if(deviceList.size() > 0) {
+			mydebug.debug("found "+deviceList.size()+" Devices");
             devList = new RemoteDevice[deviceList.size()];
             deviceList.copyInto(devList);
             if (searchServices(devList)) {
@@ -469,7 +476,9 @@ mydebug.debug("servicesDiscovered n:"+servRecord.length+"\n");;
 		} else {
 			mydebug.debug("servicesDiscovered["+i+"] "+sr.getConnectionURL(0,false)+"\n");
 		}
-		addAvailService.AddAvailService(sr);
+		if(isBtControllService(sr)) {
+			addAvailService.AddAvailService(sr);
+		}
 	}
 
 
@@ -507,6 +516,63 @@ mydebug.debug("servicesDiscovered n:"+servRecord.length+"\n");;
             }
         }
     }
+	
+	/**
+	 *
+	 * bissi mühsamer code damit ma sr["4"]=dataseq[1]=dataseq[1]=int bekommt 
+	 * TODO: das attr[nummer] kapseln ...
+	 *
+	 */
+	public boolean isBtControllService(ServiceRecord sr) {
+		try {
+			mydebug.debug("isBtControllService?");
+			DataElement attr=sr.getAttributeValue(4);
+			if(DataElement.DATSEQ == attr.getDataType()) {
+				java.util.Enumeration en = (java.util.Enumeration) attr.getValue();
+				int n=0;
+				while (en.hasMoreElements()) {
+					DataElement attr1 = (DataElement) en.nextElement();
+					if(n==1) {
+						if(DataElement.DATSEQ == attr1.getDataType()) {
+							java.util.Enumeration en1 = (java.util.Enumeration) attr1.getValue();
+							n=0;
+							while (en1.hasMoreElements()) {
+								DataElement attr2 = (DataElement) en1.nextElement();
+								if(n==1) {
+									if(DataElement.U_INT_1 == attr2.getDataType()){
+										long port=attr2.getLong();
+										// debug("isBtControllService port:"+port+"\n");
+										if(port==30) // endlich meinen port gefunden !!!
+											return true;
+										else
+											return false;
+									} else {
+										mydebug.debug("attr[0][1][1] != INT ("+attr2.getDataType()+")");
+										return false;
+									}
+								}
+								n++;
+							}
+							mydebug.debug("isBtControllService fuk!\n");
+							return false;
+						} else {
+							mydebug.debug("attr[0][1] != DATASEQ\n");
+							return false;
+						}
+					}
+					n++;
+				}
+			} else {
+				mydebug.debug("attr[0] != DATASEQ\n");
+				return false;
+			}
+		} catch (Exception e) {
+			mydebug.debug("exception: "+e.toString()+"\n");
+		}
+		mydebug.debug("isBtControllService fuk2\n");
+		return false;
+	}
+
 }
 
 

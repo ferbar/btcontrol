@@ -1,4 +1,4 @@
-U1 P521
+U1 P521 (http://www.hemar.ch/daten/File/Prospekte/Cosmo_CrossReferenceCoupler.pdf kp1010 dürft auch gehn)
 C2 4.7µF
 R4 1k
 R20 2,2k

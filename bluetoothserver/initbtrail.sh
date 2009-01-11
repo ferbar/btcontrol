@@ -18,6 +18,10 @@ sdptool setattr 0x10005 0x100 "btrail"
 # watch hcitool rssi 00:12:EE:21:20:63
 
 # checken ob piscan eingeschalten ist:
+#
+# in /var/lib/bluetooth/<blue_id>/config eingetragen habe 
+# mode discoverable 
+# discovto 0 
 /usr/sbin/hciconfig hci0 | grep ISCAN
 rc=$?
 if [ $rc != 0 ]; then
