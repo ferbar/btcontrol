@@ -103,16 +103,18 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	public void paint(Graphics g) {
 		try {
 			int width=getWidth();
+			Font f=g.getFont();
+			int lineHeight=f.getHeight();
 			g.setColor(0xffffff);
 			g.fillRect(0, 0, width, getHeight());
 			g.setColor(0x00ff00);
 			int speed_len=(Math.abs(btcomm.currSpeed) * width/2 / 255);
 			if(btcomm.currSpeed >= 0) {
-				g.fillRect(width/2, 20, speed_len, 20);
+				g.fillRect(width/2, 20, speed_len, lineHeight);
 				g.setColor(0x0000ff);
 				g.drawString("Speed:"+btcomm.currSpeed,width/2,20,Graphics.TOP|Graphics.LEFT);
 			} else {
-				g.fillRect(width/2 - speed_len, 20, speed_len, 20);
+				g.fillRect(width/2 - speed_len, 20, speed_len, lineHeight);
 				g.setColor(0x0000ff);
 				g.drawString("Speed:"+btcomm.currSpeed,0,20,Graphics.TOP|Graphics.LEFT);
 			}
@@ -127,18 +129,18 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			//g.drawString("isDoubleBuffered: "+this.isDoubleBuffered(),0,40,Graphics.TOP|Graphics.LEFT);
 			if(btcomm.timeout) {
 				g.setColor(0xff0000);
-				g.fillRect(0, 40, getWidth(), 20);
+				g.fillRect(0, 20+lineHeight, getWidth(), lineHeight);
 				g.setColor(0x000000);
-				g.drawString("timeout",0,40,Graphics.TOP|Graphics.LEFT);
+				g.drawString("timeout",0,20+lineHeight,Graphics.TOP|Graphics.LEFT);
 			}
 			if(btcomm.isAlive()==false) {
 				g.setColor(0xff0000);
-				g.fillRect(0, 60, getWidth(), 20);
+				g.fillRect(0, 20+lineHeight*2, getWidth(), lineHeight);
 				g.setColor(0x000000);
-				g.drawString("disconnected",0,60,Graphics.TOP|Graphics.LEFT);
+				g.drawString("disconnected",0,20+lineHeight*2,Graphics.TOP|Graphics.LEFT);
 			}
 			if(err.compareTo("")!=0) {
-				g.drawString("error: "+err,0,60,Graphics.TOP|Graphics.LEFT);
+				g.drawString("error: "+err,0,20+lineHeight*2,Graphics.TOP|Graphics.LEFT);
 			}
 			if(this.inCommandAction) {
 				g.drawString("in cmdAction",0,80,Graphics.TOP|Graphics.LEFT);

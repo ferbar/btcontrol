@@ -44,8 +44,8 @@ public class BTcommThread extends Thread{
 
 	// FIXME: riesen pfusch das !!!!!!!!!!
 	String my_queue[];
+	boolean my_queue_returnReply=false;
 	Object queue_wait=new Object(); // thread macht nachn senden ein notify -> kamma neues reinschreiben
-	boolean returnReply=false;
 	String reply=null;
 	Object reply_sync=new Object();
 	
@@ -143,8 +143,13 @@ public class BTcommThread extends Thread{
 	}
 	
 	public void addCmdToQueue(String cmd) throws Exception {
+		addCmdToQueue(cmd,false);
+	}
+	
+	
+	public void addCmdToQueue(String cmd, boolean returnReply) throws Exception {
 		synchronized(queue_wait) {
-			if(my_queue[0] != null) { // queue nicht leer
+			if(this.my_queue[0] != null) { // queue nicht leer
 				try {
 					debugForm.debug("addCmdToQueue need wait");
 					queue_wait.wait(); // ... dann auf das nächste notify warten
@@ -152,10 +157,11 @@ public class BTcommThread extends Thread{
 					debugForm.debug("addCmdToQueue exception ("+e.toString()+")");
 				}
 			}
-			if(my_queue[0] != null) {
+			if(this.my_queue[0] != null) {
 				throw new Exception("addCmdToQueue: queue not empty");
 			}
-			my_queue[0]=cmd;
+			this.my_queue[0]=cmd;
+			this.my_queue_returnReply=returnReply;
 		}
 		
 		synchronized(this.timerwait) {
@@ -168,13 +174,12 @@ public class BTcommThread extends Thread{
 	 */
 	public String execCmd(String cmd) throws Exception {
 		debugForm.debug("execCmd "+cmd+"\n");
-		addCmdToQueue(cmd);
+		addCmdToQueue(cmd,true);
 		if(this.reply != null) { // ganz schlecht
 			debugForm.debug("execCmd: reply scho gesetzt!\n");
 			throw new Exception("reply != null");
 		}
 		this.reply=new String();
-		this.returnReply=true;
 		String ret="undef";
 
 		debugForm.debug("execCmd: wait 4 reply\n");
@@ -188,7 +193,6 @@ public class BTcommThread extends Thread{
 			}
 	 
 			debugForm.debug("execCmd: wait done\n");
-			this.returnReply=false;
 			ret = this.reply;
 			this.reply=null;
 		}
@@ -255,6 +259,9 @@ public class BTcommThread extends Thread{
 					
 					if(my_queue[0] != null) {
 						s=commandNr+" "+my_queue[0]+"\n";
+						debugForm.debug("#"+commandNr+" = "+my_queue[0]+"\n");
+						returnReply=my_queue_returnReply;
+						my_queue_returnReply=false;
 						my_queue[0]=null;
 						queue_wait.notify();
 					} else {
@@ -306,17 +313,20 @@ public class BTcommThread extends Thread{
 					
 					// --> mehrzeilige antwort mit spaces am anfang:
 					if(sreply_commandNr.length() == 0) {
-						debugForm.debug("no cmd end received!: \""+s+"\"\n");
-						if(this.returnReply) {
-							debugForm.debug("returnReply\n");
+						debugForm.debug("#"+commandNr+" multiline reply: \""+s+"\"\n");
+						if(returnReply) {
+							// debugForm.debug("returnReply\n");
 							this.reply += s.substring(1) + '\n'; // readline filterts ja raus ....
 						}
 						continue;
 					}
 					// sreply_commandNr angegeben -> cmd ende und speed steht auch da
 					int reply_commandNr=Integer.parseInt(sreply_commandNr);
-					if(reply_commandNr==commandNr)
+					if(reply_commandNr==commandNr) {
 						found=true;
+					} else {
+						debugForm.debug("#"+commandNr+" invalidID:\""+reply_commandNr+"\"");
+					}
 
 					// debugForm.debug("read speed\n");
 					// addr,speed,funcbits auslesen - gibts nur wenn commandNr angegeben wurde
@@ -357,18 +367,18 @@ public class BTcommThread extends Thread{
 						try {
 							notifyObject.BTCallback();
 						} catch (Exception e) {
-							debugForm.debug("BTCallback exception: "+e.toString()+"\n");
+							debugForm.debug("#"+commandNr+" BTCallback exception: "+e.toString()+"\n");
 						}
 					}
 					// debugForm.debug("notify done\n");
 					// helloForm.append("rx: "+sreply_commandNr+'\n');
 					pingtext.setText("rx: "+sreply_commandNr+'\n');
 				}
-				if(this.returnReply){
+				if(returnReply){
+					debugForm.debug("#"+commandNr+" done ret.len="+this.reply.length()+"\n");
 					synchronized(this.reply_sync) {
 						// debugForm.debug("reply.notify\n");
 						this.reply_sync.notify();
-						this.returnReply=false;
 					}
 				}
 				commandNr++;
@@ -389,7 +399,7 @@ public class BTcommThread extends Thread{
 		} catch (Exception e) {
 			debugForm.debug("BT comm thread: exception("+e.toString()+")\n");
 		}
-		if(this.returnReply){
+		if(my_queue_returnReply){
 			synchronized(this.reply_sync) { // sicher is sicher ...
 				this.reply_sync.notify();
 			}
