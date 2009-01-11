@@ -46,7 +46,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	TimerTask task=null;
 	public class HoldDownKeyTask extends TimerTask {
 		Object notifyObject;
-		private String cmd;
+		public String cmd;	// fürs releaseKey public
 		public HoldDownKeyTask(String cmd, Object notifyObject) {
 			this.notifyObject=notifyObject;
 			this.cmd=cmd;
@@ -106,16 +106,24 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			g.setColor(0xffffff);
 			g.fillRect(0, 0, width, getHeight());
 			g.setColor(0x00ff00);
-			int speed_len=(Math.abs(btcomm.speed) * width/2 / 255);
-			if(btcomm.speed >= 0) {
+			int speed_len=(Math.abs(btcomm.currSpeed) * width/2 / 255);
+			if(btcomm.currSpeed >= 0) {
 				g.fillRect(width/2, 20, speed_len, 20);
 				g.setColor(0x0000ff);
-				g.drawString("Speed:"+btcomm.speed,width/2,20,Graphics.TOP|Graphics.LEFT);
+				g.drawString("Speed:"+btcomm.currSpeed,width/2,20,Graphics.TOP|Graphics.LEFT);
 			} else {
 				g.fillRect(width/2 - speed_len, 20, speed_len, 20);
 				g.setColor(0x0000ff);
-				g.drawString("Speed:"+btcomm.speed,0,20,Graphics.TOP|Graphics.LEFT);
+				g.drawString("Speed:"+btcomm.currSpeed,0,20,Graphics.TOP|Graphics.LEFT);
 			}
+			// funcbits ausgeben:
+			String tmp=""; //+btcomm.currFuncBits+":";
+			for(int i=11; i >=0; i--) {
+				if((btcomm.currFuncBits & (1<<i)) > 0) {
+					tmp+=(i+1)+" ";
+				}
+			}
+			g.drawString(tmp,0,40,Graphics.TOP|Graphics.LEFT);
 			//g.drawString("isDoubleBuffered: "+this.isDoubleBuffered(),0,40,Graphics.TOP|Graphics.LEFT);
 			if(btcomm.timeout) {
 				g.setColor(0xff0000);
@@ -129,7 +137,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 				g.setColor(0x000000);
 				g.drawString("disconnected",0,60,Graphics.TOP|Graphics.LEFT);
 			}
-			if(err!="") {
+			if(err.compareTo("")!=0) {
 				g.drawString("error: "+err,0,60,Graphics.TOP|Graphics.LEFT);
 			}
 			if(this.inCommandAction) {
@@ -142,28 +150,46 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	
 	/**
 	 * Called when a key is pressed.
+	 * note: stop = commandAction
 	 */
 	protected  void keyPressed(int keyCode) {
 		if(btcomm!=null) {
 			String cmd;
-			int gameAction =this.getGameAction( keyCode );
-			switch ( gameAction )
-			{
-				case Canvas.UP:
-					cmd="up";
-					break;
-				case Canvas.LEFT:
-					cmd="left";
-					break;
-				case Canvas.DOWN:
-					cmd="down";
-					break;
-				case Canvas.RIGHT:
-					cmd="right";
-					break;
-				default:
-					cmd="invalid_key";
-					// leave unchanged
+			int repeatTimeout=1000; // ms
+			switch(keyCode) {
+				case Canvas.KEY_NUM0: cmd="func 10 down"; break;
+				case Canvas.KEY_NUM1: cmd="func 1 down"; break;
+				case Canvas.KEY_NUM2: cmd="func 2 down"; break;
+				case Canvas.KEY_NUM3: cmd="func 3 down"; break;
+				case Canvas.KEY_NUM4: cmd="func 4 down"; break;
+				case Canvas.KEY_NUM5: cmd="func 5 down"; break;
+				case Canvas.KEY_NUM6: cmd="func 6 down"; break;
+				case Canvas.KEY_NUM7: cmd="func 7 down"; break;
+				case Canvas.KEY_NUM8: cmd="func 8 down"; break;
+				case Canvas.KEY_NUM9: cmd="func 9 down"; break;
+				case Canvas.KEY_STAR: cmd="key_star down"; break;
+				case Canvas.KEY_POUND: cmd="key_pound down"; break;
+				default: 
+					repeatTimeout=250; // 4*/s senden
+					int gameAction =this.getGameAction( keyCode );
+					switch ( gameAction )
+					{
+						case Canvas.UP:
+							cmd="up";
+							break;
+						case Canvas.LEFT:
+							cmd="left";
+							break;
+						case Canvas.DOWN:
+							cmd="down";
+							break;
+						case Canvas.RIGHT:
+							cmd="right";
+							break;
+						default:
+							cmd="invalid_key";
+							// leave unchanged
+					}
 			}
 			try {
 				btcomm.addCmdToQueue(cmd + " ("+keyCode+")");
@@ -177,8 +203,8 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			timer = new Timer();
 			timerwait=new Object();
 			task = new HoldDownKeyTask(cmd,timerwait);
-			int timeout=250; // 4*/s senden
-			timer.schedule(task, timeout, timeout);
+			
+			timer.schedule(task, repeatTimeout, repeatTimeout);
 		} else {
 			err="no btcomm";
 		}
@@ -189,6 +215,15 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	 * Called when a key is released.
 	 */
 	protected  void keyReleased(int keyCode) {
+		String cmd=((HoldDownKeyTask)task).cmd;
+		if(cmd.startsWith("func ")) {
+			cmd=cmd.substring(0,cmd.length()-4);
+			try {
+				btcomm.addCmdToQueue(cmd+"up");
+			} catch (Exception e) {
+				err="keyReleased: Ex"+e.toString();
+			}
+		}
 		timer.cancel();
 	}
 	
@@ -250,7 +285,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	{
 		selectList = new List("Loks", Choice.IMPLICIT, new String[0], new Image[0]);
 		selectList.setCommandListener(this);
-		selectList.setSelectedFlags(new boolean[0]);
+		//selectList.setSelectedFlags(new boolean[0]);
 		selectList.setSelectCommand(locoListCMDSelect);
 		selectList.addCommand(locoListCMDBack);
 		return selectList;
@@ -261,7 +296,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	{
 		selectList = new List("Funktionen", Choice.IMPLICIT, new String[0], new Image[0]);
 		selectList.setCommandListener(this);
-		selectList.setSelectedFlags(new boolean[0]);
+		//selectList.setSelectedFlags(new boolean[0]);
 		selectList.setSelectCommand(funcListCMDOn);
 		selectList.addCommand(funcListCMDOff);
 		selectList.addCommand(locoListCMDBack);

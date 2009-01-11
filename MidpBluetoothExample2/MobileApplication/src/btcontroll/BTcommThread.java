@@ -32,7 +32,9 @@ public class BTcommThread extends Thread{
 	StreamConnection BTStreamConnection;
 	
 	private DisplayOutput debugForm;  
-	public int speed=0; // schreibta da rein, ruft notiry auf
+	public int currAddr=0; // schreibta da rein, ruft notiry auf
+	public int currSpeed=0;
+	public int currFuncBits=0;
 	interface Callback {
 		public void BTCallback();
 	}
@@ -142,7 +144,7 @@ public class BTcommThread extends Thread{
 	
 	public void addCmdToQueue(String cmd) throws Exception {
 		synchronized(queue_wait) {
-			if(my_queue[0] != "") { // queue nicht leet
+			if(my_queue[0] != null) { // queue nicht leer
 				try {
 					debugForm.debug("addCmdToQueue need wait");
 					queue_wait.wait(); // ... dann auf das nächste notify warten
@@ -150,7 +152,7 @@ public class BTcommThread extends Thread{
 					debugForm.debug("addCmdToQueue exception ("+e.toString()+")");
 				}
 			}
-			if(my_queue[0] != "") {
+			if(my_queue[0] != null) {
 				throw new Exception("addCmdToQueue: queue not empty");
 			}
 			my_queue[0]=cmd;
@@ -207,6 +209,8 @@ public class BTcommThread extends Thread{
 		int pingTimeout=2000;
 		timer.schedule(task, pingTimeout, pingTimeout);
 		my_queue=new String[2];
+		my_queue[0]=null;	my_queue[1]=null;
+		
 		
 		try {
 			// geht nicht: oStream.writeChars("hallo vom handy...\n");
@@ -233,7 +237,7 @@ public class BTcommThread extends Thread{
 			int maxTPing=0;
 			int avgTPing=0;
 			while(true) {
-				if(my_queue[0]=="") { // kein befehl in der queue -> auf timerwait warten (= entweder timeout/nop oder ein neuer befehl
+				if(my_queue[0] == null) { // kein befehl in der queue -> auf timerwait warten (= entweder timeout/nop oder ein neuer befehl
 					synchronized(timerwait) {
 						try {
 							// helloForm.append("wait...");
@@ -249,9 +253,9 @@ public class BTcommThread extends Thread{
 				boolean returnReply=false;
 				synchronized(queue_wait) {
 					
-					if(my_queue[0]!= "") {
+					if(my_queue[0] != null) {
 						s=commandNr+" "+my_queue[0]+"\n";
-						my_queue[0]="";
+						my_queue[0]=null;
 						queue_wait.notify();
 					} else {
 						s=commandNr+" nop\n";
@@ -270,7 +274,7 @@ public class BTcommThread extends Thread{
 					s=new String(buffer,0,n);
 					// helloForm.append("read done ("+n+"): "+s+'\n');
 					if(s==null) {
-						debugForm.debug("BT comm thread: s==null\n");;
+						debugForm.debug("BT comm thread: s==null\n");
 						return;
 					}
 					// debugForm.debug("read done ("+n+"): \""+s+"\"\n");
@@ -315,11 +319,37 @@ public class BTcommThread extends Thread{
 						found=true;
 
 					// debugForm.debug("read speed\n");
-					// speed auslesen - gibts nur wenn commandNr angegeben wurde
+					// addr,speed,funcbits auslesen - gibts nur wenn commandNr angegeben wurde
+					String tmp="-1";
+					int p=0;
 					try {
-						this.speed=Integer.parseInt(sreply);
+						int i=p+1;
+						while((i < sreply.length()) && Character.isDigit(sreply.charAt(i))) { i++; }
+						tmp=sreply.substring(p, i);
+						p=i+1;
+						this.currAddr=Integer.parseInt(tmp);
+						
+						i=p+1;
+						while((i < sreply.length()) && Character.isDigit(sreply.charAt(i))) { i++; }
+						tmp=sreply.substring(p, i);
+						p=i+1;
+						this.currSpeed=Integer.parseInt(tmp);
+						
+						i=p+1;
+						while(i < sreply.length()) {
+							int d=Character.digit(sreply.charAt(i),16);
+							if(d>=0 && d < 16) {
+							} else {
+								break;
+							}
+							i++;
+						}
+						tmp=sreply.substring(p, i);
+						p=i+1;
+						this.currFuncBits=Integer.parseInt(tmp,16);
+						
 					} catch (Exception e) {
-						debugForm.debug("parsespeed:"+ e.toString()+"\n");
+						debugForm.debug("parseret "+ e.toString()+" p:"+p+" tmp:\""+tmp+"\"\n");
 					}
 					
 					// debugForm.debug("notify\n");
