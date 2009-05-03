@@ -29,6 +29,8 @@
 
 #include "srcp.h"
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
 // macht aus blah "blah"
 #define     _STR(x)   _VAL(x)
 #define     _VAL(x)   #x
@@ -55,13 +57,14 @@ struct startupdata_t {
 };
 
 struct func_t {
-	const char *name;
+	char name[32];
 	bool pulse; // nur einmal einschalten dann gleich wieder aus
 	bool ison;
 };
 
 #define F_DEFAULT 0
-#define F_LGB_DEC 1
+#define F_DEC14 1
+#define F_DEC28 2
 
 struct lokdef_t {
 	int addr;
@@ -70,10 +73,12 @@ struct lokdef_t {
 	int nFunc;
 	func_t func[16];
 	int currspeed;
+	bool initDone;
 };
 
 // darf kein pointer sein weil .currspeed und func wird ja geändert
-static lokdef_t lokdef[16] = {
+static lokdef_t *lokdef; 
+/*= {
 //	{1,"lok1"},
 //	{2,"lok2"},
 //	{3,"lok3",4,{{"func1"},{"func2"},{"func3"},{"func4"}}},
@@ -87,10 +92,12 @@ static lokdef_t lokdef[16] = {
 	{108,F_DEFAULT,"G 4/5",12,{{"lFührerstand"},{"2"},{"3"},{"lFührerstand"},{"sPfeife",true},{"s6"},{"s7"},{"sSound ein/aus"},{"sPfeife"},{"sRangierpfiff"},{"sKompressor"},{"sPressluft"}}},
 	{7,  F_DEFAULT,"Ge 4/4 II",8,{{"lFührerstand"},{"lFührerstand"},{"lSchweizer Rücklicht"},{"???"}}},
 	{647,F_DEFAULT,"Ge 4/4 III",12,{{"lFührerstand"},{"2"},{"3"},{"lFührerstand"},{"sPfeife",true},{"s6"},{"s7"},{"sSound ein/aus"},{"sPfeife"},{"sRangierpfiff"},{"sKompressor"},{"sPressluft"}}},
-	{12, F_LGB_DEC,"Ge 2/4"},
+	{203,F_DEFAULT,"Ge 2/6 203",12,{{"lFührerstand"},{"2"},{"3"},{"lFührerstand"},{"sPfeife",true},{"s6"},{"s7"},{"sSound ein/aus"},{"sPfeife"},{"sRangierpfiff"},{"sKompressor"},{"sPressluft"}}},
+	{12, F_LGB_DEC,"Ge 2/4 213"},
 	{14, F_DEFAULT,"schoema",4,{{""},{"lblink"},{"lblink"},{""}}},
 	{0}
 };
+*/
 
 /**
  * liefert den index
@@ -298,15 +305,21 @@ void *phoneClient(void *data)
 			}
 			// int nFahrstufen = 14;
 			int nFahrstufen = 127;
-			if(lokdef[addr_index].flags & F_LGB_DEC) {
+			if(lokdef[addr_index].flags & F_DEC14) {
 				nFahrstufen = 14;
+			} else if(lokdef[addr_index].flags & F_DEC28) {
+				nFahrstufen = 28;
 			}
 			int dccSpeed = abs(lokdef[addr_index].currspeed) * nFahrstufen / 255;
 			bool func[16];
 			for(int j=0; j < lokdef[addr_index].nFunc; j++) {
 				func[j]=lokdef[addr_index].func[j].ison;
 			}
-			srcp->send(addr, dir, nFahrstufen, dccSpeed, lokdef[addr_index].nFunc, func);
+			if(!lokdef[addr_index].initDone) {
+				srcp->sendLocoInit(addr, nFahrstufen, lokdef[addr_index].nFunc);
+				lokdef[addr_index].initDone=true;
+			}
+			srcp->sendLocoSpeed(addr, dir, nFahrstufen, dccSpeed, lokdef[addr_index].nFunc, func);
 		}
 	}
 	printf("%d:client exit\n",startupdata->clientID);
@@ -547,6 +560,113 @@ void signalHandler(int signo, siginfo_t *p, void *ucontext)
 	exit(0);
 }
 
+
+int str2decodertype(const char *pos)
+{
+	if(strncmp(pos,"F_DEC14",7) == 0) {
+		return F_DEC14;
+	}
+	if(strncmp(pos,"F_DEC28",7) == 0) {
+		return F_DEC28;
+	}
+	return F_DEFAULT;
+}
+
+char *getnext(char **pos)
+{
+	printf("skipping value:");
+	while(**pos && (strchr(",\r\n",**pos) == NULL)) {
+		printf("%c",**pos);
+		(*pos)++;
+	}
+	printf("\n");
+	if(!**pos) {*pos=NULL; return NULL; }
+	(*pos)++; // , überspringen
+	printf("skipping spaces:");
+	while(**pos && (**pos == ' ') || (**pos == '\t')) {
+		printf("%c",**pos);
+		(*pos)++;
+	}
+	printf("\n");
+	char *endpos=*pos;
+	while(*endpos && (strchr(",\r\n",*endpos) == NULL)) endpos++;
+	return endpos;
+}
+
+#define CHECKVAL(_FMT, ...)	\
+		if(!pos) {	\
+			fprintf(stderr,"%s:%d " _FMT " \n",LOKDEF_FILENAME,n+1, ## __VA_ARGS__);	\
+			fclose(flokdef);	\
+			return false;	\
+		}
+
+/**
+ *
+ * @return true = sussess
+ */
+bool readLokdef()
+{
+#define LOKDEF_FILENAME "lokdef.csv"
+	FILE *flokdef=fopen(LOKDEF_FILENAME,"r");
+	if(!flokdef) {
+		fprintf(stderr,"error reading %s \n",LOKDEF_FILENAME);
+		return false;
+	}
+	char buffer[1024];
+	int n=0;
+	int line=0;
+	while(fgets(buffer,sizeof(buffer),flokdef)) {
+		line++;
+		printf("line %d\n",line);
+		if(buffer[0] =='#') continue;
+		lokdef = (lokdef_t *) realloc(lokdef, sizeof(lokdef_t)*(n+1));
+		bzero(&lokdef[n],sizeof(lokdef_t));
+		char *pos=buffer;
+		char *pos_end;
+		lokdef[n].addr=atoi(pos);
+		pos_end=getnext(&pos);
+		lokdef[n].flags=str2decodertype(pos);
+		pos_end=getnext(&pos);
+		strncpy(lokdef[n].name, pos,  MIN(sizeof(lokdef[n].name), pos_end-pos));
+		pos_end=getnext(&pos);
+		CHECKVAL("error reading nfunc");
+		lokdef[n].nFunc=atoi(pos);
+
+		for(int i=0; i < lokdef[n].nFunc; i++) {
+			pos_end=getnext(&pos);
+			CHECKVAL("func i = %d, nfunc %d invalid? %d function names missing",i,lokdef[n].nFunc,lokdef[n].nFunc-i);
+			strncpy(lokdef[n].func[i].name, pos, MIN(sizeof(lokdef[n].func[i].name), pos_end-pos));
+			if(strchr(lokdef[n].func[i].name,'\n') != NULL) {
+				fprintf(stderr,"%s:%d newline in funcname (%s)- irgendwas hats da\n",LOKDEF_FILENAME,n+1,lokdef[n].func[i].name);
+				exit(1);
+			}
+		}
+
+		n++;
+	}
+	fclose(flokdef);
+	// listen-ende:
+	lokdef = (lokdef_t *) realloc(lokdef, sizeof(lokdef_t)*(n+1));
+	bzero(&lokdef[n],sizeof(lokdef_t));
+
+	return true;
+}
+
+void dumpLokdef()
+{
+	int n=0;
+	printf("----------------- dump lokdef -------------------------\n");
+	while(lokdef[n].addr) {
+		printf("addr:%d flags:%d, name:%s, nFunc:%d,", lokdef[n].addr, lokdef[n].flags, lokdef[n].name, lokdef[n].nFunc);
+		for(int i=0; i < lokdef[n].nFunc; i++) {
+			printf("%s:%d ",lokdef[n].func[i].name,lokdef[n].func[i].ison);
+		}
+		printf("currspeed:%d\n",lokdef[n].currspeed);
+		n++;
+
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	if(argc > 1) {
@@ -567,6 +687,12 @@ int main(int argc, char *argv[])
 			exit(0);
 		}
 	}
+
+	if( ! readLokdef() ) {
+		exit(1);
+	}
+	dumpLokdef();
+
 	struct sigaction sa;
 	memset(&sa,0,sizeof(sa));
 	sa.sa_sigaction=signalHandler;

@@ -8,3 +8,5 @@ copy:
 		btserver \
 		/home/chris/download/lgb/DDL-xmas2005/erddcd/erddcd \
 		root@ibm-desktop:/root/bin/
+search-ibm-desktop:
+	for i in `seq 1 240` ; do ping -W 1 -c 1 192.168.0.$i 2>&1| grep -B 1 "transmitted, 1"; done
