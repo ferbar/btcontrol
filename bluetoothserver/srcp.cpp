@@ -7,10 +7,36 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "srcp.h"
+#include <errno.h>
+
+SRCPReply::SRCPReply(const char *message)
+{
+	sscanf(message,"%f %d %*s %a[^\n]", &this->timestamp, &this->code, &this->message); 
+	if(this->code >= 500)
+		this->type=SRCPReply::ERROR;
+	else if(this->code >= 400)
+		this->type=SRCPReply::ERROR;
+	else if(this->code >= 200)
+		this->type=SRCPReply::OK;
+	else if(this->code >= 100)
+		this->type=SRCPReply::INFO;
+	else
+		this->type=SRCPReply::ERROR;
+	printf("SRCPReply: %d %s\n", this->code, this->message);
+}
+
+SRCPReply::~SRCPReply()
+{
+	if(this->message) {
+		free(this->message);
+		this->message=(char*)-1;
+	}
+}
+
 
 SRCP::SRCP()
 {
-	int port=12345;
+	int port=4303;
 	const char *hostName="127.0.0.1";
 	struct hostent *ServerHost;
 	struct sockaddr_in socketAddr;
@@ -27,15 +53,31 @@ SRCP::SRCP()
 		exit(1);
 	}
 	if ( connect(so,  (struct sockaddr *)&socketAddr, sizeof(socketAddr))<0  ) {
-		fprintf(stderr,"\nDaemon erddcd not found on host %s on port %d.\n", 
+		fprintf(stderr,"\nDaemon srcpd not found on host %s on port %d.\n", 
 				hostName, port);
-		fprintf(stderr,"erddcd is not running or is running on another port.\n\n");
+		fprintf(stderr,"srcpd is not running or is running on another port.\n\n");
 		exit(1);
 	}
 
 	memset(servermsg,0,SERVMSGLEN);
 	read(so,servermsg,SERVMSGLEN-1);
 	printf("\nconnected to: %s\n", servermsg);
+	SRCPReplyPtr reply;
+	reply=this->sendMessage("SET PROTOCOL SRCP 0.8");
+	if(reply->type != SRCPReply::OK) {
+		fprintf(stderr,"error setting protocol: %s\n",reply->message);
+		exit(1);
+	}
+	reply=this->sendMessage("SET CONNECTIONMODE SRCP COMMAND");
+	if(reply->type != SRCPReply::OK) {
+		fprintf(stderr,"error setting protocol: %s\n",reply->message);
+		exit(1);
+	}
+	reply=this->sendMessage("GO");
+	if(reply->type != SRCPReply::OK) {
+		fprintf(stderr,"error setting protocol: %s\n",reply->message);
+		exit(1);
+	}
 	this->pwrOn();
 }
 
@@ -50,23 +92,59 @@ SRCP::~SRCP()
 
 void SRCP::pwrOn()
 {
-	const char *buf="STARTVOLTAGE\n";
-	if(write(so,buf,strlen(buf)) != strlen(buf)) {
-		printf("error writing start command!\n");
+	SRCPReplyPtr reply = this->sendMessage("SET 1 POWER ON");
+	if(reply->type != SRCPReply::OK) {
+		fprintf(stderr,"error power on (%s)\n",reply->message);
 	}
 	printf("STARTVOLTAGE done\n");
 }
 
 void SRCP::pwrOff()
 {
-	const char *buf="STOPVOLTAGE\n";
-	if(write(so,buf,strlen(buf)) != strlen(buf)) {
-		printf("error writing start command!\n");
+	SRCPReplyPtr reply = this->sendMessage("SET 1 POWER OFF");
+	if(reply->type != SRCPReply::OK) {
+		fprintf(stderr,"error power on (%s)\n",reply->message);
 	}
 	printf("STOPVOLTAGE done\n");
 }
 
-void SRCP::send(int addr, int dir, int nFahrstufen, int speed, int nFunc, bool *func)
+/**
+ * sendet eine message an den SRCPD
+ * @return status message, no need to delete()
+ */
+SRCPReplyPtr SRCP::sendMessage(const char *message)
+{
+	write(this->so,message,strlen(message));
+	write(this->so,"\n",1);
+	return this->readReply();
+}
+
+SRCPReplyPtr SRCP::readReply()
+{
+	char buffer[1024];
+	int n=read(this->so,buffer,sizeof(buffer));
+	if(n <= 0) {
+		// exception ???
+		fprintf(stderr,"error reading reply (%s)\n",strerror(errno));
+		exit(1);
+	}
+	buffer[n]=0;
+
+	return SRCPReplyPtr(new SRCPReply(buffer));
+}
+
+SRCPReplyPtr SRCP::sendLocoInit(int addr, int nFahrstufen, int nFunc)
+{
+	char cmd[1024];
+	snprintf(cmd,sizeof(cmd),"INIT 1 GL "/* addr:*/ "%d " /* proto:*/ "%c " /* protoversion:*/ "%d " 
+		/* nFahrstufen:*/ "%d " /* nFunc:*/ "%d",
+		addr, 'N', addr < 128 ? 1 : 2,
+		nFahrstufen, nFunc+1);
+	printf("sending init: %s\n",cmd);
+	return this->sendMessage(cmd);
+}
+
+SRCPReplyPtr SRCP::sendLocoSpeed(int addr, int dir, int nFahrstufen, int speed, int nFunc, bool *func)
 {
 	// const char *proto = addr > 32 ? "N2" : "N1";
 	const char *proto=NULL;
@@ -78,8 +156,7 @@ void SRCP::send(int addr, int dir, int nFahrstufen, int speed, int nFunc, bool *
 	}
 	const int CMDBUFLEN=256;
 	char buf[CMDBUFLEN];
-	snprintf(buf,CMDBUFLEN-1,"SET GL %s %d %d %d " /* nFahrstufen*/ "%d " /* licht ein:*/ "%d " /*nFunc:*/ "%d",
-			proto,
+	snprintf(buf,CMDBUFLEN-1,"SET 1 GL " /* addr:*/ "%d " /* dir:*/ "%d " /* Fahrstufe:*/ "%d " /* nFahrstufen*/ "%d " /* F0:*/ "%d ",
 			addr,
 			dir,
 			speed,
@@ -90,8 +167,6 @@ void SRCP::send(int addr, int dir, int nFahrstufen, int speed, int nFunc, bool *
 		int pos=strlen(buf);
 		snprintf(buf+pos,CMDBUFLEN-1-pos," %d",func[i]); 
 	}
-	strcat(buf,"\n");
 	printf("cmd: %s", buf);
-	write(so,buf,strlen(buf));
-
+	return this->sendMessage(buf);
 }
