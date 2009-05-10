@@ -1,0 +1,37 @@
+# protokoll def + docu
+# jede message hat zusätlich noch einen header mit sizeof() + seqNr
+# I .. int als zahl oder bitmaske verwendet
+# S .. string
+# A{} .. array mit beliebig vielen elementen
+
+
+# im prinzip ein pollen
+PING=
+# reply = geänderte loks, kann size 0 sein
+PING_REPLY=info:A{addr:I,speed:I,functions:I}
+
+# beschleunigen
+ACC=addr:I
+ACC_REPLY=addr:I,speed:I,functions:I
+
+# bremsen
+BREAK=addr:I
+BREAK_REPLY=addr:I,speed:I,functions:I
+
+# stop
+STOP=addr:I
+STOP_REPLY=addr:I,speed:I,functions:I
+
+SETFUNC=addr:I,funcnr:I,value:I
+SETFUNC_REPLY=addr:I,speed:I,functions:I
+
+# notstop/power off, speed jeder lok auf 0 setzen?
+POWER=value:I
+POWER_REPLY=value:I
+
+#
+GETFUNCTIONS=addr:I
+GETFUNCTIONS_REPLY=info:A{name:S,value:I}
+
+GETLOCOS=
+GETLOCOS_REPLY=info:A{name:S,addr:I}
