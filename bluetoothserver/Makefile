@@ -19,3 +19,5 @@ tags:
 	find . | grep -e '\.h$$' -e '\.c$$' -e '\.cpp$$' | \
 		ctags --language-force=c++ --c++-kinds=+p --extra=+q --fields=+iaS -L-
 
+clean:
+	rm -f *.o

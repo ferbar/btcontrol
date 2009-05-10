@@ -216,7 +216,7 @@ void FBTCtlMessage::dump(int indent, const MessageLayout *layout) const
 			INDENT();
 			printf("(STRING) %s\n",this->sval.c_str()); break;
 		case ARRAY: {
-			INDENT(); printf("array\n");
+			// INDENT(); printf("array\n");
 			for(int i=0; i < arrayVal.size(); i++) {
 				INDENT();
 				printf("[%d]:\n",i);
@@ -224,7 +224,7 @@ void FBTCtlMessage::dump(int indent, const MessageLayout *layout) const
 			}
 			break; }
 		default: { // struct + message type
-			INDENT(); printf("struct\n");
+			// INDENT(); printf("struct\n");
 			std::map<std::string,FBTCtlMessage>::const_iterator it;
 			for(it=this->structVal.begin(); it != this->structVal.end(); ++it) {
 				INDENT();
@@ -285,7 +285,7 @@ const MessageLayout& getMessageLayout(FBTCtlMessage::DataType type)
 	MessageLayout tmp;
 	MessageLayouts::const_iterator it;
 	for(it=messageLayouts.begin(); it != messageLayouts.end(); ++it) {
-		printf("searching for %d ... ?= %s\n", type, it->first.c_str());
+		// printf("searching for %d ... ?= %s\n", type, it->first.c_str());
 		if(type == it->second.type)
 			return messageLayouts[it->first];
 	}
@@ -435,7 +435,7 @@ std::string messageTypeName(FBTCtlMessage::DataType type)
 			tmp +="(STRUCT ";
 			MessageLayouts::const_iterator it;
 			for(it=messageLayouts.begin(); it != messageLayouts.end(); ++it) {
-				printf("searching for %d (%s)\n",type, it->first.c_str());
+				// printf("searching for %d (%s)\n",type, it->first.c_str());
 				if(type == it->second.type)
 					break;
 			}
