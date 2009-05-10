@@ -25,9 +25,11 @@
 
 #include <map>
 
+#include "fbtctl_message.h"
 #include "../usb k8055/k8055.h"
 
 #include "srcp.h"
+
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -669,6 +671,37 @@ void dumpLokdef()
 
 int main(int argc, char *argv[])
 {
+	// FBTCtlMessage test(FBTCtlMessage::STRUCT)
+	try {
+		loadMessageLayouts();
+		FBTCtlMessage test(messageTypeID("PING_REPLY"));
+		test["info"][0]["addr"]=1;
+		test["info"][0]["speed"]=50;
+		test["info"][0]["functions"]=255;
+		test.dump();
+		std::string msg=test.getBinaryMessage();
+		printf("message: (len=%d)\n",msg.size());
+		fwrite(msg.data(), 1, msg.size(), stdout);
+		printf("\n------------------------\n");
+
+		FBTCtlMessage test2(messageTypeID("GETLOCOS_REPLY"));
+		test2["info"][0]["addr"]=3;
+		test2["info"][0]["name"]="testding";
+		test2.dump();
+		msg=test2.getBinaryMessage();
+		printf("message: (len=%d)\n",msg.size());
+		fwrite(msg.data(), 1, msg.size(), stdout);
+		printf("\n und wieder zurück ......\n");
+		FBTCtlMessage test3(msg.data(), msg.size());
+		test3.dump();
+	} catch(const char *e) {
+		printf("exception %s\n",e);
+		exit(1);
+	} catch(std::string &s) {
+		printf("exception %s\n",s.c_str());
+	}
+	exit(1);
+
 	if(argc > 1) {
 		if(strcmp(argv[1],"--debug")==0) {
 			cfg_debug=1;
