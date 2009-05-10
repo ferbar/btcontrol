@@ -10,7 +10,10 @@
 #include <stdlib.h>
 
 class MessageLayoutInfo;
-typedef std::map<std::string , MessageLayoutInfo > MessageLayout;
+class MessageLayout : public std::map<std::string , MessageLayoutInfo > {
+public:
+	void dump(int indent=0) const;
+};
 class MessageLayoutInfo{
 public:
 	int type;
@@ -20,11 +23,21 @@ public:
 class InputReader {
 public:
 	InputReader(const char *data, int len) : data(data), len(len), pos(0) {};
-	int getInt() { int ret=atoi(&data[pos]); pos+=4; if(pos > len) throw "getInt übers ende gelesen";  return ret; };
+	unsigned char getByte() { 
+		unsigned char ret=*((unsigned char *)(&data[pos])); pos+=1;
+		printf("getByte ret=%d = %#x\n",(int) ret, ret);
+		if(this->pos > this->len) throw "getInt übers ende gelesen";
+		return ret; };
+	int getInt() { 
+		int ret=*((int *)(&data[pos])); pos+=4;
+		printf("getInt ret=%d\n",ret);
+		if(this->pos > this->len) throw "getInt übers ende gelesen";
+		return ret; };
 	std::string getString() {
-		unsigned char len=*((unsigned char*)data);
-		std::string ret=std::string(&data[1],len); pos +=1+len;
-		if(pos > len) throw "getString übers ende gelesen"; return ret; };
+		unsigned char len=this->getByte();
+		std::string ret=std::string(this->data,len); this->pos +=len;
+		printf("getString %s\n",ret.c_str());
+		if(this->pos > this->len) throw "getString übers ende gelesen"; return ret; };
 	const char *data;
 	int len;
 	int pos;
@@ -38,6 +51,7 @@ public:
 	FBTCtlMessage(const char *binMessage, int len);
 	FBTCtlMessage(int i);
 	FBTCtlMessage(const std::string &s);
+	FBTCtlMessage(const char *s);
 	FBTCtlMessage(DataType type);
 
 	FBTCtlMessage();
@@ -49,12 +63,11 @@ public:
 	FBTCtlMessage &operator [](int i);
 	FBTCtlMessage &operator [](const std::string &s);
 
-	void readMessage(InputReader &in);
-	void readMessage(InputReader &in, const MessageLayout &layout);
+	void readMessage(InputReader &in, const MessageLayout *layout=NULL);
 
 	std::string getBinaryMessage(const MessageLayout *layout = NULL);
 
-	void dump(int indent=0, const MessageLayout *layout = NULL);
+	void dump(int indent=0, const MessageLayout *layout = NULL) const;
 
 private:
 	int seqNum;
@@ -79,3 +92,4 @@ std::string messageTypeName(FBTCtlMessage::DataType type);
 
 FBTCtlMessage::DataType messageTypeID(const std::string &name);
 
+void dumpMessageLayouts();
