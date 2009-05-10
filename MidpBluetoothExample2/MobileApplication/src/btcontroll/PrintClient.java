@@ -1,12 +1,12 @@
 package btcontroll;
 import java.lang.*;
-import java.io.*;
+// import java.io.*;
 import java.util.*;
-import javax.microedition.io.*;
+// import javax.microedition.io.*;
 import javax.bluetooth.*;
 
 // fürs debug
-import javax.microedition.lcdui.*;
+// import javax.microedition.lcdui.*;
 
 
 /**
@@ -221,7 +221,7 @@ System.out.println("Done Waiting " + serviceSearchCount);
      * printer service was found
      */
     public boolean findPrinter(boolean fullSearch) {
-        RemoteDevice[] devList;
+		RemoteDevice[] devList;
 		if(!fullSearch) {
 			/*
 			 * If there are any devices that have been found by a recent inquiry,
@@ -465,7 +465,7 @@ if (servRecord.length == 0) { // zerst war da servRecord[0] == 0
 	return;
 }
 System.out.println("After this");
-mydebug.debug("servicesDiscovered n:"+servRecord.length+"\n");;
+mydebug.debug("servicesDiscovered n:"+servRecord.length+"\n");
 	for(int i=0; i < servRecord.length; i++) {
 		int primaryLanguageBase = 0x0100;
 		ServiceRecord sr = servRecord[i];

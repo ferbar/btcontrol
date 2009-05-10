@@ -1,7 +1,0 @@
-MIDlet-1: HelloMidlet, ,btcontroll.HelloMidlet
-MIDlet-Vendor: ferbsi
-MIDlet-Icon: /icons/logo.png
-MIDlet-Version: 0.1
-MIDlet-Name: btcontroll
-MicroEdition-Configuration: CLDC-1.1
-MicroEdition-Profile: MIDP-2.0
