@@ -20,6 +20,8 @@ class MessageLayout : public std::map<std::string , MessageLayoutInfo > {
 public:
 	void dump(int indent=0) const;
 };
+
+// TODO: das da ins MessageLayout tun, dann kamma auch die MessageLayouts typedef killen ***********
 class MessageLayoutInfo{
 public:
 	int type;

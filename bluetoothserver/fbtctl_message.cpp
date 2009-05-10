@@ -254,6 +254,7 @@ void FBTCtlMessage::dump(int indent, const MessageLayout *layout) const
 	}
 }
 
+// TODO: MessageLayoutAndType auf MessageLayout mit .type umbaun
 class MessageLayoutAndType: public MessageLayout {
 public:
 	MessageLayoutAndType(const MessageLayout &in) : MessageLayout(in), type(FBTCtlMessage::UNDEF) {};
@@ -294,6 +295,7 @@ const MessageLayout& getMessageLayout(FBTCtlMessage::DataType type)
 
 /**
  * @param pos zeigt auf name:TYP
+ * TODO: Das in die MessageLayout klasse tun *****************************
  */
 MessageLayout parseMessageLayout(const char *&pos)
 {
@@ -353,7 +355,7 @@ void loadMessageLayouts()
 		throw "error reading protocol.dat";
 	}
 	char buffer[1024];
-	int n=0;
+	int typeNr=STRUCT+1;
 	while(!feof(f)) {
 		fgets(buffer,sizeof(buffer)-1,f);
 		int n=strlen(buffer);
@@ -381,9 +383,10 @@ void loadMessageLayouts()
 		pos++;
 
 		MessageLayoutAndType messageLayout(parseMessageLayout(pos));
-		FBTCtlMessage::DataType type=(FBTCtlMessage::DataType) (n+FBTCtlMessage::STRUCT+1);
+		FBTCtlMessage::DataType type=(FBTCtlMessage::DataType) (typeNr);
 		messageLayout.type=type;
 		messageLayouts[name] = messageLayout;
+		typeNr++;
 	}
 
 	fclose(f);
