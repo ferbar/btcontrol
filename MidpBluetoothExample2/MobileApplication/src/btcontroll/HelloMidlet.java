@@ -49,8 +49,8 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 	private Command backCommand2;
 	private Command screenCommand_startConrtollCanvas;
 	private Command itemCommandBlah1;
-    private Command clearCommand=new Command("clear", Command.SCREEN, 1);
-    private Command btScanCommand=new Command("erneute BT suche", Command.SCREEN, 2);
+	private Command clearCommand=new Command("clear", Command.SCREEN, 1);
+	private Command btScanCommand=new Command("erneute BT suche", Command.SCREEN, 2);
 	private Command screenCommand_startControllCanvas=new Command("connect", Command.ITEM, 1);
 
 	
@@ -177,14 +177,14 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
         System.out.println("System.out.println");
         
 		getDisplay().setCurrent(get_helloForm());//GEN-LINE:MVDInitInit
-        helloForm.setTitle("bt scan...");
+		helloForm.setTitle("bt scan...");
         // Insert post-init code here
 		PrintClient client;
-        try {
-            client=new PrintClient(this,this);
-        } catch (BluetoothStateException e) {
-            helloForm.append("exception: ("+e.toString()+") bluetooth disabled?");
-            e.printStackTrace();
+		try {
+			client=new PrintClient(this,this);
+		} catch (BluetoothStateException e) {
+			helloForm.append("exception: ("+e.toString()+") bluetooth disabled?");
+			e.printStackTrace();
 			return;
 		}
 		client.findPrinter(false);
@@ -266,6 +266,8 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 			}//GEN-BEGIN:MVDCACase23
 		}//GEN-END:MVDCACase23
 		if (command == btScanCommand) {  // neue BT suche
+			helloForm.setTitle("bt scan...");
+			System.out.println("bt scan started");
 			PrintClient client;
 			this.listServer = null;
 			try {
