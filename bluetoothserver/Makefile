@@ -1,7 +1,8 @@
 .SUFFIXES:
+.PHONY: tags clean
 
-all: fbtctl_message.o
-	g++ fbtctl_message.o -g -lbluetooth -lpthread "../usb k8055/k8055.cpp" srcp.cpp -lusb main.cpp -o btserver -DSVNVERSION=`svnversion`
+all: fbtctl_message.o message_layout.o
+	g++ $+ -g -lbluetooth -lpthread "../usb k8055/k8055.cpp" srcp.cpp -lusb main.cpp -o btserver -DSVNVERSION=`svnversion`
 
 copy:
 	scp /home/chris/dev/svn_btcontroll/ussp-push-0.11/src/ussp-push \
