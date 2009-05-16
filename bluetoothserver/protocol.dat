@@ -4,6 +4,8 @@
 # S .. string
 # A{} .. array mit beliebig vielen elementen
 
+# erste Message vom server -> client
+HELO=protoversion:I,name:S,version:S
 
 # im prinzip ein pollen
 PING=

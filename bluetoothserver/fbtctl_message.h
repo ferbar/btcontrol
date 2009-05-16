@@ -9,24 +9,7 @@
 
 #include <stdlib.h>
 
-/**
- * speichert den aufbau einer einzigen message
- */
-class MessageLayoutInfo;
-/**
- * speichert den aufbau der messages, wird aus protocol.dat geladen
- */
-class MessageLayout : public std::map<std::string , MessageLayoutInfo > {
-public:
-	void dump(int indent=0) const;
-};
-
-// TODO: das da ins MessageLayout tun, dann kamma auch die MessageLayouts typedef killen ***********
-class MessageLayoutInfo{
-public:
-	int type;
-	MessageLayout childLayout;
-};
+#include "message_layout.h"
 
 /**
  * zum einlesen von binary messages
@@ -60,13 +43,12 @@ public:
  */
 class FBTCtlMessage {
 public:
-	enum DataType {UNDEF=0, INT=1,STRING=2,ARRAY=3,STRUCT=4};
 
 	FBTCtlMessage(const char *binMessage, int len);
 	FBTCtlMessage(int i);
 	FBTCtlMessage(const std::string &s);
 	FBTCtlMessage(const char *s);
-	FBTCtlMessage(DataType type);
+	FBTCtlMessage(MessageLayout::DataType type);
 
 	FBTCtlMessage();
 	// sollt alles kopierbar sein ... FBTCtlMessage(const FBTCtlMessage&msg);
@@ -88,7 +70,7 @@ private:
 
 	std::string name;
 
-	DataType type;
+	MessageLayout::DataType type;
 	int ival;
 	std::string sval;
 	std::vector<FBTCtlMessage> arrayVal;
@@ -99,12 +81,3 @@ private:
 // typedef std::auto_ptr<FBTCtlMessage> FBTCtlMessagePtr;
 
 
-// ladet die protocol.dat
-void loadMessageLayouts();
-// liefert das layout für eine message (type)
-const MessageLayout &getMessageLayout(FBTCtlMessage::DataType type);
-std::string messageTypeName(FBTCtlMessage::DataType type);
-
-FBTCtlMessage::DataType messageTypeID(const std::string &name);
-
-void dumpMessageLayouts();
