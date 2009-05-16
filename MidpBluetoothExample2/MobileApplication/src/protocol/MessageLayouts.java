@@ -15,9 +15,10 @@ import java.io.InputStream;
  */
 public class MessageLayouts {
 	
-	static Hashtable messageLayouts;
+	/// name = MessageLayout subnode
+	static Hashtable messageLayouts = new Hashtable();
 
-	public String myReadLn(InputStream iStream) throws java.io.IOException 
+	public static String myReadLn(InputStream iStream) throws java.io.IOException 
 	{
 		String ret="";
 		int i;
@@ -29,7 +30,7 @@ public class MessageLayouts {
 			if(i == '\n') {
 				return ret;
 			}
-			ret+=(byte)i;
+			ret+=(char)i;
 			n++;
 		}
 		if(n==0)
@@ -37,46 +38,52 @@ public class MessageLayouts {
 		return ret;
 	}
 	
-	public void load()  throws java.io.IOException {
+	public void load() throws Exception {
 		InputStream f = this.getClass().getResourceAsStream("protocol.dat");
 		String line;
 		int typeNr = FBTCtlMessage.STRUCT + 1;
 		while((line=myReadLn(f)) != null) {
-			if(line.charAt(0) == '#')
-				continue;
-			try {
-				int pos=0;
-				while(line.charAt(pos) != ' ') pos++;
-				int namestart=pos;
-				while(line.charAt(pos) != '=') pos++;
-				String name=line.substring(namestart, pos);
-				pos++;
-				System.out.print("name: " + name);
-				MessageLayout layout = new MessageLayout();
-				layout.parse(line,pos);
-				this.messageLayouts.put(name, layout);
-				typeNr++;
-			} catch(Exception e) {
-				System.out.println("Exception: "+e);
-			}
+			if(line.startsWith("#"))
+			continue;
+			int pos=0;
+			while(line.startsWith(" ",pos)) pos++;
+			if(pos==line.length()) continue;
+			int namestart=pos;
+			while(!line.startsWith("=",pos)) pos++;
+			if(pos==line.length()) continue;
+			String name=line.substring(namestart, pos);
+			pos++;
+			System.out.print("name: " + name);
+			MessageLayout layout = new MessageLayout();
+			layout.parse(line,pos);
+			System.out.println();
+			layout.type=typeNr;
+			MessageLayouts.messageLayouts.put(name, layout);
+			typeNr++;
 			
 		}
 	}
 	
-	public static MessageLayout getLayout(int type) {
-		MessageLayout ret = (MessageLayout) messageLayouts.get(new Integer(type));
-		return ret;
+	public static MessageLayout getLayout(int type) throws Exception {
+		
+		Enumeration e = MessageLayouts.messageLayouts.elements();
+		while(e.hasMoreElements()) {
+			MessageLayout layout = (MessageLayout) e.nextElement();
+			if(layout.type==type)
+				return layout;
+		}
+		throw new Exception("getLayout type "+type+" invalid");
 	}
 	
-	public void dump() { this.dump(0);}
-	public void dump(int indent) {
+	public static void dump() { MessageLayouts.dump(0);}
+	public static void dump(int indent) {
 		Enumeration e = messageLayouts.elements();
 		while(e.hasMoreElements()) {
 			String name = (String) e.nextElement();
 			MessageLayout layout = (MessageLayout) messageLayouts.get(name);
 			String messageTypeName;
 			try {
-				messageTypeName=this.messageTypeName(layout.type);
+				messageTypeName=MessageLayouts.messageTypeName(layout.type);
 			} catch(Exception ex) {
 				messageTypeName="exception:"+ex;
 			}
@@ -93,7 +100,7 @@ public class MessageLayouts {
 			case FBTCtlMessage.STRUCT: return "(STRUCT)";
 			default: {
 				String tmp = "(STRUCT ";
-				Enumeration e = messageLayouts.elements();
+				Enumeration e = MessageLayouts.messageLayouts.keys();
 				while(e.hasMoreElements()) {
 					String name = (String) e.nextElement();
 					MessageLayout layout = (MessageLayout) messageLayouts.get(name);

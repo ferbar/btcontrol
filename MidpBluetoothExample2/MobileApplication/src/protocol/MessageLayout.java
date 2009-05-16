@@ -4,7 +4,8 @@
  */
 
 package protocol;
-import java.util.Hashtable;
+import java.util.Vector;
+import java.util.Enumeration;
 
 /**
  *
@@ -13,27 +14,31 @@ import java.util.Hashtable;
 public class MessageLayout {
 
 	public int type;
-	Hashtable childLayout;
+	public String name;
+	public Vector childLayout = new Vector();
 
 	/**
 	 * @return neuer pos pointer
+	 * parst einen struct mit key=value dingern
 	 */
 	public int parse(String line, int pos) throws Exception {
 		this.type=FBTCtlMessage.STRUCT;
 		while(true) {
 			int namestart=pos;
-			while(line.charAt(pos) != ':') pos++;
+			while(!line.startsWith(":",pos)) {
+				if(line.length() == pos) return pos;
+				pos++;
+			}
 			String name=line.substring(namestart,pos);
 			pos++;
 			MessageLayout info = new MessageLayout();
+			info.name=name;
 			switch(line.charAt(pos)) {
 				case 'I': info.type=FBTCtlMessage.INT;
 					pos++;
-					this.childLayout.put(name, info);
 					break;
 				case 'S': info.type=FBTCtlMessage.STRING;
 					pos++;
-					this.childLayout.put(name, info);
 					break;
 				case 'A': info.type=FBTCtlMessage.ARRAY;
 					pos++;
@@ -42,16 +47,47 @@ public class MessageLayout {
 					pos++;
 					MessageLayout arrayinfo = new MessageLayout();
 					pos = arrayinfo.parse(line,pos);
-					info.childLayout.put(null, arrayinfo);
-					this.childLayout.put(name, info);
-				default: System.out.println("error parsing line \""+line+"\"");
-					throw new Exception("error parsing line");
+					info.childLayout.addElement(arrayinfo);
+					break;
+				default:
+					throw new Exception("error parsing line (pos="+pos+")");
 			}
-			if(pos == line.length())
-				break;
+			this.childLayout.addElement(info);
+			if(line.length() == pos) break;
+			switch(line.charAt(pos)) {
+				case '}': return pos;
+				case ',': pos++; continue;
+				default : throw new Exception ("invalid char '"+line.charAt(pos)+"' @"+pos);
+			}
 		}
 		
 		return pos;
 	}
 	
+	public void dump() throws Exception {
+		System.out.println("MessageLayout dump");
+		this.dump(0);
+	}
+	public void dump(int indent) throws Exception {
+		System.out.println("type:"+MessageLayouts.messageTypeName(this.type));
+		switch(this.type) {
+			case FBTCtlMessage.UNDEF: System.out.println("UNDEF"); break;
+			case FBTCtlMessage.INT: System.out.println("INT"); break;
+			case FBTCtlMessage.STRING: System.out.println("STRING"); break;
+			case FBTCtlMessage.ARRAY: {
+				System.out.println("ARRAY");
+				MessageLayout childLayout = (MessageLayout) this.childLayout.firstElement();
+				childLayout.dump(indent);
+				break; }
+			default: {
+				System.out.println("STRUCT");
+				Enumeration e=this.childLayout.elements();
+				while(e.hasMoreElements()) {
+					MessageLayout childLayout = (MessageLayout) e.nextElement();
+					System.out.println("["+childLayout.name+"]");
+					childLayout.dump(indent);
+				}
+				break; }
+		}
+	}
 }
