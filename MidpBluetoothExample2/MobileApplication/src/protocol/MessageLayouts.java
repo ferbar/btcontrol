@@ -38,11 +38,14 @@ public class MessageLayouts {
 		return ret;
 	}
 	
+	/**
+	 * @throws java.lang.Exception
+	 */
 	public void load() throws Exception {
-		InputStream f = this.getClass().getResourceAsStream("protocol.dat");
+		InputStream protocolFile = this.getClass().getResourceAsStream("protocol.dat");
 		String line;
 		int typeNr = FBTCtlMessage.STRUCT + 1;
-		while((line=myReadLn(f)) != null) {
+		while((line=myReadLn(protocolFile)) != null) {
 			if(line.startsWith("#"))
 			continue;
 			int pos=0;
@@ -65,7 +68,7 @@ public class MessageLayouts {
 	}
 	
 	public static MessageLayout getLayout(int type) throws Exception {
-		
+				
 		Enumeration e = MessageLayouts.messageLayouts.elements();
 		while(e.hasMoreElements()) {
 			MessageLayout layout = (MessageLayout) e.nextElement();
@@ -92,6 +95,11 @@ public class MessageLayouts {
 	}
 	
 	public static String messageTypeName(int type) throws Exception {
+		/* - als 1. funk wird immer getMessageLayout aufgerufen (msg vom server lesen)
+		if(!MessageLayouts.loaded) {
+			MessageLayouts.load();
+			MessageLayouts.loaded=true;
+		}*/
 		switch(type) {
 			case FBTCtlMessage.UNDEF: throw new Exception("undefined data type");
 			case FBTCtlMessage.INT: return "(INT)";

@@ -36,6 +36,9 @@ public class OutputWriter {
 	}
 
 	public byte[] getBytes() {
-		return ret;
+		return this.ret;
+	}
+	public int getSize() {
+		return this.pos;
 	}
 }

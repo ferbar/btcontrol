@@ -13,6 +13,12 @@ import javax.bluetooth.*;
 
 import javax.microedition.io.Connector;
 import javax.microedition.io.StreamConnection;
+
+import java.io.InputStream; // für load resource
+
+import protocol.FBTCtlMessage;
+import protocol.MessageLayouts;
+ 
 //import javax.microedition.io.*; // input stream, output stream
 
 // import java.io.DataInputStream;
@@ -32,16 +38,54 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 	static public Display display;
 	
     /** Creates a new instance of HelloMidlet */
-    public HelloMidlet()
+    public HelloMidlet() throws Exception
 	{
 		display=this.getDisplay();
+
+		// ladet die protocol.dat
+		MessageLayouts messageLayouts = new MessageLayouts();
+		messageLayouts.load();
+		/*
+		try {
+
+			FBTCtlMessage test = new FBTCtlMessage();
+			/ *
+			test.setType(MessageLayouts.messageTypeID("PING_REPLY"));
+			test.get("info").get(0).get("addr").set(1);
+			test.get("info").get(0).get("speed").set(192);
+			test.get("info").get(0).get("functions").set(0xffffff);
+			 * /
+			test.setType(MessageLayouts.messageTypeID("HELO"));
+			test.get("name").set("testclient");
+			test.get("version").set("0.0.1");
+			test.get("protoversion").set(1);
+			test.dump();
+			System.out.println("---------- -> bin -----------------------------");
+			byte binMessage[]=test.getBinaryMessage();
+			// System.out.println(new String(binMessage));
+			FBTCtlMessage test2 = new FBTCtlMessage();
+			System.out.println("---------- bin -> struct ----------------------");
+			test2.readMessage(binMessage);
+			test2.dump();
+			System.out.print("server:" + test2.get("name").getStringVal());
+			System.out.println("test done");
+			System.exit(1);
+		} catch(Exception e) {
+			e.printStackTrace();
+			System.out.println("exception: " + e.toString());
+		}
+		 */
+		// */
+				
+		// test.get("info").get(0).get("addr").set(1);
+		
     }
     
 	private Form helloForm;
 	private Command exitCommand;
 	private Command helpCommand1;
 	private Alert help;
-	private Canvas controllForm;
+	// private Canvas controllForm;
 	private List listServer;
 	private Command itemCommandDetail;
 	private Command okCommand1;

@@ -128,11 +128,11 @@ public class FBTCtlMessage {
 	/**
 	 * wandelt die aktuelle message in einen bin - string um
 	 */
-	public byte[] getBinaryMessage() throws Exception  {
+	public OutputWriter getBinaryMessage() throws Exception  {
 		MessageLayout layout = MessageLayouts.getLayout(this.type);
 		OutputWriter out=new OutputWriter();
 		this.getBinaryMessage(layout, out);
-		return out.getBytes();
+		return out;
 	}
 	
 	public void getBinaryMessage(MessageLayout layout, OutputWriter out) throws Exception {
@@ -213,6 +213,11 @@ public class FBTCtlMessage {
 		return sval;
 	}
 	
+	public int getArraySize() throws Exception {
+		if(this.type != ARRAY) throw new Exception("invalid type (not an array)");
+		return this.arrayVal.size();
+	}
+
 	
 	public void dump() throws Exception {
 		this.dump(0,null);
@@ -269,5 +274,14 @@ public class FBTCtlMessage {
 				}
 				break; }
 		}
+	}
+	
+	public boolean isType(String typeName) {
+		 int type=MessageLayouts.messageTypeID(typeName);
+		 if(this.type == type) {
+			 return true;
+		 } else {
+			 return false;
+		 }
 	}
 }
