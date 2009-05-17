@@ -17,6 +17,11 @@ import javax.microedition.io.StreamConnection;
 
 import javax.microedition.lcdui.*;
 
+import protocol.FBTCtlMessage;
+import protocol.MessageLayouts;
+import protocol.InputReader;
+import protocol.OutputWriter;
+
 /**
  *
  * @author chris
@@ -35,7 +40,7 @@ public class BTcommThread extends Thread{
 	public int currAddr=0; // schreibta da rein, ruft notiry auf
 	public int currSpeed=0;
 	public int currFuncBits=0;
-	interface Callback {
+	public interface Callback {
 		public void BTCallback();
 	}
 	// wenn daten empfangen werden wird notify() aufgerufen
@@ -201,6 +206,43 @@ public class BTcommThread extends Thread{
 		return ret;
 	
 	}
+
+	/**
+	 * sendet eine Message incl message header (size)
+	 * TODO: da sind 2 new OutputWriter - optimieren
+	 */
+	private void sendMessage(FBTCtlMessage msg) throws Exception
+	{
+		OutputWriter out=msg.getBinaryMessage();
+		OutputWriter outSize=new OutputWriter();
+		outSize.putInt(out.getSize());
+		oStream.write(outSize.getBytes(),0,outSize.getSize());
+		oStream.write(out.getBytes(),0,out.getSize());
+		oStream.flush();
+	}
+	
+	/**
+	 * liest eine message incl header (size) ein
+	 *  TODO: byte[const länge], nicht jedes mal neu allocen!!!
+	 */
+	private FBTCtlMessage receiveMessage() throws Exception
+	{
+		byte[] buffer = new byte[256];
+		if(iStream.read(buffer,0,4) != 4) {
+			throw new Exception("error reading init HELO (1)");
+		}
+		debugForm.debug("connected, read helo");
+		InputReader in = new InputReader(buffer);
+		int msgSize = in.getInt();
+		debugForm.debug("size: "+msgSize);
+		if(iStream.read(buffer,0,msgSize) != msgSize) {
+			throw new Exception("error reading init HELO (2)");
+		}
+		debugForm.debug("parsing: ");
+		FBTCtlMessage msg = new FBTCtlMessage();
+		msg.readMessage(buffer);
+		return msg;
+	}
 	
 	/**
 	 * der thread
@@ -218,16 +260,40 @@ public class BTcommThread extends Thread{
 		
 		try {
 			// geht nicht: oStream.writeChars("hallo vom handy...\n");
-			String s="hallo vom handy...\n";
-			byte[] buffer = s.getBytes();
-			oStream.write(buffer);
+			String s; // ="hallo vom handy...\n";
+			FBTCtlMessage heloMsg = this.receiveMessage();
+			if(!heloMsg.isType("HELO")) {
+				throw new Exception("didn't receive HELO");
+			}
+			debugForm.debug("server:"+heloMsg.get("name").getStringVal()+
+				" version:"+heloMsg.get("version").getStringVal()+
+				" protoVersion:"+heloMsg.get("protoversion").getIntVal());
+			
+// ping test:
+			FBTCtlMessage pingMsg = new FBTCtlMessage();
+			pingMsg.setType(MessageLayouts.messageTypeID("PING"));
+			this.sendMessage(pingMsg);
+			FBTCtlMessage pingReply = this.receiveMessage();
+			if(!pingReply.isType("PING_REPLY")) {
+				throw new Exception("didn't receive HELO");
+			}
+			debugForm.debug("pingReply rx ");
+			int an=pingReply.get("info").getArraySize();
+			debugForm.debug("size:"+an+" ");
+			for(int i=0; i < an; i++) {
+				debugForm.debug("addr:"+pingReply.get("info").get(i).get("addr").getIntVal()+
+					" speed: "+pingReply.get("info").get(i).get("speed").getIntVal()+
+					" func: "+pingReply.get("info").get(i).get("functions").getIntVal());
+			}
+			
+			
 			/*
 			for (int n = 0; n < stream.length; ++n) {
 				oStream.writeByte(stream[n]);
 			} */
 			oStream.flush();
 			debugForm.debug("writeChars done\n");
-			buffer=new byte[50];
+			byte []buffer=new byte[50];
 			int commandNr=0;
 			StringItem pingtext=new StringItem("pingtext","");
 			StringItem sendtext=new StringItem("sendtext","");
