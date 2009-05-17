@@ -61,9 +61,11 @@ public:
 
 	void readMessage(InputReader &in, const MessageLayout *layout=NULL);
 
-	std::string getBinaryMessage(const MessageLayout *layout = NULL);
+	std::string getBinaryMessage(const MessageLayout *layout = NULL) const;
 
 	void dump(int indent=0, const MessageLayout *layout = NULL) const;
+
+	void clear();
 
 private:
 	int seqNum;
@@ -74,7 +76,8 @@ private:
 	int ival;
 	std::string sval;
 	std::vector<FBTCtlMessage> arrayVal;
-	std::map<std::string,FBTCtlMessage> structVal;
+	typedef std::map<std::string,FBTCtlMessage> StructVal;
+	StructVal structVal;
 
 };
 

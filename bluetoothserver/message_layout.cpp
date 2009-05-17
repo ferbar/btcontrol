@@ -37,10 +37,13 @@ MessageLayout parseMessageLayout(const char *&pos)
 {
 	// printf("parse \"%s\"\n",pos);
 	MessageLayout messageLayout;
+	if(*pos=='\0') { // leere zeile
+		return messageLayout;
+	}
 	while(true) {
 		const char *namestart=pos;
 		while(*pos && *pos != ':') pos++;
-		if(pos=='\0')
+		if(*pos=='\0')
 			throw "error finding name";
 		// printf("pos=\"%c\"\n",*pos);
 		MessageLayout info;
@@ -125,6 +128,7 @@ void loadMessageLayouts()
 		MessageLayout messageLayout(parseMessageLayout(pos));
 		MessageLayout::DataType type=(MessageLayout::DataType) (typeNr);
 		messageLayout.type=type;
+	printf("messayLayout: type: %d\n",type);
 		messageLayouts[name] = messageLayout;
 		typeNr++;
 	}
@@ -135,7 +139,7 @@ void loadMessageLayouts()
 
 void MessageLayout::dump(int indent) const
 {
-	// printf("sub:%d\n", this->size());
+	printf("sub:%d\n", this->childLayouts.size());
 	std::vector<MessageLayout>::const_iterator it;
 	for(it=this->childLayouts.begin(); it != this->childLayouts.end(); ++it) {
 		INDENT();
@@ -183,7 +187,11 @@ std::string messageTypeName(MessageLayout::DataType type)
 					break;
 			}
 			if(it == messageLayouts.end()) {
-				throw "invalid id";
+				std::string tmp;
+				tmp += "invalid id (";
+				tmp += type;
+				tmp += ")";
+				throw tmp;
 			}
 			tmp += it->first;
 			tmp +=")";
@@ -196,7 +204,7 @@ MessageLayout::DataType messageTypeID(const std::string &name)
 {
 	MessageLayout::DataType type=messageLayouts[name].type;
 	if(type == MessageLayout::UNDEF)
-		throw "invalid message name";
+		throw std::string("invalid message name: \"") + name + "\"";
 	return type;
 	/*
 	MessageLayouts::const_iterator it;
