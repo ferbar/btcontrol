@@ -36,13 +36,16 @@ FBTCtlMessage::FBTCtlMessage(const char *binMessage, int len)
 
 void FBTCtlMessage::readMessage(InputReader &in, const MessageLayout *layout)
 {
+	clear();
 	printf("reading bin msg\n");
 
 	this->type=(MessageLayout::DataType) in.getByte();
 	printf("datatype: %d\n",this->type);
 
-	if(!layout && (this->type > MessageLayout::STRUCT))
+	if(!layout && (this->type > MessageLayout::STRUCT)) {
 		layout=&getMessageLayout(this->type);
+		layout->dump();
+	}
 
 	if(!layout)
 		throw "no message layout";
@@ -119,6 +122,14 @@ FBTCtlMessage::FBTCtlMessage(MessageLayout::DataType type) : type(type)
 
 }
 
+void FBTCtlMessage::clear()
+{
+	this->type=MessageLayout::UNDEF;
+	this->ival=0;
+	this->sval="";
+	this->structVal.clear();
+	this->arrayVal.clear();
+}
 
 int FBTCtlMessage::getIntVal()
 {
@@ -148,7 +159,7 @@ FBTCtlMessage &FBTCtlMessage::operator [](const std::string &s)
 	return structVal[s];
 }
 
-std::string FBTCtlMessage::getBinaryMessage(const MessageLayout *layout)
+std::string FBTCtlMessage::getBinaryMessage(const MessageLayout *layout) const
 {
 	std::string ret;
 	if(!layout)
@@ -182,10 +193,15 @@ std::string FBTCtlMessage::getBinaryMessage(const MessageLayout *layout)
 		default: { // struct + message type
 			std::vector<MessageLayout>::const_iterator it;
 			for(it=layout->childLayouts.begin(); it != layout->childLayouts.end(); ++it) {
-				if(structVal[it->name].type == it->type) {
-					ret += structVal[it->name].getBinaryMessage(&*it);
+				StructVal::const_iterator element=this->structVal.find(it->name);
+				if(element != this->structVal.end()) {
+					if(element->second.type == it->type) {
+						ret += element->second.getBinaryMessage(&*it);
+					} else {
+						throw "invalid type (try dump before)";
+					}
 				} else {
-					throw "invalid type (try dump before)";
+					throw "struct value - field not set";
 				}
 			}
 			break; }
@@ -238,6 +254,7 @@ void FBTCtlMessage::dump(int indent, const MessageLayout *layout) const
 					FBTCtlMessage *sub=&(const_cast<FBTCtlMessage*>(this))->structVal[it->name];
 					if(sub->type == it->type) {
 						sub->dump(indent+1, &*it);
+						validEntries[it->name] = true;
 					} else {
 						try {
 							std::string typeName=messageTypeName(sub->type);

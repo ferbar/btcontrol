@@ -136,6 +136,14 @@ void resetPlatine()
 
 #define MAXPATHLEN 255
 
+void sendMessage(int so, const FBTCtlMessage &msg)
+{
+	std::string binMsg=msg.getBinaryMessage();
+	int msgsize=binMsg.size();
+	write(so, &msgsize, 4);
+	write(so, binMsg.data(), binMsg.size());
+}
+
 /**
  * für jedes handy ein eigener thread...
  */
@@ -144,7 +152,40 @@ void *phoneClient(void *data)
 	startupdata_t *startupdata=(startupdata_t *)data;
 	printf("%d:new client ID=%d\n",startupdata->clientID,startupdata->clientID);
 	printf("%d:socket accepted sending welcome msg\n",startupdata->clientID);
-	write(startupdata->so,"hallo\n",6);
+
+	try {
+	FBTCtlMessage test2(messageTypeID("HELO"));
+	test2["name"]="my bt server";
+	test2["version"]="testding";
+	test2["protoversion"]=2;
+	test2.dump();
+	sendMessage(startupdata->so,test2);
+
+	int msgsize;
+	if(read(startupdata->so, &msgsize, 4) != 4) {
+		printf("error reading cmd\n");
+		return NULL;
+	}
+	printf("reading msg.size: %d bytes\n",msgsize);
+	char buffer[msgsize];
+	if(read(startupdata->so, buffer, msgsize) != msgsize) {
+		printf("error reading cmd.data\n");
+		return NULL;
+	}
+	InputReader in(buffer,msgsize);
+	printf("parsing msg\n");
+	test2.readMessage(in);
+	test2.dump();
+
+	FBTCtlMessage test(messageTypeID("PING_REPLY"));
+	test["info"][0]["addr"]=1;
+	test["info"][0]["speed"]=50;
+	test["info"][0]["functions"]=255;
+	test["info"][1]["addr"]=2;
+	test["info"][1]["speed"]=20;
+	test["info"][1]["functions"]=225;
+	test.dump();
+	sendMessage(startupdata->so,test);
 
 
 	int x=0;
@@ -325,6 +366,11 @@ void *phoneClient(void *data)
 		}
 	}
 	printf("%d:client exit\n",startupdata->clientID);
+	} catch(const char *e) {
+		printf("exception %s\n",e);
+	} catch(std::string &s) {
+		printf("exception %s\n",s.c_str());
+	}
 }
 
 /**
@@ -576,7 +622,7 @@ int str2decodertype(const char *pos)
 
 char *getnext(char **pos)
 {
-	printf("skipping value:");
+	// printf("skipping value:");
 	while(**pos && (strchr(",\r\n",**pos) == NULL)) {
 		printf("%c",**pos);
 		(*pos)++;
@@ -584,12 +630,12 @@ char *getnext(char **pos)
 	printf("\n");
 	if(!**pos) {*pos=NULL; return NULL; }
 	(*pos)++; // , überspringen
-	printf("skipping spaces:");
+	// printf("skipping spaces:");
 	while(**pos && (**pos == ' ') || (**pos == '\t')) {
 		printf("%c",**pos);
 		(*pos)++;
 	}
-	printf("\n");
+	// printf("\n");
 	char *endpos=*pos;
 	while(*endpos && (strchr(",\r\n",*endpos) == NULL)) endpos++;
 	return endpos;
@@ -674,6 +720,7 @@ int main(int argc, char *argv[])
 	// FBTCtlMessage test(FBTCtlMessage::STRUCT)
 	try {
 		loadMessageLayouts();
+/*
 		FBTCtlMessage test(messageTypeID("PING_REPLY"));
 		test["info"][0]["addr"]=1;
 		test["info"][0]["speed"]=50;
@@ -694,13 +741,14 @@ int main(int argc, char *argv[])
 		printf("\n und wieder zurück ......\n");
 		FBTCtlMessage test3(msg.data(), msg.size());
 		test3.dump();
+		exit(1);
+	*/
 	} catch(const char *e) {
 		printf("exception %s\n",e);
 		exit(1);
 	} catch(std::string &s) {
 		printf("exception %s\n",s.c_str());
 	}
-	exit(1);
 
 	if(argc > 1) {
 		if(strcmp(argv[1],"--debug")==0) {
