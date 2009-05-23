@@ -201,7 +201,7 @@ std::string FBTCtlMessage::getBinaryMessage(const MessageLayout *layout) const
 						throw "invalid type (try dump before)";
 					}
 				} else {
-					throw "struct value - field not set";
+					throw std::string("struct value \"")+it->name+"\" - field not set";
 				}
 			}
 			break; }
@@ -282,3 +282,11 @@ void FBTCtlMessage::dump(int indent, const MessageLayout *layout) const
 	}
 }
 
+bool FBTCtlMessage::isType(const char *name)
+{
+	if(this->type == messageTypeID(name)) {
+		return true;
+	} else {
+		return false;
+	}
+}

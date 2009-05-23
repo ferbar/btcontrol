@@ -14,18 +14,18 @@ PING_REPLY=info:A{addr:I,speed:I,functions:I}
 
 # beschleunigen
 ACC=addr:I
-ACC_REPLY=addr:I,speed:I,functions:I
+ACC_REPLY=info:A{addr:I,speed:I,functions:I}
 
 # bremsen
 BREAK=addr:I
-BREAK_REPLY=addr:I,speed:I,functions:I
+BREAK_REPLY=info:A{addr:I,speed:I,functions:I}
 
 # stop
 STOP=addr:I
-STOP_REPLY=addr:I,speed:I,functions:I
+STOP_REPLY=info:A{addr:I,speed:I,functions:I}
 
 SETFUNC=addr:I,funcnr:I,value:I
-SETFUNC_REPLY=addr:I,speed:I,functions:I
+SETFUNC_REPLY=info:A{addr:I,speed:I,functions:I}
 
 # notstop/power off, speed jeder lok auf 0 setzen?
 POWER=value:I
