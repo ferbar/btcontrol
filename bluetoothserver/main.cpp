@@ -144,6 +144,35 @@ void sendMessage(int so, const FBTCtlMessage &msg)
 	write(so, binMsg.data(), binMsg.size());
 }
 
+struct lastStatus_t {
+	int currspeed;
+	int func;
+};
+
+void setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus)
+{
+	// FBTCtlMessage test(messageTypeID("PING_REPLY"));
+	int n=0;
+	int i=0;
+	reply["info"]=FBTCtlMessage(MessageLayout::ARRAY); // feld anlegen damits immer da ist
+	while(lokdef[i].addr) {
+		int func=0;
+		for(int j=0; j < lokdef[i].nFunc; j++) {
+			if(lokdef[i].func[j].ison)
+				func |= 1 << j;
+		}
+		if((lokdef[i].currspeed != lastStatus[i].currspeed) || (func != lastStatus[i].func)) {
+			lastStatus[i].currspeed=lokdef[i].currspeed;
+			lastStatus[i].func=func;
+			reply["info"][n]["addr"]=lokdef[i].addr;
+			reply["info"][n]["speed"]=lokdef[i].currspeed;
+			reply["info"][n]["functions"]=func;
+			n++;
+		}
+		i++;
+	}
+}
+
 /**
  * für jedes handy ein eigener thread...
  */
@@ -154,100 +183,142 @@ void *phoneClient(void *data)
 	printf("%d:socket accepted sending welcome msg\n",startupdata->clientID);
 
 	try {
-	FBTCtlMessage test2(messageTypeID("HELO"));
-	test2["name"]="my bt server";
-	test2["version"]="testding";
-	test2["protoversion"]=2;
-	test2.dump();
-	sendMessage(startupdata->so,test2);
+	FBTCtlMessage heloReply(messageTypeID("HELO"));
+	heloReply["name"]="my bt server";
+	heloReply["version"]="testding";
+	heloReply["protoversion"]=2;
+	heloReply.dump();
+	sendMessage(startupdata->so,heloReply);
 
-	int msgsize;
-	if(read(startupdata->so, &msgsize, 4) != 4) {
-		printf("error reading cmd\n");
-		return NULL;
-	}
-	printf("reading msg.size: %d bytes\n",msgsize);
-	char buffer[msgsize];
-	if(read(startupdata->so, buffer, msgsize) != msgsize) {
-		printf("error reading cmd.data\n");
-		return NULL;
-	}
-	InputReader in(buffer,msgsize);
-	printf("parsing msg\n");
-	test2.readMessage(in);
-	test2.dump();
-
-	FBTCtlMessage test(messageTypeID("PING_REPLY"));
-	test["info"][0]["addr"]=1;
-	test["info"][0]["speed"]=50;
-	test["info"][0]["functions"]=255;
-	test["info"][1]["addr"]=2;
-	test["info"][1]["speed"]=20;
-	test["info"][1]["functions"]=225;
-	test.dump();
-	sendMessage(startupdata->so,test);
+	int nLokdef=0;
+	while(lokdef[nLokdef].addr) nLokdef++;
+	lastStatus_t *lastStatus=new lastStatus_t[nLokdef+1];
 
 
 	int x=0;
 	// int speed=0;
 	int addr=3;
 	while(1) {
-		int addr_index=getAddrIndex(addr);
 		// addr_index sollte immer gültig sin - sonst gibts an segv ....
-		
-		char buffer[256];
-		int size;
+	
+		int changedAddr=0;
 		bool emergencyStop=false;
 
+		int msgsize;
+		int rc;
+		if((rc=read(startupdata->so, &msgsize, 4)) != 4) {
+			printf("error reading cmd (%d)\n",rc);
+			return NULL;
+		}
+		printf("reading msg.size: %d bytes\n",msgsize);
+		char buffer[msgsize];
+		if(read(startupdata->so, buffer, msgsize) != msgsize) {
+			printf("error reading cmd.data\n");
+			return NULL;
+		}
+		InputReader in(buffer,msgsize);
+		printf("parsing msg\n");
+		FBTCtlMessage cmd;
+		cmd.readMessage(in);
+		cmd.dump();
+		int nr=0; // für die conrad platine
+		/*
+		int size;
+		char buffer[256];
 		if((size = read(startupdata->so, buffer, sizeof(buffer))) <= 0) {
 			printf("%d:error reading message size=%d \"%.*s\"\n",startupdata->clientID,size,size >= 0 ? buffer : NULL);
 			break;
 		}
 		buffer[size]='\0';
 		printf("%.*s",size,buffer);
-		int nr=0;
 		char cmd[sizeof(buffer)]="";
 		char param1[sizeof(buffer)]="";
 		char param2[sizeof(buffer)]="";
 		sscanf(buffer,"%d %s %s %s",&nr,&cmd, &param1, &param2);
 		printf("%d:<- %s p1=%s p2=%s\n",startupdata->clientID,cmd,param1,param2);
-		
-		if(cmd) {
-			if(memcmp(cmd,"up",2)==0) {
+		*/
+		if(true) {
+			if(cmd.isType("PING")) {
+				FBTCtlMessage reply(messageTypeID("PING_REPLY"));
+				setLokStatus(reply,lastStatus);
+				reply.dump();
+				sendMessage(startupdata->so,reply);
+			} else if(cmd.isType("ACC")) {
+				int addr=cmd["addr"].getIntVal();
+				int addr_index=getAddrIndex(addr);
 				lokdef[addr_index].currspeed+=5;
 				if(lokdef[addr_index].currspeed > 255)
 					lokdef[addr_index].currspeed=255;
-			} else if(memcmp(cmd,"down",4)==0) {
+				FBTCtlMessage reply(messageTypeID("ACC_REPLY"));
+				setLokStatus(reply,lastStatus);
+				sendMessage(startupdata->so,reply);
+				changedAddr=addr;
+			} else if(cmd.isType("BREAK")) {
+				int addr=cmd["addr"].getIntVal();
+				int addr_index=getAddrIndex(addr);
 				lokdef[addr_index].currspeed-=5;
 				if(lokdef[addr_index].currspeed < -255)
 					lokdef[addr_index].currspeed=-255;
-			} else if(STREQ(cmd,"list")) { // liste mit eingetragenen loks abrufen, format: <name>;<adresse>;...\n
+				FBTCtlMessage reply(messageTypeID("BREAK_REPLY"));
+				setLokStatus(reply,lastStatus);
+				sendMessage(startupdata->so,reply);
+				changedAddr=addr;
+			} else if(cmd.isType("STOP")) {
+				int addr=cmd["addr"].getIntVal();
+				int addr_index=getAddrIndex(addr);
+				lokdef[addr_index].currspeed=0;
+				FBTCtlMessage reply(messageTypeID("STOP_REPLY"));
+				setLokStatus(reply,lastStatus);
+				reply.dump();
+				sendMessage(startupdata->so,reply);
+				changedAddr=addr;
+			} else if(cmd.isType("GETLOCOS")) { // liste mit eingetragenen loks abrufen, format: <name>;<adresse>;...\n
+				FBTCtlMessage reply(messageTypeID("GETLOCOS_REPLY"));
 				int i=0;
-				char buffer[32];
 				while(lokdef[i].addr) {
-					snprintf(buffer,sizeof(buffer)," %d;%s\n",lokdef[i].addr,lokdef[i].name);
-					sendToPhone(buffer);
+					reply["info"][i]["addr"]=lokdef[i].addr;
+					reply["info"][i]["name"]=lokdef[i].name;
 					i++;
 				}
-			} else if(STREQ(cmd,"funclist")) {
+				reply.dump();
+				sendMessage(startupdata->so,reply);
+			} else if(cmd.isType("GETFUNCTIONS")) {
+				int addr=cmd["addr"].getIntVal();
+				int addr_index=getAddrIndex(addr);
+				FBTCtlMessage reply(messageTypeID("GETFUNCTIONS_REPLY"));
 				printf("funclist for addr %d\n",addr);
-				char buffer[32];
-				for(int j=0; j < lokdef[addr_index].nFunc; j++) {
-					snprintf(buffer,sizeof(buffer)," %d;%d;%s\n",j+1,lokdef[addr_index].func[j].ison,lokdef[addr_index].func[j].name);
-					sendToPhone(buffer);
+				// char buffer[32];
+				for(int i=0; i < lokdef[addr_index].nFunc; i++) {
+					// snprintf(buffer,sizeof(buffer)," %d;%d;%s\n",j+1,lokdef[addr_index].func[j].ison,lokdef[addr_index].func[j].name);
+					reply["info"][i]["name"]=lokdef[addr_index].func[i].name;
+					reply["info"][i]["value"]=lokdef[addr_index].func[i].ison;
 				}
-			} else if(STREQ(cmd,"func")) { // wenn cmd kürzer als 5 zeichen bricht der ja beim \0 ab -> ok
+				sendMessage(startupdata->so,reply);
+			} else if(cmd.isType("SETFUNC")) {
+				/*
 				char *endptr=NULL;
+				todo
 				int funcNr=atol(param1); // geht von 1..16
 
-				if(funcNr > 0 && funcNr <= lokdef[addr_index].nFunc) {
-					if(STREQ(param2,"on") || STREQ(param2,"down"))
-						lokdef[addr_index].func[funcNr-1].ison = true;
+				*/
+				int addr=cmd["addr"].getIntVal();
+				int addr_index=getAddrIndex(addr);
+				int funcNr=cmd["funcnr"].getIntVal();
+				int value=cmd["value"].getIntVal();
+				if(funcNr >= 0 && funcNr < lokdef[addr_index].nFunc) {
+					if(value)
+						lokdef[addr_index].func[funcNr].ison = true;
 					else
-						lokdef[addr_index].func[funcNr-1].ison = false;
+						lokdef[addr_index].func[funcNr].ison = false;
 				} else {
 					printf("%d:invalid funcNr out of bounds(%d)\n",startupdata->clientID,funcNr);
 				}
+				FBTCtlMessage reply(messageTypeID("SETFUNC_REPLY"));
+				setLokStatus(reply,lastStatus);
+				sendMessage(startupdata->so,reply);
+				changedAddr=addr;
+
+/*
 			} else if(STREQ(cmd,"stop")) {
 				printf("stop\n");
 				lokdef[addr_index].currspeed=0;
@@ -263,14 +334,23 @@ void *phoneClient(void *data)
 				} else {
 					sendToPhone(" invalid id\n");
 				}
-			} else if(STREQ(cmd,"pwr_off")) {
-				if(srcp) srcp->pwrOff();
-			} else if(STREQ(cmd,"pwr_on")) {
-				if(srcp) srcp->pwrOn();
-			} else if(memcmp(cmd,"invalid_key",10)==0) {
+*/
+			} else if(cmd.isType("POWER")) {
+				int value=cmd["value"].getIntVal();
+				if(srcp) {
+					if(value) srcp->pwrOn();
+					else srcp->pwrOff();
+				}
+				FBTCtlMessage reply(messageTypeID("POWER_REPLY"));
+				reply["value"]=value;
+				sendMessage(startupdata->so,reply);
+			} else {
+				printf("----------------- invalid command ------------------------\n");
+			/*
+			if(memcmp(cmd,"invalid_key",10)==0) {
 				printf("%d:invalid key ! param1: %s\n",startupdata->clientID,param1);
 				bool notaus=false;
-				/*
+				/ *
 				int i=0;
 				int row=-1;
 				while(lokdef[i].addr) {
@@ -295,17 +375,19 @@ void *phoneClient(void *data)
 				} else {
 					notaus=true;
 				}
-				*/
+				* /
 				if(notaus) {
 					printf("notaus\n");
 					lokdef[addr_index].currspeed=0;
 					emergencyStop=true;
 				}
+				*/
 			}
 		} else {
 			printf("%d:no command?????",startupdata->clientID);
 		}
 
+		/*
 		// REPLY SENDEN -----------------
 		int funcbits=0;
 		for(int i=0; i < lokdef[addr_index].nFunc; i++) {
@@ -316,32 +398,38 @@ void *phoneClient(void *data)
 		snprintf(buffer,sizeof(buffer),"%d %d %d %04x\n",nr,
 			lokdef[addr_index].addr,lokdef[addr_index].currspeed,funcbits);
 		sendToPhone(buffer);
+		*/
 
 		// PLATINE ANSTEUERN ------------
 		if(platine) {
 			// geschwindigkeit 
 			// double f_speed=sqrt(sqrt((double)lokdef[addr_index].currspeed/255.0))*255.0; // für üperhaupt keine elektronik vorm motor gut (schienentraktor)
-			unsigned int a_speed=abs(lokdef[addr_index].currspeed);
-			double f_speed=a_speed;
+			changedAddr=addr;
+			if(changedAddr) {
+				int addr_index=getAddrIndex(changedAddr);
+				unsigned int a_speed=abs(lokdef[addr_index].currspeed);
+				double f_speed=a_speed;
 
-			int ia1=255-(int)f_speed;
-			printf("%d:lokdef[addr_index].currspeed: %d (%f)\n",startupdata->clientID,ia1,f_speed);
-			int ia2=lokdef[addr_index].currspeed < 0 ? 255 : 0; // 255 -> relais zieht an
-			int id8=0;
-			// printf("lokdef[addr_index].currspeed=%d: ",lokdef[addr_index].currspeed);
-			for(int i=1; i < 9; i++) {
-				// printf("%d ",255*i/(9));
-				if( a_speed >= 255*i/(9)) {
-					id8 |= 1 << (i-1);
+				int ia1=255-(int)f_speed;
+				printf("%d:lokdef[addr_index].currspeed: %d (%f)\n",startupdata->clientID,ia1,f_speed);
+				int ia2=lokdef[addr_index].currspeed < 0 ? 255 : 0; // 255 -> relais zieht an
+				int id8=0;
+				// printf("lokdef[addr_index].currspeed=%d: ",lokdef[addr_index].currspeed);
+				for(int i=1; i < 9; i++) {
+					// printf("%d ",255*i/(9));
+					if( a_speed >= 255*i/(9)) {
+						id8 |= 1 << (i-1);
+					}
 				}
+				// printf("\n");
+				if(lokdef[addr_index].currspeed==0) { // lauflicht anzeigen
+					int a=1 << (nr&3);
+					id8=a | a << 4;
+				}
+				platine->write_output(ia1, ia2, id8);
 			}
-			// printf("\n");
-			if(lokdef[addr_index].currspeed==0) { // lauflicht anzeigen
-				int a=1 << (nr&3);
-				id8=a | a << 4;
-			}
-			platine->write_output(ia1, ia2, id8);
-		} else if(srcp) { // erddcd/srcp/dcc:
+		} else if(srcp && changedAddr) { // erddcd/srcpd/dcc:
+			int addr_index=getAddrIndex(changedAddr);
 			int dir= lokdef[addr_index].currspeed < 0 ? 0 : 1;
 			if(emergencyStop) {
 				dir=2;

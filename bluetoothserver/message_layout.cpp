@@ -1,4 +1,5 @@
 #include <string.h>
+#include <errno.h>
 #include "message_layout.h"
 #include "fbtctl_message.h"
 
@@ -100,7 +101,12 @@ void loadMessageLayouts()
 	char buffer[1024];
 	int typeNr=MessageLayout::STRUCT+1;
 	while(!feof(f)) {
-		fgets(buffer,sizeof(buffer)-1,f);
+		if(fgets(buffer,sizeof(buffer)-1,f) == NULL) {
+			if(!feof(f)) {
+				printf("error reading line (%s)\n",strerror(errno));
+			}
+			break;
+		}
 		int n=strlen(buffer);
 		if((buffer[n-1] == '\n') || (buffer[n-1] == '\r')) {
 			buffer[n-1]='\0';
@@ -128,7 +134,7 @@ void loadMessageLayouts()
 		MessageLayout messageLayout(parseMessageLayout(pos));
 		MessageLayout::DataType type=(MessageLayout::DataType) (typeNr);
 		messageLayout.type=type;
-	printf("messayLayout: type: %d\n",type);
+	printf("messayLayout: type: %d line:%s\n",type,buffer);
 		messageLayouts[name] = messageLayout;
 		typeNr++;
 	}

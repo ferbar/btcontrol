@@ -184,13 +184,19 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 		helloForm.setTitle(text);
 	}
     public void debug(String text) {
+		StringItem item=new StringItem("",text);
+		debug(item);
+		/*
+		text.setFont(Font.getFont(Font.SIZE_SMALL));
         helloForm.append(text);
 		try {
 			// this.btcomm.addCmdToQueue("debug "+text+"\n");
 		}catch(Exception e) {
 		}
+		 */
     }
 	public void debug(StringItem text) {
+		text.setFont(Font.getFont(Font.FACE_PROPORTIONAL, Font.STYLE_PLAIN, Font.SIZE_SMALL));
         helloForm.append(text);
     }
 	

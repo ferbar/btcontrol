@@ -5,6 +5,7 @@
  *
  * macht die kommunikation mit dem BT server
  *	- AddCmdQueue -tut ein kommando in die queue
+ * run wartet auf ein commando in der queue und sendet das dann, ruft callback auf
  */
 package btcontroll;
 
@@ -27,32 +28,36 @@ import protocol.OutputWriter;
  * @author chris
  */
 public class BTcommThread extends Thread{
-	interface DisplayOutput {
+	public interface DisplayOutput {
 		public void debug(String text);
 		public void debug(StringItem text);
 		public void vibrate(int ms);
 	}
+			
 	DataInputStream iStream;
 	DataOutputStream oStream;
 	StreamConnection BTStreamConnection;
 	
-	private DisplayOutput debugForm;  
-	public int currAddr=0; // schreibta da rein, ruft notiry auf
-	public int currSpeed=0;
-	public int currFuncBits=0;
+	private DisplayOutput debugForm;
 	public interface Callback {
-		public void BTCallback();
+		public void BTCallback(FBTCtlMessage reply);
+	}
+	private class NextMessage {
+		NextMessage(FBTCtlMessage message, Callback callback) {
+			this.message=message;
+			this.callback=callback;
+		}
+		FBTCtlMessage message;
+		Callback callback;
 	}
 	// wenn daten empfangen werden wird notify() aufgerufen
-	public Callback notifyObject=null;
+	public Callback pingCallback=null;
 	
 
-	// FIXME: riesen pfusch das !!!!!!!!!!
-	String my_queue[];
+	// FIXME: nextMessage = 1 element queue
+	NextMessage nextMessage=null;
 	boolean my_queue_returnReply=false;
 	Object queue_wait=new Object(); // thread macht nachn senden ein notify -> kamma neues reinschreiben
-	String reply=null;
-	Object reply_sync=new Object();
 	
 	// sachen fürn timeout:
 	boolean timeout=false;
@@ -67,9 +72,9 @@ public class BTcommThread extends Thread{
 			System.out.println( "TimeoutTask" );
 			called=true;
 			timeout=true;
-			if(notifyObject != null) {
+			if(pingCallback != null) {
 				try {
-					notifyObject.BTCallback();
+					pingCallback.BTCallback(null);
 				} catch (Exception e) {
 					debugForm.debug("BTCallback exception: "+e.toString()+"\n");
 				}
@@ -147,14 +152,14 @@ public class BTcommThread extends Thread{
 		debugForm.vibrate(1000);
 	}
 	
-	public void addCmdToQueue(String cmd) throws Exception {
-		addCmdToQueue(cmd,false);
+	public void addCmdToQueue(FBTCtlMessage message) throws Exception {
+		addCmdToQueue(message,null);
 	}
 	
 	
-	public void addCmdToQueue(String cmd, boolean returnReply) throws Exception {
+	public void addCmdToQueue(FBTCtlMessage message, Callback callback) throws Exception {
 		synchronized(queue_wait) {
-			if(this.my_queue[0] != null) { // queue nicht leer
+			if(this.nextMessage != null) { // queue nicht leer
 				try {
 					debugForm.debug("addCmdToQueue need wait");
 					queue_wait.wait(); // ... dann auf das nächste notify warten
@@ -162,11 +167,10 @@ public class BTcommThread extends Thread{
 					debugForm.debug("addCmdToQueue exception ("+e.toString()+")");
 				}
 			}
-			if(this.my_queue[0] != null) {
+			if(this.nextMessage != null) {
 				throw new Exception("addCmdToQueue: queue not empty");
 			}
-			this.my_queue[0]=cmd;
-			this.my_queue_returnReply=returnReply;
+			this.nextMessage=new NextMessage(message,callback);
 		}
 		
 		synchronized(this.timerwait) {
@@ -175,34 +179,64 @@ public class BTcommThread extends Thread{
 	}
 	
 	/**
-	 * sendet ein command und liefert die antwort zurück
+	 * callback func wird ausgeführt wenn antwort vom exec-cmd da ist
 	 */
-	public String execCmd(String cmd) throws Exception {
-		debugForm.debug("execCmd "+cmd+"\n");
-		addCmdToQueue(cmd,true);
-		if(this.reply != null) { // ganz schlecht
+	class CallbackExecCmd implements Callback {
+		public void BTCallback(FBTCtlMessage reply) {
+			this.reply=reply;
+			synchronized(this.reply_sync) {
+				// debugForm.debug("reply.notify\n");
+				this.reply_sync.notify();
+			}
+		}
+		public FBTCtlMessage reply;
+		public Object reply_sync=new Object();
+		public boolean inUse=false;
+
+	}
+	// kann global sein weil queue = 1 command => der muss sowieso warten bis reingeschrieben werden darf
+	CallbackExecCmd callbackExecCmd=new CallbackExecCmd();
+	
+	/**
+	 * sendet ein command und liefert die antwort zurück
+	 * @return antwort
+	 */
+	public FBTCtlMessage execCmd(FBTCtlMessage message) throws Exception {
+		if(this.callbackExecCmd.inUse) {
+			debugForm.debug("execCmd already in use!!!!\n");
+			throw new Exception("execCmd already in use");
+		}
+		this.callbackExecCmd.inUse=true;
+		// debugForm.debug("execCmd "+message.toString()+"\n");
+		if(this.callbackExecCmd.reply != null) { // ganz schlecht
 			debugForm.debug("execCmd: reply scho gesetzt!\n");
 			throw new Exception("reply != null");
 		}
-		this.reply=new String();
-		String ret="undef";
+		addCmdToQueue(message,callbackExecCmd);
 
-		debugForm.debug("execCmd: wait 4 reply\n");
-		synchronized(this.reply_sync) {
-	
-			try {
-				this.reply_sync.wait();
-			} catch (InterruptedException ex) {
-				debugForm.debug("execCmd: wait exception\n");
-				ex.printStackTrace();
+		FBTCtlMessage ret;
+		// debugForm.debug("execCmd: wait 4 reply\n");
+		// message.dump(debugForm);
+		synchronized(this.callbackExecCmd.reply_sync) {
+			// schaut leicht blöd aus, kann aber schon vom thread gesetzt worden sein! - und dann warten wir hier bis in alle ehwigkeiten ...
+			// wichtig ist dass schreiben und da auslesen mit selben object gelockt ist
+			if(this.callbackExecCmd.reply==null) {
+
+				try {
+					this.callbackExecCmd.reply_sync.wait();
+				} catch (InterruptedException ex) {
+					debugForm.debug("execCmd: wait exception\n");
+					ex.printStackTrace();
+				}
 			}
-	 
-			debugForm.debug("execCmd: wait done\n");
-			ret = this.reply;
-			this.reply=null;
+			// debugForm.debug("execCmd: wait done\n");
+			ret=this.callbackExecCmd.reply;
+			this.callbackExecCmd.reply=null;
 		}
 
-		debugForm.debug("execCmd: return: \""+ret+"\"\n");
+		// debugForm.debug("execCmd: return:\n");
+		// message.dump(debugForm);
+		this.callbackExecCmd.inUse=false;
 		return ret;
 	
 	}
@@ -213,12 +247,21 @@ public class BTcommThread extends Thread{
 	 */
 	private void sendMessage(FBTCtlMessage msg) throws Exception
 	{
-		OutputWriter out=msg.getBinaryMessage();
+		// debugForm.debug("txMsg "); msg.dump(debugForm);
+		OutputWriter out;
+		try {
+			out=msg.getBinaryMessage();
+		} catch(Exception e) {
+			debugForm.debug("txMsg getBin Exception: "+e.getMessage());
+			throw e;
+		}
 		OutputWriter outSize=new OutputWriter();
 		outSize.putInt(out.getSize());
 		oStream.write(outSize.getBytes(),0,outSize.getSize());
+		// debugForm.debug("txMsg send: "+out.getSize()+"B ");
 		oStream.write(out.getBytes(),0,out.getSize());
 		oStream.flush();
+		// debugForm.debug("txMsg done");
 	}
 	
 	/**
@@ -231,16 +274,17 @@ public class BTcommThread extends Thread{
 		if(iStream.read(buffer,0,4) != 4) {
 			throw new Exception("error reading init HELO (1)");
 		}
-		debugForm.debug("connected, read helo");
 		InputReader in = new InputReader(buffer);
 		int msgSize = in.getInt();
-		debugForm.debug("size: "+msgSize);
+		// debugForm.debug("rxMsg: size: "+msgSize);
 		if(iStream.read(buffer,0,msgSize) != msgSize) {
 			throw new Exception("error reading init HELO (2)");
 		}
-		debugForm.debug("parsing: ");
+		// debugForm.debug("parsing: ");
 		FBTCtlMessage msg = new FBTCtlMessage();
 		msg.readMessage(buffer);
+		// debugForm.debug("parsing done ");
+		// debugForm.debug("rx Msg"); msg.dump(debugForm);
 		return msg;
 	}
 	
@@ -254,9 +298,6 @@ public class BTcommThread extends Thread{
 		task = new PingDing(timerwait);
 		int pingTimeout=2000;
 		timer.schedule(task, pingTimeout, pingTimeout);
-		my_queue=new String[2];
-		my_queue[0]=null;	my_queue[1]=null;
-		
 		
 		try {
 			// geht nicht: oStream.writeChars("hallo vom handy...\n");
@@ -270,6 +311,7 @@ public class BTcommThread extends Thread{
 				" protoVersion:"+heloMsg.get("protoversion").getIntVal());
 			
 // ping test:
+			/*
 			FBTCtlMessage pingMsg = new FBTCtlMessage();
 			pingMsg.setType(MessageLayouts.messageTypeID("PING"));
 			this.sendMessage(pingMsg);
@@ -285,7 +327,7 @@ public class BTcommThread extends Thread{
 					" speed: "+pingReply.get("info").get(i).get("speed").getIntVal()+
 					" func: "+pingReply.get("info").get(i).get("functions").getIntVal());
 			}
-			
+			*/
 			
 			/*
 			for (int n = 0; n < stream.length; ++n) {
@@ -293,7 +335,7 @@ public class BTcommThread extends Thread{
 			} */
 			oStream.flush();
 			debugForm.debug("writeChars done\n");
-			byte []buffer=new byte[50];
+			// byte []buffer=new byte[50];
 			int commandNr=0;
 			StringItem pingtext=new StringItem("pingtext","");
 			StringItem sendtext=new StringItem("sendtext","");
@@ -307,7 +349,7 @@ public class BTcommThread extends Thread{
 			int maxTPing=0;
 			int avgTPing=0;
 			while(true) {
-				if(my_queue[0] == null) { // kein befehl in der queue -> auf timerwait warten (= entweder timeout/nop oder ein neuer befehl
+				if(this.nextMessage == null) { // kein befehl in der queue -> auf timerwait warten (= entweder timeout/nop oder ein neuer befehl
 					synchronized(timerwait) {
 						try {
 							// helloForm.append("wait...");
@@ -320,26 +362,31 @@ public class BTcommThread extends Thread{
 					}
 				}
 				long startTime = System.currentTimeMillis();
-				boolean returnReply=false;
+				NextMessage currMessage=null;
 				synchronized(queue_wait) {
 					
-					if(my_queue[0] != null) {
+					if(this.nextMessage != null) {
+						/*
 						s=commandNr+" "+my_queue[0]+"\n";
 						debugForm.debug("#"+commandNr+" = "+my_queue[0]+"\n");
-						returnReply=my_queue_returnReply;
-						my_queue_returnReply=false;
-						my_queue[0]=null;
+						 */
+						currMessage=this.nextMessage;
+						this.nextMessage=null;
 						queue_wait.notify();
 					} else {
-						s=commandNr+" nop\n";
+						FBTCtlMessage pingMsg = new FBTCtlMessage();
+						pingMsg.setType(MessageLayouts.messageTypeID("PING"));
+						currMessage=new NextMessage(pingMsg, pingCallback);
 					}
 				}
 				timeoutTimer = new Timer();
 				timeoutTask = new TimeoutTask();
 				timeoutTimer.schedule(timeoutTask,1000); // timeout 1s
+				this.sendMessage(currMessage.message);
+				/*
 				oStream.write(s.getBytes()); oStream.flush();
-				// helloForm.append("sent: "+s);
-				sendtext.setText("sent: "+s);
+				helloForm.append("sent: "+s);
+				// sendtext.setText("sent: "+s);
 				boolean found=false;
 				while(!found) { // so lange lesen bis zeile mit cmdnr anfängt
 					// debugForm.debug("readln for cmd "+commandNr+"\n");
@@ -440,13 +487,21 @@ public class BTcommThread extends Thread{
 					// helloForm.append("rx: "+sreply_commandNr+'\n');
 					pingtext.setText("rx: "+sreply_commandNr+'\n');
 				}
+				*/
+				FBTCtlMessage reply = this.receiveMessage();
+				if(currMessage.callback != null) {
+					// debugForm.debug("#"+commandNr+" done ret.len="+reply.toString()+"\n");
+					currMessage.callback.BTCallback(reply);
+				}
+
+				/*
 				if(returnReply){
-					debugForm.debug("#"+commandNr+" done ret.len="+this.reply.length()+"\n");
 					synchronized(this.reply_sync) {
 						// debugForm.debug("reply.notify\n");
 						this.reply_sync.notify();
 					}
 				}
+				 */
 				commandNr++;
 				long endTime = System.currentTimeMillis();
 				int t=(int) (endTime-startTime);
@@ -465,11 +520,13 @@ public class BTcommThread extends Thread{
 		} catch (Exception e) {
 			debugForm.debug("BT comm thread: exception("+e.toString()+")\n");
 		}
+		/*
 		if(my_queue_returnReply){
 			synchronized(this.reply_sync) { // sicher is sicher ...
 				this.reply_sync.notify();
 			}
 		}
+		*/
 		debugForm.debug("BT comm thread: ended\n");
 		close();
 		timer.cancel(); // ping timer stoppen sonst gibts eventuell irgendwann 2 davon ...

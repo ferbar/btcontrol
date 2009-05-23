@@ -67,6 +67,8 @@ public:
 
 	void clear();
 
+	bool isType(const char *);
+
 private:
 	int seqNum;
 
