@@ -197,7 +197,7 @@ void *phoneClient(void *data)
 
 	int x=0;
 	// int speed=0;
-	int addr=3;
+	// int addr=3;
 	while(1) {
 		// addr_index sollte immer gültig sin - sonst gibts an segv ....
 	
@@ -404,7 +404,7 @@ void *phoneClient(void *data)
 		if(platine) {
 			// geschwindigkeit 
 			// double f_speed=sqrt(sqrt((double)lokdef[addr_index].currspeed/255.0))*255.0; // für üperhaupt keine elektronik vorm motor gut (schienentraktor)
-			changedAddr=addr;
+			// changedAddr=1;
 			if(changedAddr) {
 				int addr_index=getAddrIndex(changedAddr);
 				unsigned int a_speed=abs(lokdef[addr_index].currspeed);
@@ -447,10 +447,10 @@ void *phoneClient(void *data)
 				func[j]=lokdef[addr_index].func[j].ison;
 			}
 			if(!lokdef[addr_index].initDone) {
-				srcp->sendLocoInit(addr, nFahrstufen, lokdef[addr_index].nFunc);
+				srcp->sendLocoInit(changedAddr, nFahrstufen, lokdef[addr_index].nFunc);
 				lokdef[addr_index].initDone=true;
 			}
-			srcp->sendLocoSpeed(addr, dir, nFahrstufen, dccSpeed, lokdef[addr_index].nFunc, func);
+			srcp->sendLocoSpeed(changedAddr, dir, nFahrstufen, dccSpeed, lokdef[addr_index].nFunc, func);
 		}
 	}
 	printf("%d:client exit\n",startupdata->clientID);
