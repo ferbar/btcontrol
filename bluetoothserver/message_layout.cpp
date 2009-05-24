@@ -87,11 +87,14 @@ MessageLayout parseMessageLayout(const char *&pos)
 
 /**
  * tut die protocol.dat laden
+ * @return hash von protocol.dat (zum vergleich ob das tel die selbe protocol.dat verwendet)
+ *              kommentare werden ignoriert
  */
-void loadMessageLayouts()
+int loadMessageLayouts()
 {
+	int hash=0;
 	if(MessageLayoutsInited==true)
-		return;
+		return 0;
 	MessageLayoutsInited=true;
 	FILE *f=fopen("protocol.dat","r");
 	if(!f) {
@@ -117,6 +120,13 @@ void loadMessageLayouts()
 		if(buffer[0]=='#') {
 			continue;
 		}
+		{ // hash für die zeile berechnen
+			int lineHash=0;
+			const unsigned char *n=(unsigned char *) buffer;
+			while(*n) { lineHash+=*n; n++;}
+			hash+=lineHash;
+		}
+
 		const char *pos=buffer;
 		while(*pos && isspace(*pos)) pos++;
 		if(*pos=='\0')
@@ -134,13 +144,14 @@ void loadMessageLayouts()
 		MessageLayout messageLayout(parseMessageLayout(pos));
 		MessageLayout::DataType type=(MessageLayout::DataType) (typeNr);
 		messageLayout.type=type;
-	printf("messayLayout: type: %d line:%s\n",type,buffer);
+		// printf("messayLayout: type: %d line:%s\n",type,buffer);
 		messageLayouts[name] = messageLayout;
 		typeNr++;
 	}
 
 	fclose(f);
 	dumpMessageLayouts();
+	return hash;
 }
 
 void MessageLayout::dump(int indent) const

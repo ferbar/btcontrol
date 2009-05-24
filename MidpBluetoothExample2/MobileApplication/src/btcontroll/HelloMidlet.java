@@ -14,9 +14,9 @@ import javax.bluetooth.*;
 import javax.microedition.io.Connector;
 import javax.microedition.io.StreamConnection;
 
-import java.io.InputStream; // für load resource
+// import java.io.InputStream; // für load resource
 
-import protocol.FBTCtlMessage;
+// import protocol.FBTCtlMessage;
 import protocol.MessageLayouts;
  
 //import javax.microedition.io.*; // input stream, output stream
@@ -317,6 +317,7 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 		}//GEN-END:MVDCACase23
 		if (command == btScanCommand) {  // neue BT suche
 			helloForm.setTitle("bt scan...");
+			debug("bt scan started");
 			System.out.println("bt scan started");
 			PrintClient client;
 			this.listServer = null;

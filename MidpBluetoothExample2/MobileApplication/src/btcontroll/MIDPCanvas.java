@@ -11,6 +11,7 @@ import java.util.TimerTask;
 import javax.microedition.lcdui.*;
 import protocol.FBTCtlMessage;
 import protocol.MessageLayouts;
+import java.util.Vector;
 
 /**
  *
@@ -31,10 +32,14 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	// loco list
 	private Command locoListCMDSelect = new Command("Select", Command.ITEM,1);
 	private Command locoListCMDBack = new Command("back", Command.BACK,1);
+	private Command locoListMultiCMDSelect = new Command("go", Command.ITEM,1);
 			
 	// func list (back=locoListCMDBack
 	private Command funcListCMDOn = new Command("Ein", Command.ITEM,1);
 	private Command funcListCMDOff = new Command("Aus", Command.ITEM,2);
+	
+	private Command sendPOMCommand = new Command("POM (TODO)", Command.ITEM,9);
+	private Command multiControllCommand = new Command("Mehrfachsteuerung", Command.ITEM, 10);
 
 	boolean inCommandAction=false;
 
@@ -42,6 +47,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 
 	private Displayable backForm; // damit ma wieder zurück kommen
 
+	private int[] currMultiAddr=null; // für mehrfachsteuerung
 	private int currAddr=0; // 
 	private int currSpeed=0; // wird von der callback func gesetzt
 	private int currFuncBits=0;
@@ -76,8 +82,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			if(reply == null) {
 				throw new Exception("callback, no reply-disconnected?");
 			} else {
-				if(reply.isType("PING_REPLY") || reply.isType("ACC_REPLY") || reply.isType("BREAK_REPLY")
-						|| reply.isType("STOP_REPLY") || reply.isType("SETFUNC_REPLY")) {
+				if(reply.isType("STATUS_REPLY")) {
 					// debugForm.debug("pingReply rx ");
 					int an=reply.get("info").getArraySize();
 					// debugForm.debug("asize:"+an+" ");
@@ -130,6 +135,8 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		this.addCommand(pwrOffCommand);
 		this.addCommand(pwrOnCommand);
 
+		this.addCommand(sendPOMCommand);
+		this.addCommand(multiControllCommand);
 	}
 	
 	public void update(BTcommThread btcomm)  {
@@ -222,10 +229,16 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 						switch ( gameAction )
 						{
 							case Canvas.UP:
-								msg.setType(MessageLayouts.messageTypeID("ACC"));
+								if(this.currMultiAddr == null)
+									msg.setType(MessageLayouts.messageTypeID("ACC"));
+								else
+									msg.setType(MessageLayouts.messageTypeID("ACC_MULTI"));
 								break;
 							case Canvas.DOWN:
-								msg.setType(MessageLayouts.messageTypeID("BREAK"));
+								if(this.currMultiAddr == null)
+									msg.setType(MessageLayouts.messageTypeID("BREAK"));
+								else
+									msg.setType(MessageLayouts.messageTypeID("BREAK_MULTI"));
 								break;
 							/* - mittlere taste wird als kommando aufgerufen!
 							case Canvas.FIRE:
@@ -251,7 +264,13 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 						msg.get("funcnr").set(func);
 						msg.get("value").set(1);
 					}
-					msg.get("addr").set(this.currAddr);
+					if(func < 0 && this.currMultiAddr != null) {
+						for(int i=0; i < this.currMultiAddr.length; i++) {
+							msg.get("list").get(i).get("addr").set(this.currMultiAddr[i]);
+						}
+					} else {
+						msg.get("addr").set(this.currAddr);
+					}
 
 					btcomm.addCmdToQueue(msg,this);
 				}
@@ -382,6 +401,9 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		}
 	}
 
+	/**
+	 * startet einen eigenen thread zum befüllen der liste - blockiert sonst commandAction
+	 */
 	public List get_locoList() throws Exception
 	{
 		selectList = new ValueList("Loks", Choice.IMPLICIT);
@@ -396,7 +418,20 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		return selectList;
 	}  		
 
-	
+	public List get_locoListMultiControll() throws Exception
+	{
+		selectList = new ValueList("Loks", Choice.MULTIPLE);
+		selectList.setCommandListener(this);
+		//selectList.setSelectedFlags(new boolean[0]);
+		selectList.addCommand(locoListMultiCMDSelect);
+		selectList.addCommand(locoListCMDBack);
+		FBTCtlMessage msg = new FBTCtlMessage();
+		msg.setType(MessageLayouts.messageTypeID("GETLOCOS"));
+		Thread th = new FillListThread("Loks",msg,"name","addr");
+		th.start();
+		return selectList;
+	}  		
+
 	public List get_funcList() throws Exception
 	{
 		selectList = new ValueList("Funktionen", Choice.IMPLICIT);
@@ -439,29 +474,65 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			} else if(command==this.emergencyStopCommand) {
 				this.setTitle("stop");
 				FBTCtlMessage msg = new FBTCtlMessage();
-				msg.setType(MessageLayouts.messageTypeID("STOP"));
-				msg.get("addr").set(this.currAddr);
+				if(this.currMultiAddr == null) {
+					msg.setType(MessageLayouts.messageTypeID("STOP"));
+					msg.get("addr").set(this.currAddr);
+				} else {
+					msg.setType(MessageLayouts.messageTypeID("STOP_MULTI"));
+					for(int i=0; i < this.currMultiAddr.length; i++) {
+						msg.get("list").get(i).get("addr").set(this.currMultiAddr[i]);
+					}
+				}
 				btcomm.addCmdToQueue(msg,this);
+				
 			} else if(command==this.locoListCommand) {
 				HelloMidlet.display.setCurrent(get_locoList());
 			} else if(command==this.locoListCMDSelect) {
 				int n=selectList.getSelectedIndex();
 				Integer addr=(Integer) selectList.getValue(n);
 				this.currAddr=addr.intValue();
+				this.currMultiAddr=null;
 				HelloMidlet.display.setCurrent(this);
 				this.setTitle(selectList.getString(n));
+				
+			} else if(command==this.multiControllCommand) {
+				HelloMidlet.display.setCurrent(get_locoListMultiControll());
+			} else if(command==this.locoListMultiCMDSelect) {
+				boolean[] selectedIndexes=new boolean[selectList.size()];
+				int listSize=selectList.getSelectedFlags(selectedIndexes);
 				/*
-				int pos=line.indexOf(";");
-				if(pos >= 0) {
-					String saddr=line.substring(0,pos);
-					debugForm.debug("locoListSelect: \""+saddr+"\"");
-					int addr=Integer.parseInt(saddr);
-					String ret=btcomm.execCmd("select "+addr);
-
+				int n=0;
+				debugForm.debug("locoListMultiCMDSelect ");
+				for(int i=0; i < selectedIndexes.length; i++) {
+					debugForm.debug("["+i+"]="+selectedIndexes[i]+" ");
+					if(selectedIndexes[i]) {
+						n++;
+					}
+				}*/
+				if(listSize > 1) {
+					this.currMultiAddr=new int[listSize];
+					int n=0;
+					debugForm.debug("locoListMultiCMDSelect ("+listSize+")");
+					String s="";
+					for(int i=0; i < selectedIndexes.length; i++) {
+						if(selectedIndexes[i]) {
+							Integer addr=(Integer) selectList.getValue(i);
+							this.currAddr=addr.intValue(); // damit irgendwas angezeigt wird
+							this.currMultiAddr[n]=addr.intValue();
+							// debugForm.debug("["+n+"]="+addr.intValue()+" ");
+							s+=addr.intValue()+", ";
+							n++;
+						}
+					}
 					HelloMidlet.display.setCurrent(this);
-					this.setTitle(ret);
+					this.setTitle("Mehrfachsteuerung "+s);
+				} else {
+					Alert alert;
+					alert = new Alert("Mehrfachsteuerung","bitte >= 2 loks auswählen ("+listSize+")",null,null);
+					alert.setTimeout(Alert.FOREVER);
+					HelloMidlet.display.setCurrent(alert);
 				}
-				 */
+				
 			} else if(command==this.locoListCMDBack) {
 				HelloMidlet.display.setCurrent(this);
 			} else if(command==this.funcListCommand) {

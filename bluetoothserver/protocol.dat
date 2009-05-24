@@ -5,27 +5,29 @@
 # A{} .. array mit beliebig vielen elementen
 
 # erste Message vom server -> client
-HELO=protoversion:I,name:S,version:S
+HELO=protohash:I,name:S,version:S
 
 # im prinzip ein pollen
 PING=
 # reply = geänderte loks, kann size 0 sein
-PING_REPLY=info:A{addr:I,speed:I,functions:I}
+STATUS_REPLY=info:A{addr:I,speed:I,functions:I}
 
-# beschleunigen
+# beschleunigen reply = STATUS_REPLY
 ACC=addr:I
-ACC_REPLY=info:A{addr:I,speed:I,functions:I}
 
 # bremsen
 BREAK=addr:I
-BREAK_REPLY=info:A{addr:I,speed:I,functions:I}
 
 # stop
 STOP=addr:I
-STOP_REPLY=info:A{addr:I,speed:I,functions:I}
 
+
+ACC_MULTI=list:A{addr:I}
+BREAK_MULTI=list:A{addr:I}
+STOP_MULTI=list:A{addr:I}
+
+# func ein/aus
 SETFUNC=addr:I,funcnr:I,value:I
-SETFUNC_REPLY=info:A{addr:I,speed:I,functions:I}
 
 # notstop/power off, speed jeder lok auf 0 setzen?
 POWER=value:I

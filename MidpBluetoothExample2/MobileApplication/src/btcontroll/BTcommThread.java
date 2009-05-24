@@ -301,14 +301,19 @@ public class BTcommThread extends Thread{
 		
 		try {
 			// geht nicht: oStream.writeChars("hallo vom handy...\n");
-			String s; // ="hallo vom handy...\n";
+			// String s; // ="hallo vom handy...\n";
 			FBTCtlMessage heloMsg = this.receiveMessage();
 			if(!heloMsg.isType("HELO")) {
 				throw new Exception("didn't receive HELO");
 			}
 			debugForm.debug("server:"+heloMsg.get("name").getStringVal()+
 				" version:"+heloMsg.get("version").getStringVal()+
-				" protoVersion:"+heloMsg.get("protoversion").getIntVal());
+				" protoHash:"+heloMsg.get("protohash").getIntVal());
+			int protocolHash=heloMsg.get("protohash").getIntVal();
+			if(MessageLayouts.hash != protocolHash) {
+				debugForm.debug("invalid protocol.dat hash (server:"+protocolHash+" me:"+MessageLayouts.hash+")");
+				throw new Exception("invalid protocol.dat hash (server:"+protocolHash+" me:"+MessageLayouts.hash+")");
+			}
 			
 // ping test:
 			/*
@@ -332,9 +337,10 @@ public class BTcommThread extends Thread{
 			/*
 			for (int n = 0; n < stream.length; ++n) {
 				oStream.writeByte(stream[n]);
-			} */
+			}
 			oStream.flush();
 			debugForm.debug("writeChars done\n");
+			 */
 			// byte []buffer=new byte[50];
 			int commandNr=0;
 			StringItem pingtext=new StringItem("pingtext","");

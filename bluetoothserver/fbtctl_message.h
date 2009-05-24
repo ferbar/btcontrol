@@ -56,6 +56,7 @@ public:
 
 	int getIntVal();
 	std::string getStringVal();
+	int getArraySize();
 	FBTCtlMessage &operator [](int i);
 	FBTCtlMessage &operator [](const std::string &s);
 

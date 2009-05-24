@@ -24,8 +24,8 @@ public:
 	std::vector < MessageLayout > childLayouts;
 };
 
-// ladet die protocol.dat
-void loadMessageLayouts();
+// ladet die protocol.dat @return hash von der protocol.dat
+int loadMessageLayouts();
 // liefert das layout für eine message (type)
 const MessageLayout &getMessageLayout(MessageLayout::DataType type);
 std::string messageTypeName(MessageLayout::DataType type);
