@@ -143,6 +143,11 @@ std::string FBTCtlMessage::getStringVal()
 	return sval;
 }
 
+int FBTCtlMessage::getArraySize()
+{
+	return arrayVal.size();
+}
+
 FBTCtlMessage &FBTCtlMessage::operator [](int i)
 {
 	if(this->type == MessageLayout::UNDEF) this->type=MessageLayout::ARRAY;

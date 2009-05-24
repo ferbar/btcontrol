@@ -50,6 +50,8 @@ static int master = 0;
 static int linger = 0;
 bool cfg_debug=false;
 
+int protocolHash;
+
 K8055 *platine=NULL;
 SRCP *srcp=NULL;
 
@@ -173,6 +175,14 @@ void setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus)
 	}
 }
 
+void sendStatusReply(int so, lastStatus_t *lastStatus)
+{
+	FBTCtlMessage reply(messageTypeID("STATUS_REPLY"));
+	setLokStatus(reply,lastStatus);
+	reply.dump();
+	sendMessage(so,reply);
+}
+
 /**
  * für jedes handy ein eigener thread...
  */
@@ -186,13 +196,16 @@ void *phoneClient(void *data)
 	FBTCtlMessage heloReply(messageTypeID("HELO"));
 	heloReply["name"]="my bt server";
 	heloReply["version"]="testding";
-	heloReply["protoversion"]=2;
+	heloReply["protohash"]=protocolHash;
 	heloReply.dump();
 	sendMessage(startupdata->so,heloReply);
 
 	int nLokdef=0;
 	while(lokdef[nLokdef].addr) nLokdef++;
-	lastStatus_t *lastStatus=new lastStatus_t[nLokdef+1];
+	lastStatus_t lastStatus[nLokdef+1];
+	for(int i=0; i <= nLokdef; i++) { lastStatus[i].func=-1; }
+	bool changedAddrIndex[nLokdef+1];
+	for(int i=0; i <= nLokdef; i++) { changedAddrIndex[i] = false; }
 
 
 	int x=0;
@@ -201,7 +214,6 @@ void *phoneClient(void *data)
 	while(1) {
 		// addr_index sollte immer gültig sin - sonst gibts an segv ....
 	
-		int changedAddr=0;
 		bool emergencyStop=false;
 
 		int msgsize;
@@ -239,39 +251,108 @@ void *phoneClient(void *data)
 		*/
 		if(true) {
 			if(cmd.isType("PING")) {
-				FBTCtlMessage reply(messageTypeID("PING_REPLY"));
-				setLokStatus(reply,lastStatus);
-				reply.dump();
-				sendMessage(startupdata->so,reply);
+				sendStatusReply(startupdata->so,lastStatus);
 			} else if(cmd.isType("ACC")) {
 				int addr=cmd["addr"].getIntVal();
 				int addr_index=getAddrIndex(addr);
 				lokdef[addr_index].currspeed+=5;
 				if(lokdef[addr_index].currspeed > 255)
 					lokdef[addr_index].currspeed=255;
-				FBTCtlMessage reply(messageTypeID("ACC_REPLY"));
-				setLokStatus(reply,lastStatus);
-				sendMessage(startupdata->so,reply);
-				changedAddr=addr;
+				sendStatusReply(startupdata->so,lastStatus);
+				changedAddrIndex[addr_index]=true;
 			} else if(cmd.isType("BREAK")) {
 				int addr=cmd["addr"].getIntVal();
 				int addr_index=getAddrIndex(addr);
 				lokdef[addr_index].currspeed-=5;
 				if(lokdef[addr_index].currspeed < -255)
 					lokdef[addr_index].currspeed=-255;
-				FBTCtlMessage reply(messageTypeID("BREAK_REPLY"));
-				setLokStatus(reply,lastStatus);
-				sendMessage(startupdata->so,reply);
-				changedAddr=addr;
+				sendStatusReply(startupdata->so,lastStatus);
+				changedAddrIndex[addr_index]=true;
 			} else if(cmd.isType("STOP")) {
 				int addr=cmd["addr"].getIntVal();
 				int addr_index=getAddrIndex(addr);
 				lokdef[addr_index].currspeed=0;
-				FBTCtlMessage reply(messageTypeID("STOP_REPLY"));
-				setLokStatus(reply,lastStatus);
-				reply.dump();
-				sendMessage(startupdata->so,reply);
-				changedAddr=addr;
+				sendStatusReply(startupdata->so,lastStatus);
+				changedAddrIndex[addr_index]=true;
+			} else if(cmd.isType("ACC_MULTI")) {
+				int n=cmd["list"].getArraySize();
+				int addr=cmd["list"][0]["addr"].getIntVal();
+				int addr_index=getAddrIndex(addr);
+				lokdef[addr_index].currspeed+=5;
+				if(lokdef[addr_index].currspeed > 255)
+					lokdef[addr_index].currspeed=255;
+				changedAddrIndex[addr_index]=true;
+				int speed=lokdef[addr_index].currspeed;
+				for(int i=1; i < n; i++) {
+					int addr=cmd["list"][i]["addr"].getIntVal();
+					int addr_index=getAddrIndex(addr);
+					lokdef[addr_index].currspeed=speed;
+					changedAddrIndex[addr_index]=true;
+				}
+				sendStatusReply(startupdata->so,lastStatus);
+			} else if(cmd.isType("BREAK_MULTI")) {
+				int n=cmd["list"].getArraySize();
+				int addr=cmd["list"][0]["addr"].getIntVal();
+				int addr_index=getAddrIndex(addr);
+				lokdef[addr_index].currspeed-=5;
+				if(lokdef[addr_index].currspeed < -255)
+					lokdef[addr_index].currspeed=-255;
+				changedAddrIndex[addr_index]=true;
+				int speed=lokdef[addr_index].currspeed;
+				for(int i=1; i < n; i++) {
+					int addr=cmd["list"][i]["addr"].getIntVal();
+					int addr_index=getAddrIndex(addr);
+					lokdef[addr_index].currspeed=speed;
+					changedAddrIndex[addr_index]=true;
+				}
+				sendStatusReply(startupdata->so,lastStatus);
+			} else if(cmd.isType("STOP_MULTI")) {
+				int n=cmd["list"].getArraySize();
+				int addr=cmd["list"][0]["addr"].getIntVal();
+				int addr_index=getAddrIndex(addr);
+				lokdef[addr_index].currspeed=0;
+				changedAddrIndex[addr_index]=true;
+				int speed=lokdef[addr_index].currspeed;
+				for(int i=1; i < n; i++) {
+					int addr=cmd["list"][i]["addr"].getIntVal();
+					int addr_index=getAddrIndex(addr);
+					lokdef[addr_index].currspeed=speed;
+					changedAddrIndex[addr_index]=true;
+				}
+				sendStatusReply(startupdata->so,lastStatus);
+			} else if(cmd.isType("SETFUNC")) {
+				int addr=cmd["addr"].getIntVal();
+				int addr_index=getAddrIndex(addr);
+				int funcNr=cmd["funcnr"].getIntVal();
+				int value=cmd["value"].getIntVal();
+				if(funcNr >= 0 && funcNr < lokdef[addr_index].nFunc) {
+					if(value)
+						lokdef[addr_index].func[funcNr].ison = true;
+					else
+						lokdef[addr_index].func[funcNr].ison = false;
+				} else {
+					printf("%d:invalid funcNr out of bounds(%d)\n",startupdata->clientID,funcNr);
+				}
+				sendStatusReply(startupdata->so,lastStatus);
+				changedAddrIndex[addr_index]=true;
+
+/*
+			} else if(STREQ(cmd,"stop")) {
+				printf("stop\n");
+				lokdef[addr_index].currspeed=0;
+			} else if(STREQ(cmd,"select")) { // ret = lokname
+				int new_addr=atoi(param1);
+				printf("%d:neue lok addr:%d\n",startupdata->clientID,new_addr);
+				int new_addr_index=getAddrIndex(new_addr);
+				if(new_addr_index >= 0) {
+					addr=new_addr;
+					addr_index=new_addr_index;
+					snprintf(buffer,sizeof(buffer)," %s\n",lokdef[addr_index].name);
+					sendToPhone(buffer);
+				} else {
+					sendToPhone(" invalid id\n");
+				}
+*/
 			} else if(cmd.isType("GETLOCOS")) { // liste mit eingetragenen loks abrufen, format: <name>;<adresse>;...\n
 				FBTCtlMessage reply(messageTypeID("GETLOCOS_REPLY"));
 				int i=0;
@@ -294,47 +375,6 @@ void *phoneClient(void *data)
 					reply["info"][i]["value"]=lokdef[addr_index].func[i].ison;
 				}
 				sendMessage(startupdata->so,reply);
-			} else if(cmd.isType("SETFUNC")) {
-				/*
-				char *endptr=NULL;
-				todo
-				int funcNr=atol(param1); // geht von 1..16
-
-				*/
-				int addr=cmd["addr"].getIntVal();
-				int addr_index=getAddrIndex(addr);
-				int funcNr=cmd["funcnr"].getIntVal();
-				int value=cmd["value"].getIntVal();
-				if(funcNr >= 0 && funcNr < lokdef[addr_index].nFunc) {
-					if(value)
-						lokdef[addr_index].func[funcNr].ison = true;
-					else
-						lokdef[addr_index].func[funcNr].ison = false;
-				} else {
-					printf("%d:invalid funcNr out of bounds(%d)\n",startupdata->clientID,funcNr);
-				}
-				FBTCtlMessage reply(messageTypeID("SETFUNC_REPLY"));
-				setLokStatus(reply,lastStatus);
-				sendMessage(startupdata->so,reply);
-				changedAddr=addr;
-
-/*
-			} else if(STREQ(cmd,"stop")) {
-				printf("stop\n");
-				lokdef[addr_index].currspeed=0;
-			} else if(STREQ(cmd,"select")) { // ret = lokname
-				int new_addr=atoi(param1);
-				printf("%d:neue lok addr:%d\n",startupdata->clientID,new_addr);
-				int new_addr_index=getAddrIndex(new_addr);
-				if(new_addr_index >= 0) {
-					addr=new_addr;
-					addr_index=new_addr_index;
-					snprintf(buffer,sizeof(buffer)," %s\n",lokdef[addr_index].name);
-					sendToPhone(buffer);
-				} else {
-					sendToPhone(" invalid id\n");
-				}
-*/
 			} else if(cmd.isType("POWER")) {
 				int value=cmd["value"].getIntVal();
 				if(srcp) {
@@ -404,7 +444,8 @@ void *phoneClient(void *data)
 		if(platine) {
 			// geschwindigkeit 
 			// double f_speed=sqrt(sqrt((double)lokdef[addr_index].currspeed/255.0))*255.0; // für üperhaupt keine elektronik vorm motor gut (schienentraktor)
-			// changedAddr=1;
+			// TODO: wemmas wieder brauchen sollt gucken ob sich wirklich was geändert hat
+			int changedAddr=1;
 			if(changedAddr) {
 				int addr_index=getAddrIndex(changedAddr);
 				unsigned int a_speed=abs(lokdef[addr_index].currspeed);
@@ -428,29 +469,35 @@ void *phoneClient(void *data)
 				}
 				platine->write_output(ia1, ia2, id8);
 			}
-		} else if(srcp && changedAddr) { // erddcd/srcpd/dcc:
-			int addr_index=getAddrIndex(changedAddr);
-			int dir= lokdef[addr_index].currspeed < 0 ? 0 : 1;
-			if(emergencyStop) {
-				dir=2;
+		} else if(srcp) { // erddcd/srcpd/dcc:
+			// wegen X_MULTI gucken was wir geändert ham:
+			for(int i=0; i <= nLokdef; i++) {
+				if(changedAddrIndex[i]) {
+					changedAddrIndex[i]=false;
+					int addr_index=i;
+					int dir= lokdef[addr_index].currspeed < 0 ? 0 : 1;
+					if(emergencyStop) {
+						dir=2;
+					}
+					// int nFahrstufen = 14;
+					int nFahrstufen = 127;
+					if(lokdef[addr_index].flags & F_DEC14) {
+						nFahrstufen = 14;
+					} else if(lokdef[addr_index].flags & F_DEC28) {
+						nFahrstufen = 28;
+					}
+					int dccSpeed = abs(lokdef[addr_index].currspeed) * nFahrstufen / 255;
+					bool func[16];
+					for(int j=0; j < lokdef[addr_index].nFunc; j++) {
+						func[j]=lokdef[addr_index].func[j].ison;
+					}
+					if(!lokdef[addr_index].initDone) {
+						srcp->sendLocoInit(lokdef[addr_index].addr, nFahrstufen, lokdef[addr_index].nFunc);
+						lokdef[addr_index].initDone=true;
+					}
+					srcp->sendLocoSpeed(lokdef[addr_index].addr, dir, nFahrstufen, dccSpeed, lokdef[addr_index].nFunc, func);
+				}
 			}
-			// int nFahrstufen = 14;
-			int nFahrstufen = 127;
-			if(lokdef[addr_index].flags & F_DEC14) {
-				nFahrstufen = 14;
-			} else if(lokdef[addr_index].flags & F_DEC28) {
-				nFahrstufen = 28;
-			}
-			int dccSpeed = abs(lokdef[addr_index].currspeed) * nFahrstufen / 255;
-			bool func[16];
-			for(int j=0; j < lokdef[addr_index].nFunc; j++) {
-				func[j]=lokdef[addr_index].func[j].ison;
-			}
-			if(!lokdef[addr_index].initDone) {
-				srcp->sendLocoInit(changedAddr, nFahrstufen, lokdef[addr_index].nFunc);
-				lokdef[addr_index].initDone=true;
-			}
-			srcp->sendLocoSpeed(changedAddr, dir, nFahrstufen, dccSpeed, lokdef[addr_index].nFunc, func);
 		}
 	}
 	printf("%d:client exit\n",startupdata->clientID);
@@ -712,15 +759,15 @@ char *getnext(char **pos)
 {
 	// printf("skipping value:");
 	while(**pos && (strchr(",\r\n",**pos) == NULL)) {
-		printf("%c",**pos);
+		// printf("%c",**pos);
 		(*pos)++;
 	}
-	printf("\n");
+	// printf("\n");
 	if(!**pos) {*pos=NULL; return NULL; }
 	(*pos)++; // , überspringen
 	// printf("skipping spaces:");
 	while(**pos && (**pos == ' ') || (**pos == '\t')) {
-		printf("%c",**pos);
+		// printf("%c",**pos);
 		(*pos)++;
 	}
 	// printf("\n");
@@ -753,7 +800,7 @@ bool readLokdef()
 	int line=0;
 	while(fgets(buffer,sizeof(buffer),flokdef)) {
 		line++;
-		printf("line %d\n",line);
+		// printf("line %d\n",line);
 		if(buffer[0] =='#') continue;
 		lokdef = (lokdef_t *) realloc(lokdef, sizeof(lokdef_t)*(n+1));
 		bzero(&lokdef[n],sizeof(lokdef_t));
@@ -807,7 +854,8 @@ int main(int argc, char *argv[])
 {
 	// FBTCtlMessage test(FBTCtlMessage::STRUCT)
 	try {
-		loadMessageLayouts();
+		protocolHash = loadMessageLayouts();
+		printf("---------------protohash = %d\n",protocolHash);
 /*
 		FBTCtlMessage test(messageTypeID("PING_REPLY"));
 		test["info"][0]["addr"]=1;

@@ -14,7 +14,8 @@ import java.io.InputStream;
  * @return len gelesene bytes, -1 bei eof
  */
 public class MessageLayouts {
-	
+
+	static public int hash;
 	/// name = MessageLayout subnode
 	static Hashtable messageLayouts = new Hashtable();
 
@@ -39,16 +40,24 @@ public class MessageLayouts {
 	}
 	
 	/**
-	 * @throws java.lang.Exception
+	 * ladet die protocol.dat
+	 * setzt this.hash: hashwert von protocol.dat (zum vergleichen ob server protocol.dat und handy protocol.dat stimmen
 	 */
 	public void load() throws Exception {
 		InputStream protocolFile = this.getClass().getResourceAsStream("protocol.dat");
 		String line;
+		this.hash=0;
 		int typeNr = FBTCtlMessage.STRUCT + 1;
 		while((line=myReadLn(protocolFile)) != null) {
 			if(line.startsWith("#"))
-			continue;
+				continue;
+			
 			int pos=0;
+			for(int i=0; i < line.length(); i++) {
+				int c=line.charAt(i);
+				this.hash += (c &0xff);
+			}
+			pos=0;
 			while(line.startsWith(" ",pos)) pos++;
 			if(pos==line.length()) continue;
 			int namestart=pos;
@@ -65,6 +74,7 @@ public class MessageLayouts {
 			typeNr++;
 			
 		}
+		System.out.println("---------------------------hash)"+this.hash);
 	}
 	
 	public static MessageLayout getLayout(int type) throws Exception {
