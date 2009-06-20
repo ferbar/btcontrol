@@ -9,9 +9,12 @@ package btcontroll;
 import java.util.Timer;
 import java.util.TimerTask;
 import javax.microedition.lcdui.*;
+import java.util.Hashtable;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+
 import protocol.FBTCtlMessage;
 import protocol.MessageLayouts;
-import java.util.Vector;
 
 /**
  *
@@ -38,12 +41,17 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	private Command funcListCMDOn = new Command("Ein", Command.ITEM,1);
 	private Command funcListCMDOff = new Command("Aus", Command.ITEM,2);
 	
-	private Command sendPOMCommand = new Command("POM (TODO)", Command.ITEM,9);
+	private Command sendPOMCommand = new Command("POM", Command.ITEM,9);
 	private Command multiControllCommand = new Command("Mehrfachsteuerung", Command.ITEM, 10);
 
+	private Command POMCMDGo = new Command("go", Command.OK,1);
+			
 	boolean inCommandAction=false;
 
 	private ValueList selectList; // für die func und lok auswahl
+	private Form form=null;
+	TextField textField1=new TextField("CV","",3,TextField.NUMERIC);
+	TextField textField2=new TextField("Val","",3,TextField.NUMERIC);
 
 	private Displayable backForm; // damit ma wieder zurück kommen
 
@@ -51,6 +59,12 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	private int currAddr=0; // 
 	private int currSpeed=0; // wird von der callback func gesetzt
 	private int currFuncBits=0;
+	
+	// zuordnung adresse -> lokbezeichnung,bild
+	class availLocosListItem {public String name; public Image img; 
+		public availLocosListItem(String name, Image img) { this.name=name; this.img=img; } }
+	private Hashtable availLocos=new Hashtable();
+	private Hashtable imgCache=new Hashtable();
 
 	// ... damit eine gedrückte taste öfter gezählt wird
 	Timer timer;
@@ -165,6 +179,8 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 				g.setColor(0x0000ff);
 				g.drawString("Speed:"+this.currSpeed,0,20,Graphics.TOP|Graphics.LEFT);
 			}
+			Image img=((availLocosListItem) this.availLocos.get(new Integer(this.currAddr))).img;
+			g.drawImage(img, 0, 20,0);
 			// funcbits ausgeben:
 			String tmp=""; //+btcomm.currFuncBits+":";
 			for(int i=11; i >=0; i--) {
@@ -341,11 +357,13 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		private FBTCtlMessage cmd;
 		private String fieldDisplay;
 		private String fieldValue;
-		public FillListThread(String title, FBTCtlMessage cmd, String fieldDisplay, String fieldValue) {
+		private String fieldImage;
+		public FillListThread(String title, FBTCtlMessage cmd, String fieldDisplay, String fieldValue, String fieldImage) {
 			this.title=title;
 			this.cmd=cmd;
 			this.fieldDisplay=fieldDisplay;
 			this.fieldValue=fieldValue;
+			this.fieldImage=fieldImage;
 		}
 		
 		public void run()
@@ -375,7 +393,12 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 					} else {
 						o = null;
 					}
-					selectList.append(reply.get("info").get(i).get(this.fieldDisplay).getStringVal(), null, o);
+					Image image=null;
+					if(this.fieldImage != null) {
+						String imageName=reply.get("info").get(i).get(this.fieldImage).getStringVal();
+						image=getImageCached(imageName);
+					}
+					selectList.append(reply.get("info").get(i).get(this.fieldDisplay).getStringVal(), image, o);
 					// debugForm.debug("radListD ("+i+")\n");
 					/*
 					debugForm.debug("addr:"+pingReply.get("info").get(i).get("addr").getIntVal()+
@@ -413,7 +436,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		selectList.addCommand(locoListCMDBack);
 		FBTCtlMessage msg = new FBTCtlMessage();
 		msg.setType(MessageLayouts.messageTypeID("GETLOCOS"));
-		Thread th = new FillListThread("Loks",msg,"name","addr");
+		Thread th = new FillListThread("Loks",msg,"name","addr","imgname");
 		th.start();
 		return selectList;
 	}  		
@@ -427,7 +450,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		selectList.addCommand(locoListCMDBack);
 		FBTCtlMessage msg = new FBTCtlMessage();
 		msg.setType(MessageLayouts.messageTypeID("GETLOCOS"));
-		Thread th = new FillListThread("Loks",msg,"name","addr");
+		Thread th = new FillListThread("Loks",msg,"name","addr","imgname");
 		th.start();
 		return selectList;
 	}  		
@@ -443,11 +466,23 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		FBTCtlMessage msg = new FBTCtlMessage();
 		msg.setType(MessageLayouts.messageTypeID("GETFUNCTIONS"));
 		msg.get("addr").set(this.currAddr);
-		Thread th = new FillListThread("funclist",msg,"name",null);
+		Thread th = new FillListThread("funclist",msg,"name",null,"imgname");
 		th.start();
 		return selectList;
 	}  
 
+	private Form getPOMForm() {
+		if(this.form != null)
+			return this.form;
+		this.form = new Form("");
+		this.form.setCommandListener(this);
+		this.form.addCommand(POMCMDGo);
+		this.form.addCommand(locoListCMDBack);
+		this.form.append(textField1);
+		this.form.append(textField2);
+		return this.form;
+	}
+	
 	/**
 	 * Called when action should be handled
 	 *
@@ -488,6 +523,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			} else if(command==this.locoListCommand) {
 				HelloMidlet.display.setCurrent(get_locoList());
 			} else if(command==this.locoListCMDSelect) {
+				this.setAvailLocos(selectList);
 				int n=selectList.getSelectedIndex();
 				Integer addr=(Integer) selectList.getValue(n);
 				this.currAddr=addr.intValue();
@@ -559,6 +595,17 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			
 				}
 				 * */
+			} else if((command==this.sendPOMCommand)) {
+				Form f=getPOMForm();
+				f.setTitle("POM (addr:"+this.currAddr+")");
+				HelloMidlet.display.setCurrent(f);
+			} else if((command==this.POMCMDGo)) {
+				FBTCtlMessage msg = new FBTCtlMessage();
+				msg.setType(MessageLayouts.messageTypeID("POM"));
+				msg.get("addr").set(this.currAddr);
+				msg.get("cv").set(Integer.parseInt(textField1.getString()));
+				msg.get("value").set(Integer.parseInt(textField2.getString()));
+				btcomm.addCmdToQueue(msg);
 			} else {
 				this.setTitle("invalid command");
 			}
@@ -579,7 +626,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	protected void showNotify(){
 		System.out.println( "showNotify" );
 		try {
-			if(this.currAddr==0)
+			if(this.currAddr==0 && this.btcomm != null && this.btcomm.isAlive()) // wenn keine adresse gesetzt + verbunden
 				HelloMidlet.display.setCurrent(get_locoList());
 		} catch(Exception e) {
 			err=e.toString();
@@ -589,4 +636,47 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		System.out.println( "hideNotify" );
 	}
 	
+	/**
+	 * ladet ein bild vom server, btcomm muss gerade frei sein, blocking
+	 * @param imageName
+	 * @return bild
+	 */
+	private Image getImageCached(String imageName) {
+		FBTCtlMessage msg = new FBTCtlMessage();
+		this.debugForm.debug("getImageCached ("+imageName+")");
+		if(imageName.length() == 0) {
+			return null;
+		}
+		try {
+			Image cached = (Image) imgCache.get(imageName);
+			if(cached != null)
+				return cached;
+			msg.setType(MessageLayouts.messageTypeID("GETIMAGE"));
+			msg.get("imgname").set(imageName);
+			FBTCtlMessage reply=btcomm.execCmd(msg);
+			String imageData=reply.get("img").getStringVal();
+			if(imageData.length() > 0) {
+				this.debugForm.debug("size:"+imageData.length()+" ");
+				InputStream in = new ByteArrayInputStream(imageData.getBytes());
+				Image ret=Image.createImage(in);
+				imgCache.put(imageName,ret);
+				return ret;
+			} else {
+				return null;
+			}
+		} catch(Exception e) {
+			this.debugForm.debug("getImageCached exception:"+e.toString());
+			return null;
+		}
+	}
+	
+	private void setAvailLocos(ValueList selectList) {
+		int n=selectList.size();
+		for(int i=0; i < n; i++) {
+			Integer addr = (Integer) selectList.values.elementAt(i);
+			String name = selectList.getString(i);
+			Image img = selectList.getImage(i);
+			this.availLocos.put(addr,new availLocosListItem(name,img));
+		}
+	}
 }

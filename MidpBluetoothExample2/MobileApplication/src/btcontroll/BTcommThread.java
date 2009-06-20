@@ -267,18 +267,30 @@ public class BTcommThread extends Thread{
 	/**
 	 * liest eine message incl header (size) ein
 	 *  TODO: byte[const länge], nicht jedes mal neu allocen!!!
+	 * msgSizeBuffer = global -> nicht threadsave, sollt aber eh nur von einem thread aufgerufen werden (midp handys können nur eine connection machen)
 	 */
+	byte msgSizeBuffer[] = new byte[4];
+	InputReader msgSizeIn = new InputReader(msgSizeBuffer);
 	private FBTCtlMessage receiveMessage() throws Exception
 	{
-		byte[] buffer = new byte[256];
-		if(iStream.read(buffer,0,4) != 4) {
-			throw new Exception("error reading init HELO (1)");
+		// debugForm.debug("rxMsg: ");
+		if(iStream.read(msgSizeBuffer,0,4) != 4) {
+			throw new Exception("error reading msgSize");
 		}
-		InputReader in = new InputReader(buffer);
-		int msgSize = in.getInt();
+		msgSizeIn.reset();
+		int msgSize = msgSizeIn.getInt();
+		byte[] buffer = new byte[msgSize];
 		// debugForm.debug("rxMsg: size: "+msgSize);
-		if(iStream.read(buffer,0,msgSize) != msgSize) {
-			throw new Exception("error reading init HELO (2)");
+		int readBytes=0;
+		while(readBytes < msgSize) {
+			int rc=iStream.read(buffer,readBytes,msgSize-readBytes);
+			if(rc <= 0) { // rc = -1 wenn EOF
+				throw new Exception("error reading msg (rc="+rc+", size:"+msgSize+" read:"+readBytes);
+			}
+			if(rc != msgSize) {  // sonyericsson bleibt hängen wenn da kein debug ist (vermutlich täts ein sleep auch tun)
+				debugForm.debug("xx reading msg (rc="+rc+", size:"+msgSize+" read:"+readBytes);
+			}
+			readBytes += rc;
 		}
 		// debugForm.debug("parsing: ");
 		FBTCtlMessage msg = new FBTCtlMessage();

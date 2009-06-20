@@ -26,6 +26,7 @@ public:
 	SRCPReplyPtr sendLocoInit(int addr, int nFahrstufen, int nFunc);
 	// add:0... dir:0 zurück 1 vor 2 notstop, nFahrstufen: 14, ,nFunc:4 
 	SRCPReplyPtr sendLocoSpeed(int addr, int dir, int nFahrstufen, int speed, int nFunc, bool *func);
+	SRCPReplyPtr sendPOM(int addr, int cv, int value);
 
 	SRCPReplyPtr sendMessage(const char *msg);
 	SRCPReplyPtr readReply();

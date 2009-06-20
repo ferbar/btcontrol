@@ -7,7 +7,7 @@
  *			daten ...
  *
  * daten:	int: einfach intval
- *			string: byte len, daten
+ *			string: 2byte len, daten
  *			array: byte anzahl
  * 
  *
@@ -180,7 +180,7 @@ std::string FBTCtlMessage::getBinaryMessage(const MessageLayout *layout) const
 			break;
 		case MessageLayout::STRING: {
 			int tmp=this->sval.size();
-			ret += std::string((char *) &tmp, 1);
+			ret += std::string((char *) &tmp, 2);
 			ret += this->sval;
 			break; }
 		case MessageLayout::ARRAY: {
@@ -206,7 +206,7 @@ std::string FBTCtlMessage::getBinaryMessage(const MessageLayout *layout) const
 						throw "invalid type (try dump before)";
 					}
 				} else {
-					throw std::string("struct value \"")+it->name+"\" - field not set";
+					throw std::string("struct \"")+messageTypeName(this->type)+ " value \""+it->name+"\" - field not set";
 				}
 			}
 			break; }
