@@ -16,7 +16,10 @@ public class InputReader {
 	public InputReader(byte inbuffer[]) {
 		this.inbuffer=inbuffer;
 	}
-
+	public void reset() {
+		pos=0;
+	}
+	
 	public int getByte() {
 		return 0xff & ((int) this.inbuffer[pos++]);
 	}
@@ -27,7 +30,7 @@ public class InputReader {
 		return ret;
 	}
 	public String getString() {
-		int len=getByte();
+		int len=getByte() | (getByte() << 8);
 		String ret=new String(this.inbuffer,this.pos,len);
 		this.pos+=len;
 		return ret;

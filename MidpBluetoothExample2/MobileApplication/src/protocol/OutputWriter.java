@@ -28,7 +28,8 @@ public class OutputWriter {
 	}
 	public void putString(String s) {
 		byte[] buffer = s.getBytes();
-		this.putByte(buffer.length);
+		this.putByte(buffer.length & 0xff);
+		this.putByte(buffer.length >> 8);
 		for(int i=0; i < buffer.length; i++) {
 			this.ret[pos++] = buffer[i];
 		}

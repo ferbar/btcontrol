@@ -170,3 +170,16 @@ SRCPReplyPtr SRCP::sendLocoSpeed(int addr, int dir, int nFahrstufen, int speed, 
 	printf("cmd: %s", buf);
 	return this->sendMessage(buf);
 }
+
+SRCPReplyPtr SRCP::sendPOM(int addr, int cv, int value)
+{
+	const int CMDBUFLEN=256;
+	char buf[CMDBUFLEN];
+	snprintf(buf,CMDBUFLEN-1,"SET 1 SM " /* addr:*/ "%d CV " /* cv# */ "%d " /* value */ "%d",
+		addr,
+		cv,
+		value);
+	printf("cmd: %s\n",buf);
+	return this->sendMessage(buf);
+	
+}

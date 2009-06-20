@@ -1,11 +1,11 @@
-3,  F_DEFAULT,lok3,     12,func1,func2,func3,func4,func5,func6,func7,func8,func9,func10,func11,func12
-4,  F_DEFAULT,Ge 4/4 I, 12,sPfeife,sBremse,Pfeife+Echo,sAnsage,sAggregat ein/aus,sSound ein/aus,lFührerstand,Rangiergang,Ansage,sLufthahn,Pantho,Pantho,sKompressor,sVakuumpumpe,sStufenschalter,schaltbare Verzögerung,
-621,  F_DEFAULT,Ge 4/4 II,4,lFührerstand,lFührerstand,lSchweizer Rücklicht,???,
-647,F_DEFAULT,Ge 4/4 III,12,lFührerstand,2,3,lFührerstand,sPfeife,s6,s7,sSound ein/aus,sPfeife,sRangierpfiff,sKompressor,sPressluft,
+3,  F_DEFAULT,lok3,                              , 12,func1,func2,func3,func4,func5,func6,func7,func8,func9,func10,func11,func12
+4,  F_DEFAULT,Ge 4/4 I,   ge_4_4_I.png           , 12,sPfeife,sBremse,Pfeife+Echo,sAnsage,sAggregat ein/aus,sSound ein/aus,lFührerstand,Rangiergang,Ansage,sLufthahn,Pantho,Pantho,sKompressor,sVakuumpumpe,sStufenschalter,schaltbare Verzögerung,
+621,  F_DEFAULT,Ge 4/4 II,e.png                  ,  4,lFührerstand,lFührerstand,lSchweizer Rücklicht,???,
+647,F_DEFAULT,Ge 4/4 III, capito.png             , 12,lFührerstand,2,3,lFührerstand,sPfeife,s6,s7,sSound ein/aus,sPfeife,sRangierpfiff,sKompressor,sPressluft,
 # 5,  F_DEFAULT,lok5,
-413,F_DEFAULT,Ge 6/6 I, 12,lFührerstand,2,3,lFührerstand,sPfeife,s6,s7,sSound ein/aus,sPfeife,sRangierpfiff,sKompressor,sPressluft,
-6,  F_DEFAULT,Ge 6/6 II, 8,sSound ein/aus,sPfeife,sRangierpfiff,sKompressor,sPressluft,Rangiergang,,
-108,F_DEFAULT,G 4/5,    12,lFührerstand,2,3,lFührerstand,sPfeife,s6,s7,sSound ein/aus,sPfeife,sRangierpfiff,sKompressor,sPressluft,
-203,F_DEFAULT,Ge 2/6,   12,lFührerstand,2,3,lFührerstand,sPfeife,s6,s7,sSound ein/aus,sPfeife,sRangierpfiff,sKompressor,sPressluft,
-213, F_DEC28,Ge 2/4 213,
-14, F_DEFAULT,schoema,4,,lblink,lblink,,
+413,F_DEFAULT,Ge 6/6 I,   kroko.png              , 12,lFührerstand,2,3,lFührerstand,sPfeife,s6,s7,sSound ein/aus,sPfeife,sRangierpfiff,sKompressor,sPressluft,
+6,  F_DEFAULT,Ge 6/6 II,  ge_6_6_II.png          ,  8,sSound ein/aus,sPfeife,sRangierpfiff,sKompressor,sPressluft,Rangiergang,,
+108,F_DEFAULT,G 4/5,      dampf.png              , 12,lFührerstand,2,3,lFührerstand,sPfeife,s6,s7,sSound ein/aus,sPfeife,sRangierpfiff,sKompressor,sPressluft,
+203,F_DEFAULT,Ge 2/4,     ge_2_4_203.png         , 12,lFührerstand,2,3,lFührerstand,sPfeife,s6,s7,sSound ein/aus,sPfeife,sRangierpfiff,sKompressor,sPressluft,
+213, F_DEC28,Ge 2/4 213,  ge_2_4_213.png
+14, F_DEFAULT,schoema,    schienentraktor.png,  4,,lblink,lblink,,

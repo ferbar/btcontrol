@@ -64,6 +64,7 @@ struct func_t {
 	char name[32];
 	bool pulse; // nur einmal einschalten dann gleich wieder aus
 	bool ison;
+	char imgname[32];
 };
 
 #define F_DEFAULT 0
@@ -78,6 +79,7 @@ struct lokdef_t {
 	func_t func[16];
 	int currspeed;
 	bool initDone;
+	char imgname[32];
 };
 
 // darf kein pointer sein weil .currspeed und func wird ja geändert
@@ -120,6 +122,42 @@ int getAddrIndex(int addr)
 	return -1;
 }
 
+/**
+ * tut spaces am ende weg
+ */
+void strtrim(char *s)
+{
+	char *pos=s+strlen(s);
+	while(pos > s) {
+		pos--;
+		if(isspace(*pos)) {
+			*pos='\0';
+		} else
+			break;
+	}
+}
+
+std::string readFile(std::string filename)
+{
+	std::string ret;
+	struct stat buf;
+	if(stat(filename.c_str(), &buf) == 0) {
+		ret.resize(buf.st_size,'\0');
+		FILE *f=fopen(filename.c_str(),"r");
+		if(!f) {
+			fprintf(stderr,"error reading file %s\n",filename.c_str());
+		} else {
+			const char *data=ret.data(); // mutig ...
+			fread((void*)data,1,buf.st_size,f);
+			fclose(f);
+			printf("%s:%d bytes\n",filename.c_str(),buf.st_size);
+		}
+	} else {
+		fprintf(stderr,"error stat file %s\n",filename.c_str());
+	}
+	return ret;
+}
+
 void resetPlatine()
 {
 	if(platine)
@@ -144,6 +182,7 @@ void sendMessage(int so, const FBTCtlMessage &msg)
 	int msgsize=binMsg.size();
 	write(so, &msgsize, 4);
 	write(so, binMsg.data(), binMsg.size());
+	printf("messagesize: %d+4\n",binMsg.size());
 }
 
 struct lastStatus_t {
@@ -359,6 +398,7 @@ void *phoneClient(void *data)
 				while(lokdef[i].addr) {
 					reply["info"][i]["addr"]=lokdef[i].addr;
 					reply["info"][i]["name"]=lokdef[i].name;
+					reply["info"][i]["imgname"]=lokdef[i].imgname;
 					i++;
 				}
 				reply.dump();
@@ -373,6 +413,7 @@ void *phoneClient(void *data)
 					// snprintf(buffer,sizeof(buffer)," %d;%d;%s\n",j+1,lokdef[addr_index].func[j].ison,lokdef[addr_index].func[j].name);
 					reply["info"][i]["name"]=lokdef[addr_index].func[i].name;
 					reply["info"][i]["value"]=lokdef[addr_index].func[i].ison;
+					reply["info"][i]["imgname"]="";
 				}
 				sendMessage(startupdata->so,reply);
 			} else if(cmd.isType("POWER")) {
@@ -383,6 +424,25 @@ void *phoneClient(void *data)
 				}
 				FBTCtlMessage reply(messageTypeID("POWER_REPLY"));
 				reply["value"]=value;
+				sendMessage(startupdata->so,reply);
+			} else if(cmd.isType("POM")) {
+				int addr=cmd["addr"].getIntVal();
+				int addr_index=getAddrIndex(addr);
+				int cv=cmd["cv"].getIntVal();
+				int value=cmd["value"].getIntVal();
+				FBTCtlMessage reply(messageTypeID("POM_REPLY"));
+				if(srcp) {
+					reply["value"]=1;
+					srcp->sendPOM(lokdef[addr_index].addr, cv, value);
+				} else {
+					reply["value"]=0;
+				}
+				sendMessage(startupdata->so,reply);
+			} else if(cmd.isType("GETIMAGE")) {
+				std::string imageName=cmd["imgname"].getStringVal();
+				FBTCtlMessage reply(messageTypeID("GETIMAGE_REPLY"));
+				printf("--------------getimage:\"%s\"\n",imageName.c_str());
+				reply["img"]=readFile("img/"+imageName);
 				sendMessage(startupdata->so,reply);
 			} else {
 				printf("----------------- invalid command ------------------------\n");
@@ -811,6 +871,11 @@ bool readLokdef()
 		lokdef[n].flags=str2decodertype(pos);
 		pos_end=getnext(&pos);
 		strncpy(lokdef[n].name, pos,  MIN(sizeof(lokdef[n].name), pos_end-pos));
+		strtrim(lokdef[n].name);
+		pos_end=getnext(&pos);
+		//TODO: trim
+		strncpy(lokdef[n].imgname, pos, MIN(sizeof(lokdef[n].imgname), pos_end-pos));
+		strtrim(lokdef[n].imgname);
 		pos_end=getnext(&pos);
 		CHECKVAL("error reading nfunc");
 		lokdef[n].nFunc=atoi(pos);
@@ -840,7 +905,7 @@ void dumpLokdef()
 	int n=0;
 	printf("----------------- dump lokdef -------------------------\n");
 	while(lokdef[n].addr) {
-		printf("addr:%d flags:%d, name:%s, nFunc:%d,", lokdef[n].addr, lokdef[n].flags, lokdef[n].name, lokdef[n].nFunc);
+		printf("addr:%d flags:%d, name:%s, img:%s, nFunc:%d,", lokdef[n].addr, lokdef[n].flags, lokdef[n].name, lokdef[n].imgname, lokdef[n].nFunc);
 		for(int i=0; i < lokdef[n].nFunc; i++) {
 			printf("%s:%d ",lokdef[n].func[i].name,lokdef[n].func[i].ison);
 		}
