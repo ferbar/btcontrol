@@ -1,0 +1,100 @@
+#!/bin/sh
+
+if [ "$#" -eq 0 ]
+then
+  echo "You must give one of the following argument create|clean"
+  exit 0
+fi
+
+AVE_DIR=avetanaBluetooth
+
+if [ $1 == "create" ]
+then
+  ORIG_DIR=`pwd` 
+  
+  if [ -n $AVE_DIR ]
+  then
+    echo Moving old directory into .bak directory
+    mv $AVE_DIR $AVE_DIR.bak
+  fi  
+  
+  mkdir $AVE_DIR
+  cd $AVE_DIR
+
+  mkdirhier sources/c
+  mkdirhier binaries
+  mkdirhier sources/javax/microedition/io
+  mkdirhier sources/javax/bluetooth
+  mkdirhier sources/javax/obex
+  mkdirhier sources/com/sun/cdc/io/j2me/btspp
+  mkdirhier sources/com/sun/cdc/io/j2me/btl2cap
+  mkdirhier sources/com/sun/cdc/io/j2me/btgoep
+  mkdirhier sources/de/avetana/bluetooth
+
+
+  PROJ_DIR=~/eclipse-workspace/avetanaBluetooth/avetanabt
+  
+  cp $PROJ_DIR/Makefile.in sources
+  cp $PROJ_DIR/version.xml sources
+  cp $PROJ_DIR/avetana.vcf sources
+  cp $PROJ_DIR/HOWTOCOMPILE sources
+
+  cp $PROJ_DIR/c/* sources/c
+
+  cp $PROJ_DIR/javax/bluetooth/*.java sources/javax/bluetooth
+  cp $PROJ_DIR/javax/obex/*.java sources/javax/obex
+  cp $PROJ_DIR/javax/microedition/io/*.java sources/javax/microedition/io
+  cp $PROJ_DIR/com/sun/cdc/io/*.java sources/com/sun/cdc/io
+  cp $PROJ_DIR/com/sun/cdc/io/j2me/btspp/*.java sources/com/sun/cdc/io/j2me/btspp
+  cp $PROJ_DIR/com/sun/cdc/io/j2me/btl2cap/*.java sources/com/sun/cdc/io/j2me/btl2cap
+  cp $PROJ_DIR/com/sun/cdc/io/j2me/btgoep/*.java sources/com/sun/cdc/io/j2me/btgoep
+
+  cd sources/de/avetana/bluetooth/
+
+  myTable=". obex connection hci sdp stack l2cap test rfcomm util"
+  for n in $myTable;
+  do
+    mkdir $n
+    cp ${PROJ_DIR}/de/avetana/bluetooth/$n/*.java $n 
+  done
+
+#  cp $PROJ_DIR/../avetanaBluetooth.jar $ORIG_DIR/$AVE_DIR/binaries
+
+  cd $ORIG_DIR
+  tar cvf $AVE_DIR.tar $AVE_DIR
+  gzip $AVE_DIR.tar
+  echo Archive and directory Created!
+fi
+
+if [ $1 == "clean" ]
+then
+echo Do you really want to remove directory/bak directory 
+select nom in yes no
+do
+  if [ -n "$nom" ]
+  then
+    if [ $nom == "yes" ]
+    then
+      if [ -n $AVE_DIR ]
+      then
+        echo $AVE_DIR : Removing directory
+	rm -rf $AVE_DIR
+      fi
+      if [ -n $AVE_DIR.bak ]
+      then
+        echo $AVE_DIR.bak : Removing directory
+	rm -rf $AVE_DIR.bak
+      fi
+      break
+    fi
+    
+    if [ $nom == "no" ]
+    then 
+     break
+    fi
+  else echo You must type 1 or 2!
+  fi 
+  
+done
+fi
+

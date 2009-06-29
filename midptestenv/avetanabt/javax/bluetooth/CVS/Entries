@@ -1,0 +1,14 @@
+/BluetoothConnectionException.java/1.1.1.1/Thu Jul 15 07:36:20 2004//
+/BluetoothStateException.java/1.2/Thu Oct 28 06:19:01 2004//
+/DataElement.java/1.10/Thu Feb 16 08:36:32 2006//
+/DeviceClass.java/1.2/Tue Nov 29 08:53:18 2005//
+/DiscoveryAgent.java/1.18/Thu Apr 13 15:16:04 2006//
+/DiscoveryListener.java/1.1.1.1/Thu Jul 15 07:36:20 2004//
+/L2CAPConnection.java/1.1.1.1/Thu Jul 15 07:36:21 2004//
+/L2CAPConnectionNotifier.java/1.1.1.1/Thu Jul 15 07:36:19 2004//
+/LocalDevice.java/1.10/Fri Feb 24 11:01:33 2006//
+/RemoteDevice.java/1.12/Fri Jan 27 20:23:30 2006//
+/ServiceRecord.java/1.1.1.1/Thu Jul 15 07:36:16 2004//
+/ServiceRegistrationException.java/1.2/Tue Nov 29 08:53:18 2005//
+/UUID.java/1.8/Wed Dec 21 20:32:02 2005//
+D
