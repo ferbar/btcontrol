@@ -37,6 +37,8 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
     
 	static public Display display;
 	
+	// private int orgDiscoverable;
+	
     /** Creates a new instance of HelloMidlet */
     public HelloMidlet() throws Exception
 	{
@@ -96,6 +98,7 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 	private Command clearCommand=new Command("clear", Command.SCREEN, 1);
 	private Command btScanCommand=new Command("erneute BT suche", Command.SCREEN, 2);
 	private Command screenCommand_startControllCanvas=new Command("connect", Command.ITEM, 1);
+	private Command screenCommand_startControllCanvasTCP=new Command("TCP connect", Command.ITEM, 5);
 
 	
 	private Canvas controllCanvas;
@@ -194,6 +197,7 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 		}catch(Exception e) {
 		}
 		 */
+		System.out.println(text);
     }
 	public void debug(StringItem text) {
 		text.setFont(Font.getFont(Font.FACE_PROPORTIONAL, Font.STYLE_PLAIN, Font.SIZE_SMALL));
@@ -227,19 +231,64 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
         System.out.println("System.out.println");
         
 		getDisplay().setCurrent(get_helloForm());//GEN-LINE:MVDInitInit
-		helloForm.setTitle("bt scan...");
-        // Insert post-init code here
-		PrintClient client;
+
+		
+		
+		LocalDevice local;
 		try {
-			client=new PrintClient(this,this);
+			local = LocalDevice.getLocalDevice();
 		} catch (BluetoothStateException e) {
-			helloForm.append("exception: ("+e.toString()+") bluetooth disabled?");
-			e.printStackTrace();
+			helloForm.setTitle("no bt?");
+			helloForm.append("no bluetooth?");
 			return;
 		}
-		client.findPrinter(false);
+
+		if(!LocalDevice.isPowerOn()) {
+			helloForm.setTitle("bt off");
+			helloForm.append("please enable bluetooth!");
+		} else {
+			// Insert post-init code here
+			PrintClient client;
+			try {
+				helloForm.setTitle("setting discoverable=0");
+				local.setDiscoverable(DiscoveryAgent.NOT_DISCOVERABLE);
+				helloForm.setTitle("bt scan...");
+				client=new PrintClient(this,this);
+			} catch (BluetoothStateException e) {
+			
+				helloForm.append("exception: ("+e.toString()+") bluetooth disabled?");
+				e.printStackTrace();
+				return;
+			}
+			client.findPrinter(false);
+		}
 	}//GEN-LINE:MVDInitEnd
     
+	class ConnectThread extends Thread {
+		String connectionURL;
+		BTcommThread.DisplayOutput debugForm;
+		ConnectThread(BTcommThread.DisplayOutput debugForm, String connectionURL) {
+			this.connectionURL=connectionURL;
+			this.debugForm = debugForm;
+		}
+		public void run() {
+			try {
+				System.out.print("connecting:"+this.connectionURL);
+				StreamConnection connection = (StreamConnection)Connector.open(this.connectionURL);
+				btcomm = new BTcommThread(this.debugForm, connection);
+						//Thread t = new Thread(btcomm); t.start(); -> da is isAlive auf einmal nicht gesetzt
+				btcomm.start();
+				helloForm.setTitle("connected");
+				getDisplay().setCurrent(get_controllCanvas(btcomm));
+			} catch(Exception e) {
+				Alert alert;
+				alert = new Alert("commandActioon","Exception:"+e.toString(),null,null);
+				alert.setTimeout(Alert.FOREVER);
+				getDisplay().setCurrent(alert);
+			}
+		}
+	}
+	
 	/** Called by the system to indicate that a command has been invoked on a particular displayable.//GEN-BEGIN:MVDCABegin
 	 * @param command the Command that ws invoked
 	 * @param displayable the Displayable on which the command was invoked
@@ -273,7 +322,8 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 				getDisplay().setCurrent(get_helloForm());//GEN-LINE:MVDCAAction34
 				// Insert post-action code here//GEN-LINE:MVDCAAction21
 				//GEN-LINE:MVDCACase21
-			} else if (command == screenCommand_startControllCanvas) { // verbinden!
+			} else if ((command == screenCommand_startControllCanvas) ||
+					(command == screenCommand_startControllCanvasTCP ) ) { // verbinden!
 				if(btcomm != null && !btcomm.isAlive()) {
 					helloForm.append("btcomm not alive -> deleting object");
 					btcomm.close();
@@ -281,22 +331,20 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 				}
 				if(btcomm == null) {
 					helloForm.setTitle("connecting ...");
-					try {
-						String connectionURL=listServer.getString(listServer.getSelectedIndex());
-						StreamConnection BTStreamConnection = (StreamConnection)Connector.open(connectionURL);
+
+						String connectionURL;
+						if(command == screenCommand_startControllCanvasTCP) {
+							connectionURL = "socket://192.168.0.109:3030";
+						} else {
+							connectionURL=listServer.getString(listServer.getSelectedIndex());
+						}
+						ConnectThread connectThread = new ConnectThread(this,connectionURL);
+						connectThread.start();
 						// DataInputStream input = (InputConnection) connection.openDataInputStream();
 						// DataOutputStream output = connection.openDataOutputStream();
-						btcomm = new BTcommThread(this, BTStreamConnection);
-						//Thread t = new Thread(btcomm); t.start(); -> da is isAlive auf einmal nicht gesetzt
-						btcomm.start();
-						helloForm.setTitle("connected");
-					} catch (java.io.IOException e) {
-						helloForm.append("exception("+e.toString()+")\n");
-						helloForm.setTitle("connecting exception...");
-					} 
+
 				}
 				// Insert pre-action code here
-				getDisplay().setCurrent(get_controllCanvas(btcomm));
 				/*
 				getDisplay().setCurrent(get_controllForm());//GEN-LINE:MVDCAAction23
 				*/
@@ -432,6 +480,7 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 			listServer = new List("gefundene Server", Choice.IMPLICIT, new String[0], new Image[0]);
 			listServer.addCommand(get_backCommand2());
 			listServer.addCommand(screenCommand_startControllCanvas);
+			listServer.addCommand(screenCommand_startControllCanvasTCP);
 			listServer.setCommandListener(this);
 			// macht exception am neuen sony .... listServer.setSelectedFlags(new boolean[0]);
 			listServer.setSelectCommand(screenCommand_startControllCanvas);

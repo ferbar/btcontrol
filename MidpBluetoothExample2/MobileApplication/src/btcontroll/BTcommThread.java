@@ -9,8 +9,8 @@
  */
 package btcontroll;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.Exception;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -34,8 +34,11 @@ public class BTcommThread extends Thread{
 		public void vibrate(int ms);
 	}
 			
-	DataInputStream iStream;
-	DataOutputStream oStream;
+	// me4se kann das nicht:
+	// DataInputStream iStream;
+	// DataOutputStream oStream;
+	InputStream iStream;
+	OutputStream oStream;
 	StreamConnection BTStreamConnection;
 	
 	private DisplayOutput debugForm;
@@ -109,7 +112,7 @@ public class BTcommThread extends Thread{
 	 * tut zeile lesen
 	 * @param buffer bitte gross genug machen sonst gibts exception
 	 * @return nchars
-	 */
+	 *
 	public int myReadLn(DataInputStream iStream, byte[] buffer) throws java.io.IOException 
 	{
 		int n=0;
@@ -120,6 +123,7 @@ public class BTcommThread extends Thread{
 		}
 		return n;
 	}
+	 */
 	
 	
 	/**
@@ -130,8 +134,10 @@ public class BTcommThread extends Thread{
 	public BTcommThread(DisplayOutput debugForm, StreamConnection BTStreamConnection) throws java.io.IOException {
 		this.debugForm=debugForm;
 		this.BTStreamConnection=BTStreamConnection;
-		this.iStream=BTStreamConnection.openDataInputStream();
-		this.oStream=BTStreamConnection.openDataOutputStream();
+		this.iStream=BTStreamConnection.openInputStream();
+		this.oStream=BTStreamConnection.openOutputStream();
+		System.out.print("iStream: "+this.iStream+" oStream:"+this.oStream);
+		System.out.print("str: i:"+this.iStream.toString()+" o:"+this.oStream.toString());
 	}
 	
 	protected void close()
@@ -537,6 +543,7 @@ public class BTcommThread extends Thread{
 			debugForm.debug("BT comm thread: IO exception("+e.toString()+")\n");
 		} catch (Exception e) {
 			debugForm.debug("BT comm thread: exception("+e.toString()+")\n");
+			e.printStackTrace();
 		}
 		/*
 		if(my_queue_returnReply){

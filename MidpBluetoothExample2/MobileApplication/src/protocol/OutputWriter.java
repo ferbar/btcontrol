@@ -26,12 +26,11 @@ public class OutputWriter {
 		this.ret[this.pos+3]=(byte)((i >> 24) & 0xff);
 		this.pos+=4;
 	}
-	public void putString(String s) {
-		byte[] buffer = s.getBytes();
-		this.putByte(buffer.length & 0xff);
-		this.putByte(buffer.length >> 8);
-		for(int i=0; i < buffer.length; i++) {
-			this.ret[pos++] = buffer[i];
+	public void putString(byte buffer[], int off, int len) {
+		this.putByte(len & 0xff);
+		this.putByte(len >> 8);
+		for(int i=0; i < len; i++) {
+			this.ret[pos++] = buffer[i+off];
 		}
 		
 	}

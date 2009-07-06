@@ -10,7 +10,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 import javax.microedition.lcdui.*;
 import java.util.Hashtable;
-import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
 import protocol.FBTCtlMessage;
@@ -21,7 +20,7 @@ import protocol.MessageLayouts;
  * @author  chris
  * @version
  */
-public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.Callback {
+public class MIDPCanvas extends Canvas implements CommandListener, ItemStateListener, BTcommThread.Callback {
 	public BTcommThread btcomm;
 	BTcommThread.DisplayOutput debugForm;
 	String err="";
@@ -51,7 +50,8 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	private ValueList selectList; // für die func und lok auswahl
 	private Form form=null;
 	TextField textField1=new TextField("CV","",3,TextField.NUMERIC);
-	TextField textField2=new TextField("Val","",3,TextField.NUMERIC);
+	TextField textFieldPOMVal=new TextField("Val","",3,TextField.NUMERIC);
+	TextField textFieldPOMBinVal=new TextField("Val (bin)","",8,TextField.NUMERIC);
 
 	private Displayable backForm; // damit ma wieder zurück kommen
 
@@ -179,8 +179,24 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 				g.setColor(0x0000ff);
 				g.drawString("Speed:"+this.currSpeed,0,20,Graphics.TOP|Graphics.LEFT);
 			}
-			Image img=((availLocosListItem) this.availLocos.get(new Integer(this.currAddr))).img;
-			g.drawImage(img, 0, 20,0);
+			if(this.currMultiAddr == null) {
+				Image img=((availLocosListItem) this.availLocos.get(new Integer(this.currAddr))).img;
+				if(img != null) {
+					g.drawImage(img, 0, 20,0);
+				} else {
+					System.out.print("no image ["+this.currAddr+"]");
+				}
+			} else {
+				for(int i=0; i < this.currMultiAddr.length; i++) {
+					System.out.print("get image ["+this.currMultiAddr[i]+"]");
+					Image img=((availLocosListItem) this.availLocos.get(new Integer(this.currMultiAddr[i]))).img;
+					if(img != null) {
+						g.drawImage(img, (16+2)*i, 20,0);
+					} else {
+						System.out.print("no image ["+this.currMultiAddr[i]+"]");
+					}
+				}
+			}
 			// funcbits ausgeben:
 			String tmp=""; //+btcomm.currFuncBits+":";
 			for(int i=11; i >=0; i--) {
@@ -211,6 +227,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			}
 		} catch (Exception e) {
 			g.drawString("canvas::paint exception("+e.toString()+")",0,20,Graphics.TOP|Graphics.LEFT);
+			e.printStackTrace();
 		}
 	}
 	
@@ -256,11 +273,11 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 								else
 									msg.setType(MessageLayouts.messageTypeID("BREAK_MULTI"));
 								break;
-							/* - mittlere taste wird als kommando aufgerufen!
+							// - mittlere taste wird bei nokia handies als kommando aufgerufen!
 							case Canvas.FIRE:
 								msg.setType(MessageLayouts.messageTypeID("STOP"));
 								break;
-							 */
+							 
 							/*
 							case Canvas.LEFT:
 								cmd="left";
@@ -479,8 +496,48 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		this.form.addCommand(POMCMDGo);
 		this.form.addCommand(locoListCMDBack);
 		this.form.append(textField1);
-		this.form.append(textField2);
+		ItemStateListener listener = new ItemStateListener() {
+			public void itemStateChanged(Item item) {
+				if(item == textFieldPOMVal) {
+					String s="";
+					int CVVal=Integer.parseInt(textFieldPOMVal.getString());
+					for(int i=0; i < 8; i++) {
+						s+=((CVVal & (1 << i)) == 0) ? "0" : "1";
+					}
+					textFieldPOMBinVal.setString(s);
+				} else if(item == textFieldPOMBinVal) {
+					String s=textFieldPOMBinVal.getString();
+					boolean wrongChar=false;
+					// int cursor=textFieldPOMBinVal.getCaretPosition();
+					int i=0;
+					while(i < s.length()) {
+						char c=s.charAt(i);
+						if(c != '0' && c != '1') {
+							s=s.substring(0, i)+s.substring(i+1);
+							wrongChar=true;
+							continue;
+						}
+						i++;
+					}
+					if(wrongChar)
+						textFieldPOMBinVal.setString(s);
+					int CVVal=Integer.parseInt(s,2);
+					textFieldPOMVal.setString(""+CVVal);
+				}
+			}
+		};
+		this.form.setItemStateListener(listener);
+		/*
+		textFieldPOMVal.setItemCommandListener(listener);
+		textFieldPOMBinVal.setItemCommandListener(listener);
+		 */
+		this.form.append(textFieldPOMVal);
+		this.form.append(textFieldPOMBinVal);
 		return this.form;
+	}
+	
+	public void itemStateChanged(Item item) {
+
 	}
 	
 	/**
@@ -604,7 +661,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 				msg.setType(MessageLayouts.messageTypeID("POM"));
 				msg.get("addr").set(this.currAddr);
 				msg.get("cv").set(Integer.parseInt(textField1.getString()));
-				msg.get("value").set(Integer.parseInt(textField2.getString()));
+				msg.get("value").set(Integer.parseInt(textFieldPOMVal.getString()));
 				btcomm.addCmdToQueue(msg);
 			} else {
 				this.setTitle("invalid command");
@@ -630,6 +687,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 				HelloMidlet.display.setCurrent(get_locoList());
 		} catch(Exception e) {
 			err=e.toString();
+			System.out.println( "Exception:" +e.toString() );
 		}
 	}
 	protected void hideNotify(){
@@ -654,11 +712,26 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			msg.setType(MessageLayouts.messageTypeID("GETIMAGE"));
 			msg.get("imgname").set(imageName);
 			FBTCtlMessage reply=btcomm.execCmd(msg);
-			String imageData=reply.get("img").getStringVal();
-			if(imageData.length() > 0) {
-				this.debugForm.debug("size:"+imageData.length()+" ");
-				InputStream in = new ByteArrayInputStream(imageData.getBytes());
-				Image ret=Image.createImage(in);
+			InputStream imageData=reply.get("img").getStringInputStream();
+			if(imageData.available() > 0) {
+				this.debugForm.debug("size:"+imageData.available()+" ");
+				Image ret;
+				try {
+					ret=Image.createImage(imageData);
+				} catch (Exception e) {
+					this.debugForm.debug("getImageCached exception:"+e.toString());
+					/*
+					System.out.println("[0]="+imageData.charAt(0)+" [1]="+imageData.charAt(1)+
+				" [2]="+imageData.charAt(2));
+					byte data[]=imageData.getBytes();
+					System.out.println("imgdump: ("+data.length+"bytes)");
+					for(int i=0; i < data.length; i++) {
+						System.out.print(data[i]+" ");
+					}
+					*/
+					System.out.println("\n"+imageData);
+					ret = null;
+				}
 				imgCache.put(imageName,ret);
 				return ret;
 			} else {

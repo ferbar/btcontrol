@@ -10,14 +10,17 @@ package protocol;
 //import java.util.Vector;
 import java.util.Hashtable;
 import java.util.Enumeration;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 
 /**
  *
  */
 public class FBTCtlMessage {
 	String name;
-	int ival;
-	String sval;
+	int ival; // integer value oder string-offset im byte[] array
+	int slen;
+	byte buffer[];
 	int type;
 	Hashtable arrayVal; // struct:key=string + array:key=int
 	
@@ -27,14 +30,18 @@ public class FBTCtlMessage {
 	public static final int ARRAY = 3;
 	public static final int STRUCT = 4;
 
+	/// int
 	public FBTCtlMessage(int i) {
 		type=INT;
 		ival=i;
 	}
 			
-	public FBTCtlMessage(String s) {
-		type=STRING;
-		sval=s;
+	/// string
+	public FBTCtlMessage(byte []buffer, int off, int len) {
+		this.type=STRING;
+		this.buffer=buffer;
+		this.ival=off;
+		this.slen=len;
 	}
 	
 	public FBTCtlMessage() {
@@ -58,7 +65,9 @@ public class FBTCtlMessage {
 		if(this.type != STRING) {
 			throw new Exception("setString invalid type ("+this.type+")");
 		}
-		this.sval=s;
+		this.buffer=s.getBytes();
+		this.ival=0;
+		this.slen=this.buffer.length;
 	}
 	
 	public void setType(int type) throws Exception {
@@ -102,7 +111,7 @@ public class FBTCtlMessage {
 					this.arrayVal.put(childLayout.name, new FBTCtlMessage(in.getInt()));
 					break;
 				case STRING:
-					this.arrayVal.put(childLayout.name, new FBTCtlMessage(in.getString()));
+					this.arrayVal.put(childLayout.name, new FBTCtlMessage(in.inbuffer,in.getStrOff(),in.getStrLen()));
 					break;
 				case ARRAY: {
 					int n=in.getByte();
@@ -148,7 +157,7 @@ public class FBTCtlMessage {
 			case INT:
 				out.putInt(this.ival); break;
 			case STRING: {
-				out.putString(this.sval); break;
+				out.putString(this.buffer,this.ival,this.slen); break;
 			}
 			case ARRAY: {
 				int n=this.arrayVal.size();
@@ -220,7 +229,12 @@ public class FBTCtlMessage {
 	
 	public String getStringVal() throws Exception {
 		if(this.type != STRING) throw new Exception("invalid type (not a string)");
-		return sval;
+		return new String(this.buffer,this.ival,this.slen,"utf-8");
+	}
+	
+	public InputStream getStringInputStream() throws Exception {
+		if(this.type != STRING) throw new Exception("invalid type (not a string)");
+		return new ByteArrayInputStream(this.buffer,this.ival,this.slen);
 	}
 	
 	public int getArraySize() throws Exception {
@@ -250,7 +264,7 @@ public class FBTCtlMessage {
 		switch(this.type) {
 			case UNDEF: out.debug("undefined\n"); break;
 			case INT: out.debug("int:"+this.ival+"\n"); break;
-			case STRING: out.debug("string:"+this.sval+"\n"); break;
+			case STRING: out.debug("string:"+new String(this.buffer,this.ival,this.slen)+"\n"); break;
 			case ARRAY: {
 				Enumeration e=arrayVal.keys();
 				while(e.hasMoreElements()) {
