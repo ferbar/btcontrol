@@ -242,8 +242,17 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 			helloForm.append("no bluetooth?");
 			return;
 		}
-
-		if(!LocalDevice.isPowerOn()) {
+		
+		// me4se kann kein isPowerOn()
+		boolean btPowerOff=false;
+		try {
+			if(!LocalDevice.isPowerOn()) {
+				btPowerOff=true;
+			}
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
+		if(btPowerOff) {
 			helloForm.setTitle("bt off");
 			helloForm.append("please enable bluetooth!");
 		} else {
