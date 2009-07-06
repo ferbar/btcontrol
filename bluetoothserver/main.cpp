@@ -18,17 +18,13 @@
 
 #include <pthread.h>
 
-#include <bluetooth/bluetooth.h>
-#include <bluetooth/hci.h>
-#include <bluetooth/hci_lib.h>
-#include <bluetooth/rfcomm.h>
-
 #include <map>
 
 #include "fbtctl_message.h"
 #include "../usb k8055/k8055.h"
 
 #include "srcp.h"
+#include "server.h"
 
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -43,22 +39,12 @@
 #define SVNVERSION unknown
 #endif
 
-static int auth = 0;
-static int encryption = 0;
-static int secure = 0;
-static int master = 0;
-static int linger = 0;
 bool cfg_debug=false;
 
 int protocolHash;
 
 K8055 *platine=NULL;
 SRCP *srcp=NULL;
-
-struct startupdata_t {
-	int clientID;
-	int so;
-};
 
 struct func_t {
 	char name[32];
@@ -262,6 +248,10 @@ void *phoneClient(void *data)
 			return NULL;
 		}
 		printf("reading msg.size: %d bytes\n",msgsize);
+		if(msgsize < 0 || msgsize > 10000) {
+			fprintf(stderr,"invalid size 2big\n");
+			throw "invalid msg.size";
+		}
 		char buffer[msgsize];
 		if(read(startupdata->so, buffer, msgsize) != msgsize) {
 			printf("error reading cmd.data\n");
@@ -566,235 +556,13 @@ void *phoneClient(void *data)
 	} catch(std::string &s) {
 		printf("exception %s\n",s.c_str());
 	}
-}
-
-/**
- *
- *
- */
-// mehr oder weniger aus http://bluez.cvs.sourceforge.net/*checkout*/bluez/utils/rfcomm/main.c?revision=1.31
-static void cmd_listen(int ctl, int dev, bdaddr_t *bdaddr, int rc_channel)
-{
-	struct sockaddr_rc laddr, raddr;
-	struct rfcomm_dev_req req;
-//	struct termios ti;
-//	struct sigaction sa;
-//	struct pollfd p;
-	sigset_t sigs;
-	socklen_t alen;
-	char dst[18], devname[MAXPATHLEN]="";
-	int sk, nsk, lm, ntry = 30;
-
-	laddr.rc_family = AF_BLUETOOTH;
-	bacpy(&laddr.rc_bdaddr, bdaddr);
-	laddr.rc_channel = rc_channel;
-
-	sk = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
-	if (sk < 0) {
-		perror("Can't create RFCOMM socket");
-		return;
-	}
-
-	lm = 0;
-	if (master)
-		lm |= RFCOMM_LM_MASTER;
-	if (auth)
-		lm |= RFCOMM_LM_AUTH;
-	if (encryption)
-		lm |= RFCOMM_LM_ENCRYPT;
-	if (secure)
-		lm |= RFCOMM_LM_SECURE;
-
-	if (lm && setsockopt(sk, SOL_RFCOMM, RFCOMM_LM, &lm, sizeof(lm)) < 0) {
-		perror("Can't set RFCOMM link mode");
-		close(sk);
-		return;
-	}
-
-	if (bind(sk, (struct sockaddr *)&laddr, sizeof(laddr)) < 0) {
-		perror("Can't bind RFCOMM socket");
-		close(sk);
-		return;
-	}
-
-	try {
-		assert(!platine);
-		platine=new K8055(1,cfg_debug);
-		printf("init platine\n");
-		resetPlatine();
-	} catch(const char *errormsg) {
-		fprintf(stderr,"ansteuer platine error: %s\n",errormsg);
-	}
-
-	if(!platine) {
-		assert(!srcp);
-		try {
-			srcp=new SRCP();
-			printf("init erddcd\n");
-		} catch(const char *errormsg) {
-			fprintf(stderr,"error connecting to erddcd (%s)\n",errormsg);
-		}
-	}
-
-	int clientID_counter=1;
-	std::map<int,pthread_t> clients;
-
-	listen(sk, 10);
-while(1) {
-	printf("Waiting for connection on channel %d\n", laddr.rc_channel);
-
-	alen = sizeof(raddr);
-	nsk = accept(sk, (struct sockaddr *) &raddr, &alen);
-
-// brauch ma das noch für irgendwas????
-	alen = sizeof(laddr);
-	if (getsockname(nsk, (struct sockaddr *)&laddr, &alen) < 0) {
-		perror("Can't get RFCOMM socket name");
-		close(nsk);
-		return;
-	}
-
-	memset(&req, 0, sizeof(req));
-	bacpy(&req.src, &laddr.rc_bdaddr);
-	bacpy(&req.dst, &raddr.rc_bdaddr);
-	req.channel = raddr.rc_channel;
-	ba2str(&req.dst, dst);
-	printf("Connection from %s to %s\n", dst, devname);
-
-// client thread vorbereiten + starten
-	startupdata_t *startupdata=(startupdata_t*) calloc(sizeof(startupdata_t),1);
-	startupdata->clientID=clientID_counter++;
-	startupdata->so=nsk;
-	pthread_t &newThread=clients[startupdata->clientID];
-	bzero(&newThread,sizeof(newThread));
-	pthread_create(&newThread, NULL, phoneClient, (void *)startupdata);
-
-	}
-
-	resetPlatine();
-
-	printf("Disconnected\n");
-	close(nsk);
-
-#if 0 
-	if (linger) {
-		struct linger l = { l_onoff = 1, l_linger = linger };
-
-		if (setsockopt(nsk, SOL_SOCKET, SO_LINGER, &l, sizeof(l)) < 0) {
-			perror("Can't set linger option");
-			close(nsk);
-			return;
-		}
-	}
-#endif
-
-// serial tty ding anlegen ??????????????????
-/*
-	memset(&req, 0, sizeof(req));
-	req.dev_id = dev;
-	req.flags = (1 << RFCOMM_REUSE_DLC) | (1 << RFCOMM_RELEASE_ONHUP);
-
-	bacpy(&req.src, &laddr.rc_bdaddr);
-	bacpy(&req.dst, &raddr.rc_bdaddr);
-	req.channel = raddr.rc_channel;
-
-	dev = ioctl(nsk, RFCOMMCREATEDEV, &req);
-	if (dev < 0) {
-		perror("Can't create RFCOMM TTY");
-		close(sk);
-		return;
-	}
-
-	snprintf(devname, MAXPATHLEN - 1, "/dev/rfcomm%d", dev);
-	while ((fd = open(devname, O_RDONLY | O_NOCTTY)) < 0) {
-		if (errno == EACCES) {
-			perror("Can't open RFCOMM device");
-			goto release;
-		}
-
-		snprintf(devname, MAXPATHLEN - 1, "/dev/bluetooth/rfcomm/%d", dev);
-		if ((fd = open(devname, O_RDONLY | O_NOCTTY)) < 0) {
-			if (ntry--) {
-				snprintf(devname, MAXPATHLEN - 1, "/dev/rfcomm%d", dev);
-				usleep(100);
-				continue;
-			}
-			perror("Can't open RFCOMM device");
-			goto release;
-		}
-	}
-
-*/
-
-#if 0
-	if (rfcomm_raw_tty) {
-		tcflush(fd, TCIOFLUSH);
-
-		cfmakeraw(&ti);
-		tcsetattr(fd, TCSANOW, &ti);
-	}
-#endif
-
-	close(sk);
-
-
-/*
-	memset(&sa, 0, sizeof(sa));
-	sa.sa_flags   = SA_NOCLDSTOP;
-	sa.sa_handler = SIG_IGN;
-	sigaction(SIGCHLD, &sa, NULL);
-	sigaction(SIGPIPE, &sa, NULL);
-
-	sa.sa_handler = sig_term;
-	sigaction(SIGTERM, &sa, NULL);
-	sigaction(SIGINT,  &sa, NULL);
-
-	sa.sa_handler = sig_hup;
-	sigaction(SIGHUP, &sa, NULL);
-
-	sigfillset(&sigs);
-	sigdelset(&sigs, SIGCHLD);
-	sigdelset(&sigs, SIGPIPE);
-	sigdelset(&sigs, SIGTERM);
-	sigdelset(&sigs, SIGINT);
-	sigdelset(&sigs, SIGHUP); */
-
-/*
-	p.fd = fd;
-	p.events = POLLERR | POLLHUP;
-
-	if (argc <= 2) {
-		while (!__io_canceled) {
-			p.revents = 0;
-			if (ppoll(&p, 1, NULL, &sigs) > 0)
-				break;
-		}
-	} else
-		run_cmdline(&p, &sigs, devname, argc - 2, argv + 2);
-*/
-
-/*
-	sa.sa_handler = NULL;
-	sigaction(SIGTERM, &sa, NULL);
-	sigaction(SIGINT,  &sa, NULL);
-	close(fd);
-	*/
-
-
-	return;
-
-release:
-	memset(&req, 0, sizeof(req));
-	req.dev_id = dev;
-	req.flags = (1 << RFCOMM_HANGUP_NOW);
-	ioctl(ctl, RFCOMMRELEASEDEV, &req);
-
-	close(sk);
+	close(startupdata->so);
 }
 
 void signalHandler(int signo, siginfo_t *p, void *ucontext)
 {
-	printf("signalHandler\n"); 
+	printf("signalHandler\n");
+	// TODO: programm nicht gleich killen - exit-msg an die clients schicken
 	resetPlatine();
 	if(srcp) {
 		delete(srcp);
@@ -982,13 +750,42 @@ int main(int argc, char *argv[])
 	sigaction(SIGINT,&sa,NULL);
 	sigaction(SIGTERM,&sa,NULL);
 	printf("btserver starting...\n");
-	bdaddr_t bdaddr;
-	// bzero(&bdaddr, sizeof(bdaddr));
-	bacpy(&bdaddr, BDADDR_ANY);
 
-	int ctl=1000;
-	cmd_listen(ctl, 30, &bdaddr, 30);
-	if(platine)
+	try {
+		assert(!platine);
+		platine=new K8055(1,cfg_debug);
+		printf("init platine\n");
+		resetPlatine();
+	} catch(const char *errormsg) {
+		fprintf(stderr,"ansteuer platine error: %s\n",errormsg);
+	}
+
+	if(!platine) {
+		assert(!srcp);
+		try {
+			srcp=new SRCP();
+			printf("init erddcd\n");
+		} catch(const char *errormsg) {
+			fprintf(stderr,"error connecting to erddcd (%s)\n",errormsg);
+		}
+	}
+
+
+	Server server;
+	while(1) {
+		int nsk = server.accept();
+	// client thread vorbereiten + starten
+		startupdata_t *startupdata=(startupdata_t*) calloc(sizeof(startupdata_t),1);
+		startupdata->clientID=server.clientID_counter++;
+		startupdata->so=nsk;
+		pthread_t &newThread=server.clients[startupdata->clientID];
+		bzero(&newThread,sizeof(newThread));
+		pthread_create(&newThread, NULL, phoneClient, (void *)startupdata);
+	}
+
+	if(platine) {
+		resetPlatine();
 		delete platine;
+	}
 
 }
