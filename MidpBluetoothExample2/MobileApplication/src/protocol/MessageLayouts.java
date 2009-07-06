@@ -74,7 +74,7 @@ public class MessageLayouts {
 			typeNr++;
 			
 		}
-		System.out.println("---------------------------hash)"+this.hash);
+		System.out.println("---------------------------hash:"+this.hash);
 	}
 	
 	public static MessageLayout getLayout(int type) throws Exception {

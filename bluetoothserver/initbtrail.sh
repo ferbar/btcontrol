@@ -22,7 +22,7 @@ sdptool setattr 0x10005 0x100 "btrail"
 # in /var/lib/bluetooth/<blue_id>/config eingetragen habe 
 # mode discoverable 
 # discovto 0 
-/usr/sbin/hciconfig hci0 | grep ISCAN
+/usr/sbin/hciconfig hci0 | grep ISCAN -q
 rc=$?
 if [ $rc != 0 ]; then
 	echo "bluetooth ISCAN nicht eingeschalten!" > /dev/stderr

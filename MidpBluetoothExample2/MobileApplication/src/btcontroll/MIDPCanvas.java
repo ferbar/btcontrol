@@ -57,15 +57,16 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 
 	private int[] currMultiAddr=null; // für mehrfachsteuerung
 	private int currAddr=0; // 
-	private int currSpeed=0; // wird von der callback func gesetzt
-	private int currFuncBits=0;
 	
 	// zuordnung adresse -> lokbezeichnung,bild
-	class availLocosListItem {public String name; public Image img; 
-		public availLocosListItem(String name, Image img) { this.name=name; this.img=img; } }
+	class AvailLocosListItem {public String name; public Image img; public int speed; public int funcBits;
+		public AvailLocosListItem(String name, Image img, int speed, int funcBits) {
+			this.name=name; this.img=img; this.speed=speed; this.funcBits=funcBits;} }
 	private Hashtable availLocos=new Hashtable();
 	private Hashtable imgCache=new Hashtable();
 
+	// FillThread speichert da die letzte liste
+	FBTCtlMessage lastReply;
 	// ... damit eine gedrückte taste öfter gezählt wird
 	Timer timer;
 	Object timerwait;
@@ -94,7 +95,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 		// TODO: optimieren *********
 		try {
 			if(reply == null) {
-				throw new Exception("callback, no reply-disconnected?");
+				throw new Exception("callback-timeout");
 			} else {
 				if(reply.isType("STATUS_REPLY")) {
 					// debugForm.debug("pingReply rx ");
@@ -102,14 +103,16 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 					// debugForm.debug("asize:"+an+" ");
 					for(int i=0; i < an; i++) {
 						int addr= reply.get("info").get(i).get("addr").getIntVal();
-						/*
-						debugForm.debug("addr:"+addr+
+						
+						System.out.println("addr:"+addr+
 							" speed: "+reply.get("info").get(i).get("speed").getIntVal()+
 							" func: "+reply.get("info").get(i).get("functions").getIntVal());
-						 */
-						if(this.currAddr==addr) {
-							this.currSpeed=reply.get("info").get(i).get("speed").getIntVal();
-							this.currFuncBits=reply.get("info").get(i).get("functions").getIntVal();
+						AvailLocosListItem item=(AvailLocosListItem)this.availLocos.get(new Integer(addr));
+						if(item != null) {
+							item.speed=reply.get("info").get(i).get("speed").getIntVal();
+							item.funcBits=reply.get("info").get(i).get("functions").getIntVal();
+						} else {
+							System.out.println("addr:"+addr+"not in list!!!");
 						}
 					}
 				} else {
@@ -156,6 +159,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 	public void update(BTcommThread btcomm)  {
 		this.btcomm=btcomm;
 		this.btcomm.pingCallback=this;
+		this.err="";
 	}
 	
 	/**
@@ -169,18 +173,25 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 			g.setColor(0xffffff);
 			g.fillRect(0, 0, width, getHeight());
 			g.setColor(0x00ff00);
-			int speed_len=(Math.abs(this.currSpeed) * width/2 / 255);
-			if(this.currSpeed >= 0) {
+			AvailLocosListItem item=(AvailLocosListItem)this.availLocos.get(new Integer(this.currAddr));
+			int currSpeed=-1;
+			int currFuncBits=-1;
+			if(item != null) {
+				currSpeed=item.speed;
+				currFuncBits=item.funcBits;
+			}
+			int speed_len=(Math.abs(currSpeed) * width/2 / 255);
+			if(currSpeed >= 0) {
 				g.fillRect(width/2, 20, speed_len, lineHeight);
 				g.setColor(0x0000ff);
-				g.drawString("Speed:"+this.currSpeed,width/2,20,Graphics.TOP|Graphics.LEFT);
+				g.drawString("Speed:"+currSpeed,width/2,20,Graphics.TOP|Graphics.LEFT);
 			} else {
 				g.fillRect(width/2 - speed_len, 20, speed_len, lineHeight);
 				g.setColor(0x0000ff);
-				g.drawString("Speed:"+this.currSpeed,0,20,Graphics.TOP|Graphics.LEFT);
+				g.drawString("Speed:"+currSpeed,0,20,Graphics.TOP|Graphics.LEFT);
 			}
-			if(this.currMultiAddr == null) {
-				Image img=((availLocosListItem) this.availLocos.get(new Integer(this.currAddr))).img;
+			if((this.currMultiAddr == null) && (item != null)) {
+				Image img=item.img;
 				if(img != null) {
 					g.drawImage(img, 0, 20,0);
 				} else {
@@ -189,7 +200,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 			} else {
 				for(int i=0; i < this.currMultiAddr.length; i++) {
 					System.out.print("get image ["+this.currMultiAddr[i]+"]");
-					Image img=((availLocosListItem) this.availLocos.get(new Integer(this.currMultiAddr[i]))).img;
+					Image img=((AvailLocosListItem) this.availLocos.get(new Integer(this.currMultiAddr[i]))).img;
 					if(img != null) {
 						g.drawImage(img, (16+2)*i, 20,0);
 					} else {
@@ -200,7 +211,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 			// funcbits ausgeben:
 			String tmp=""; //+btcomm.currFuncBits+":";
 			for(int i=11; i >=0; i--) {
-				if((this.currFuncBits & (1<<i)) > 0) {
+				if((currFuncBits & (1<<i)) > 0) {
 					tmp+=(i+1)+" ";
 				}
 			}
@@ -319,12 +330,30 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 			task = new HoldDownKeyTask(msg,this);
 			
 			timer.schedule(task, repeatTimeout, repeatTimeout);
+			this.updateTitle();
 		} else {
 			err="no btcomm";
 		}
 		this.repaint();
 	}
 
+	void updateTitle()
+	{
+		String title=null;
+		if(this.currMultiAddr == null) { 
+			AvailLocosListItem item = ((AvailLocosListItem) this.availLocos.get(new Integer(this.currAddr)));
+			if(item != null)
+				title = item.name;
+		} else { // mehrfachsteuerung
+			title = "Mehrfachsteuerung ";
+			for(int i=0; i < this.currMultiAddr.length; i++) {
+				title+=this.currMultiAddr[i]+", ";
+			}
+		}
+		if(title != null)
+			this.setTitle(title);
+	}
+			
 	/**
 	 * Called when a key is released.
 	 */
@@ -389,6 +418,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 				selectList.setTitle("reading...");
 				selectList.deleteAll(); // sollte eigentlich eh leer sein 
 				FBTCtlMessage reply=btcomm.execCmd(cmd);
+				lastReply=reply;
 				int n=reply.get("info").getArraySize();
 				for(int i=0; i < n; i++) {
 					Object o;
@@ -580,13 +610,14 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 			} else if(command==this.locoListCommand) {
 				HelloMidlet.display.setCurrent(get_locoList());
 			} else if(command==this.locoListCMDSelect) {
-				this.setAvailLocos(selectList);
+				HelloMidlet.display.getCurrent();
+				this.setAvailLocos(this.lastReply,this.selectList);
 				int n=selectList.getSelectedIndex();
-				Integer addr=(Integer) selectList.getValue(n);
+				Integer addr=(Integer) this.selectList.getValue(n);
 				this.currAddr=addr.intValue();
 				this.currMultiAddr=null;
 				HelloMidlet.display.setCurrent(this);
-				this.setTitle(selectList.getString(n));
+				this.updateTitle();
 				
 			} else if(command==this.multiControllCommand) {
 				HelloMidlet.display.setCurrent(get_locoListMultiControll());
@@ -613,12 +644,11 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 							this.currAddr=addr.intValue(); // damit irgendwas angezeigt wird
 							this.currMultiAddr[n]=addr.intValue();
 							// debugForm.debug("["+n+"]="+addr.intValue()+" ");
-							s+=addr.intValue()+", ";
 							n++;
 						}
 					}
 					HelloMidlet.display.setCurrent(this);
-					this.setTitle("Mehrfachsteuerung "+s);
+					this.updateTitle();
 				} else {
 					Alert alert;
 					alert = new Alert("Mehrfachsteuerung","bitte >= 2 loks auswählen ("+listSize+")",null,null);
@@ -742,14 +772,21 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 			return null;
 		}
 	}
-	
-	private void setAvailLocos(ValueList selectList) {
-		int n=selectList.size();
+
+	/**
+	 * @param reply antwort auf GETLOCOS - da steht auch aktueller speed + func der loks drinnen
+	 * @param selectList liste die filllistthread erzeugt hat (wegen den bildern)
+	 * @throws java.lang.Exception
+	 */
+	private void setAvailLocos(FBTCtlMessage reply, ValueList selectList) throws Exception {
+		int n=reply.get("info").getArraySize();
 		for(int i=0; i < n; i++) {
-			Integer addr = (Integer) selectList.values.elementAt(i);
-			String name = selectList.getString(i);
+			Integer addr = new Integer(reply.get("info").get(i).get("addr").getIntVal());
+			String name = reply.get("info").get(i).get("name").getStringVal();
+			int speed = reply.get("info").get(i).get("speed").getIntVal();
+			int func = reply.get("info").get(i).get("functions").getIntVal();
 			Image img = selectList.getImage(i);
-			this.availLocos.put(addr,new availLocosListItem(name,img));
+			this.availLocos.put(addr,new AvailLocosListItem(name,img,speed,func));
 		}
 	}
 }

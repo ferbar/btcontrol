@@ -11,7 +11,7 @@ package btcontroll;
 
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.Exception;
+// import java.lang.Exception;
 import java.util.Timer;
 import java.util.TimerTask;
 import javax.microedition.io.StreamConnection;
@@ -72,7 +72,7 @@ public class BTcommThread extends Thread{
 			
 		}
 		public void run() {
-			System.out.println( "TimeoutTask" );
+			debugForm.debug( "TimeoutTask" );
 			called=true;
 			timeout=true;
 			if(pingCallback != null) {
@@ -82,7 +82,7 @@ public class BTcommThread extends Thread{
 					debugForm.debug("BTCallback exception: "+e.toString()+"\n");
 				}
 			}
-			debugForm.vibrate(100);
+			debugForm.vibrate(30);
 		}
 	}
 	
@@ -97,7 +97,7 @@ public class BTcommThread extends Thread{
 			this.notifyObject=notifyObject;
 		}
 		public void run() {
-			System.out.println( "Running the task" );
+			System.out.println( "Running the ping task" );
 			// HelloMidlet h =
 			synchronized(this.notifyObject) {
 				// helloForm.append("timer ");
@@ -155,7 +155,7 @@ public class BTcommThread extends Thread{
 			debugForm.debug("BTcommThread::close2 exception ("+e.toString()+")");
 		}
 		debugForm.debug("BTcommThread::close done");
-		debugForm.vibrate(1000);
+		debugForm.vibrate(500);
 	}
 	
 	public void addCmdToQueue(FBTCtlMessage message) throws Exception {
@@ -166,12 +166,17 @@ public class BTcommThread extends Thread{
 	public void addCmdToQueue(FBTCtlMessage message, Callback callback) throws Exception {
 		synchronized(queue_wait) {
 			if(this.nextMessage != null) { // queue nicht leer
-				try {
+				//try {
 					debugForm.debug("addCmdToQueue need wait");
-					queue_wait.wait(); // ... dann auf das nächste notify warten
+					queue_wait.wait(5000); // ... dann auf das nächste notify warten - mit 10s timeout
+					if(this.nextMessage != null) { // timeout 
+						throw new Exception("addCmdToQueue: timeout");
+					}
+				/*
 				} catch (Exception e) {
 					debugForm.debug("addCmdToQueue exception ("+e.toString()+")");
 				}
+				 */
 			}
 			if(this.nextMessage != null) {
 				throw new Exception("addCmdToQueue: queue not empty");
@@ -280,8 +285,9 @@ public class BTcommThread extends Thread{
 	private FBTCtlMessage receiveMessage() throws Exception
 	{
 		// debugForm.debug("rxMsg: ");
-		if(iStream.read(msgSizeBuffer,0,4) != 4) {
-			throw new Exception("error reading msgSize");
+		int rc=iStream.read(msgSizeBuffer,0,4);
+		if( rc != 4) {
+			throw new Exception("error reading msgSize ("+rc+")");
 		}
 		msgSizeIn.reset();
 		int msgSize = msgSizeIn.getInt();
@@ -289,7 +295,7 @@ public class BTcommThread extends Thread{
 		// debugForm.debug("rxMsg: size: "+msgSize);
 		int readBytes=0;
 		while(readBytes < msgSize) {
-			int rc=iStream.read(buffer,readBytes,msgSize-readBytes);
+			rc=iStream.read(buffer,readBytes,msgSize-readBytes);
 			if(rc <= 0) { // rc = -1 wenn EOF
 				throw new Exception("error reading msg (rc="+rc+", size:"+msgSize+" read:"+readBytes);
 			}
@@ -555,5 +561,8 @@ public class BTcommThread extends Thread{
 		debugForm.debug("BT comm thread: ended\n");
 		close();
 		timer.cancel(); // ping timer stoppen sonst gibts eventuell irgendwann 2 davon ...
+		synchronized(queue_wait) {
+			queue_wait.notifyAll(); // damit das prog nicht in einem queue wait hängen bleibt
+		}
 	}
 }
