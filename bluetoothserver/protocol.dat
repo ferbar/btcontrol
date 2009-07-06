@@ -38,7 +38,7 @@ GETFUNCTIONS=addr:I
 GETFUNCTIONS_REPLY=info:A{name:S,value:I,imgname:S}
 
 GETLOCOS=
-GETLOCOS_REPLY=info:A{name:S,addr:I,imgname:S}
+GETLOCOS_REPLY=info:A{name:S,addr:I,imgname:S,speed:I,functions:I}
 
 POM=addr:I,cv:I,value:I
 # 0=fehler(???) 1=ok

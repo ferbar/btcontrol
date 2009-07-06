@@ -37,7 +37,8 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
     
 	static public Display display;
 	
-	// private int orgDiscoverable;
+	private int orgDiscoverable;
+	private float btApiVersion;
 	
     /** Creates a new instance of HelloMidlet */
     public HelloMidlet() throws Exception
@@ -234,6 +235,23 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 
 		
 		
+		String version = LocalDevice.getProperty("bluetooth.api.version");
+		this.btApiVersion = Float.parseFloat(version);
+		helloForm.append("bt api version "+this.btApiVersion);
+		
+		// me4se und api version 1.0 kann kein isPowerOn()
+		if(this.btApiVersion >= 1.1) {
+			try {
+				if(!LocalDevice.isPowerOn()) {
+					helloForm.setTitle("bt off");
+					helloForm.append("please enable bluetooth!");
+				}
+			} catch(java.lang.Error e) {
+				debug("bt.isPowerOn exception");
+				// e.printStackTrace();
+			}
+		}
+		
 		LocalDevice local;
 		try {
 			local = LocalDevice.getLocalDevice();
@@ -243,34 +261,27 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 			return;
 		}
 		
-		// me4se kann kein isPowerOn()
-		boolean btPowerOff=false;
+
+		
+		// Insert post-init code here
+		PrintClient client;
 		try {
-			if(!LocalDevice.isPowerOn()) {
-				btPowerOff=true;
-			}
-		} catch(Exception e) {
+			this.orgDiscoverable=local.getDiscoverable();
+			local.setDiscoverable(DiscoveryAgent.NOT_DISCOVERABLE);
+		} catch (BluetoothStateException e) {
+			debug("bt.setDiscoverable(NOT_DISCOVERABLE) not supported");
+		}
+		try {
+			helloForm.setTitle("bt scan...");
+			client=new PrintClient(this,this);
+		} catch (BluetoothStateException e) {
+
+			helloForm.append("exception: ("+e.toString()+") bluetooth disabled?");
 			e.printStackTrace();
+			return;
 		}
-		if(btPowerOff) {
-			helloForm.setTitle("bt off");
-			helloForm.append("please enable bluetooth!");
-		} else {
-			// Insert post-init code here
-			PrintClient client;
-			try {
-				helloForm.setTitle("setting discoverable=0");
-				local.setDiscoverable(DiscoveryAgent.NOT_DISCOVERABLE);
-				helloForm.setTitle("bt scan...");
-				client=new PrintClient(this,this);
-			} catch (BluetoothStateException e) {
-			
-				helloForm.append("exception: ("+e.toString()+") bluetooth disabled?");
-				e.printStackTrace();
-				return;
-			}
-			client.findPrinter(false);
-		}
+		client.findPrinter(false);
+		
 	}//GEN-LINE:MVDInitEnd
     
 	class ConnectThread extends Thread {
@@ -352,6 +363,8 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 						// DataInputStream input = (InputConnection) connection.openDataInputStream();
 						// DataOutputStream output = connection.openDataOutputStream();
 
+				} else {
+					getDisplay().setCurrent(get_controllCanvas(btcomm));
 				}
 				// Insert pre-action code here
 				/*
@@ -408,7 +421,12 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
      * This method should exit the midlet.
      */
     public void exitMIDlet() {//GEN-FIRST:MVDExitMidlet
-        getDisplay().setCurrent(null);
+        try {
+			LocalDevice local=LocalDevice.getLocalDevice();
+			local.setDiscoverable(this.orgDiscoverable);
+		} catch(Exception e) {
+		}
+		getDisplay().setCurrent(null);
         destroyApp(true);
         notifyDestroyed();
     }//GEN-LAST:MVDExitMidlet

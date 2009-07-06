@@ -389,6 +389,13 @@ void *phoneClient(void *data)
 					reply["info"][i]["addr"]=lokdef[i].addr;
 					reply["info"][i]["name"]=lokdef[i].name;
 					reply["info"][i]["imgname"]=lokdef[i].imgname;
+					reply["info"][i]["speed"]=lokdef[i].currspeed;
+					int func=0;
+					for(int j=0; j < lokdef[i].nFunc; j++) {
+						if(lokdef[i].func[j].ison)
+							func |= 1 << j;
+					}
+					reply["info"][i]["functions"]=func;
 					i++;
 				}
 				reply.dump();
