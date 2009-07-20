@@ -20,10 +20,13 @@ import protocol.MessageLayouts;
  * @author  chris
  * @version
  */
-public class MIDPCanvas extends Canvas implements CommandListener, ItemStateListener, BTcommThread.Callback {
+public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.Callback {
 	public BTcommThread btcomm;
 	BTcommThread.DisplayOutput debugForm;
 	String err="";
+	private final Image pfeilRechts;
+	private final Image pfeilLinks;
+				
 	private Command exitCommand = new Command("Exit", Command.BACK, 1);
 	private Command emergencyStopCommand = new Command("STOP", Command.ITEM,1);
 	private Command locoListCommand = new Command("loks", Command.ITEM, 5);
@@ -129,9 +132,11 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 	/**
 	 * constructor
 	 */
-	public MIDPCanvas(BTcommThread.DisplayOutput debugForm, BTcommThread btcomm) {
+	public MIDPCanvas(BTcommThread.DisplayOutput debugForm, BTcommThread btcomm) throws Exception {
 		this.debugForm=debugForm;
 		backForm=HelloMidlet.display.getCurrent();
+		this.pfeilRechts=Image.createImage("/icons/pfeilRechts.png");
+		this.pfeilLinks=Image.createImage("/icons/pfeilLinks.png");
 		update(btcomm);
 		/* ------- steht im hello form!!!!!! 
 		try {
@@ -181,14 +186,18 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 				currFuncBits=item.funcBits;
 			}
 			int speed_len=(Math.abs(currSpeed) * width/2 / 255);
+			int line=20;
+			int middle=width/2;
 			if(currSpeed >= 0) {
-				g.fillRect(width/2, 20, speed_len, lineHeight);
+				g.fillRect(middle, line, speed_len, lineHeight);
 				g.setColor(0x0000ff);
-				g.drawString("Speed:"+currSpeed,width/2,20,Graphics.TOP|Graphics.LEFT);
+				g.drawString(currSpeed+" ", middle, line, Graphics.TOP|Graphics.RIGHT);
+				g.drawImage(this.pfeilRechts, middle, line, Graphics.TOP|Graphics.LEFT);
 			} else {
-				g.fillRect(width/2 - speed_len, 20, speed_len, lineHeight);
+				g.fillRect(middle - speed_len, line, speed_len, lineHeight);
 				g.setColor(0x0000ff);
-				g.drawString("Speed:"+currSpeed,0,20,Graphics.TOP|Graphics.LEFT);
+				g.drawString(" "+currSpeed,middle,line,Graphics.TOP|Graphics.LEFT);
+				g.drawImage(this.pfeilLinks, middle, line, Graphics.TOP|Graphics.RIGHT);
 			}
 			if((this.currMultiAddr == null) && (item != null)) {
 				Image img=item.img;
@@ -197,7 +206,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 				} else {
 					System.out.print("no image ["+this.currAddr+"]");
 				}
-			} else {
+			} else if(this.currMultiAddr != null) {
 				for(int i=0; i < this.currMultiAddr.length; i++) {
 					System.out.print("get image ["+this.currMultiAddr[i]+"]");
 					Image img=((AvailLocosListItem) this.availLocos.get(new Integer(this.currMultiAddr[i]))).img;
@@ -286,17 +295,40 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 								break;
 							// - mittlere taste wird bei nokia handies als kommando aufgerufen!
 							case Canvas.FIRE:
-								msg.setType(MessageLayouts.messageTypeID("STOP"));
+								if(this.currMultiAddr == null)
+									msg.setType(MessageLayouts.messageTypeID("STOP"));
+								else
+									msg.setType(MessageLayouts.messageTypeID("STOP_MULTI"));
 								break;
 							 
-							/*
-							case Canvas.LEFT:
-								cmd="left";
-								break;
-							case Canvas.RIGHT:
-								cmd="right";
-								break;
-							 */
+							
+							case Canvas.LEFT: {
+								AvailLocosListItem item = ((AvailLocosListItem) this.availLocos.get(new Integer(this.currAddr)));
+								if(Math.abs(item.speed)<=1) {
+									if(this.currMultiAddr == null)
+										msg.setType(MessageLayouts.messageTypeID("DIR"));
+									else
+										msg.setType(MessageLayouts.messageTypeID("DIR_MULTI"));
+									msg.get("dir").set(-1);
+								} else {
+									sendCmd=false;
+									this.err="Richtungsänderung nur wenn Lok steht!";
+								}
+								break; }
+							case Canvas.RIGHT:   {
+								AvailLocosListItem item = ((AvailLocosListItem) this.availLocos.get(new Integer(this.currAddr)));
+								if(Math.abs(item.speed)<=1) {
+									if(this.currMultiAddr == null)
+										msg.setType(MessageLayouts.messageTypeID("DIR"));
+									else
+										msg.setType(MessageLayouts.messageTypeID("DIR_MULTI"));
+									msg.get("dir").set(1);
+								} else {
+									sendCmd=false;
+									this.err="Richtungsänderung nur wenn Lok steht!";
+								}
+								break; }
+							
 							default:
 								sendCmd=false;
 								break;
@@ -312,6 +344,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 						for(int i=0; i < this.currMultiAddr.length; i++) {
 							msg.get("list").get(i).get("addr").set(this.currMultiAddr[i]);
 						}
+						// msg.dump(debugForm);
 					} else {
 						msg.get("addr").set(this.currAddr);
 					}
@@ -530,9 +563,13 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 			public void itemStateChanged(Item item) {
 				if(item == textFieldPOMVal) {
 					String s="";
-					int CVVal=Integer.parseInt(textFieldPOMVal.getString());
-					for(int i=0; i < 8; i++) {
-						s+=((CVVal & (1 << i)) == 0) ? "0" : "1";
+					if(textFieldPOMVal.getString().equals("")) {
+						
+					} else {
+						int CVVal=Integer.parseInt(textFieldPOMVal.getString());
+						for(int i=0; i < 8; i++) {
+							s+=((CVVal & (1 << i)) == 0) ? "0" : "1";
+						}
 					}
 					textFieldPOMBinVal.setString(s);
 				} else if(item == textFieldPOMBinVal) {
@@ -551,8 +588,12 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 					}
 					if(wrongChar)
 						textFieldPOMBinVal.setString(s);
-					int CVVal=Integer.parseInt(s,2);
-					textFieldPOMVal.setString(""+CVVal);
+					if(s.equals("")) {
+						textFieldPOMVal.setString("");
+					} else {
+						int CVVal=Integer.parseInt(s,2);
+						textFieldPOMVal.setString(""+CVVal);
+					}
 				}
 			}
 		};
@@ -566,9 +607,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 		return this.form;
 	}
 	
-	public void itemStateChanged(Item item) {
 
-	}
 	
 	/**
 	 * Called when action should be handled
@@ -713,7 +752,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, ItemStateList
 	protected void showNotify(){
 		System.out.println( "showNotify" );
 		try {
-			if(this.currAddr==0 && this.btcomm != null && this.btcomm.isAlive()) // wenn keine adresse gesetzt + verbunden
+			if(this.currAddr==0 && this.btcomm != null && !this.btcomm.hasError()) // wenn keine adresse gesetzt + verbunden
 				HelloMidlet.display.setCurrent(get_locoList());
 		} catch(Exception e) {
 			err=e.toString();
