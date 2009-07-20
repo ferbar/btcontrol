@@ -234,3 +234,23 @@ release:
 	close(sk);
 */
 }
+
+
+
+std::string BTServer::getRemoteAddr(int so)
+{
+	// struct rfcomm_dev_req req;
+	struct sockaddr_rc raddr;
+	char dst[18];
+
+
+	socklen_t addrlen=sizeof(raddr);
+	if (getpeername(so, (struct sockaddr *)&raddr, &addrlen) < 0) {
+		perror("Can't get RFCOMM socket name");
+		exit(1);
+	}
+
+	ba2str(&raddr.rc_bdaddr, dst);
+	return std::string(dst);
+}
+

@@ -20,11 +20,13 @@
 
 #include <map>
 
-#include "fbtctl_message.h"
 #include "../usb k8055/k8055.h"
 
 #include "srcp.h"
+
 #include "server.h"
+#include "clientthread.h"
+#include "lokdef.h"
 
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -45,68 +47,6 @@ int protocolHash;
 
 K8055 *platine=NULL;
 SRCP *srcp=NULL;
-
-struct func_t {
-	char name[32];
-	bool pulse; // nur einmal einschalten dann gleich wieder aus
-	bool ison;
-	char imgname[32];
-};
-
-#define F_DEFAULT 0
-#define F_DEC14 1
-#define F_DEC28 2
-
-struct lokdef_t {
-	int addr;
-	int flags;		// LGB loks mit 14 fahrstufen ansteuern
-	char name[12];
-	int nFunc;
-	func_t func[16];
-	int currspeed;
-	bool initDone;
-	char imgname[32];
-};
-
-// darf kein pointer sein weil .currspeed und func wird ja geändert
-static lokdef_t *lokdef; 
-/*= {
-//	{1,"lok1"},
-//	{2,"lok2"},
-//	{3,"lok3",4,{{"func1"},{"func2"},{"func3"},{"func4"}}},
-// die funk 5-12 werden extra übertragen -> sollten nicht stören
-	{3,  F_DEFAULT,"lok3",12,{{"func1"},{"func2"},{"func3"},{"func4"},{"func5"},{"func6"},{"func7"},{"func8"},{"func9"},{"func10"},{"func11"},{"func12"}}},
-	{4,  F_DEFAULT,"Ge 4/4 I",12,{{"sPfeife",true},{"sBremse",true},{"sPfeife+Echo"},{"sAnsage"},{"sAggregat ein/aus",false},{"sSound ein/aus",false},{"lFührerstand"},{"Rangiergang"},{"Ansage",true},
-		{"sLufthahn"},{"Pantho"},{"Pantho"},{"sKompressor"},{"sVakuumpumpe"},{"sStufenschalter"},{"schaltbare Verzögerung"}}},
-	{5,  F_DEFAULT,"lok5"},
-	{6,  F_DEFAULT,"Ge 6/6 II",8,{{"sSound ein/aus"},{"sPfeife"},{"sRangierpfiff"},{"sKompressor"},{"sPressluft"},{"Rangiergang"}}},
-	{413,F_DEFAULT,"Ge 6/6 I",12,{{"lFührerstand"},{"2"},{"3"},{"lFührerstand"},{"sPfeife",true},{"s6"},{"s7"},{"sSound ein/aus"},{"sPfeife"},{"sRangierpfiff"},{"sKompressor"},{"sPressluft"}}},
-	{108,F_DEFAULT,"G 4/5",12,{{"lFührerstand"},{"2"},{"3"},{"lFührerstand"},{"sPfeife",true},{"s6"},{"s7"},{"sSound ein/aus"},{"sPfeife"},{"sRangierpfiff"},{"sKompressor"},{"sPressluft"}}},
-	{7,  F_DEFAULT,"Ge 4/4 II",8,{{"lFührerstand"},{"lFührerstand"},{"lSchweizer Rücklicht"},{"???"}}},
-	{647,F_DEFAULT,"Ge 4/4 III",12,{{"lFührerstand"},{"2"},{"3"},{"lFührerstand"},{"sPfeife",true},{"s6"},{"s7"},{"sSound ein/aus"},{"sPfeife"},{"sRangierpfiff"},{"sKompressor"},{"sPressluft"}}},
-	{203,F_DEFAULT,"Ge 2/6 203",12,{{"lFührerstand"},{"2"},{"3"},{"lFührerstand"},{"sPfeife",true},{"s6"},{"s7"},{"sSound ein/aus"},{"sPfeife"},{"sRangierpfiff"},{"sKompressor"},{"sPressluft"}}},
-	{12, F_LGB_DEC,"Ge 2/4 213"},
-	{14, F_DEFAULT,"schoema",4,{{""},{"lblink"},{"lblink"},{""}}},
-	{0}
-};
-*/
-
-/**
- * liefert den index
- * @return < 0 wenn lok nicht gefunden
- *
- */
-int getAddrIndex(int addr)
-{
-	int i=0;
-	while(lokdef[i].addr) {
-		if(lokdef[i].addr==addr) {
-			return i;
-		}
-		i++;
-	}
-	return -1;
-}
 
 /**
  * tut spaces am ende weg
@@ -150,63 +90,6 @@ void resetPlatine()
 		platine->write_output(255, 255, 0xaa);
 }
 
-#define STREQ(s1,s2) (strcmp(s1,s2)==0)
-
-#define sendToPhone(text) \
-		if(strlen(text) != write(startupdata->so,text,strlen(text))) { \
-			printf("%d:error writing message (%s)\n",startupdata->clientID, strerror(errno)); \
-			break; \
-		} else { \
-			printf("%d: ->%s",startupdata->clientID,text); \
-		}
-
-#define MAXPATHLEN 255
-
-void sendMessage(int so, const FBTCtlMessage &msg)
-{
-	std::string binMsg=msg.getBinaryMessage();
-	int msgsize=binMsg.size();
-	write(so, &msgsize, 4);
-	write(so, binMsg.data(), binMsg.size());
-	printf("messagesize: %d+4\n",binMsg.size());
-}
-
-struct lastStatus_t {
-	int currspeed;
-	int func;
-};
-
-void setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus)
-{
-	// FBTCtlMessage test(messageTypeID("PING_REPLY"));
-	int n=0;
-	int i=0;
-	reply["info"]=FBTCtlMessage(MessageLayout::ARRAY); // feld anlegen damits immer da ist
-	while(lokdef[i].addr) {
-		int func=0;
-		for(int j=0; j < lokdef[i].nFunc; j++) {
-			if(lokdef[i].func[j].ison)
-				func |= 1 << j;
-		}
-		if((lokdef[i].currspeed != lastStatus[i].currspeed) || (func != lastStatus[i].func)) {
-			lastStatus[i].currspeed=lokdef[i].currspeed;
-			lastStatus[i].func=func;
-			reply["info"][n]["addr"]=lokdef[i].addr;
-			reply["info"][n]["speed"]=lokdef[i].currspeed;
-			reply["info"][n]["functions"]=func;
-			n++;
-		}
-		i++;
-	}
-}
-
-void sendStatusReply(int so, lastStatus_t *lastStatus)
-{
-	FBTCtlMessage reply(messageTypeID("STATUS_REPLY"));
-	setLokStatus(reply,lastStatus);
-	reply.dump();
-	sendMessage(so,reply);
-}
 
 /**
  * für jedes handy ein eigener thread...
@@ -214,355 +97,17 @@ void sendStatusReply(int so, lastStatus_t *lastStatus)
 void *phoneClient(void *data)
 {
 	startupdata_t *startupdata=(startupdata_t *)data;
-	printf("%d:new client ID=%d\n",startupdata->clientID,startupdata->clientID);
-	printf("%d:socket accepted sending welcome msg\n",startupdata->clientID);
+	printf("%d:new client\n",startupdata->clientID,startupdata->clientID);
 
 	try {
-	FBTCtlMessage heloReply(messageTypeID("HELO"));
-	heloReply["name"]="my bt server";
-	heloReply["version"]="testding";
-	heloReply["protohash"]=protocolHash;
-	heloReply.dump();
-	sendMessage(startupdata->so,heloReply);
-
-	int nLokdef=0;
-	while(lokdef[nLokdef].addr) nLokdef++;
-	lastStatus_t lastStatus[nLokdef+1];
-	for(int i=0; i <= nLokdef; i++) { lastStatus[i].func=-1; }
-	bool changedAddrIndex[nLokdef+1];
-	for(int i=0; i <= nLokdef; i++) { changedAddrIndex[i] = false; }
-
-
-	int x=0;
-	// int speed=0;
-	// int addr=3;
-	while(1) {
-		// addr_index sollte immer gültig sin - sonst gibts an segv ....
-	
-		bool emergencyStop=false;
-
-		int msgsize;
-		int rc;
-		if((rc=read(startupdata->so, &msgsize, 4)) != 4) {
-			printf("error reading cmd (%d)\n",rc);
-			return NULL;
-		}
-		printf("reading msg.size: %d bytes\n",msgsize);
-		if(msgsize < 0 || msgsize > 10000) {
-			fprintf(stderr,"invalid size 2big\n");
-			throw "invalid msg.size";
-		}
-		char buffer[msgsize];
-		if(read(startupdata->so, buffer, msgsize) != msgsize) {
-			printf("error reading cmd.data\n");
-			return NULL;
-		}
-		InputReader in(buffer,msgsize);
-		printf("parsing msg\n");
-		FBTCtlMessage cmd;
-		cmd.readMessage(in);
-		cmd.dump();
-		int nr=0; // für die conrad platine
-		/*
-		int size;
-		char buffer[256];
-		if((size = read(startupdata->so, buffer, sizeof(buffer))) <= 0) {
-			printf("%d:error reading message size=%d \"%.*s\"\n",startupdata->clientID,size,size >= 0 ? buffer : NULL);
-			break;
-		}
-		buffer[size]='\0';
-		printf("%.*s",size,buffer);
-		char cmd[sizeof(buffer)]="";
-		char param1[sizeof(buffer)]="";
-		char param2[sizeof(buffer)]="";
-		sscanf(buffer,"%d %s %s %s",&nr,&cmd, &param1, &param2);
-		printf("%d:<- %s p1=%s p2=%s\n",startupdata->clientID,cmd,param1,param2);
-		*/
-		if(true) {
-			if(cmd.isType("PING")) {
-				sendStatusReply(startupdata->so,lastStatus);
-			} else if(cmd.isType("ACC")) {
-				int addr=cmd["addr"].getIntVal();
-				int addr_index=getAddrIndex(addr);
-				lokdef[addr_index].currspeed+=5;
-				if(lokdef[addr_index].currspeed > 255)
-					lokdef[addr_index].currspeed=255;
-				sendStatusReply(startupdata->so,lastStatus);
-				changedAddrIndex[addr_index]=true;
-			} else if(cmd.isType("BREAK")) {
-				int addr=cmd["addr"].getIntVal();
-				int addr_index=getAddrIndex(addr);
-				lokdef[addr_index].currspeed-=5;
-				if(lokdef[addr_index].currspeed < -255)
-					lokdef[addr_index].currspeed=-255;
-				sendStatusReply(startupdata->so,lastStatus);
-				changedAddrIndex[addr_index]=true;
-			} else if(cmd.isType("STOP")) {
-				int addr=cmd["addr"].getIntVal();
-				int addr_index=getAddrIndex(addr);
-				lokdef[addr_index].currspeed=0;
-				sendStatusReply(startupdata->so,lastStatus);
-				changedAddrIndex[addr_index]=true;
-			} else if(cmd.isType("ACC_MULTI")) {
-				int n=cmd["list"].getArraySize();
-				int addr=cmd["list"][0]["addr"].getIntVal();
-				int addr_index=getAddrIndex(addr);
-				lokdef[addr_index].currspeed+=5;
-				if(lokdef[addr_index].currspeed > 255)
-					lokdef[addr_index].currspeed=255;
-				changedAddrIndex[addr_index]=true;
-				int speed=lokdef[addr_index].currspeed;
-				for(int i=1; i < n; i++) {
-					int addr=cmd["list"][i]["addr"].getIntVal();
-					int addr_index=getAddrIndex(addr);
-					lokdef[addr_index].currspeed=speed;
-					changedAddrIndex[addr_index]=true;
-				}
-				sendStatusReply(startupdata->so,lastStatus);
-			} else if(cmd.isType("BREAK_MULTI")) {
-				int n=cmd["list"].getArraySize();
-				int addr=cmd["list"][0]["addr"].getIntVal();
-				int addr_index=getAddrIndex(addr);
-				lokdef[addr_index].currspeed-=5;
-				if(lokdef[addr_index].currspeed < -255)
-					lokdef[addr_index].currspeed=-255;
-				changedAddrIndex[addr_index]=true;
-				int speed=lokdef[addr_index].currspeed;
-				for(int i=1; i < n; i++) {
-					int addr=cmd["list"][i]["addr"].getIntVal();
-					int addr_index=getAddrIndex(addr);
-					lokdef[addr_index].currspeed=speed;
-					changedAddrIndex[addr_index]=true;
-				}
-				sendStatusReply(startupdata->so,lastStatus);
-			} else if(cmd.isType("STOP_MULTI")) {
-				int n=cmd["list"].getArraySize();
-				int addr=cmd["list"][0]["addr"].getIntVal();
-				int addr_index=getAddrIndex(addr);
-				lokdef[addr_index].currspeed=0;
-				changedAddrIndex[addr_index]=true;
-				int speed=lokdef[addr_index].currspeed;
-				for(int i=1; i < n; i++) {
-					int addr=cmd["list"][i]["addr"].getIntVal();
-					int addr_index=getAddrIndex(addr);
-					lokdef[addr_index].currspeed=speed;
-					changedAddrIndex[addr_index]=true;
-				}
-				sendStatusReply(startupdata->so,lastStatus);
-			} else if(cmd.isType("SETFUNC")) {
-				int addr=cmd["addr"].getIntVal();
-				int addr_index=getAddrIndex(addr);
-				int funcNr=cmd["funcnr"].getIntVal();
-				int value=cmd["value"].getIntVal();
-				if(funcNr >= 0 && funcNr < lokdef[addr_index].nFunc) {
-					if(value)
-						lokdef[addr_index].func[funcNr].ison = true;
-					else
-						lokdef[addr_index].func[funcNr].ison = false;
-				} else {
-					printf("%d:invalid funcNr out of bounds(%d)\n",startupdata->clientID,funcNr);
-				}
-				sendStatusReply(startupdata->so,lastStatus);
-				changedAddrIndex[addr_index]=true;
-
-/*
-			} else if(STREQ(cmd,"stop")) {
-				printf("stop\n");
-				lokdef[addr_index].currspeed=0;
-			} else if(STREQ(cmd,"select")) { // ret = lokname
-				int new_addr=atoi(param1);
-				printf("%d:neue lok addr:%d\n",startupdata->clientID,new_addr);
-				int new_addr_index=getAddrIndex(new_addr);
-				if(new_addr_index >= 0) {
-					addr=new_addr;
-					addr_index=new_addr_index;
-					snprintf(buffer,sizeof(buffer)," %s\n",lokdef[addr_index].name);
-					sendToPhone(buffer);
-				} else {
-					sendToPhone(" invalid id\n");
-				}
-*/
-			} else if(cmd.isType("GETLOCOS")) { // liste mit eingetragenen loks abrufen, format: <name>;<adresse>;...\n
-				FBTCtlMessage reply(messageTypeID("GETLOCOS_REPLY"));
-				int i=0;
-				while(lokdef[i].addr) {
-					reply["info"][i]["addr"]=lokdef[i].addr;
-					reply["info"][i]["name"]=lokdef[i].name;
-					reply["info"][i]["imgname"]=lokdef[i].imgname;
-					reply["info"][i]["speed"]=lokdef[i].currspeed;
-					int func=0;
-					for(int j=0; j < lokdef[i].nFunc; j++) {
-						if(lokdef[i].func[j].ison)
-							func |= 1 << j;
-					}
-					reply["info"][i]["functions"]=func;
-					i++;
-				}
-				reply.dump();
-				sendMessage(startupdata->so,reply);
-			} else if(cmd.isType("GETFUNCTIONS")) {
-				int addr=cmd["addr"].getIntVal();
-				int addr_index=getAddrIndex(addr);
-				FBTCtlMessage reply(messageTypeID("GETFUNCTIONS_REPLY"));
-				printf("funclist for addr %d\n",addr);
-				// char buffer[32];
-				for(int i=0; i < lokdef[addr_index].nFunc; i++) {
-					// snprintf(buffer,sizeof(buffer)," %d;%d;%s\n",j+1,lokdef[addr_index].func[j].ison,lokdef[addr_index].func[j].name);
-					reply["info"][i]["name"]=lokdef[addr_index].func[i].name;
-					reply["info"][i]["value"]=lokdef[addr_index].func[i].ison;
-					reply["info"][i]["imgname"]="";
-				}
-				sendMessage(startupdata->so,reply);
-			} else if(cmd.isType("POWER")) {
-				int value=cmd["value"].getIntVal();
-				if(srcp) {
-					if(value) srcp->pwrOn();
-					else srcp->pwrOff();
-				}
-				FBTCtlMessage reply(messageTypeID("POWER_REPLY"));
-				reply["value"]=value;
-				sendMessage(startupdata->so,reply);
-			} else if(cmd.isType("POM")) {
-				int addr=cmd["addr"].getIntVal();
-				int addr_index=getAddrIndex(addr);
-				int cv=cmd["cv"].getIntVal();
-				int value=cmd["value"].getIntVal();
-				FBTCtlMessage reply(messageTypeID("POM_REPLY"));
-				if(srcp) {
-					reply["value"]=1;
-					srcp->sendPOM(lokdef[addr_index].addr, cv, value);
-				} else {
-					reply["value"]=0;
-				}
-				sendMessage(startupdata->so,reply);
-			} else if(cmd.isType("GETIMAGE")) {
-				std::string imageName=cmd["imgname"].getStringVal();
-				FBTCtlMessage reply(messageTypeID("GETIMAGE_REPLY"));
-				printf("--------------getimage:\"%s\"\n",imageName.c_str());
-				reply["img"]=readFile("img/"+imageName);
-				sendMessage(startupdata->so,reply);
-			} else {
-				printf("----------------- invalid command ------------------------\n");
-			/*
-			if(memcmp(cmd,"invalid_key",10)==0) {
-				printf("%d:invalid key ! param1: %s\n",startupdata->clientID,param1);
-				bool notaus=false;
-				/ *
-				int i=0;
-				int row=-1;
-				while(lokdef[i].addr) {
-					if(lokdef[i].addr==addr) {
-						row=i;
-						break;
-					}
-					i++;
-				}
-				if(row >= 0) {
-					if(strcmp(param1,"(49)")==0) {
-						lokdef[i].func[0].ison = ! lokdef[i].func[0].ison;
-					} else if(strcmp(param1,"(55)")==0) {
-						lokdef[i].func[1].ison = ! lokdef[i].func[1].ison;
-					} else if(strcmp(param1,"(51)")==0) {
-						lokdef[i].func[2].ison = ! lokdef[i].func[2].ison;
-					} else if(strcmp(param1,"(57)")==0) {
-						lokdef[i].func[3].ison = ! lokdef[i].func[3].ison;
-					} else {
-						notaus=true;
-					}
-				} else {
-					notaus=true;
-				}
-				* /
-				if(notaus) {
-					printf("notaus\n");
-					lokdef[addr_index].currspeed=0;
-					emergencyStop=true;
-				}
-				*/
-			}
-		} else {
-			printf("%d:no command?????",startupdata->clientID);
-		}
-
-		/*
-		// REPLY SENDEN -----------------
-		int funcbits=0;
-		for(int i=0; i < lokdef[addr_index].nFunc; i++) {
-			if(lokdef[addr_index].func[i].ison) {
-				funcbits |= (1 << i);
-			}
-		}
-		snprintf(buffer,sizeof(buffer),"%d %d %d %04x\n",nr,
-			lokdef[addr_index].addr,lokdef[addr_index].currspeed,funcbits);
-		sendToPhone(buffer);
-		*/
-
-		// PLATINE ANSTEUERN ------------
-		if(platine) {
-			// geschwindigkeit 
-			// double f_speed=sqrt(sqrt((double)lokdef[addr_index].currspeed/255.0))*255.0; // für üperhaupt keine elektronik vorm motor gut (schienentraktor)
-			// TODO: wemmas wieder brauchen sollt gucken ob sich wirklich was geändert hat
-			int changedAddr=1;
-			if(changedAddr) {
-				int addr_index=getAddrIndex(changedAddr);
-				unsigned int a_speed=abs(lokdef[addr_index].currspeed);
-				double f_speed=a_speed;
-
-				int ia1=255-(int)f_speed;
-				printf("%d:lokdef[addr_index].currspeed: %d (%f)\n",startupdata->clientID,ia1,f_speed);
-				int ia2=lokdef[addr_index].currspeed < 0 ? 255 : 0; // 255 -> relais zieht an
-				int id8=0;
-				// printf("lokdef[addr_index].currspeed=%d: ",lokdef[addr_index].currspeed);
-				for(int i=1; i < 9; i++) {
-					// printf("%d ",255*i/(9));
-					if( a_speed >= 255*i/(9)) {
-						id8 |= 1 << (i-1);
-					}
-				}
-				// printf("\n");
-				if(lokdef[addr_index].currspeed==0) { // lauflicht anzeigen
-					int a=1 << (nr&3);
-					id8=a | a << 4;
-				}
-				platine->write_output(ia1, ia2, id8);
-			}
-		} else if(srcp) { // erddcd/srcpd/dcc:
-			// wegen X_MULTI gucken was wir geändert ham:
-			for(int i=0; i <= nLokdef; i++) {
-				if(changedAddrIndex[i]) {
-					changedAddrIndex[i]=false;
-					int addr_index=i;
-					int dir= lokdef[addr_index].currspeed < 0 ? 0 : 1;
-					if(emergencyStop) {
-						dir=2;
-					}
-					// int nFahrstufen = 14;
-					int nFahrstufen = 127;
-					if(lokdef[addr_index].flags & F_DEC14) {
-						nFahrstufen = 14;
-					} else if(lokdef[addr_index].flags & F_DEC28) {
-						nFahrstufen = 28;
-					}
-					int dccSpeed = abs(lokdef[addr_index].currspeed) * nFahrstufen / 255;
-					bool func[16];
-					for(int j=0; j < lokdef[addr_index].nFunc; j++) {
-						func[j]=lokdef[addr_index].func[j].ison;
-					}
-					if(!lokdef[addr_index].initDone) {
-						srcp->sendLocoInit(lokdef[addr_index].addr, nFahrstufen, lokdef[addr_index].nFunc);
-						lokdef[addr_index].initDone=true;
-					}
-					srcp->sendLocoSpeed(lokdef[addr_index].addr, dir, nFahrstufen, dccSpeed, lokdef[addr_index].nFunc, func);
-				}
-			}
-		}
+		ClientThread client(startupdata->clientID, startupdata->so);
+		client.run();
+	} catch(const char *e) {
+		printf("%d:exception %s\n",startupdata->clientID,e);
+	} catch(std::string &s) {
+		printf("%d:exception %s\n",startupdata->clientID,s.c_str());
 	}
 	printf("%d:client exit\n",startupdata->clientID);
-	} catch(const char *e) {
-		printf("exception %s\n",e);
-	} catch(std::string &s) {
-		printf("exception %s\n",s.c_str());
-	}
 	close(startupdata->so);
 }
 
@@ -639,6 +184,7 @@ bool readLokdef()
 		if(buffer[0] =='#') continue;
 		lokdef = (lokdef_t *) realloc(lokdef, sizeof(lokdef_t)*(n+1));
 		bzero(&lokdef[n],sizeof(lokdef_t));
+		lokdef[n].currdir=1;
 		char *pos=buffer;
 		char *pos_end;
 		lokdef[n].addr=atoi(pos);

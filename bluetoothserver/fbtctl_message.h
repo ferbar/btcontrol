@@ -53,6 +53,8 @@ public:
 	FBTCtlMessage();
 	// sollt alles kopierbar sein ... FBTCtlMessage(const FBTCtlMessage&msg);
 
+	MessageLayout::DataType getType() const { return this->type; } ;
+
 
 	int getIntVal();
 	std::string getStringVal();

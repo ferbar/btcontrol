@@ -1,11 +1,15 @@
 #include <pthread.h>
 #include <map>
+#include <string>
 
-class BTServer{
+#define STREQ(s1,s2) (strcmp(s1,s2)==0)
+
+class BTServer {
 public:
 	BTServer(int channel = 30);
 	virtual ~BTServer();
 	virtual int accept();
+	static std::string getRemoteAddr(int so);
 protected:
 	int so;
 };
