@@ -1,8 +1,10 @@
 .SUFFIXES:
 .PHONY: tags clean
 
-all: fbtctl_message.o message_layout.o server.o btserver.o
-	g++ $+ -g -lbluetooth -lpthread "../usb k8055/k8055.cpp" srcp.cpp -lusb main.cpp -o btserver -DSVNVERSION=`svnversion`
+all: btserver
+
+btserver: fbtctl_message.o message_layout.o server.o btserver.o clientthread.o lokdef.o main.o srcp.o
+	g++ $+ -g -lbluetooth -lpthread "../usb k8055/k8055.cpp" -lusb -o btserver -DSVNVERSION=`svnversion`
 
 help:
 	@echo -e "all\t alles builden\ntags\t c-tags generieren\ncopy\t auf ibm kiste kopieren\nsearch-ibm-desktop\t ibm kiste suchen\n"

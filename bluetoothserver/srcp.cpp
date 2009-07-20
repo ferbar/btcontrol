@@ -9,6 +9,8 @@
 #include "srcp.h"
 #include <errno.h>
 
+
+
 SRCPReply::SRCPReply(const char *message)
 {
 	sscanf(message,"%f %d %*s %a[^\n]", &this->timestamp, &this->code, &this->message); 

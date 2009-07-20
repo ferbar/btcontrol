@@ -6,6 +6,7 @@
 
 # erste Message vom server -> client
 HELO=protohash:I,name:S,version:S
+HELO_ERR=protohash:I,doupdate:I
 
 # im prinzip ein pollen
 PING=
@@ -18,12 +19,16 @@ ACC=addr:I
 # bremsen
 BREAK=addr:I
 
+# vor (1) oder zurück (-1)
+DIR=addr:I,dir:I
+
 # stop
 STOP=addr:I
 
 
 ACC_MULTI=list:A{addr:I}
 BREAK_MULTI=list:A{addr:I}
+DIR_MULTI=dir:I,list:A{addr:I}
 STOP_MULTI=list:A{addr:I}
 
 # func ein/aus
@@ -46,3 +51,7 @@ POM_REPLY=value:I
 
 GETIMAGE=imgname:S
 GETIMAGE_REPLY=img:S
+
+
+# ganz zum schluss ...
+version=1.0:I
