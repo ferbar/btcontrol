@@ -41,6 +41,12 @@ public class BTcommThread extends Thread{
 	OutputStream oStream;
 	StreamConnection BTStreamConnection;
 	
+	private boolean err=false;
+	public boolean hasError() {return this.err; } ;
+	boolean doupdate=false;
+	private Object connectedNotifyObject;
+
+	
 	private DisplayOutput debugForm;
 	public interface Callback {
 		public void BTCallback(FBTCtlMessage reply);
@@ -131,13 +137,14 @@ public class BTcommThread extends Thread{
 	 * @param iStream
 	 * @param oStream
 	 */
-	public BTcommThread(DisplayOutput debugForm, StreamConnection BTStreamConnection) throws java.io.IOException {
+	public BTcommThread(DisplayOutput debugForm, StreamConnection BTStreamConnection, Object connectedNotifyObject) throws java.io.IOException {
 		this.debugForm=debugForm;
 		this.BTStreamConnection=BTStreamConnection;
 		this.iStream=BTStreamConnection.openInputStream();
 		this.oStream=BTStreamConnection.openOutputStream();
 		System.out.print("iStream: "+this.iStream+" oStream:"+this.oStream);
 		System.out.print("str: i:"+this.iStream.toString()+" o:"+this.oStream.toString());
+		this.connectedNotifyObject=connectedNotifyObject;
 	}
 	
 	protected void close()
@@ -164,6 +171,9 @@ public class BTcommThread extends Thread{
 	
 	
 	public void addCmdToQueue(FBTCtlMessage message, Callback callback) throws Exception {
+		if(this.err) {
+			throw new Exception("addCmdToQueue: no comm");
+		}
 		synchronized(queue_wait) {
 			if(this.nextMessage != null) { // queue nicht leer
 				//try {
@@ -335,6 +345,22 @@ public class BTcommThread extends Thread{
 				" protoHash:"+heloMsg.get("protohash").getIntVal());
 			int protocolHash=heloMsg.get("protohash").getIntVal();
 			if(MessageLayouts.hash != protocolHash) {
+				this.err=true;
+				Object notifyObject=new Object();
+				YesNoAlert yesNo=new YesNoAlert("old version","update java midlet? (altes bitte löschen)",notifyObject);
+				HelloMidlet.display.setCurrent(yesNo);
+				synchronized(notifyObject) {
+					notifyObject.wait();
+				}
+				FBTCtlMessage heloReply = new FBTCtlMessage();
+				heloReply.setType(MessageLayouts.messageTypeID("HELO_ERR"));
+				heloReply.get("protohash").set(MessageLayouts.hash);
+				if(yesNo.yes) {
+					heloReply.get("doupdate").set(1);
+					this.doupdate=true;
+				} else
+					heloReply.get("doupdate").set(0);
+				this.sendMessage(heloReply);
 				debugForm.debug("invalid protocol.dat hash (server:"+protocolHash+" me:"+MessageLayouts.hash+")");
 				throw new Exception("invalid protocol.dat hash (server:"+protocolHash+" me:"+MessageLayouts.hash+")");
 			}
@@ -366,6 +392,9 @@ public class BTcommThread extends Thread{
 			debugForm.debug("writeChars done\n");
 			 */
 			// byte []buffer=new byte[50];
+			synchronized(connectedNotifyObject) {
+				this.connectedNotifyObject.notify();
+			}
 			int commandNr=0;
 			StringItem pingtext=new StringItem("pingtext","");
 			StringItem sendtext=new StringItem("sendtext","");
@@ -558,11 +587,15 @@ public class BTcommThread extends Thread{
 			}
 		}
 		*/
+		this.err=true;
 		debugForm.debug("BT comm thread: ended\n");
 		close();
 		timer.cancel(); // ping timer stoppen sonst gibts eventuell irgendwann 2 davon ...
 		synchronized(queue_wait) {
 			queue_wait.notifyAll(); // damit das prog nicht in einem queue wait hängen bleibt
+		}
+		synchronized(connectedNotifyObject) {
+			connectedNotifyObject.notify(); // zur sicherheit damit nix hängen bleibt
 		}
 	}
 }

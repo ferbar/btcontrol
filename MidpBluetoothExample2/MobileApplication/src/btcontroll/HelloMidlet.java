@@ -5,7 +5,7 @@
  */
 
 package btcontroll;
-import java.util.Hashtable;
+// import java.util.Hashtable;
 		
 import javax.microedition.midlet.*;
 import javax.microedition.lcdui.*;
@@ -89,7 +89,7 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 	private Command helpCommand1;
 	private Alert help;
 	// private Canvas controllForm;
-	private List listServer;
+	private ValueList listServer;
 	private Command itemCommandDetail;
 	private Command okCommand1;
 	private Command screenCommand1 = new Command("ShowList", Command.SCREEN, 1);
@@ -104,7 +104,7 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 	
 	private Canvas controllCanvas;
 	BTcommThread btcomm;
-	Hashtable availServices = new Hashtable(); // indexda = index im listServer
+	// Hashtable availServices = new Hashtable(); // indexda = index im listServer
 	private Command itemCommandShowServiceRecord=new Command("ServiceRecord", Command.ITEM, 1);
 
 //GEN-LINE:MVDMethods
@@ -235,9 +235,29 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 
 		
 		
-		String version = LocalDevice.getProperty("bluetooth.api.version");
-		this.btApiVersion = Float.parseFloat(version);
-		helloForm.append("bt api version "+this.btApiVersion);
+		String version = "0";
+		try {
+			version = LocalDevice.getProperty("bluetooth.api.version");
+		} catch(Exception e) {
+			
+		}
+		if(version == null) {
+			version="0";
+		}
+		try {
+			String versionNeu="";
+			for(int i=0; i < version.length(); i++) {
+				char c=version.charAt(i);
+				if((c >= '0' && c <= '9') || c =='.') {
+					versionNeu+=c;
+				}
+			}
+			version=versionNeu;
+			this.btApiVersion = Float.parseFloat(version);
+			helloForm.append("bt api version "+this.btApiVersion);
+		} catch(Exception e) {
+			helloForm.append("error parsing bt version("+version+") "+e.toString());
+		}
 		
 		// me4se und api version 1.0 kann kein isPowerOn()
 		if(this.btApiVersion >= 1.1) {
@@ -264,13 +284,15 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 
 		
 		// Insert post-init code here
-		PrintClient client;
 		try {
+			// wenn BT verbindong offen ist und die services von diesem handy abgefragt werden ist eventuell die verbindung weg - deswegen auf unsichtbar setzen
 			this.orgDiscoverable=local.getDiscoverable();
 			local.setDiscoverable(DiscoveryAgent.NOT_DISCOVERABLE);
 		} catch (BluetoothStateException e) {
 			debug("bt.setDiscoverable(NOT_DISCOVERABLE) not supported");
 		}
+		
+		PrintClient client;
 		try {
 			helloForm.setTitle("bt scan...");
 			client=new PrintClient(this,this);
@@ -295,11 +317,19 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 			try {
 				System.out.print("connecting:"+this.connectionURL);
 				StreamConnection connection = (StreamConnection)Connector.open(this.connectionURL);
-				btcomm = new BTcommThread(this.debugForm, connection);
+				Object connectedNotifyObject = new Object();
+				btcomm = new BTcommThread(this.debugForm, connection, connectedNotifyObject);
 						//Thread t = new Thread(btcomm); t.start(); -> da is isAlive auf einmal nicht gesetzt
 				btcomm.start();
-				helloForm.setTitle("connected");
-				getDisplay().setCurrent(get_controllCanvas(btcomm));
+				synchronized(connectedNotifyObject) {
+					connectedNotifyObject.wait();
+				}
+				if(!btcomm.hasError()) {
+					helloForm.setTitle("connected");
+					getDisplay().setCurrent(get_controllCanvas(btcomm));
+				} else if (btcomm.doupdate) {
+					exitMIDlet();
+				}
 			} catch(Exception e) {
 				Alert alert;
 				alert = new Alert("commandActioon","Exception:"+e.toString(),null,null);
@@ -356,7 +386,8 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 						if(command == screenCommand_startControllCanvasTCP) {
 							connectionURL = "socket://192.168.0.109:3030";
 						} else {
-							connectionURL=listServer.getString(listServer.getSelectedIndex());
+							ServiceRecord sr = (ServiceRecord) this.listServer.getValue(this.listServer.getSelectedIndex());
+							connectionURL=sr.getConnectionURL(0, false);
 						}
 						ConnectThread connectThread = new ConnectThread(this,connectionURL);
 						connectThread.start();
@@ -373,12 +404,12 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 				// Insert post-action code here
 			} else if (command == itemCommandShowServiceRecord) {
 				int index=listServer.getSelectedIndex();
-				String url=listServer.getString(index);
 				//debug("sr["+index+"="+url+"] -----------\n");
-				Object o = this.availServices.get(url);
+				Object o = this.listServer.getValue(index);
 				//debug("sr o\n");
 				debug("sr o="+o.toString());
 				ServiceRecord sr = (ServiceRecord) o;
+				debug(sr.getConnectionURL(0, false));
 				//debug("sr cast ok\n");
 				//debug("sr ----------"+sr.toString()+"\n");
 				this.debugServiceRecord(sr);
@@ -450,7 +481,7 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 		return helloForm;
 	}                    
     
-	public Canvas get_controllCanvas(BTcommThread btcomm) {
+	public Canvas get_controllCanvas(BTcommThread btcomm) throws Exception {
 		if(controllCanvas==null) {
 			controllCanvas=new MIDPCanvas(this, btcomm);
 
@@ -501,10 +532,10 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 	/** This method returns instance for listServer component and should be called instead of accessing listServer field directly.                         
 	 * @return Instance for listServer component
 	 */
-	public List get_listServer() {
+	public ValueList get_listServer() {
 		if (listServer == null) {
 			// Insert pre-init code here
-			listServer = new List("gefundene Server", Choice.IMPLICIT, new String[0], new Image[0]);
+			listServer = new ValueList("gefundene Server", Choice.IMPLICIT);
 			listServer.addCommand(get_backCommand2());
 			listServer.addCommand(screenCommand_startControllCanvas);
 			listServer.addCommand(screenCommand_startControllCanvasTCP);
@@ -568,24 +599,35 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
     }
 
 	public void AddAvailService(ServiceRecord sr) {
+/*
 		this.debug("adding service...\n");
+		
 		String url=sr.getConnectionURL(0,false);
 		int p=url.indexOf(";");
 		if(p >= 0)
 			url=url.substring(0,p);
+		
 		try {
-			List mylist = this.get_listServer();
-			this.debug("service add: getlist\n");
-			int index = mylist.append(url,null);
-			this.debug("service added ("+index+")\n");
-			availServices.put(url,sr);
+*/		  
+			// this.debug("service add: getlist");
+			String hostname=null;
+			try {
+				hostname=sr.getHostDevice().getFriendlyName(false);
+			} catch(Exception e) {}
+			if(hostname == null) {
+				hostname="???";
+			}
+			get_listServer().append(hostname, null, sr); 
+/*			
 		} catch(Exception e) {
 			this.debug("service-add Exception: "+e.toString()+"\n");				
 		}
+ */
 	}
 	
-	public int CountAvailServices() {
-		return availServices.size();
+	
+	public int countAvailServices() {
+		return this.listServer.size();
 	
 	}
 

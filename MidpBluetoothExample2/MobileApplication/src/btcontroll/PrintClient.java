@@ -1,5 +1,5 @@
 package btcontroll;
-import java.lang.*;
+// import java.lang.*;
 // import java.io.*;
 import java.util.*;
 // import javax.microedition.io.*;
@@ -20,7 +20,7 @@ public class PrintClient implements DiscoveryListener {
 
 	public interface iAddAvailService {
 		public void AddAvailService(ServiceRecord sr);
-		public int CountAvailServices();
+		public int countAvailServices();
 	}
 	
 			
@@ -210,7 +210,7 @@ System.out.println("Done Waiting " + serviceSearchCount);
                 }
             }
         }
-		return addAvailService.CountAvailServices() > 0;
+		return addAvailService.countAvailServices() > 0;
     }
 
     /**
