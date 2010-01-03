@@ -4,6 +4,7 @@
 #define F_DEC28 2
 
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 struct func_t {
 	char name[32];
@@ -49,4 +50,8 @@ extern lokdef_t *lokdef;
 
 
 int getAddrIndex(int addr);
+
+bool readLokdef();
+
+void dumpLokdef();
 

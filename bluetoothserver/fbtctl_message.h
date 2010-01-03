@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "message_layout.h"
 
