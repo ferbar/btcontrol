@@ -329,10 +329,10 @@ variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COM
 link_all_deplibs=no
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec="/usr/lib/gcc/i586-suse-linux/4.3 /usr/i586-suse-linux/lib /usr/lib /lib"
+sys_lib_search_path_spec="/usr/lib/gcc/i586-suse-linux/4.4 /usr/i586-suse-linux/lib /usr/lib /lib"
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/X11R6/lib/Xaw3d /usr/X11R6/lib /usr/lib/Xaw3d /usr/i386-suse-linux/lib /usr/local/lib /opt/kde3/lib /usr/lib/graphviz /usr/lib/graphviz/sharp /usr/lib/graphviz/java /usr/lib/graphviz/perl /usr/lib/graphviz/php /usr/lib/graphviz/ocaml /usr/lib/graphviz/python /usr/lib/graphviz/lua /usr/lib/graphviz/tcl /usr/lib/graphviz/guile /usr/lib/graphviz/ruby /opt/gnome/lib "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/X11R6/lib/Xaw3d /usr/X11R6/lib /usr/lib/Xaw3d /usr/i386-suse-linux/lib /usr/local/lib /opt/kde3/lib /usr/lib/ghostscript/Omni /usr/lib/graphviz /usr/lib/graphviz/sharp /usr/lib/graphviz/java /usr/lib/graphviz/perl /usr/lib/graphviz/php /usr/lib/graphviz/ocaml /usr/lib/graphviz/python /usr/lib/graphviz/lua /usr/lib/graphviz/tcl /usr/lib/graphviz/guile /usr/lib/graphviz/ruby /opt/gnome/lib "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
@@ -7502,11 +7502,11 @@ striplib="strip --strip-unneeded"
 
 # Dependencies to place before the objects being linked to create a
 # shared library.
-predep_objects="/usr/lib/gcc/i586-suse-linux/4.3/../../../crti.o /usr/lib/gcc/i586-suse-linux/4.3/crtbeginS.o"
+predep_objects="/usr/lib/gcc/i586-suse-linux/4.4/../../../crti.o /usr/lib/gcc/i586-suse-linux/4.4/crtbeginS.o"
 
 # Dependencies to place after the objects being linked to create a
 # shared library.
-postdep_objects="/usr/lib/gcc/i586-suse-linux/4.3/crtendS.o /usr/lib/gcc/i586-suse-linux/4.3/../../../crtn.o"
+postdep_objects="/usr/lib/gcc/i586-suse-linux/4.4/crtendS.o /usr/lib/gcc/i586-suse-linux/4.4/../../../crtn.o"
 
 # Dependencies to place before the objects being linked to create a
 # shared library.
@@ -7518,11 +7518,11 @@ postdeps="-lstdc++ -lm -lgcc_s -lc -lgcc_s"
 
 # The directories searched by this compiler when creating a shared
 # library
-compiler_lib_search_dirs="/usr/lib/gcc/i586-suse-linux/4.3 /usr/lib/gcc/i586-suse-linux/4.3 /usr/lib/gcc/i586-suse-linux/4.3/../../../../i586-suse-linux/lib /usr/lib/gcc/i586-suse-linux/4.3/../../.."
+compiler_lib_search_dirs="/usr/lib/gcc/i586-suse-linux/4.4 /usr/lib/gcc/i586-suse-linux/4.4 /usr/lib/gcc/i586-suse-linux/4.4/../../../../i586-suse-linux/lib /usr/lib/gcc/i586-suse-linux/4.4/../../.."
 
 # The library search path used internally by the compiler when linking
 # a shared library.
-compiler_lib_search_path="-L/usr/lib/gcc/i586-suse-linux/4.3 -L/usr/lib/gcc/i586-suse-linux/4.3 -L/usr/lib/gcc/i586-suse-linux/4.3/../../../../i586-suse-linux/lib -L/usr/lib/gcc/i586-suse-linux/4.3/../../.."
+compiler_lib_search_path="-L/usr/lib/gcc/i586-suse-linux/4.4 -L/usr/lib/gcc/i586-suse-linux/4.4 -L/usr/lib/gcc/i586-suse-linux/4.4/../../../../i586-suse-linux/lib -L/usr/lib/gcc/i586-suse-linux/4.4/../../.."
 
 # Method to check whether dependent libraries are shared objects.
 deplibs_check_method="pass_all"
@@ -7602,10 +7602,10 @@ variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COM
 link_all_deplibs=no
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec="/usr/lib/gcc/i586-suse-linux/4.3 /usr/i586-suse-linux/lib /usr/lib /lib"
+sys_lib_search_path_spec="/usr/lib/gcc/i586-suse-linux/4.4 /usr/i586-suse-linux/lib /usr/lib /lib"
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/X11R6/lib/Xaw3d /usr/X11R6/lib /usr/lib/Xaw3d /usr/i386-suse-linux/lib /usr/local/lib /opt/kde3/lib /usr/lib/graphviz /usr/lib/graphviz/sharp /usr/lib/graphviz/java /usr/lib/graphviz/perl /usr/lib/graphviz/php /usr/lib/graphviz/ocaml /usr/lib/graphviz/python /usr/lib/graphviz/lua /usr/lib/graphviz/tcl /usr/lib/graphviz/guile /usr/lib/graphviz/ruby /opt/gnome/lib "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/X11R6/lib/Xaw3d /usr/X11R6/lib /usr/lib/Xaw3d /usr/i386-suse-linux/lib /usr/local/lib /opt/kde3/lib /usr/lib/ghostscript/Omni /usr/lib/graphviz /usr/lib/graphviz/sharp /usr/lib/graphviz/java /usr/lib/graphviz/perl /usr/lib/graphviz/php /usr/lib/graphviz/ocaml /usr/lib/graphviz/python /usr/lib/graphviz/lua /usr/lib/graphviz/tcl /usr/lib/graphviz/guile /usr/lib/graphviz/ruby /opt/gnome/lib "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
