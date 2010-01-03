@@ -16,7 +16,7 @@ struct func_t {
 struct lokdef_t {
 	int addr;
 	int flags;		// LGB loks mit 14 fahrstufen ansteuern
-	char name[12];
+	char name[20];
 	int nFunc;
 	func_t func[16];
 	int currspeed;

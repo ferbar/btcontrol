@@ -95,7 +95,7 @@ void ClientThread::run()
 	printf("%d:socket accepted sending welcome msg\n",this->clientID);
 	FBTCtlMessage heloReply(messageTypeID("HELO"));
 	heloReply["name"]="my bt server";
-	heloReply["version"]="testding";
+	heloReply["version"]="0.9";
 	heloReply["protohash"]=protocolHash;
 	// heloReply.dump();
 	sendMessage(heloReply);
