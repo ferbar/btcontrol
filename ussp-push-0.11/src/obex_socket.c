@@ -512,7 +512,9 @@ int cobex_handle_input(obex_t * handle, void *userdata, int timeout)
 		int len;
 		fd_set fdset1 = fdset;
 
+		BTDEBUG("select ");
 		ret = select(gt->rfd + 1, &fdset1, NULL, NULL, &time);
+		BTDEBUG("done\n");
 
 		/* Check if this is a timeout (0) or error (-1) */
 		if (ret < 0) {
