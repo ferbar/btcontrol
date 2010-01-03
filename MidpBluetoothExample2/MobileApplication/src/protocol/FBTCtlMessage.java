@@ -89,7 +89,7 @@ public class FBTCtlMessage {
 		this.readMessage(new InputReader(inbuffer),null);
 	}
 	public void readMessage(InputReader in, MessageLayout layout) throws Exception {
-		System.out.println("reading bin msg\n");
+		System.out.println("reading bin msg");
 		this.type=in.getByte(); // type muss >= STRUCT sein
 		if(layout == null && (this.type > STRUCT)) {
 			layout = MessageLayouts.getLayout(this.type);
@@ -264,7 +264,14 @@ public class FBTCtlMessage {
 		switch(this.type) {
 			case UNDEF: out.debug("undefined\n"); break;
 			case INT: out.debug("int:"+this.ival+"\n"); break;
-			case STRING: out.debug("string:"+new String(this.buffer,this.ival,this.slen)+"\n"); break;
+			case STRING:
+				String tmp;
+				try {
+					tmp=new String(this.buffer,this.ival,this.slen);
+				} catch (Exception e) {
+					tmp="not printable characters";
+				}
+				 out.debug("string:"+tmp+"\n"); break;
 			case ARRAY: {
 				Enumeration e=arrayVal.keys();
 				while(e.hasMoreElements()) {
