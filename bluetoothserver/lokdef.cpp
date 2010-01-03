@@ -107,6 +107,9 @@ bool readLokdef()
 		pos_end=getnext(&pos);
 		lokdef[n].flags=str2decodertype(pos);
 		pos_end=getnext(&pos);
+		if(pos_end-pos >= sizeof(lokdef[n].name)) {
+			printf("warning: lokdef.name > size \"%.*s\"\n",pos_end-pos,pos);
+		}
 		strncpy(lokdef[n].name, pos,  MIN(sizeof(lokdef[n].name), pos_end-pos));
 		strtrim(lokdef[n].name);
 		pos_end=getnext(&pos);
