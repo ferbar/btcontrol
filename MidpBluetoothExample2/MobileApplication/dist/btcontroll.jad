@@ -1,7 +1,7 @@
 MIDlet-1: HelloMidlet, ,btcontroll.HelloMidlet
 MIDlet-2: Main, /icons/logo.png, btcontroll.Main
 MIDlet-Icon: /icons/logo.png
-MIDlet-Jar-Size: 61106
+MIDlet-Jar-Size: 61115
 MIDlet-Jar-URL: btcontroll.jar
 MIDlet-Name: btcontroll
 MIDlet-Vendor: ferbsi
