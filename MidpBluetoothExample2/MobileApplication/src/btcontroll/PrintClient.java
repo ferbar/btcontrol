@@ -117,9 +117,11 @@ public class PrintClient implements DiscoveryListener {
             if (transactionID[i] == -1) {
                 transactionID[i] = trans;
 				transactionIDtoDev[i]=devID;
+				System.out.println("addToTransactionTable["+i+"]="+trans);
                 return;
             }
         }
+		Debuglog.debugln("addToTransactionTable: no row free?************** transID="+trans);
     }
 
     /**
@@ -132,9 +134,12 @@ public class PrintClient implements DiscoveryListener {
         for (int i = 0; i < transactionID.length; i++) {
             if (transactionID[i] == trans) {
                 transactionID[i] = -1;
+				System.out.println("removeFromTransactionTable["+i+"]="+trans);
                 return (RemoteDevice) this.deviceList[transactionIDtoDev[i]];
             }
         }
+		// bug: removeFromTransaction VOR add ?????
+		System.out.println("removeFromTransactionTable: invalid transaction!!!");
 		return null;
     }
 
@@ -185,6 +190,7 @@ System.out.println("searchServices() Length = " + devList.length);
 
             try {
 System.out.println("Starting Service Search on " + devList[i].getBluetoothAddress());
+				// bug da: am PC ist searchServices manchmal schneller fertig als addToTransactionTable
                 int trans = agent.searchServices(null, searchList, devList[i], this);
 System.out.println("Starting Service Search " + trans);
                 addToTransactionTable(trans, i);
@@ -454,7 +460,8 @@ System.out.println("serviceSearchCompleted(" + transID + ", " + respCode + ")");
        /*
         * Removes the transaction ID from the transaction table.
         */
-		addAvailService.BTServerScanningDone(removeFromTransactionTable(transID));
+		RemoteDevice rd=removeFromTransactionTable(transID);
+		addAvailService.BTServerScanningDone(rd);
 
         serviceSearchCount--;
 

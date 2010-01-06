@@ -134,7 +134,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
                     while (en.hasMoreElements())
                     {
                         DataElement e = (DataElement) en.nextElement();
-                        debugDataElement(e,level+1);
+                        ret += debugDataElement(e,level+1);
                         
                     }
                     ret += "(/DATASEQ)\n";
@@ -220,25 +220,6 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
     }
  */
 	
-	/**
-	 * vibriert - blocking oder non-blocking ???
-	 */
-    public void vibrate(int ms) {
-		getDisplay().vibrate(ms);
-/*
-		try {
-       // Nokia
-       Class.forName("com.nokia.mid.sound.Sound");
-       try
-       {
-           Class test=Class.forName("com.nokia.mid.ui.DeviceControl");
-           com.nokia.mid.ui.DeviceControl.setLights(0,100);
-       }
-       catch(Exception ex2){}
-   }
-		catch(Exception ex){}
-*/
-	}
 	
 	/** This method initializes UI of the application.//GEN-BEGIN:MVDInitBegin
 	 */
@@ -249,7 +230,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 		getDisplay().setCurrent(this.get_listServer());//GEN-LINE:MVDInitInit
 
 		
-		Debuglog d=new Debuglog(this.getDebugForm());
+		Debuglog d=new Debuglog(this.getDebugForm(),this.getDisplay());
 		
 		
 		String version = null;
@@ -422,7 +403,9 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 						if(command == screenCommand_startControllCanvasTCP) {
 							connectionURL = "socket://192.168.0.165:3030";
 						} else {
-							ServiceRecord sr = (ServiceRecord) this.listServer.getValue(this.listServer.getSelectedIndex());
+							// me4se dürfte einen bug bei getSelectedIndex haben
+							int index=this.listServer.getSelectedIndex();
+							ServiceRecord sr = (ServiceRecord) this.listServer.getValue(index);
 							connectionURL=sr.getConnectionURL(0, false);
 						}
 						ConnectThread connectThread = new ConnectThread(connectionURL);
@@ -439,23 +422,36 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 				*/
 				// Insert post-action code here
 			} else if (command == itemCommandShowServiceRecord) {
-				int index=listServer.getSelectedIndex();
-				//debug("sr["+index+"="+url+"] -----------\n");
-				Object o = this.listServer.getValue(index);
+				// me4se dürfte einen bug bei getSelectedIndex haben
+				int index=this.get_listServer().getSelectedIndex();
+				Debuglog.debugln("sr["+index+"]=...");
+				Object o = this.get_listServer().getValue(index);
 				//debug("sr o\n");
-				Debuglog.debugln("sr o="+o.toString());
-				ServiceRecord sr = (ServiceRecord) o;
-				String s=sr.getConnectionURL(0, false)+"\n";
-				//debug("sr cast ok\n");
-				//debug("sr ----------"+sr.toString()+"\n");
-				s+=this.debugServiceRecord(sr);
+				if(o != null) {
+					Debuglog.debugln("sr o="+o.toString());
+					// System.out.println("da ["+o.getClass().toString()+"] SR:["+)
+					if(o instanceof ServiceRecord) {
+						ServiceRecord sr = (ServiceRecord) o;
+						String s=sr.getConnectionURL(0, false)+"\n";
+						//debug("sr cast ok\n");
+						//debug("sr ----------"+sr.toString()+"\n");
+						s+=this.debugServiceRecord(sr);
 
-				Item i = new StringItem("", s);
-				Form f = new Form("ServiceRecord", new Item[] { i });
-				newConnForm.addCommand(getBack2ListCommand());
-				newConnForm.setCommandListener(this);
-				getDisplay().setCurrent(f);
-
+						StringItem i = new StringItem("", s);
+						i.setFont(Font.getFont(Font.FACE_PROPORTIONAL, Font.STYLE_PLAIN, Font.SIZE_SMALL));
+						Form f = new Form("ServiceRecord", new Item[] { i });
+						f.addCommand(getBack2ListCommand());
+						f.setCommandListener(this);
+						System.out.println("set display form");
+						getDisplay().setCurrent(f);
+					} else {
+						Alert alert;
+						alert = new Alert("no service",o.getClass().getName()+": "+o.toString(),null,null);
+						alert.setTimeout(Alert.FOREVER);
+						getDisplay().setCurrent(alert);
+						Debuglog.debugln(o.getClass().getName()+": "+o.toString());
+					}
+				}
 			}//GEN-BEGIN:MVDCACase23
 		} else if (displayable == newConnForm) {
 			if(command == okCommand1) {
@@ -473,6 +469,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 			alert = new Alert("commandActioon","Exception:"+e.toString(),null,null);
 			alert.setTimeout(Alert.FOREVER);
 			getDisplay().setCurrent(alert);
+			e.printStackTrace();
 		}
 }//GEN-LINE:MVDCAEnd
     
@@ -507,7 +504,6 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 			debugForm.addCommand(getBack2ListCommand());
 			debugForm.addCommand(screenCommand1);
 			debugForm.addCommand(clearCommand);
-			debugForm.addCommand(btScanCommand);
 			debugForm.addCommand(get_helpCommand1());
 			debugForm.setCommandListener(this);
             // Insert post-init code here
@@ -681,6 +677,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 				if(lrd.equals(sr.getHostDevice())) {
 					l.set(i, l.getString(i), this.imgListService);
 					l.setValue(i, sr);
+					System.out.println("addAvailService - replaced value, set value["+i+"]="+sr.getClass().getName()+" "+sr.toString());
 					set=true;
 					break;
 				}
@@ -688,6 +685,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 		}
 		if(!set) {
 			l.append(hostname, this.imgListService, sr);
+			System.out.println("addAvailService - added server");
 		}
 /*			
 		} catch(Exception e) {

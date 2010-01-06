@@ -28,9 +28,6 @@ import protocol.OutputWriter;
  * @author chris
  */
 public class BTcommThread extends Thread{
-	public interface DisplayOutput {
-		public void vibrate(int ms);
-	}
 			
 	// me4se kann das nicht:
 	// DataInputStream iStream;
@@ -45,7 +42,6 @@ public class BTcommThread extends Thread{
 	private Object connectedNotifyObject;
 
 	
-	private DisplayOutput debugForm;
 	public interface Callback {
 		public void BTCallback(FBTCtlMessage reply);
 	}
@@ -86,7 +82,7 @@ public class BTcommThread extends Thread{
 					Debuglog.debugln("BTCallback exception: "+e.toString());
 				}
 			}
-			debugForm.vibrate(30);
+			Debuglog.vibrate(30);
 		}
 	}
 	
@@ -159,7 +155,7 @@ public class BTcommThread extends Thread{
 			Debuglog.debugln("BTcommThread::close2 exception ("+e.toString()+")");
 		}
 		Debuglog.debugln("BTcommThread::close done");
-		debugForm.vibrate(500);
+		Debuglog.vibrate(500);
 	}
 	
 	public void addCmdToQueue(FBTCtlMessage message) throws Exception {
