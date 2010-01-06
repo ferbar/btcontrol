@@ -23,7 +23,7 @@ public class ValueList extends javax.microedition.lcdui.List {
 	}
 
 	public Object getValue(int i) {
-		return values.elementAt(i);
+		return this.values.elementAt(i);
 	}
 
 	public void setValue(int i, Object o) {
