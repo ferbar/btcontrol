@@ -22,7 +22,6 @@ import protocol.MessageLayouts;
  */
 public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.Callback {
 	public BTcommThread btcomm;
-	BTcommThread.DisplayOutput debugForm;
 	String err="";
 	private final Image pfeilRechts;
 	private final Image pfeilLinks;
@@ -132,9 +131,8 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	/**
 	 * constructor
 	 */
-	public MIDPCanvas(BTcommThread.DisplayOutput debugForm, BTcommThread btcomm) throws Exception {
-		this.debugForm=debugForm;
-		backForm=HelloMidlet.display.getCurrent();
+	public MIDPCanvas(BTcommThread btcomm) throws Exception {
+		backForm=btrailClient.display.getCurrent();
 		this.pfeilRechts=Image.createImage("/icons/pfeilRechts.png");
 		this.pfeilLinks=Image.createImage("/icons/pfeilLinks.png");
 		update(btcomm);
@@ -499,7 +497,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 				selectList.setTitle(this.title);
 			} catch(Exception e) {
 				selectList.setTitle("ex:"+e.toString());
-				debugForm.debug("|||"+e.getMessage());
+				Debuglog.debugln("|||"+e.getMessage());
 			}
 		}
 	}
@@ -619,7 +617,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		// debug("canvas cmd \""+command.toString()+"\"\n");
 		try {
 			if(command == exitCommand) {
-				HelloMidlet.display.setCurrent(backForm);
+				btrailClient.display.setCurrent(backForm);
 			} else if(command==this.pwrOffCommand) {
 				this.setTitle("pwr off");
 				FBTCtlMessage msg = new FBTCtlMessage();
@@ -647,19 +645,19 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 				btcomm.addCmdToQueue(msg,this);
 				
 			} else if(command==this.locoListCommand) {
-				HelloMidlet.display.setCurrent(get_locoList());
+				btrailClient.display.setCurrent(get_locoList());
 			} else if(command==this.locoListCMDSelect) {
-				HelloMidlet.display.getCurrent();
+				btrailClient.display.getCurrent();
 				this.setAvailLocos(this.lastReply,this.selectList);
 				int n=selectList.getSelectedIndex();
 				Integer addr=(Integer) this.selectList.getValue(n);
 				this.currAddr=addr.intValue();
 				this.currMultiAddr=null;
-				HelloMidlet.display.setCurrent(this);
+				btrailClient.display.setCurrent(this);
 				this.updateTitle();
 				
 			} else if(command==this.multiControllCommand) {
-				HelloMidlet.display.setCurrent(get_locoListMultiControll());
+				btrailClient.display.setCurrent(get_locoListMultiControll());
 			} else if(command==this.locoListMultiCMDSelect) {
 				boolean[] selectedIndexes=new boolean[selectList.size()];
 				int listSize=selectList.getSelectedFlags(selectedIndexes);
@@ -675,7 +673,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 				if(listSize > 1) {
 					this.currMultiAddr=new int[listSize];
 					int n=0;
-					debugForm.debug("locoListMultiCMDSelect ("+listSize+")");
+					Debuglog.debugln("locoListMultiCMDSelect ("+listSize+")");
 					String s="";
 					for(int i=0; i < selectedIndexes.length; i++) {
 						if(selectedIndexes[i]) {
@@ -686,22 +684,22 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 							n++;
 						}
 					}
-					HelloMidlet.display.setCurrent(this);
+					btrailClient.display.setCurrent(this);
 					this.updateTitle();
 				} else {
 					Alert alert;
 					alert = new Alert("Mehrfachsteuerung","bitte >= 2 loks auswählen ("+listSize+")",null,null);
 					alert.setTimeout(Alert.FOREVER);
-					HelloMidlet.display.setCurrent(alert);
+					btrailClient.display.setCurrent(alert);
 				}
 				
 			} else if(command==this.locoListCMDBack) {
-				HelloMidlet.display.setCurrent(this);
+				btrailClient.display.setCurrent(this);
 			} else if(command==this.funcListCommand) {
-				HelloMidlet.display.setCurrent(get_funcList());
+				btrailClient.display.setCurrent(get_funcList());
 			} else if((command==this.funcListCMDOn) || (command==this.funcListCMDOff)) {
 				int funcnr=selectList.getSelectedIndex();
-				HelloMidlet.display.setCurrent(this);
+				btrailClient.display.setCurrent(this);
 				FBTCtlMessage msg = new FBTCtlMessage();
 				msg.setType(MessageLayouts.messageTypeID("SETFUNC"));
 				msg.get("addr").set(this.currAddr);
@@ -724,7 +722,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			} else if((command==this.sendPOMCommand)) {
 				Form f=getPOMForm();
 				f.setTitle("POM (addr:"+this.currAddr+")");
-				HelloMidlet.display.setCurrent(f);
+				btrailClient.display.setCurrent(f);
 			} else if((command==this.POMCMDGo)) {
 				FBTCtlMessage msg = new FBTCtlMessage();
 				msg.setType(MessageLayouts.messageTypeID("POM"));
@@ -736,12 +734,12 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 				this.setTitle("invalid command");
 			}
 		} catch(Exception e) {
-			HelloMidlet.display.setCurrent(this);	// canvas wieder setzen wenna in der liste is ....
+			btrailClient.display.setCurrent(this);	// canvas wieder setzen wenna in der liste is ....
 
 			Alert alert;
 			alert = new Alert("commandActioon","Exception:" + e,null,null);
 			alert.setTimeout(Alert.FOREVER);
-			HelloMidlet.display.setCurrent(alert);
+			btrailClient.display.setCurrent(alert);
 
 			err=e.toString();
 		}
@@ -753,7 +751,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		System.out.println( "showNotify" );
 		try {
 			if(this.currAddr==0 && this.btcomm != null && !this.btcomm.hasError()) // wenn keine adresse gesetzt + verbunden
-				HelloMidlet.display.setCurrent(get_locoList());
+				btrailClient.display.setCurrent(get_locoList());
 		} catch(Exception e) {
 			err=e.toString();
 			System.out.println( "Exception:" +e.toString() );
@@ -770,7 +768,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	 */
 	private Image getImageCached(String imageName) {
 		FBTCtlMessage msg = new FBTCtlMessage();
-		this.debugForm.debug("getImageCached ("+imageName+")");
+		Debuglog.debugln("getImageCached ("+imageName+")");
 		if(imageName.length() == 0) {
 			return null;
 		}
@@ -783,12 +781,12 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			FBTCtlMessage reply=btcomm.execCmd(msg);
 			InputStream imageData=reply.get("img").getStringInputStream();
 			if(imageData.available() > 0) {
-				this.debugForm.debug("size:"+imageData.available()+" ");
+				Debuglog.debugln("size:"+imageData.available()+" ");
 				Image ret;
 				try {
 					ret=Image.createImage(imageData);
 				} catch (Exception e) {
-					this.debugForm.debug("getImageCached exception:"+e.toString());
+					Debuglog.debugln("getImageCached exception:"+e.toString());
 					/*
 					System.out.println("[0]="+imageData.charAt(0)+" [1]="+imageData.charAt(1)+
 				" [2]="+imageData.charAt(2));
@@ -807,7 +805,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 				return null;
 			}
 		} catch(Exception e) {
-			this.debugForm.debug("getImageCached exception:"+e.toString());
+			Debuglog.debugln("getImageCached exception:"+e.toString());
 			return null;
 		}
 	}

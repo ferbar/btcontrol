@@ -32,17 +32,24 @@ import protocol.MessageLayouts;
  *
  * @author chris
  */
-public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages, PrintClient.iAddAvailService, 
-		BTcommThread.DisplayOutput {
+public class btrailClient extends MIDlet implements CommandListener, PrintClient.iAddAvailService
+{
     
 	static public Display display;
 	
 	private int orgDiscoverable;
 	private float btApiVersion;
+
+	private Image imgListWait, imgListScanning, imgListNoService, imgListService;
 	
     /** Creates a new instance of HelloMidlet */
-    public HelloMidlet() throws Exception
+    public btrailClient() throws Exception
 	{
+		this.imgListWait=Image.createImage("/icons/listWait.png");
+		this.imgListScanning=Image.createImage("/icons/listScanning.png");
+		this.imgListNoService=Image.createImage("/icons/listNoService.png");
+		this.imgListService=Image.createImage("/icons/listService.png");
+
 		display=this.getDisplay();
 
 		// ladet die protocol.dat
@@ -84,16 +91,19 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 		
     }
     
-	private Form helloForm;
+	private Form debugForm;
 	private Command exitCommand;
 	private Command helpCommand1;
 	private Alert help;
 	// private Canvas controllForm;
 	private ValueList listServer;
+	private Form newConnForm;
+	private TextField newConnForm_host;
+
 	private Command itemCommandDetail;
 	private Command okCommand1;
 	private Command screenCommand1 = new Command("ShowList", Command.SCREEN, 1);
-	private Command backCommand2;
+	private Command back2ListCommand;
 	private Command screenCommand_startConrtollCanvas;
 	private Command itemCommandBlah1;
 	private Command clearCommand=new Command("clear", Command.SCREEN, 1);
@@ -101,6 +111,7 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 	private Command screenCommand_startControllCanvas=new Command("connect", Command.ITEM, 1);
 	private Command screenCommand_startControllCanvasTCP=new Command("TCP connect", Command.ITEM, 5);
 
+	private Command debugScreenCommand = new Command("debugscreen", Command.SCREEN,9);
 	
 	private Canvas controllCanvas;
 	BTcommThread btcomm;
@@ -109,15 +120,16 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 
 //GEN-LINE:MVDMethods
     
-    private void debugDataElement(DataElement attr, int level)
+    private String debugDataElement(DataElement attr, int level)
     {
+		String ret="";
         try {
             for(int i=0; i < level; i++)
-                helloForm.append("  ");
+                ret += "  ";
             switch(attr.getDataType()) {
                 case DataElement.DATSEQ: {
                     java.util.Enumeration en = (java.util.Enumeration) attr.getValue();
-                    helloForm.append("(DATASEQ)\n");
+                    ret += "(DATASEQ)\n";
                     int n=0;
                     while (en.hasMoreElements())
                     {
@@ -125,41 +137,42 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
                         debugDataElement(e,level+1);
                         
                     }
-                    helloForm.append("(/DATASEQ)\n");
+                    ret += "(/DATASEQ)\n";
                     break; }
                 case DataElement.INT_1:
                 case DataElement.U_INT_1:
                 case DataElement.INT_4:
                 case DataElement.U_INT_4: {
                     long l=attr.getLong();
-                    helloForm.append("(INT)"+l);
+                    ret += "(INT)"+l;
                     break; }
                 case DataElement.UUID:
-                    helloForm.append("(UUID) ");
+                    ret += "(UUID) ";
                 default: {
-                    helloForm.append(" '"+attr.getValue().toString()+"'");
+                    ret += " '"+attr.getValue().toString()+"'";
                     break; }
                 
             }
         } catch(ClassCastException e) {
-            helloForm.append(" exception:"+e.toString());
+            ret += " exception:"+e.toString();
         }
-        helloForm.append("\n");
-        
+        ret += "\n";
+        return ret;
     }
 	
-	public void debugServiceRecord(ServiceRecord sr) {
-		helloForm.append(new javax.microedition.lcdui.Spacer(10,10));
+	public String debugServiceRecord(ServiceRecord sr) {
+		String ret="";
+		// helloForm.append(new javax.microedition.lcdui.Spacer(10,10));
             System.out.println("debugServiceRecord() done");
             if(sr == null) {
                 // helloForm.setTitle("NO SR");
             } else {
                 String connectionURL=sr.getConnectionURL(0,false);
-                helloForm.append("debugServiceRecord ("+connectionURL+")");
+                ret += "debugServiceRecord ("+connectionURL+")\n";
                 try {
                     String tmpDevName = sr.getHostDevice().getFriendlyName(false);
                     if (tmpDevName != null && tmpDevName.length() > 0) {
-                        helloForm.append("name: "+tmpDevName+")");
+                        ret += "name: "+tmpDevName+")";
                     }
                 } catch (java.io.IOException e) { e.printStackTrace(); }
                 int serviceNameOffset = 0x0000;
@@ -168,42 +181,44 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
                 String srvName = null;
                 if(de != null && de.getDataType() == DataElement.STRING) {
 					srvName = (String)de.getValue();
-					helloForm.append("service: "+srvName+")");
+					ret += "service: "+srvName+")\n";
                 } else {
-					helloForm.append("no service name ");
+					ret += "no service name\n";
 				}
-                helloForm.append("\n");
                 
                 int ids[]=sr.getAttributeIDs();
-                helloForm.append("attrlist len:"+ids.length+"\n");
+                ret += "attrlist len:"+ids.length+"\n";
                 for(int i=0; i < ids.length; i++) {
                     DataElement attr=sr.getAttributeValue(ids[i]);
-                    helloForm.append("[\""+ids[i]+"\"] type="+attr.getDataType());
-                    debugDataElement(attr,0);
+                    ret += "[\""+ids[i]+"\"] type="+attr.getDataType();
+                    ret += debugDataElement(attr,0);
                 }
             }
+		return ret;
 	}
 	
 	public void updateStatus(String text) {
-		helloForm.setTitle(text);
+		this.get_listServer().setTitle(text);
 	}
+/*
     public void debug(String text) {
 		StringItem item=new StringItem("",text);
 		debug(item);
-		/*
+		/ *
 		text.setFont(Font.getFont(Font.SIZE_SMALL));
         helloForm.append(text);
 		try {
 			// this.btcomm.addCmdToQueue("debug "+text+"\n");
 		}catch(Exception e) {
 		}
-		 */
-		System.out.println(text);
+		 * /
+		System.out.print(text);
     }
 	public void debug(StringItem text) {
 		text.setFont(Font.getFont(Font.FACE_PROPORTIONAL, Font.STYLE_PLAIN, Font.SIZE_SMALL));
         helloForm.append(text);
     }
+ */
 	
 	/**
 	 * vibriert - blocking oder non-blocking ???
@@ -231,11 +246,13 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
         // Insert pre-init code here
         System.out.println("System.out.println");
         
-		getDisplay().setCurrent(get_helloForm());//GEN-LINE:MVDInitInit
+		getDisplay().setCurrent(this.get_listServer());//GEN-LINE:MVDInitInit
 
 		
+		Debuglog d=new Debuglog(this.getDebugForm());
 		
-		String version = "0";
+		
+		String version = null;
 		try {
 			version = LocalDevice.getProperty("bluetooth.api.version");
 		} catch(Exception e) {
@@ -254,20 +271,20 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 			}
 			version=versionNeu;
 			this.btApiVersion = Float.parseFloat(version);
-			helloForm.append("bt api version "+this.btApiVersion);
+			debugForm.append("bt api version "+this.btApiVersion);
 		} catch(Exception e) {
-			helloForm.append("error parsing bt version("+version+") "+e.toString());
+			debugForm.append("error parsing bt version("+version+") "+e.toString());
 		}
 		
 		// me4se und api version 1.0 kann kein isPowerOn()
 		if(this.btApiVersion >= 1.1) {
 			try {
 				if(!LocalDevice.isPowerOn()) {
-					helloForm.setTitle("bt off");
-					helloForm.append("please enable bluetooth!");
+					debugForm.setTitle("bt off");
+					debugForm.append("please enable bluetooth!");
 				}
 			} catch(java.lang.Error e) {
-				debug("bt.isPowerOn exception");
+				Debuglog.debugln("bt.isPowerOn exception");
 				// e.printStackTrace();
 			}
 		}
@@ -276,8 +293,8 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 		try {
 			local = LocalDevice.getLocalDevice();
 		} catch (BluetoothStateException e) {
-			helloForm.setTitle("no bt?");
-			helloForm.append("no bluetooth?");
+			debugForm.setTitle("no bt?");
+			debugForm.append("no bluetooth?");
 			return;
 		}
 		
@@ -289,43 +306,54 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 			this.orgDiscoverable=local.getDiscoverable();
 			local.setDiscoverable(DiscoveryAgent.NOT_DISCOVERABLE);
 		} catch (BluetoothStateException e) {
-			debug("bt.setDiscoverable(NOT_DISCOVERABLE) not supported");
+			Debuglog.debugln("bt.setDiscoverable(NOT_DISCOVERABLE) not supported");
 		}
-		
-		PrintClient client;
-		try {
-			helloForm.setTitle("bt scan...");
-			client=new PrintClient(this,this);
-		} catch (BluetoothStateException e) {
-
-			helloForm.append("exception: ("+e.toString()+") bluetooth disabled?");
-			e.printStackTrace();
-			return;
-		}
-		client.findPrinter(false);
-		
+		SearchBTServerThread s=new SearchBTServerThread(this);
+		s.start();
+		// Debuglog.debugln("init done");
 	}//GEN-LINE:MVDInitEnd
+
+	class SearchBTServerThread extends Thread {
+		btrailClient h;
+		SearchBTServerThread(btrailClient h) {
+			this.h=h;
+		}
+		public void run() {
+			PrintClient client;
+			try {
+				try {
+					debugForm.setTitle("bt scan...");
+					client=new PrintClient(h);
+				} catch (BluetoothStateException e) {
+					debugForm.append("exception: ("+e.toString()+") bluetooth disabled?");
+					e.printStackTrace();
+					return;
+				}
+				client.findPrinter(false);
+			} catch (Exception e) {
+				Debuglog.debugln("SearchBTServerThread:" + e.toString());
+			}
+		}
+	}
     
 	class ConnectThread extends Thread {
 		String connectionURL;
-		BTcommThread.DisplayOutput debugForm;
-		ConnectThread(BTcommThread.DisplayOutput debugForm, String connectionURL) {
+		ConnectThread(String connectionURL) {
 			this.connectionURL=connectionURL;
-			this.debugForm = debugForm;
 		}
 		public void run() {
 			try {
 				System.out.print("connecting:"+this.connectionURL);
 				StreamConnection connection = (StreamConnection)Connector.open(this.connectionURL);
 				Object connectedNotifyObject = new Object();
-				btcomm = new BTcommThread(this.debugForm, connection, connectedNotifyObject);
+				btcomm = new BTcommThread(connection, connectedNotifyObject);
 						//Thread t = new Thread(btcomm); t.start(); -> da is isAlive auf einmal nicht gesetzt
 				btcomm.start();
 				synchronized(connectedNotifyObject) {
 					connectedNotifyObject.wait();
 				}
 				if(!btcomm.hasError()) {
-					helloForm.setTitle("connected");
+					debugForm.setTitle("connected");
 					getDisplay().setCurrent(get_controllCanvas(btcomm));
 				} else if (btcomm.doupdate) {
 					exitMIDlet();
@@ -346,50 +374,58 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 	public void commandAction(Command command, Displayable displayable) {//GEN-END:MVDCABegin
         // Insert global pre-action code here
 		try {
-		if (displayable == helloForm) {//GEN-BEGIN:MVDCABody
-			if (command == exitCommand) {//GEN-END:MVDCABody
-                // Insert pre-action code here
-				exitMIDlet();//GEN-LINE:MVDCAAction3
-                // Insert post-action code here
-			} else if (command == helpCommand1) {//GEN-LINE:MVDCACase3
+// debugForm -----------------------------------------------------------------------------------------
+		if (displayable == debugForm) {//GEN-BEGIN:MVDCABody
+			if (command == helpCommand1) {//GEN-LINE:MVDCACase3
 				// Insert pre-action code here
-				getDisplay().setCurrent(get_help(), get_helloForm());//GEN-LINE:MVDCAAction8
+				getDisplay().setCurrent(get_help(), getDebugForm());//GEN-LINE:MVDCAAction8
 				// Insert post-action code here
-			} else if (command == screenCommand1) {//GEN-LINE:MVDCACase8
+			} else if (command == back2ListCommand) {
 				// Insert pre-action code here
-				getDisplay().setCurrent(get_listServer());//GEN-LINE:MVDCAAction18
+				getDisplay().setCurrent(get_listServer());
 				// Insert post-action code here
-			} else if (command == okCommand1) {//GEN-LINE:MVDCACase18
+
+			} else if (command == screenCommand1) {
+				// Insert pre-action code here
+				getDisplay().setCurrent(get_listServer());
+				// Insert post-action code here
+			} else if (command == okCommand1) {
 				// Insert pre-action code here
 				// Do nothing//GEN-LINE:MVDCAAction16
 				// Insert post-action code here
 			} else if (command == clearCommand) {
-				helloForm.deleteAll();
-			}//GEN-BEGIN:MVDCACase16
+				debugForm.deleteAll();
+			}
+// listServer -----------------------------------------------------------------------------------------
 		} else if (displayable == listServer) {
-			if (command == backCommand2) {//GEN-END:MVDCACase16
-				// Insert pre-action code here//GEN-LINE:MVDCACase34
-				getDisplay().setCurrent(get_helloForm());//GEN-LINE:MVDCAAction34
-				// Insert post-action code here//GEN-LINE:MVDCAAction21
-				//GEN-LINE:MVDCACase21
+			if (command == exitCommand) {
+				exitMIDlet();
+			} else if (command == btScanCommand) {  // neue BT suche
+				debugForm.setTitle("bt scan...");
+				Debuglog.debugln("bt scan started");
+
+				SearchBTServerThread s=new SearchBTServerThread(this);
+				s.start();
+			} else if (command == debugScreenCommand) {
+				getDisplay().setCurrent(getDebugForm());
 			} else if ((command == screenCommand_startControllCanvas) ||
 					(command == screenCommand_startControllCanvasTCP ) ) { // verbinden!
 				if(btcomm != null && !btcomm.isAlive()) {
-					helloForm.append("btcomm not alive -> deleting object");
+					debugForm.append("btcomm not alive -> deleting object");
 					btcomm.close();
 					btcomm=null;
 				}
 				if(btcomm == null) {
-					helloForm.setTitle("connecting ...");
+					debugForm.setTitle("connecting ...");
 
 						String connectionURL;
 						if(command == screenCommand_startControllCanvasTCP) {
-							connectionURL = "socket://192.168.0.109:3030";
+							connectionURL = "socket://192.168.0.165:3030";
 						} else {
 							ServiceRecord sr = (ServiceRecord) this.listServer.getValue(this.listServer.getSelectedIndex());
 							connectionURL=sr.getConnectionURL(0, false);
 						}
-						ConnectThread connectThread = new ConnectThread(this,connectionURL);
+						ConnectThread connectThread = new ConnectThread(connectionURL);
 						connectThread.start();
 						// DataInputStream input = (InputConnection) connection.openDataInputStream();
 						// DataOutputStream output = connection.openDataOutputStream();
@@ -407,30 +443,29 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 				//debug("sr["+index+"="+url+"] -----------\n");
 				Object o = this.listServer.getValue(index);
 				//debug("sr o\n");
-				debug("sr o="+o.toString());
+				Debuglog.debugln("sr o="+o.toString());
 				ServiceRecord sr = (ServiceRecord) o;
-				debug(sr.getConnectionURL(0, false));
+				String s=sr.getConnectionURL(0, false)+"\n";
 				//debug("sr cast ok\n");
 				//debug("sr ----------"+sr.toString()+"\n");
-				this.debugServiceRecord(sr);
-				debug("sr done--------\n");
+				s+=this.debugServiceRecord(sr);
+
+				Item i = new StringItem("", s);
+				Form f = new Form("ServiceRecord", new Item[] { i });
+				newConnForm.addCommand(getBack2ListCommand());
+				newConnForm.setCommandListener(this);
+				getDisplay().setCurrent(f);
+
 			}//GEN-BEGIN:MVDCACase23
-		}//GEN-END:MVDCACase23
-		if (command == btScanCommand) {  // neue BT suche
-			helloForm.setTitle("bt scan...");
-			debug("bt scan started");
-			System.out.println("bt scan started");
-			PrintClient client;
-			this.listServer = null;
-			try {
-				client=new PrintClient(this,this);
-			} catch (BluetoothStateException e) {
-				helloForm.append("exception: ("+e.toString()+") bluetooth disabled?");
-				e.printStackTrace();
-				return;
+		} else if (displayable == newConnForm) {
+			if(command == okCommand1) {
+
+			} else if(command == back2ListCommand) {
+				getDisplay().setCurrent(get_listServer());
 			}
-			client.findPrinter(true);
-		} 
+		}  else if(command == back2ListCommand) { // fürs ServiceRecord Form
+			getDisplay().setCurrent(get_listServer());
+		}
 		
 		// Insert global post-action code here
 		} catch(Exception e) {
@@ -465,25 +500,44 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 	/** This method returns instance for helloForm component and should be called instead of accessing helloForm field directly.                        
 	 * @return Instance for helloForm component
 	 */
-	public Form get_helloForm() {
-		if (helloForm == null) {
+	public Form getDebugForm() {
+		if (debugForm == null) {
             // Insert pre-init code here
-			helloForm = new Form(null, new Item[0]);
-			helloForm.addCommand(screenCommand1);
-			helloForm.addCommand(clearCommand);
-			helloForm.addCommand(btScanCommand);
-			helloForm.addCommand(get_helpCommand1());
-			helloForm.addCommand(get_exitCommand());
-			helloForm.setCommandListener(this);
+			debugForm = new Form(null, new Item[0]);
+			debugForm.addCommand(getBack2ListCommand());
+			debugForm.addCommand(screenCommand1);
+			debugForm.addCommand(clearCommand);
+			debugForm.addCommand(btScanCommand);
+			debugForm.addCommand(get_helpCommand1());
+			debugForm.setCommandListener(this);
             // Insert post-init code here
 			
 		}
-		return helloForm;
+		return debugForm;
 	}                    
-    
+
+	/**
+	 * abfrage hostname für eine neue TCP connection
+	 * @return
+	 */
+	public Form getNewConnForm() {
+		if (newConnForm == null) {
+
+			newConnForm_host = new TextField("IP/hostname", null, 32, TextField.ANY);
+
+			newConnForm = new Form("form", new Item[] { newConnForm_host });
+			newConnForm.addCommand(getBack2ListCommand());
+			newConnForm.addCommand(get_okCommand1());
+			newConnForm.setCommandListener(this);
+
+		}
+		return newConnForm;
+	}
+
+
 	public Canvas get_controllCanvas(BTcommThread btcomm) throws Exception {
 		if(controllCanvas==null) {
-			controllCanvas=new MIDPCanvas(this, btcomm);
+			controllCanvas=new MIDPCanvas(btcomm);
 
 		} else {
 			((MIDPCanvas) controllCanvas).update(btcomm);
@@ -535,8 +589,8 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 	public ValueList get_listServer() {
 		if (listServer == null) {
 			// Insert pre-init code here
-			listServer = new ValueList("gefundene Server", Choice.IMPLICIT);
-			listServer.addCommand(get_backCommand2());
+			listServer = new ValueList("bt rail server list", Choice.IMPLICIT);
+			listServer.addCommand(get_exitCommand());
 			listServer.addCommand(screenCommand_startControllCanvas);
 			listServer.addCommand(screenCommand_startControllCanvasTCP);
 			listServer.setCommandListener(this);
@@ -544,6 +598,7 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 			listServer.setSelectCommand(screenCommand_startControllCanvas);
 			listServer.addCommand(itemCommandShowServiceRecord);
 			listServer.addCommand(btScanCommand);
+			listServer.addCommand(debugScreenCommand);
 			// Insert post-init code here
 		}
 		return listServer;
@@ -576,13 +631,13 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 	/** This method returns instance for backCommand2 component and should be called instead of accessing backCommand2 field directly.//GEN-BEGIN:MVDGetBegin20
 	 * @return Instance for backCommand2 component
 	 */
-	public Command get_backCommand2() {
-		if (backCommand2 == null) {//GEN-END:MVDGetBegin20
+	public Command getBack2ListCommand() {
+		if (back2ListCommand == null) {//GEN-END:MVDGetBegin20
 			// Insert pre-init code here
-			backCommand2 = new Command("Back", Command.BACK, 1);//GEN-LINE:MVDGetInit20
+			back2ListCommand = new Command("Back", Command.BACK, 1);//GEN-LINE:MVDGetInit20
 			// Insert post-init code here
 		}//GEN-BEGIN:MVDGetEnd20
-		return backCommand2;
+		return back2ListCommand;
 	}//GEN-END:MVDGetEnd20
 
 //GEN-LINE:MVDGetEnd10
@@ -598,7 +653,7 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
     public void destroyApp(boolean unconditional) {
     }
 
-	public void AddAvailService(ServiceRecord sr) {
+	public void addAvailService(ServiceRecord sr) {
 /*
 		this.debug("adding service...\n");
 		
@@ -610,25 +665,103 @@ public class HelloMidlet extends MIDlet implements CommandListener, iMyMessages,
 		try {
 */		  
 			// this.debug("service add: getlist");
-			String hostname=null;
-			try {
-				hostname=sr.getHostDevice().getFriendlyName(false);
-			} catch(Exception e) {}
-			if(hostname == null) {
-				hostname="???";
+		String hostname=null;
+		try {
+			hostname=sr.getHostDevice().getFriendlyName(false);
+		} catch(Exception e) {}
+		if(hostname == null) {
+			hostname=sr.getHostDevice().getBluetoothAddress()+"???";
+		}
+		ValueList l=get_listServer();
+		boolean set=false;
+		for(int i=0; i < l.size(); i++) {
+			Object o=l.getValue(i);
+			if(o.getClass() == sr.getHostDevice().getClass()) {
+				RemoteDevice lrd=(RemoteDevice) o;
+				if(lrd.equals(sr.getHostDevice())) {
+					l.set(i, l.getString(i), this.imgListService);
+					l.setValue(i, sr);
+					set=true;
+					break;
+				}
 			}
-			get_listServer().append(hostname, null, sr); 
+		}
+		if(!set) {
+			l.append(hostname, this.imgListService, sr);
+		}
 /*			
 		} catch(Exception e) {
 			this.debug("service-add Exception: "+e.toString()+"\n");				
 		}
  */
 	}
-	
-	
-	public int countAvailServices() {
-		return this.listServer.size();
-	
+
+	/**
+	 * callback die aufgerufen wird wenn beim device suchvorgang ein device gefunden wird
+	 * @param rd
+	 */
+	public void BTServerFound(RemoteDevice rd) {
+		String s;
+		try {
+			s=rd.getFriendlyName(false);
+		} catch(Exception e) {
+			s=rd.getBluetoothAddress();
+		}
+		get_listServer().append(s,this.imgListWait,rd);
+		Debuglog.debugln("found server "+ s);
 	}
+
+	/**
+	 * callback die aufgerufen wird wenn searchService mit rd gestartet wird
+	 * @param rd
+	 */
+	public void BTServerStartScanning(RemoteDevice rd) {
+		String s;
+		try {
+			s=rd.getFriendlyName(false);
+		} catch(Exception e) {
+			s=rd.getBluetoothAddress();
+		}
+		ValueList l=get_listServer();
+		for(int i=0; i < l.size(); i++) {
+			Object o=l.getValue(i);
+			if(o.getClass() == rd.getClass()) {
+				RemoteDevice lrd=(RemoteDevice) o;
+				if(lrd.equals(rd)) {
+					l.set(i, l.getString(i), this.imgListScanning);
+					break;
+				}
+			}
+		}
+		Debuglog.debugln("start scanning: "+rd.getBluetoothAddress());
+	}
+
+	/**
+	 * callback die aufgerufen wird wenn searchservice(rd) fertig ist
+	 * wenn rd noch in der liste ist wurde kein service gefunden -> bild auf x setzen, disable
+	 * @param rd
+	 */
+	public void BTServerScanningDone(RemoteDevice rd) {
+		String s;
+		try {
+			s=rd.getFriendlyName(false);
+		} catch(Exception e) {
+			s=rd.getBluetoothAddress();
+		}
+		ValueList l=get_listServer();
+		for(int i=0; i < l.size(); i++) {
+			Object o=l.getValue(i);
+			if(o.getClass() == rd.getClass()) {
+				RemoteDevice lrd=(RemoteDevice) o;
+				if(lrd.equals(rd)) {
+					l.set(i, l.getString(i), this.imgListNoService);
+					l.setDisabled(i);
+					break;
+				}
+			}
+		}
+		Debuglog.debugln(s + " scanned");
+	}
+
 
 }

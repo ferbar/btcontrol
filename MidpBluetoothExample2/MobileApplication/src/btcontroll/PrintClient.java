@@ -19,8 +19,12 @@ public class PrintClient implements DiscoveryListener {
 
 
 	public interface iAddAvailService {
-		public void AddAvailService(ServiceRecord sr);
-		public int countAvailServices();
+		public void BTServerFound(RemoteDevice r);
+		public void BTServerStartScanning(RemoteDevice r);
+		public void BTServerScanningDone(RemoteDevice r);
+		public void addAvailService(ServiceRecord sr);
+
+		public void updateStatus(String text);
 	}
 	
 			
@@ -43,14 +47,18 @@ public class PrintClient implements DiscoveryListener {
      * Keeps track of the transaction IDs returned from searchServices.
      */
     private int transactionID[];
+	private int transactionIDtoDev[];
 
     /**
-     * Keeps track of the devices found during an inquiry.
+     * Keeps track of the devices found during an inquiry. - nur beim suchen verwendet!!!
      */
-    private Vector deviceList;
+    private Vector vDeviceList;
+	private boolean foundService;
+
+	// device liste zum service record suchen
+	private RemoteDevice[] deviceList;
     
     // private Displayable mydebug;
-    private iMyMessages mydebug;
     private iAddAvailService addAvailService;
 
 
@@ -61,9 +69,8 @@ public class PrintClient implements DiscoveryListener {
      * @exception BluetoothStateException if the Bluetooth system could not be
      * initialized
      */
-    public PrintClient(iMyMessages d, iAddAvailService s) throws BluetoothStateException {
-        mydebug=d;
-		addAvailService=s;
+    public PrintClient(iAddAvailService s) throws BluetoothStateException {
+		this.addAvailService=s;
 
         /*
          * Retrieve the local Bluetooth device object.
@@ -74,7 +81,7 @@ public class PrintClient implements DiscoveryListener {
          * Retrieve the DiscoveryAgent object that allows us to perform device
          * and service discovery.
          */
-        agent = local.getDiscoveryAgent();
+        this.agent = local.getDiscoveryAgent();
 
         /*
          * Retrieve the max number of concurrent service searches that can
@@ -89,13 +96,14 @@ public class PrintClient implements DiscoveryListener {
         }
 
         transactionID = new int[maxServiceSearches];
+		transactionIDtoDev = new int[maxServiceSearches];
 
         // Initialize the transaction list
         for (int i = 0; i < maxServiceSearches; i++) {
             transactionID[i] = -1;
         }
 
-        deviceList = new Vector();
+        this.vDeviceList = new Vector();
         System.out.println("PrintClient() done");
     }
 
@@ -104,10 +112,11 @@ public class PrintClient implements DiscoveryListener {
      *
      * @param trans the transaction ID to add to the table
      */
-    private void addToTransactionTable(int trans) {
+    private void addToTransactionTable(int trans, int devID) {
         for (int i = 0; i < transactionID.length; i++) {
             if (transactionID[i] == -1) {
                 transactionID[i] = trans;
+				transactionIDtoDev[i]=devID;
                 return;
             }
         }
@@ -117,14 +126,16 @@ public class PrintClient implements DiscoveryListener {
      * Removes the transaction from the transaction ID table.
      *
      * @param trans the transaction ID to delete from the table
+	 * @return RemoteDevice
      */
-    private void removeFromTransactionTable(int trans) {
+    private RemoteDevice removeFromTransactionTable(int trans) {
         for (int i = 0; i < transactionID.length; i++) {
             if (transactionID[i] == trans) {
                 transactionID[i] = -1;
-                return;
+                return (RemoteDevice) this.deviceList[transactionIDtoDev[i]];
             }
         }
+		return null;
     }
 
     /**
@@ -138,6 +149,11 @@ public class PrintClient implements DiscoveryListener {
      * no printer service was found on the devList provided
      */
     private boolean searchServices(RemoteDevice[] devList) {
+		this.deviceList = devList;
+		this.foundService = false;
+		this.addAvailService.updateStatus("searching services...");
+
+
         UUID[] searchList = new UUID[2];
 System.out.println("searchServices() Length = " + devList.length);
 
@@ -165,12 +181,13 @@ System.out.println("searchServices() Length = " + devList.length);
          * Start a search on as many devices as the system can support.
          */
         for (int i = 0; i < devList.length; i++) {
+			addAvailService.BTServerStartScanning(devList[i]);
 
             try {
 System.out.println("Starting Service Search on " + devList[i].getBluetoothAddress());
                 int trans = agent.searchServices(null, searchList, devList[i], this);
 System.out.println("Starting Service Search " + trans);
-                addToTransactionTable(trans);
+                addToTransactionTable(trans, i);
             } catch (BluetoothStateException e) {
 System.out.println("BluetoothStateException: " + e.getMessage());
                 /*
@@ -199,7 +216,7 @@ System.out.println("Done Waiting " + serviceSearchCount);
         }
 
 
-        /*
+		/*
          * Wait until all the service searches have completed.
          */
         while (serviceSearchCount > 0) {
@@ -210,7 +227,7 @@ System.out.println("Done Waiting " + serviceSearchCount);
                 }
             }
         }
-		return addAvailService.countAvailServices() > 0;
+		return this.foundService;
     }
 
     /**
@@ -221,17 +238,18 @@ System.out.println("Done Waiting " + serviceSearchCount);
      * printer service was found
      */
     public boolean findPrinter(boolean fullSearch) {
-		RemoteDevice[] devList;
+		this.addAvailService.updateStatus("searching hosts...");
 		if(!fullSearch) {
 			/*
 			 * If there are any devices that have been found by a recent inquiry,
 			 * we don't need to spend the time to complete an inquiry.
 			 */
-			devList = agent.retrieveDevices(DiscoveryAgent.CACHED);
+			RemoteDevice[] devList = agent.retrieveDevices(DiscoveryAgent.CACHED);
 			if (devList != null) {
+				Debuglog.debug("G");
 				if (searchServices(devList)) {
-					System.out.println("findPrinter() return cached");
-					mydebug.updateStatus(devList.length+" devices cached");
+					Debuglog.debugln("findPrinter() return cached");
+					this.addAvailService.updateStatus("btrail server (cached)");
 					return true;
 				}
 			}
@@ -243,9 +261,10 @@ System.out.println("Done Waiting " + serviceSearchCount);
 			 */
 			devList = agent.retrieveDevices(DiscoveryAgent.PREKNOWN);
 			if (devList != null) {
+				Debuglog.debug("H");
 				if (searchServices(devList)) {
-					mydebug.updateStatus(devList.length+" devices preknown");
-					System.out.println("findPrinter() preknown");
+					Debuglog.debugln("findPrinter() preknown");
+					this.addAvailService.updateStatus("btrail server (preknown)");
 					return true;
 				}
 			}
@@ -276,25 +295,27 @@ System.out.println("Done Waiting " + serviceSearchCount);
         } catch (BluetoothStateException e) {
 
             System.out.println("Unable to find devices to search");
-			mydebug.debug("Unable to find devices to search");
-			mydebug.updateStatus("Unable to search (ex)");
+			Debuglog.debugln("Unable to find devices to search "+e.toString());
+			this.addAvailService.updateStatus("BT inquiry failed!");
         }
 
-        System.out.println("findPrinter() size="+deviceList.size());
-		mydebug.updateStatus(deviceList.size()+" devices found");
+        System.out.println("findPrinter() size="+this.vDeviceList.size());
        
-       
-        if(deviceList.size() > 0) {
-			mydebug.debug("found "+deviceList.size()+" Devices");
-            devList = new RemoteDevice[deviceList.size()];
-            deviceList.copyInto(devList);
-            if (searchServices(devList)) {
-                mydebug.debug("findPrinter found service");
+        if(this.vDeviceList.size() > 0) {
+			RemoteDevice[] devList = new RemoteDevice[this.vDeviceList.size()];
+			this.vDeviceList.copyInto(devList);
+			this.vDeviceList=null;
+
+//			Debuglog.debugln("found "+deviceList.size()+" Devices");
+            if(searchServices(devList)) {
+                Debuglog.debugln("findPrinter found service");
+				this.addAvailService.updateStatus("btrail server");
                 return true;
             }
-			mydebug.updateStatus("no service found");
+			Debuglog.debugln("no service found");
+			this.addAvailService.updateStatus("no btrail service found");
         } else {
-       		mydebug.updateStatus("no devices found");
+       		this.addAvailService.updateStatus("no devices found");
         }
 
         return false;
@@ -402,7 +423,8 @@ System.out.println("Found device = " + btDevice.getBluetoothAddress());
                  * the major service classes.
                  */
 //                if ((cod.getServiceClasses() & 0x40000) != 0) {
-                    deviceList.addElement(btDevice);
+					addAvailService.BTServerFound(btDevice);
+                    this.vDeviceList.addElement(btDevice);
 //                }
 //            }
 //        }
@@ -432,7 +454,7 @@ System.out.println("serviceSearchCompleted(" + transID + ", " + respCode + ")");
        /*
         * Removes the transaction ID from the transaction table.
         */
-        removeFromTransactionTable(transID);
+		addAvailService.BTServerScanningDone(removeFromTransactionTable(transID));
 
         serviceSearchCount--;
 
@@ -458,39 +480,46 @@ System.out.println("serviceSearchCompleted(" + transID + ", " + respCode + ")");
          * If this is the first record found, then store this record
          * and cancel the remaining searches.
          */
-System.out.println("Found a service " + transID);
+// Debuglog.debugln("Found a service " + transID);
+if(servRecord == null) {
+	Debuglog.debugln("servrecord == null !!!");
+	return;
+}
 System.out.println("Length of array = " + servRecord.length);
 if (servRecord.length == 0) { // zerst war da servRecord[0] == 0
-    System.out.println("kein service record (?)");
+    Debuglog.debugln("kein service record (?)");
 	return;
 }
 System.out.println("After this");
-mydebug.debug("servicesDiscovered n:"+servRecord.length+"\n");
-	for(int i=0; i < servRecord.length; i++) {
-		int primaryLanguageBase = 0x0100;
-		ServiceRecord sr = servRecord[i];
-		DataElement de = sr.getAttributeValue(primaryLanguageBase);
-		if(de != null && de.getDataType() == DataElement.STRING) {
-			String srvName = (String)de.getValue();
-			mydebug.debug("servicesDiscovered["+i+"] "+srvName+"\n");
-		} else {
-			mydebug.debug("servicesDiscovered["+i+"] "+sr.getConnectionURL(0,false)+"\n");
+// Debuglog.debugln("servicesDiscovered n:"+servRecord.length);
+		for(int i=0; i < servRecord.length; i++) {
+			int primaryLanguageBase = 0x0100;
+			ServiceRecord sr = servRecord[i];
+			DataElement de = sr.getAttributeValue(primaryLanguageBase);
+			if(de != null && de.getDataType() == DataElement.STRING) {
+				String srvName = (String)de.getValue();
+				Debuglog.debugln("servicesDiscovered["+i+"] "+srvName);
+			} else {
+				Debuglog.debugln("servicesDiscovered["+i+"] "+sr.getConnectionURL(0,false));
+			}
+			if(isBtControllService(sr)) {
+				this.foundService=true;
+				addAvailService.addAvailService(sr);
+			}
+
 		}
-		if(isBtControllService(sr)) {
-			addAvailService.AddAvailService(sr);
-		}
-	}
 
 
             /*
              * Cancel all the service searches that are presently
              * being performed.
-			*/
+			*
             for (int i = 0; i < transactionID.length; i++) {
                 if (transactionID[i] != -1) {
 // [chris] dont stop search .... System.out.println(agent.cancelServiceSearch(transactionID[i]));
                 }
             }
+			*/
     }
 
     /**
@@ -524,8 +553,9 @@ mydebug.debug("servicesDiscovered n:"+servRecord.length+"\n");
 	 *
 	 */
 	public boolean isBtControllService(ServiceRecord sr) {
+		// mydebug.updateStatus("isBtControllService check");
 		try {
-			mydebug.debug("isBtControllService?");
+			Debuglog.debugln("isBtControllService?");
 			DataElement attr=sr.getAttributeValue(4);
 			if(DataElement.DATSEQ == attr.getDataType()) {
 				java.util.Enumeration en = (java.util.Enumeration) attr.getValue();
@@ -542,34 +572,36 @@ mydebug.debug("servicesDiscovered n:"+servRecord.length+"\n");
 									if(DataElement.U_INT_1 == attr2.getDataType()){
 										long port=attr2.getLong();
 										// debug("isBtControllService port:"+port+"\n");
-										if(port==30) // endlich meinen port gefunden !!!
+										if(port==30) {// endlich meinen port gefunden !!!
+											// mydebug.updateStatus("isBtControllService found sr");
 											return true;
-										else
+										} else {
 											return false;
+										}
 									} else {
-										mydebug.debug("attr[0][1][1] != INT ("+attr2.getDataType()+")");
+										Debuglog.debugln("attr[0][1][1] != INT ("+attr2.getDataType()+")");
 										return false;
 									}
 								}
 								n++;
 							}
-							mydebug.debug("isBtControllService fuk!\n");
+							Debuglog.debugln("isBtControllService fuk!");
 							return false;
 						} else {
-							mydebug.debug("attr[0][1] != DATASEQ\n");
+							Debuglog.debugln("attr[0][1] != DATASEQ");
 							return false;
 						}
 					}
 					n++;
 				}
 			} else {
-				mydebug.debug("attr[0] != DATASEQ\n");
+				Debuglog.debugln("attr[0] != DATASEQ");
 				return false;
 			}
 		} catch (Exception e) {
-			mydebug.debug("exception: "+e.toString()+"\n");
+			Debuglog.debugln("exception: "+e.toString());
 		}
-		mydebug.debug("isBtControllService fuk2\n");
+		Debuglog.debugln("isBtControllService fuk2");
 		return false;
 	}
 
