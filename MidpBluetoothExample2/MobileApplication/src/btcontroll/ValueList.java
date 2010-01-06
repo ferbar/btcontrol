@@ -5,6 +5,7 @@
 
 package btcontroll;
 import java.util.Vector;
+import javax.microedition.lcdui.Font;
 
 /**
  *
@@ -23,5 +24,14 @@ public class ValueList extends javax.microedition.lcdui.List {
 
 	public Object getValue(int i) {
 		return values.elementAt(i);
+	}
+
+	public void setValue(int i, Object o) {
+		this.values.setElementAt(o, i);
+	}
+
+	public void setDisabled(int i) {
+		Font f=this.getFont(i);
+		this.setFont(i, Font.getFont(f.getFace(), Font.STYLE_ITALIC, f.getSize()));
 	}
 }

@@ -12,6 +12,7 @@ import java.util.Hashtable;
 import java.util.Enumeration;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import btcontroll.Debuglog;
 
 /**
  *
@@ -246,12 +247,12 @@ public class FBTCtlMessage {
 		return this.type;
 	}
 	
-	public void dump(btcontroll.BTcommThread.DisplayOutput out) throws Exception {
-		out.debug("dump msg********\n");
-		this.dump(out,0,null);
-		out.debug("dump msg done***\n");
+	public void dump() throws Exception {
+		Debuglog.debugln("dump msg********");
+		this.dump(0,null);
+		Debuglog.debugln("dump msg done***");
 	}
-	public void dump(btcontroll.BTcommThread.DisplayOutput out, int indent, MessageLayout layout) throws Exception{
+	public void dump(int indent, MessageLayout layout) throws Exception{
 		if(layout == null) {
 			layout = MessageLayouts.getLayout(this.type);
 			layout.dump();
@@ -259,11 +260,11 @@ public class FBTCtlMessage {
 		if(layout == null)
 			throw new Exception("no message layout");
 		if(indent == 0)
-			out.debug("dumpMessage\n");
-		out.debug("type:"+this.type+" "+MessageLayouts.messageTypeName(this.type)+"\n");
+			Debuglog.debugln("dumpMessage");
+		Debuglog.debugln("type:"+this.type+" "+MessageLayouts.messageTypeName(this.type));
 		switch(this.type) {
-			case UNDEF: out.debug("undefined\n"); break;
-			case INT: out.debug("int:"+this.ival+"\n"); break;
+			case UNDEF: Debuglog.debugln("undefined"); break;
+			case INT: Debuglog.debugln("int:"+this.ival); break;
 			case STRING:
 				String tmp;
 				try {
@@ -271,14 +272,14 @@ public class FBTCtlMessage {
 				} catch (Exception e) {
 					tmp="not printable characters";
 				}
-				 out.debug("string:"+tmp+"\n"); break;
+				 Debuglog.debugln("string:"+tmp); break;
 			case ARRAY: {
 				Enumeration e=arrayVal.keys();
 				while(e.hasMoreElements()) {
 					Integer key = (Integer) e.nextElement();
-					out.debug("["+key+"]:\n");
+					Debuglog.debugln("["+key+"]:");
 					FBTCtlMessage sub = (FBTCtlMessage) arrayVal.get(key);
-					sub.dump(out,indent+1, (MessageLayout)layout.childLayout.firstElement());
+					sub.dump(indent+1, (MessageLayout)layout.childLayout.firstElement());
 				}
 				break; }
 			default: {
@@ -293,9 +294,9 @@ public class FBTCtlMessage {
 						FBTCtlMessage sub = (FBTCtlMessage) this.arrayVal.get(childLayout.name);
 						
 						if(sub == null) {
-							out.debug(" NULL \n");
+							Debuglog.debugln(" NULL ");
 						} else {
-							sub.dump(out, indent+1, childLayout);
+							sub.dump(indent+1, childLayout);
 						}
 						validNodes.put(childLayout.name, new Integer(1));
 					}
@@ -304,7 +305,7 @@ public class FBTCtlMessage {
 					while(e.hasMoreElements()) {
 						String name=(String) e.nextElement();
 						if(!validNodes.containsKey(name)) {
-							out.debug("[\""+name+"\"] gehört nicht daher!!!!!!!\n");
+							Debuglog.debugln("[\""+name+"\"] gehört nicht daher!!!!!!!");
 						}
 					}
 				}

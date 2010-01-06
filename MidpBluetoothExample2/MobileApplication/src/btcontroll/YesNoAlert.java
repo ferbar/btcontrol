@@ -24,7 +24,7 @@ public class YesNoAlert extends Alert implements CommandListener {
 		this.setTimeout(Alert.FOREVER);
 		this.addCommand(cyes);
 		this.addCommand(cno);
-		old=HelloMidlet.display.getCurrent();
+		old=btrailClient.display.getCurrent();
 	}
 	
 	public void commandAction(Command command, Displayable displayable) {
@@ -37,6 +37,6 @@ public class YesNoAlert extends Alert implements CommandListener {
 		synchronized(notifyObject) {
 			this.notifyObject.notify();
 		}
-		HelloMidlet.display.setCurrent(old);
+		btrailClient.display.setCurrent(old);
 	}
 }

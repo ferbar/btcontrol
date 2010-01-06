@@ -29,8 +29,6 @@ import protocol.OutputWriter;
  */
 public class BTcommThread extends Thread{
 	public interface DisplayOutput {
-		public void debug(String text);
-		public void debug(StringItem text);
 		public void vibrate(int ms);
 	}
 			
@@ -78,14 +76,14 @@ public class BTcommThread extends Thread{
 			
 		}
 		public void run() {
-			debugForm.debug( "TimeoutTask" );
+			Debuglog.debugln("TimeoutTask");
 			called=true;
 			timeout=true;
 			if(pingCallback != null) {
 				try {
 					pingCallback.BTCallback(null);
 				} catch (Exception e) {
-					debugForm.debug("BTCallback exception: "+e.toString()+"\n");
+					Debuglog.debugln("BTCallback exception: "+e.toString());
 				}
 			}
 			debugForm.vibrate(30);
@@ -137,8 +135,7 @@ public class BTcommThread extends Thread{
 	 * @param iStream
 	 * @param oStream
 	 */
-	public BTcommThread(DisplayOutput debugForm, StreamConnection BTStreamConnection, Object connectedNotifyObject) throws java.io.IOException {
-		this.debugForm=debugForm;
+	public BTcommThread(StreamConnection BTStreamConnection, Object connectedNotifyObject) throws java.io.IOException {
 		this.BTStreamConnection=BTStreamConnection;
 		this.iStream=BTStreamConnection.openInputStream();
 		this.oStream=BTStreamConnection.openOutputStream();
@@ -149,19 +146,19 @@ public class BTcommThread extends Thread{
 	
 	protected void close()
 	{
-		debugForm.debug("BTcommThread::close");
+		Debuglog.debugln("BTcommThread::close");
 		try {
 			this.iStream.close();
 			this.oStream.close();
 		} catch(Exception e) {
-			debugForm.debug("BTcommThread::close exception ("+e.toString()+")");
+			Debuglog.debugln("BTcommThread::close exception ("+e.toString()+")");
 		}
 		try {
 			BTStreamConnection.close();
 		} catch(Exception e) {
-			debugForm.debug("BTcommThread::close2 exception ("+e.toString()+")");
+			Debuglog.debugln("BTcommThread::close2 exception ("+e.toString()+")");
 		}
-		debugForm.debug("BTcommThread::close done");
+		Debuglog.debugln("BTcommThread::close done");
 		debugForm.vibrate(500);
 	}
 	
@@ -177,7 +174,7 @@ public class BTcommThread extends Thread{
 		synchronized(queue_wait) {
 			if(this.nextMessage != null) { // queue nicht leer
 				//try {
-					debugForm.debug("addCmdToQueue need wait");
+					Debuglog.debugln("addCmdToQueue need wait");
 					queue_wait.wait(5000); // ... dann auf das nächste notify warten - mit 10s timeout
 					if(this.nextMessage != null) { // timeout 
 						throw new Exception("addCmdToQueue: timeout");
@@ -224,13 +221,13 @@ public class BTcommThread extends Thread{
 	 */
 	public FBTCtlMessage execCmd(FBTCtlMessage message) throws Exception {
 		if(this.callbackExecCmd.inUse) {
-			debugForm.debug("execCmd already in use!!!!\n");
+			Debuglog.debugln("execCmd already in use!!!!");
 			throw new Exception("execCmd already in use");
 		}
 		this.callbackExecCmd.inUse=true;
 		// debugForm.debug("execCmd "+message.toString()+"\n");
 		if(this.callbackExecCmd.reply != null) { // ganz schlecht
-			debugForm.debug("execCmd: reply scho gesetzt!\n");
+			Debuglog.debugln("execCmd: reply scho gesetzt!");
 			throw new Exception("reply != null");
 		}
 		addCmdToQueue(message,callbackExecCmd);
@@ -246,7 +243,7 @@ public class BTcommThread extends Thread{
 				try {
 					this.callbackExecCmd.reply_sync.wait();
 				} catch (InterruptedException ex) {
-					debugForm.debug("execCmd: wait exception\n");
+					Debuglog.debugln("execCmd: wait exception");
 					ex.printStackTrace();
 				}
 			}
@@ -273,7 +270,7 @@ public class BTcommThread extends Thread{
 		try {
 			out=msg.getBinaryMessage();
 		} catch(Exception e) {
-			debugForm.debug("txMsg getBin Exception: "+e.getMessage());
+			Debuglog.debugln("txMsg getBin Exception: "+e.getMessage());
 			throw e;
 		}
 		OutputWriter outSize=new OutputWriter();
@@ -310,7 +307,7 @@ public class BTcommThread extends Thread{
 				throw new Exception("error reading msg (rc="+rc+", size:"+msgSize+" read:"+readBytes);
 			}
 			if(rc != msgSize) {  // sonyericsson bleibt hängen wenn da kein debug ist (vermutlich täts ein sleep auch tun)
-				debugForm.debug("xx reading msg (rc="+rc+", size:"+msgSize+" read:"+readBytes);
+				Debuglog.debugln("xx reading msg (rc="+rc+", size:"+msgSize+" read:"+readBytes);
 			}
 			readBytes += rc;
 		}
@@ -340,7 +337,7 @@ public class BTcommThread extends Thread{
 			if(!heloMsg.isType("HELO")) {
 				throw new Exception("didn't receive HELO");
 			}
-			debugForm.debug("server:"+heloMsg.get("name").getStringVal()+
+			Debuglog.debugln("server:"+heloMsg.get("name").getStringVal()+
 				" version:"+heloMsg.get("version").getStringVal()+
 				" protoHash:"+heloMsg.get("protohash").getIntVal());
 			int protocolHash=heloMsg.get("protohash").getIntVal();
@@ -348,7 +345,7 @@ public class BTcommThread extends Thread{
 				this.err=true;
 				Object notifyObject=new Object();
 				YesNoAlert yesNo=new YesNoAlert("old version","update java midlet? (altes bitte löschen)",notifyObject);
-				HelloMidlet.display.setCurrent(yesNo);
+				btrailClient.display.setCurrent(yesNo);
 				synchronized(notifyObject) {
 					notifyObject.wait();
 				}
@@ -361,7 +358,7 @@ public class BTcommThread extends Thread{
 				} else
 					heloReply.get("doupdate").set(0);
 				this.sendMessage(heloReply);
-				debugForm.debug("invalid protocol.dat hash (server:"+protocolHash+" me:"+MessageLayouts.hash+")");
+				Debuglog.debugln("invalid protocol.dat hash (server:"+protocolHash+" me:"+MessageLayouts.hash+")");
 				throw new Exception("invalid protocol.dat hash (server:"+protocolHash+" me:"+MessageLayouts.hash+")");
 			}
 			
@@ -400,10 +397,10 @@ public class BTcommThread extends Thread{
 			StringItem sendtext=new StringItem("sendtext","");
 			StringItem readtext=new StringItem("readtext","");
 			StringItem pingstat=new StringItem("pingstat","");
-			debugForm.debug(pingtext);
-			debugForm.debug(sendtext);
-			debugForm.debug(readtext);
-			debugForm.debug(pingstat);
+			Debuglog.debug(pingtext);
+			Debuglog.debug(sendtext);
+			Debuglog.debug(readtext);
+			Debuglog.debug(pingstat);
 			int minTPing=10000;
 			int maxTPing=0;
 			int avgTPing=0;
@@ -415,7 +412,7 @@ public class BTcommThread extends Thread{
 							timerwait.wait();
 							// helloForm.append("...wait done\n");
 						} catch (Exception e) {
-							debugForm.debug("wait exception ("+e.toString()+')');
+							Debuglog.debugln("wait exception ("+e.toString()+')');
 							return;
 						}
 					}
@@ -575,9 +572,9 @@ public class BTcommThread extends Thread{
 				// debugForm.debug("done ("+commandNr+")\n");
 			}
 		} catch (java.io.IOException e) {
-			debugForm.debug("BT comm thread: IO exception("+e.toString()+")\n");
+			Debuglog.debugln("BT comm thread: IO exception("+e.toString()+")");
 		} catch (Exception e) {
-			debugForm.debug("BT comm thread: exception("+e.toString()+")\n");
+			Debuglog.debugln("BT comm thread: exception("+e.toString()+")");
 			e.printStackTrace();
 		}
 		/*
@@ -588,7 +585,7 @@ public class BTcommThread extends Thread{
 		}
 		*/
 		this.err=true;
-		debugForm.debug("BT comm thread: ended\n");
+		Debuglog.debugln("BT comm thread: ended\n");
 		close();
 		timer.cancel(); // ping timer stoppen sonst gibts eventuell irgendwann 2 davon ...
 		synchronized(queue_wait) {
