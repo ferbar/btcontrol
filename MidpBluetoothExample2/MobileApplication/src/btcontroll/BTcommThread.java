@@ -358,6 +358,7 @@ public class BTcommThread extends Thread{
 				} catch(Exception e) {
 					Debuglog.debugln("sleep error:" + e.toString());
 				}
+				firstround=false;
 			}
 			this.setStatus(STATE_OPENPORT);
 			try {
