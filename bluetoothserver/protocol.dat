@@ -52,6 +52,11 @@ POM_REPLY=value:I
 GETIMAGE=imgname:S
 GETIMAGE_REPLY=img:S
 
+BTSCAN=
+BTSCAN_REPLY=info:A{addr:S,name:S}
+
+BTPUSH=addr:S,type:I
+BTPUSH_REPLY=rc:I
 
 # ganz zum schluss ...
 version=1.0:I

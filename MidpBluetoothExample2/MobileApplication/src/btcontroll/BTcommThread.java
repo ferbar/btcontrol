@@ -346,7 +346,7 @@ public class BTcommThread extends Thread{
 	 * der thread
 	 */
 	public void run() {
-		boolean firstround=false;
+		boolean firstround=true;
 		this.setStatus(STATE_DISCONNECTED);
 		while(!this.stop) {
 			if(!firstround) {

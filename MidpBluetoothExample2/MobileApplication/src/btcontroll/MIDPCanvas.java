@@ -32,6 +32,10 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	private Command funcListCommand = new Command("Functions", Command.ITEM,6);
 	private Command pwrOffCommand = new Command("Aus", Command.ITEM,7);
 	private Command pwrOnCommand = new Command("Ein", Command.ITEM,8);
+
+	private Command BTScanCommand = new Command("btcontroll push", Command.SCREEN,9);
+	private Command BTPushCommand = new Command("obex push", Command.ITEM, 1);
+	private Command BTGammuPushCommand = new Command("gammu push", Command.ITEM, 2);
 	
 	// loco list
 	private Command locoListCMDSelect = new Command("Select", Command.ITEM,1);
@@ -157,6 +161,8 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 
 		this.addCommand(sendPOMCommand);
 		this.addCommand(multiControllCommand);
+
+		this.addCommand(this.BTScanCommand);
 	}
 
 	/**
@@ -651,6 +657,26 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		return this.form;
 	}
 	
+	/**
+	 * startet ein btscan am server
+	 */
+	public List get_BTDevicesList() throws Exception
+	{
+		selectList = new ValueList("BTDevices", Choice.IMPLICIT);
+		selectList.setCommandListener(this);
+		//selectList.setSelectedFlags(new boolean[0]);
+		selectList.setSelectCommand(this.BTPushCommand);
+		selectList.addCommand(locoListCMDBack);
+		selectList.addCommand(this.BTPushCommand);
+		selectList.addCommand(this.BTGammuPushCommand);
+
+		FBTCtlMessage msg = new FBTCtlMessage();
+		msg.setType(MessageLayouts.messageTypeID("BTSCAN"));
+		Thread th = new FillListThread("BTDevices",msg,"name","addr",null);
+		th.start();
+		return selectList;
+	}
+
 
 	
 	/**
@@ -689,7 +715,21 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 					}
 				}
 				btcomm.addCmdToQueue(msg,this);
-				
+
+			// btscan am server starten:
+			} else if(command==this.BTScanCommand) {
+				btrailClient.display.setCurrent(get_BTDevicesList());
+			} else if((command==this.BTPushCommand) || (command==this.BTPushCommand)) {
+				this.setTitle("obex push");
+				FBTCtlMessage msg = new FBTCtlMessage();
+				msg.setType(MessageLayouts.messageTypeID("BTPUSH"));
+				int n=selectList.getSelectedIndex();
+				msg.get("addr").set((String)this.selectList.getValue(n));
+				msg.get("type").set((command==this.BTPushCommand) ? 0 : 1);
+				btcomm.addCmdToQueue(msg,this);
+				btrailClient.display.setCurrent(this);
+
+			// loco list
 			} else if(command==this.locoListCommand) {
 				btrailClient.display.setCurrent(get_locoList());
 			} else if(command==this.locoListCMDSelect) {
@@ -788,6 +828,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			btrailClient.display.setCurrent(alert);
 
 			err=e.toString();
+			e.printStackTrace();
 		}
 		this.inCommandAction=false;
 		// debug("canvas cmd done \""+controllCanvas.toString()+"\"\n");

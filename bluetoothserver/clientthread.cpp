@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
+#include <string.h>
 #include "clientthread.h"
 #include "lokdef.h"
 #include "srcp.h"
@@ -72,6 +73,10 @@ void ClientThread::sendStatusReply(lastStatus_t *lastStatus)
 	sendMessage(reply);
 }
 
+/**
+ * prog an ein handy senden
+ *
+ */
 void ClientThread::sendClientUpdate()
 {
 	std::string clientAddr = BTServer::getRemoteAddr(this->so);
@@ -79,10 +84,53 @@ void ClientThread::sendClientUpdate()
 		printf("."); fflush(stdout);
 		sleep(1);
 	}
-	printf("BT send update: to %s\n", clientAddr.c_str());
+	this->BTPush(clientAddr);
+}
+
+void ClientThread::BTPush(std::string addr)
+{
+	printf("BT send update: to %s\n", addr.c_str());
 	std::string cmd;
-	cmd+="./ussp-push " + clientAddr + "@ btcontroll.jar btcontroll.jar";
+	cmd+="./ussp-push " + addr + "@ btcontroll.jar btcontroll.jar";
 	system(cmd.c_str());
+}
+
+void ClientThread::BTScan(FBTCtlMessage &reply)
+{
+	FILE *f=popen("hcitool scanning --flush","r");
+	if(f) {
+		char buffer[1024];
+		if(fgets(buffer,sizeof(buffer),f) == NULL) {
+			fprintf(stderr,"error reading header\n");
+		} else if(!STREQ(buffer,"Scanning ...\n")) {
+			fprintf(stderr,"wrong header\n");
+		} else {
+			int i=0;
+			while(fgets(buffer,sizeof(buffer),f)) {
+				int n=strlen(buffer);
+				if(n > 1) {
+					buffer[n-1]='\0';
+				}
+				char addr[1024];
+				char name[1024];
+				if(sscanf(buffer,"%s %12c",addr,name) == 2 ) {
+					printf("addr: [%s], name: [%s]\n",addr,name);
+					reply["info"][i]["addr"]=addr;
+					reply["info"][i]["name"]=name;
+					i++;
+				} else {
+					fprintf(stderr,"error scanning line %s\n",buffer);
+				}
+
+			}
+		}
+		int rc=pclose(f);
+		if(rc) {
+			fprintf(stderr,"hcitool error");
+		}
+	} else {
+		perror("hcitool scanning --flush error");
+	}
 }
 
 /**
@@ -343,6 +391,22 @@ void ClientThread::run()
 				int doupdate=cmd["doupdate"].getIntVal();
 				printf("hash=%d (me:%d), doupdate=%d\n",protohash,protocolHash,doupdate);
 				this->sendClientUpdate();
+
+			} else if(cmd.isType("BTSCAN")) { // liste mit eingetragenen loks abrufen, format: <name>;<adresse>;...\n
+				FBTCtlMessage reply(messageTypeID("BTSCAN_REPLY"));
+				this->BTScan(reply);
+				// reply.dump();
+				sendMessage(reply);
+			} else if(cmd.isType("BTPUSH")) { // 
+				printf("BTPUSH ---------------------------------------------------\n");
+				FBTCtlMessage reply(messageTypeID("BTPUSH_REPLY"));
+				std::string addr=cmd["addr"].getStringVal();
+				int type=cmd["type"].getIntVal();
+				this->BTPush(addr);
+
+				// reply.dump();
+				reply["rc"]=1;
+				sendMessage(reply);
 			} else {
 				printf("%d:----------------- invalid/unimplemented command (%d,%s)------------------------\n",
 					this->clientID,cmd.getType(),messageTypeName(cmd.getType()).c_str());
@@ -491,6 +555,7 @@ ClientThread::~ClientThread()
 					for(int j=0; j < lokdef[addr_index].nFunc; j++) {
 						func[j]=lokdef[addr_index].func[j].ison;
 					}
+					lokdef[addr_index].currspeed=0;
 					srcp->sendLocoSpeed(lokdef[addr_index].addr, dir, nFahrstufen, dccSpeed, lokdef[addr_index].nFunc, func);
 				}
 				addr_index++;
