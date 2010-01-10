@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <strings.h>
 #include "clientthread.h"
 #include "lokdef.h"
 #include "srcp.h"
@@ -9,8 +10,8 @@
 
 extern int protocolHash;
 extern K8055 *platine;
-extern SRCP *srcp;
 
+int ClientThread::numClients=0;
 
 #define sendToPhone(text) \
 		if(strlen(text) != write(startupdata->so,text,strlen(text))) { \
@@ -103,6 +104,7 @@ void ClientThread::run()
 	int nLokdef=0;
 	while(lokdef[nLokdef].addr) nLokdef++;
 	lastStatus_t lastStatus[nLokdef+1];
+	bzero(lastStatus, sizeof(lastStatus));
 	for(int i=0; i <= nLokdef; i++) { lastStatus[i].func=-1; }
 	bool changedAddrIndex[nLokdef+1];
 	for(int i=0; i <= nLokdef; i++) { changedAddrIndex[i] = false; }
@@ -437,7 +439,6 @@ void ClientThread::run()
 					if(emergencyStop) {
 						dir=2;
 					}
-					// int nFahrstufen = 14;
 					int nFahrstufen = 127;
 					if(lokdef[addr_index].flags & F_DEC14) {
 						nFahrstufen = 14;
@@ -463,6 +464,38 @@ void ClientThread::run()
 		printf("%d:exception %s\n",this->clientID,e);
 	} catch(std::string &s) {
 		printf("%d:exception %s\n",this->clientID,s.c_str());
+	}
+}
+
+/**
+ * destruktor, schaut ob er der letzte clientThread war, wenn ja dann alle loks notstoppen
+ */
+ClientThread::~ClientThread()
+{
+	if(--this->numClients == 0) {
+		if(srcp) { // erddcd/srcpd/dcc:
+			int addr_index=0;
+			while(lokdef[addr_index].addr) {
+		printf("last client [%d]=%d\n",addr_index,lokdef[addr_index].currspeed);
+				if(lokdef[addr_index].currspeed != 0) {
+					printf("emgstop [%d]=addr:%d\n",addr_index, lokdef[addr_index].addr);
+					int nFahrstufen = 127;
+					if(lokdef[addr_index].flags & F_DEC14) {
+						nFahrstufen = 14;
+					} else if(lokdef[addr_index].flags & F_DEC28) {
+						nFahrstufen = 28;
+					}
+					int dir=2; // emergency stop
+					int dccSpeed=0;
+					bool func[16];
+					for(int j=0; j < lokdef[addr_index].nFunc; j++) {
+						func[j]=lokdef[addr_index].func[j].ison;
+					}
+					srcp->sendLocoSpeed(lokdef[addr_index].addr, dir, nFahrstufen, dccSpeed, lokdef[addr_index].nFunc, func);
+				}
+				addr_index++;
+			}
+		}
 	}
 	close(this->so);
 }

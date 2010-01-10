@@ -111,10 +111,10 @@ int loadMessageLayouts()
 			break;
 		}
 		int n=strlen(buffer);
-		if((buffer[n-1] == '\n') || (buffer[n-1] == '\r')) {
+		if((n>=1) && ((buffer[n-1] == '\n') || (buffer[n-1] == '\r'))) {
 			buffer[n-1]='\0';
 		}
-		if((buffer[n-2] == '\n') || (buffer[n-2] == '\r')) {
+		if((n>=2) && ((buffer[n-2] == '\n') || (buffer[n-2] == '\r'))) {
 			buffer[n-2]='\0';
 		}
 		if(buffer[0]=='#') {

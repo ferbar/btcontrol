@@ -9,7 +9,10 @@ struct lastStatus_t {
 
 class ClientThread {
 public:
-	ClientThread(int id, int so) : so(so), clientID(id) {};
+	ClientThread(int id, int so) : so(so), clientID(id) {
+		numClients++; // sollte atomic sein
+	};
+	~ClientThread();
 	void run();
 	void sendMessage(const FBTCtlMessage &msg);
 	void setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus);
@@ -19,4 +22,5 @@ public:
 
 	int so;
 	int clientID;
+	static int numClients;
 };

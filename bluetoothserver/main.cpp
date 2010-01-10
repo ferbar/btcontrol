@@ -25,8 +25,8 @@
 #include "srcp.h"
 
 #include "server.h"
-#include "clientthread.h"
 #include "lokdef.h"
+#include "message_layout.h"
 
 
 
@@ -72,27 +72,6 @@ void resetPlatine()
 {
 	if(platine)
 		platine->write_output(255, 255, 0xaa);
-}
-
-
-/**
- * für jedes handy ein eigener thread...
- */
-void *phoneClient(void *data)
-{
-	startupdata_t *startupdata=(startupdata_t *)data;
-	printf("%d:new client\n",startupdata->clientID,startupdata->clientID);
-
-	try {
-		ClientThread client(startupdata->clientID, startupdata->so);
-		client.run();
-	} catch(const char *e) {
-		printf("%d:exception %s\n",startupdata->clientID,e);
-	} catch(std::string &s) {
-		printf("%d:exception %s\n",startupdata->clientID,s.c_str());
-	}
-	printf("%d:client exit\n",startupdata->clientID);
-	close(startupdata->so);
 }
 
 void signalHandler(int signo, siginfo_t *p, void *ucontext)
@@ -196,16 +175,7 @@ int main(int argc, char *argv[])
 
 
 	Server server;
-	while(1) {
-		int nsk = server.accept();
-	// client thread vorbereiten + starten
-		startupdata_t *startupdata=(startupdata_t*) calloc(sizeof(startupdata_t),1);
-		startupdata->clientID=server.clientID_counter++;
-		startupdata->so=nsk;
-		pthread_t &newThread=server.clients[startupdata->clientID];
-		bzero(&newThread,sizeof(newThread));
-		pthread_create(&newThread, NULL, phoneClient, (void *)startupdata);
-	}
+	server.run();
 
 	if(platine) {
 		resetPlatine();

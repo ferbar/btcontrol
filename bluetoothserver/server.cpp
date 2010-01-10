@@ -16,6 +16,7 @@
 #include <assert.h>
 
 #include "server.h"
+#include "clientthread.h"
 
 Server::Server()
 : clientID_counter(1)
@@ -89,8 +90,6 @@ int Server::accept()
 		}
 		printf("socket: %d\n",csock);
 		return csock;
-	} else {
-		perror("select/accept error");
 	}
 	/*
 	   struct linger ling;
@@ -98,6 +97,52 @@ int Server::accept()
 	   ling.l_linger=10;
 	   setsockopt(csock, SOL_SOCKET, SO_LINGER, (char *)&ling, sizeof(ling)); */
 
+	perror("select/accept error");
 	return -1;
 }
 
+/**
+ * unregister handler
+ */
+static void unregisterPhoneClient(void *data)
+{
+	startupdata_t *startupData=(startupdata_t *)data;
+	free(startupData);
+}
+
+/**
+ * für jedes handy ein eigener thread...
+ */
+static void *phoneClient(void *data)
+{
+	startupdata_t *startupData=(startupdata_t *)data;
+	printf("%d:new client\n",startupData->clientID,startupData->clientID);
+	pthread_cleanup_push(unregisterPhoneClient,data);
+
+	try {
+		ClientThread client(startupData->clientID, startupData->so);
+		client.run();
+	} catch(const char *e) {
+		printf("%d:exception %s\n",startupData->clientID,e);
+	} catch(std::string &s) {
+		printf("%d:exception %s\n",startupData->clientID,s.c_str());
+	}
+	printf("%d:client exit\n",startupData->clientID);
+
+	pthread_cleanup_pop(true);
+	return NULL;
+}
+
+void Server::run()
+{
+	while(1) {
+		int nsk = this->accept();
+	// client thread vorbereiten + starten
+		startupdata_t *startupData=(startupdata_t*) calloc(sizeof(startupdata_t),1);
+		startupData->clientID=this->clientID_counter++;
+		startupData->so=nsk;
+		pthread_t &newThread=this->clients[startupData->clientID];
+		bzero(&newThread,sizeof(newThread));
+		pthread_create(&newThread, NULL, phoneClient, (void *)startupData);
+	}
+}
