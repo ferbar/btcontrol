@@ -11,8 +11,6 @@ import javax.microedition.midlet.*;
 import javax.microedition.lcdui.*;
 import javax.bluetooth.*;
 
-import javax.microedition.io.Connector;
-import javax.microedition.io.StreamConnection;
 
 // import java.io.InputStream; // für load resource
 
@@ -325,17 +323,20 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 		public void run() {
 			try {
 				System.out.print("connecting:"+this.connectionURL);
-				StreamConnection connection = (StreamConnection)Connector.open(this.connectionURL);
+
 				Object connectedNotifyObject = new Object();
-				btcomm = new BTcommThread(connection, connectedNotifyObject);
+				btcomm = new BTcommThread(this.connectionURL, connectedNotifyObject);
 						//Thread t = new Thread(btcomm); t.start(); -> da is isAlive auf einmal nicht gesetzt
+				getDisplay().setCurrent(get_controllCanvas(btcomm));
 				btcomm.start();
+
+				// update check:
 				synchronized(connectedNotifyObject) {
 					connectedNotifyObject.wait();
 				}
-				if(!btcomm.hasError()) {
-					debugForm.setTitle("connected");
-					getDisplay().setCurrent(get_controllCanvas(btcomm));
+				if(!btcomm.connError()) {
+					// debugForm.setTitle("connected");
+					
 				} else if (btcomm.doupdate) {
 					exitMIDlet();
 				}
@@ -401,7 +402,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 
 						String connectionURL;
 						if(command == screenCommand_startControllCanvasTCP) {
-							connectionURL = "socket://192.168.0.165:3030";
+							connectionURL = "socket://192.168.0.101:3030";
 						} else {
 							// me4se dürfte einen bug bei getSelectedIndex haben
 							int index=this.listServer.getSelectedIndex();
