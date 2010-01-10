@@ -9,11 +9,13 @@
  */
 package btcontroll;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 // import java.lang.Exception;
 import java.util.Timer;
 import java.util.TimerTask;
+import javax.microedition.io.Connector;
 import javax.microedition.io.StreamConnection;
 
 import javax.microedition.lcdui.*;
@@ -35,13 +37,25 @@ public class BTcommThread extends Thread{
 	InputStream iStream;
 	OutputStream oStream;
 	StreamConnection BTStreamConnection;
+	String connectionURL;
 	
-	private boolean err=false;
-	public boolean hasError() {return this.err; } ;
+	// private boolean err=false;
+	public boolean connError() {return (this.connState != STATE_CONNECTED && this.connState != STATE_TIMEOUT); } ;
 	boolean doupdate=false;
 	private Object connectedNotifyObject;
 
-	
+	// doClient neu starten wenn verbindung abgebrochen?
+	boolean stop=false;
+
+	public static final int STATE_DISCONNECTED = 0;
+	public static final int STATE_OPENPORT = 1;
+	public static final int STATE_CONNECTING = 2;
+	public static final int STATE_CONNECTED = 3;
+	public static final int STATE_TIMEOUT = 4; // connected aber gerade timeout
+	public static final int STATE_OPENERROR = 5;
+
+	public int connState;
+
 	public interface Callback {
 		public void BTCallback(FBTCtlMessage reply);
 	}
@@ -55,15 +69,15 @@ public class BTcommThread extends Thread{
 	}
 	// wenn daten empfangen werden wird notify() aufgerufen
 	public Callback pingCallback=null;
-	
+
+	public final Object statusChange = new Object();
 
 	// FIXME: nextMessage = 1 element queue
 	NextMessage nextMessage=null;
 	boolean my_queue_returnReply=false;
-	Object queue_wait=new Object(); // thread macht nachn senden ein notify -> kamma neues reinschreiben
+	private final Object queue_wait=new Object(); // thread macht nachn senden ein notify -> kamma neues reinschreiben
 	
 	// sachen fürn timeout:
-	boolean timeout=false;
 	Timer timeoutTimer;
 	TimeoutTask timeoutTask;
 	public class TimeoutTask extends TimerTask {
@@ -74,7 +88,7 @@ public class BTcommThread extends Thread{
 		public void run() {
 			Debuglog.debugln("TimeoutTask");
 			called=true;
-			timeout=true;
+			connState=STATE_TIMEOUT;
 			if(pingCallback != null) {
 				try {
 					pingCallback.BTCallback(null);
@@ -89,7 +103,7 @@ public class BTcommThread extends Thread{
 
 	// sachen fürs pingding:
 	Timer timer;
-	Object timerwait;
+	private final Object timerwait = new Object();
 	TimerTask task;
 	public class PingDing extends TimerTask {
 		Object notifyObject;
@@ -131,17 +145,30 @@ public class BTcommThread extends Thread{
 	 * @param iStream
 	 * @param oStream
 	 */
-	public BTcommThread(StreamConnection BTStreamConnection, Object connectedNotifyObject) throws java.io.IOException {
-		this.BTStreamConnection=BTStreamConnection;
+	public BTcommThread(String connectionURL, Object connectedNotifyObject) {
+		this.connectionURL = connectionURL;
+		this.connectedNotifyObject=connectedNotifyObject;
+	}
+
+	public void connect() throws java.io.IOException {
+		this.BTStreamConnection = (StreamConnection)Connector.open(this.connectionURL);
 		this.iStream=BTStreamConnection.openInputStream();
 		this.oStream=BTStreamConnection.openOutputStream();
 		System.out.print("iStream: "+this.iStream+" oStream:"+this.oStream);
 		System.out.print("str: i:"+this.iStream.toString()+" o:"+this.oStream.toString());
-		this.connectedNotifyObject=connectedNotifyObject;
 	}
-	
+
+	private void setStatus(int connState) {
+		this.connState=connState;
+		synchronized(this.statusChange) {
+			this.statusChange.notifyAll();
+		}
+	}
+
 	protected void close()
 	{
+		this.setStatus(STATE_DISCONNECTED);
+
 		Debuglog.debugln("BTcommThread::close");
 		try {
 			this.iStream.close();
@@ -164,7 +191,7 @@ public class BTcommThread extends Thread{
 	
 	
 	public void addCmdToQueue(FBTCtlMessage message, Callback callback) throws Exception {
-		if(this.err) {
+		if(this.connError()) {
 			throw new Exception("addCmdToQueue: no comm");
 		}
 		synchronized(queue_wait) {
@@ -318,10 +345,43 @@ public class BTcommThread extends Thread{
 	/**
 	 * der thread
 	 */
-	public void run(){
+	public void run() {
+		boolean firstround=false;
+		this.setStatus(STATE_DISCONNECTED);
+		while(!this.stop) {
+			if(!firstround) {
+				Debuglog.debugln("try to reconnect ...");
+				try {
+					Thread.sleep(1000);
+					this.setStatus(STATE_DISCONNECTED);
+					Thread.sleep(9000);
+				} catch(Exception e) {
+					Debuglog.debugln("sleep error:" + e.toString());
+				}
+			}
+			this.setStatus(STATE_OPENPORT);
+			try {
+				this.connect();
+			} catch (java.io.IOException e) {
+				Debuglog.debugln("BT comm thread: error connecting("+e.toString()+")");
+				this.setStatus(STATE_OPENERROR);
+				continue;
+			}
+			this.setStatus(STATE_CONNECTING);
+
+			doClient();
+			if(this.doupdate) {
+				return;
+			}
+		}
+	}
+
+	/**
+	 *
+	 */
+	public void doClient(){
 		// init pingding
 		timer = new Timer();
-		timerwait=new Object();
 		task = new PingDing(timerwait);
 		int pingTimeout=2000;
 		timer.schedule(task, pingTimeout, pingTimeout);
@@ -338,7 +398,6 @@ public class BTcommThread extends Thread{
 				" protoHash:"+heloMsg.get("protohash").getIntVal());
 			int protocolHash=heloMsg.get("protohash").getIntVal();
 			if(MessageLayouts.hash != protocolHash) {
-				this.err=true;
 				Object notifyObject=new Object();
 				YesNoAlert yesNo=new YesNoAlert("old version","update java midlet? (altes bitte löschen)",notifyObject);
 				btrailClient.display.setCurrent(yesNo);
@@ -355,6 +414,7 @@ public class BTcommThread extends Thread{
 					heloReply.get("doupdate").set(0);
 				this.sendMessage(heloReply);
 				Debuglog.debugln("invalid protocol.dat hash (server:"+protocolHash+" me:"+MessageLayouts.hash+")");
+				this.close();
 				throw new Exception("invalid protocol.dat hash (server:"+protocolHash+" me:"+MessageLayouts.hash+")");
 			}
 			
@@ -388,6 +448,8 @@ public class BTcommThread extends Thread{
 			synchronized(connectedNotifyObject) {
 				this.connectedNotifyObject.notify();
 			}
+			this.setStatus(STATE_CONNECTED);
+
 			int commandNr=0;
 			StringItem pingtext=new StringItem("pingtext","");
 			StringItem sendtext=new StringItem("sendtext","");
@@ -560,9 +622,9 @@ public class BTcommThread extends Thread{
 				if(t < minTPing) minTPing = t;
 				if(t > maxTPing) maxTPing = t;
 				avgTPing+=t;
-				pingstat.setText("min: "+minTPing+" max:"+maxTPing+" avg:"+(avgTPing/commandNr));
+				pingstat.setText("curr:"+t+" min: "+minTPing+" max:"+maxTPing+" avg:"+(avgTPing/commandNr));
 				if(!timeoutTask.called) {
-					this.timeout=false;
+					this.setStatus(STATE_CONNECTED);
 				}
 				timeoutTimer.cancel();
 				// debugForm.debug("done ("+commandNr+")\n");
@@ -580,7 +642,6 @@ public class BTcommThread extends Thread{
 			}
 		}
 		*/
-		this.err=true;
 		Debuglog.debugln("BT comm thread: ended\n");
 		close();
 		timer.cancel(); // ping timer stoppen sonst gibts eventuell irgendwann 2 davon ...

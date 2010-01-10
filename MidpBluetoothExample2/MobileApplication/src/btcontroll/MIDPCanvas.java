@@ -158,11 +158,37 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		this.addCommand(sendPOMCommand);
 		this.addCommand(multiControllCommand);
 	}
-	
+
+	/**
+	 * wenn BTcomm connected ist oder so dann repaint
+	 */
+	NotifyStatusChange notifyStatusChange = null;
+	class NotifyStatusChange extends Thread {
+		public void run() {
+			// Debuglog.debugln("starting NotifyStatusChange");
+			while(true) {
+				try {
+					synchronized(btcomm.statusChange) {
+						// Debuglog.debugln("starting NotifyStatusChange locked");
+						btcomm.statusChange.wait();
+					}
+					repaint();
+				} catch (InterruptedException ex) {
+					return;
+				}
+			}
+		}
+	}
+
 	public void update(BTcommThread btcomm)  {
 		this.btcomm=btcomm;
 		this.btcomm.pingCallback=this;
+		// this.
 		this.err="";
+
+		if(this.notifyStatusChange != null) this.notifyStatusChange.interrupt();
+		this.notifyStatusChange = new NotifyStatusChange();
+		this.notifyStatusChange.start();
 	}
 	
 	/**
@@ -205,11 +231,13 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 					System.out.print("no image ["+this.currAddr+"]");
 				}
 			} else if(this.currMultiAddr != null) {
+				int pos=0;
 				for(int i=0; i < this.currMultiAddr.length; i++) {
 					System.out.print("get image ["+this.currMultiAddr[i]+"]");
 					Image img=((AvailLocosListItem) this.availLocos.get(new Integer(this.currMultiAddr[i]))).img;
 					if(img != null) {
-						g.drawImage(img, (16+2)*i, 20,0);
+						g.drawImage(img, pos, 20,0);
+						pos+=img.getWidth()+2;
 					} else {
 						System.out.print("no image ["+this.currMultiAddr[i]+"]");
 					}
@@ -224,17 +252,26 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			}
 			g.drawString(tmp,0,40,Graphics.TOP|Graphics.LEFT);
 			//g.drawString("isDoubleBuffered: "+this.isDoubleBuffered(),0,40,Graphics.TOP|Graphics.LEFT);
-			if(btcomm.timeout) {
+			if(btcomm.connState != BTcommThread.STATE_CONNECTED) {
 				g.setColor(0xff0000);
 				g.fillRect(0, 20+lineHeight, getWidth(), lineHeight);
 				g.setColor(0x000000);
-				g.drawString("timeout",0,20+lineHeight,Graphics.TOP|Graphics.LEFT);
+				String msg;
+				switch(btcomm.connState) {
+					case BTcommThread.STATE_DISCONNECTED: msg="disconnected"; break;
+					case BTcommThread.STATE_TIMEOUT: msg="timeout"; break;
+					case BTcommThread.STATE_OPENPORT: msg="open port"; break;
+					case BTcommThread.STATE_CONNECTING: msg="connecting"; break;
+					case BTcommThread.STATE_OPENERROR: msg="error connecting"; break;
+					default: msg="???"; break;
+				}
+				g.drawString(msg,0,20+lineHeight,Graphics.TOP|Graphics.LEFT);
 			}
-			if(btcomm.isAlive()==false) {
+			if(btcomm.isAlive()==false) { // sollte nichtmehr vorkommen
 				g.setColor(0xff0000);
 				g.fillRect(0, 20+lineHeight*2, getWidth(), lineHeight);
 				g.setColor(0x000000);
-				g.drawString("disconnected",0,20+lineHeight*2,Graphics.TOP|Graphics.LEFT);
+				g.drawString("conn dead",0,20+lineHeight*2,Graphics.TOP|Graphics.LEFT);
 			}
 			if(err.compareTo("")!=0) {
 				g.setFont(Font.getFont(Font.FACE_PROPORTIONAL, Font.STYLE_PLAIN, Font.SIZE_SMALL));
@@ -246,6 +283,15 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		} catch (Exception e) {
 			g.drawString("canvas::paint exception("+e.toString()+")",0,20,Graphics.TOP|Graphics.LEFT);
 			e.printStackTrace();
+		}
+
+		// lokauswahl - liste anzeigen wenn currAddr == 0
+		try {
+			if(this.currAddr==0 && this.btcomm != null && !this.btcomm.connError()) // wenn keine adresse gesetzt + verbunden
+				btrailClient.display.setCurrent(get_locoList());
+		} catch(Exception e) {
+			err=e.toString();
+			System.out.println( "Exception:" +e.toString() );
 		}
 	}
 	
@@ -749,13 +795,6 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	
 	protected void showNotify(){
 		System.out.println( "showNotify" );
-		try {
-			if(this.currAddr==0 && this.btcomm != null && !this.btcomm.hasError()) // wenn keine adresse gesetzt + verbunden
-				btrailClient.display.setCurrent(get_locoList());
-		} catch(Exception e) {
-			err=e.toString();
-			System.out.println( "Exception:" +e.toString() );
-		}
 	}
 	protected void hideNotify(){
 		System.out.println( "hideNotify" );
