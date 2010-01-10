@@ -19,11 +19,13 @@ public:
 	Server();
 	virtual ~Server() {};
 	virtual int accept();
-	std::map<int,pthread_t> clients;
-	int clientID_counter;
+	void run();
 
 private:
 	int tcp_so;
+	int clientID_counter;
+	// mapping clientID => pthreadID
+	std::map<int,pthread_t> clients;
 };
 
 struct startupdata_t {

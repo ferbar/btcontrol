@@ -34,3 +34,4 @@ private:
 	int so;
 };
 
+extern SRCP *srcp;
