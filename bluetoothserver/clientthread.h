@@ -18,7 +18,9 @@ public:
 	void setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus);
 	void sendStatusReply(lastStatus_t *lastStatus);
 
+	void BTPush(std::string addr);
 	void sendClientUpdate();
+	void BTScan(FBTCtlMessage &reply);
 
 	int so;
 	int clientID;
