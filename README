@@ -1,0 +1,36 @@
+~~~~ btcontroll ~~~~~
+
+SRCPD über bluetooth mit einem MIDP handy steuern
+
+
+
+* bluetoothserver
+Vermittlungsstelle bluetooth -> srcpd
+
+* bluetoothserver/lokdef.csv
+cvs datei mit:
+1. spalte: adresse
+2. decoder typ
+3. name
+4. bildchen
+5. anzahl funktionen
+rest: funktionsnamen
+
+
+* MidpBluetoothExample2
+MIDP client
+btcontroll.jar -> MidpBluetoothExample2/MobileApplication/dist/btcontroll.jar
+
+
+* midptestenv
+emulator um MIDP programme am PC rennen zu lassen
+
+* NB1A_partlist.txt
+partlist für den merg.co.uk - booster
+
+* usb k8055
+lib um eine Viessman - platine anzusteuern, früher für PWM verwendet (ohne DCC)
+
+* ussp-push-0.11
+ussp-push -> ussp-push-0.11/src/ussp-push
+obex - push programm
