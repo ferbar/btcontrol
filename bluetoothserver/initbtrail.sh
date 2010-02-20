@@ -12,7 +12,7 @@ fi
 # rfcomm -r listen /dev/rfcomm30 30
 
 # wenn pc master kann er bis zu 7 connections machen
-/usr/sbin/hciconfig hci0 lm master
+sudo /usr/sbin/hciconfig hci0 lm master
 
 # verbindungen anzeigen
 # hcitool con
