@@ -1,3 +1,22 @@
+/*
+ *  This file is part of btcontroll
+ *  btcontroll is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  btcontroll is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with btcontroll.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *
+ * client - thread - part (für jeden client ein thread)
+ * 
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
@@ -8,6 +27,11 @@
 #include "../usb k8055/k8055.h"
 #include "utils.h"
 #include "server.h"
+
+#ifdef INCL_X
+#include <X11/Xlib.h>
+#include <X11/extensions/XTest.h>
+#endif
 
 extern int protocolHash;
 extern K8055 *platine;
@@ -238,6 +262,12 @@ void ClientThread::run()
 				lokdef[addr_index].currspeed=0;
 				sendStatusReply(lastStatus);
 				changedAddrIndex[addr_index]=true;
+#ifdef INCL_X
+				dpy = XOpenDisplay( NULL );
+				XTestFakeKeyEvent( dpy, XKeysymToKeycode( dpy, XK_Num_Lock ), True, CurrentTime );
+				XTestFakeKeyEvent( dpy, XKeysymToKeycode( dpy, XK_Num_Lock ), False, CurrentTime );
+				XCloseDisplay( dpy );
+#endif
 			} else if(cmd.isType("ACC_MULTI")) {
 				int n=cmd["list"].getArraySize();
 				int addr=cmd["list"][0]["addr"].getIntVal();
