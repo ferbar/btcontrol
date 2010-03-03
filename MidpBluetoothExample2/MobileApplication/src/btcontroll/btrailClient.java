@@ -24,6 +24,7 @@ package btcontroll;
 import javax.microedition.midlet.*;
 import javax.microedition.lcdui.*;
 import javax.bluetooth.*;
+import javax.microedition.rms.RecordStore;
 
 
 // import java.io.InputStream; // für load resource
@@ -109,19 +110,18 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 	private Alert help;
 	// private Canvas controllForm;
 	private ValueList listServer;
-	private Form newConnForm;
-	private TextField newConnForm_host;
+	private Form newTCPConnForm;
+	private TextField newTCPConnForm_host;
 
 	private Command itemCommandDetail;
 	private Command okCommand1;
 	private Command screenCommand1 = new Command("ShowList", Command.SCREEN, 1);
 	private Command back2ListCommand;
-	private Command screenCommand_startConrtollCanvas;
-	private Command itemCommandBlah1;
+	// private Command itemCommandBlah1;
 	private Command clearCommand=new Command("clear", Command.SCREEN, 1);
 	private Command btScanCommand=new Command("erneute BT suche", Command.SCREEN, 2);
 	private Command screenCommand_startControllCanvas=new Command("connect", Command.ITEM, 1);
-	private Command screenCommand_startControllCanvasTCP=new Command("TCP connect", Command.ITEM, 5);
+	private Command newTCPConn=new Command("TCP connect", Command.ITEM, 5);
 
 	private Command debugScreenCommand = new Command("debugscreen", Command.SCREEN,9);
 	
@@ -404,8 +404,9 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 				s.start();
 			} else if (command == debugScreenCommand) {
 				getDisplay().setCurrent(getDebugForm());
-			} else if ((command == screenCommand_startControllCanvas) ||
-					(command == screenCommand_startControllCanvasTCP ) ) { // verbinden!
+			} else if(command == newTCPConn ) {
+				getDisplay().setCurrent(getNewTCPConnForm());
+			} else if(command == screenCommand_startControllCanvas) { // verbinden!
 				if(btcomm != null && !btcomm.isAlive()) {
 					debugForm.append("btcomm not alive -> deleting object");
 					btcomm.close();
@@ -414,19 +415,26 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 				if(btcomm == null) {
 					debugForm.setTitle("connecting ...");
 
-						String connectionURL;
-						if(command == screenCommand_startControllCanvasTCP) {
-							connectionURL = "socket://192.168.0.101:3030";
-						} else {
-							// me4se dürfte einen bug bei getSelectedIndex haben
-							int index=this.listServer.getSelectedIndex();
-							ServiceRecord sr = (ServiceRecord) this.listServer.getValue(index);
+					String connectionURL=null;
+					// me4se dürfte einen bug bei getSelectedIndex haben
+					int index=this.listServer.getSelectedIndex();
+					Object o = this.listServer.getValue(index);
+					if(o != null) {
+						if(o instanceof ServiceRecord) {
+							ServiceRecord sr = (ServiceRecord) o;
 							connectionURL=sr.getConnectionURL(0, false);
+						} else if(o instanceof String) {
+							connectionURL=(String) o;
 						}
+					}
+					if(connectionURL == null) {
+						Debuglog.debugln("no connection url");
+					} else {
 						ConnectThread connectThread = new ConnectThread(connectionURL);
 						connectThread.start();
 						// DataInputStream input = (InputConnection) connection.openDataInputStream();
 						// DataOutputStream output = connection.openDataOutputStream();
+					}
 
 				} else {
 					getDisplay().setCurrent(get_controllCanvas(btcomm));
@@ -468,8 +476,32 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 					}
 				}
 			}//GEN-BEGIN:MVDCACase23
-		} else if (displayable == newConnForm) {
-			if(command == okCommand1) {
+		} else if (displayable == newTCPConnForm) {
+			if(command == screenCommand_startControllCanvas) {
+				// write post-init user code here
+				try {
+					RecordStore rs=javax.microedition.rms.RecordStore.openRecordStore("tcpservers", true);
+					byte[] tmp=this.newTCPConnForm_host.getString().getBytes();
+					rs.addRecord(tmp, 0, tmp.length);
+				} catch (Exception e) {
+					Debuglog.debugln("con action:"+e.toString());
+				}
+				if(btcomm != null && !btcomm.isAlive()) {
+					debugForm.append("btcomm not alive -> deleting object");
+					btcomm.close();
+					btcomm=null;
+				}
+				if(btcomm == null) {
+					debugForm.setTitle("connecting ...");
+
+					String connectionURL;
+					connectionURL = "socket://"+this.newTCPConnForm_host.getString()+":3030";
+					ConnectThread connectThread = new ConnectThread(connectionURL);
+					connectThread.start();
+
+				} else {
+					getDisplay().setCurrent(get_controllCanvas(btcomm));
+				}
 
 			} else if(command == back2ListCommand) {
 				getDisplay().setCurrent(get_listServer());
@@ -531,18 +563,28 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 	 * abfrage hostname für eine neue TCP connection
 	 * @return
 	 */
-	public Form getNewConnForm() {
-		if (newConnForm == null) {
+	public Form getNewTCPConnForm() {
+		if (newTCPConnForm == null) {
 
-			newConnForm_host = new TextField("IP/hostname", null, 32, TextField.ANY);
+			newTCPConnForm_host = new TextField("IP/hostname", null, 32, TextField.ANY);
 
-			newConnForm = new Form("form", new Item[] { newConnForm_host });
-			newConnForm.addCommand(getBack2ListCommand());
-			newConnForm.addCommand(get_okCommand1());
-			newConnForm.setCommandListener(this);
+			try {
+				RecordStore rs=javax.microedition.rms.RecordStore.openRecordStore("tcpservers", true);
+				javax.microedition.rms.RecordEnumeration re=rs.enumerateRecords(null, null, false);
+				while (re.hasNextElement()) {
+					String tmp = new String(re.nextRecord());
+					newTCPConnForm_host.setString(tmp);
+				}
+			} catch (Exception e) {
+				Debuglog.debugln("getNewTCPConnForm:"+e.toString());
+			}
+			newTCPConnForm = new Form("form", new Item[] { newTCPConnForm_host });
+			newTCPConnForm.addCommand(getBack2ListCommand());
+			newTCPConnForm.addCommand(screenCommand_startControllCanvas);
+			newTCPConnForm.setCommandListener(this);
 
 		}
-		return newConnForm;
+		return newTCPConnForm;
 	}
 
 
@@ -603,7 +645,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 			listServer = new ValueList("bt rail server list", Choice.IMPLICIT);
 			listServer.addCommand(get_exitCommand());
 			listServer.addCommand(screenCommand_startControllCanvas);
-			listServer.addCommand(screenCommand_startControllCanvasTCP);
+			listServer.addCommand(newTCPConn);
 			listServer.setCommandListener(this);
 			// macht exception am neuen sony .... listServer.setSelectedFlags(new boolean[0]);
 			listServer.setSelectCommand(screenCommand_startControllCanvas);
