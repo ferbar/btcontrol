@@ -361,26 +361,30 @@ public class BTcommThread extends Thread{
 	 * der thread
 	 */
 	public void run() {
-		boolean firstround=true;
 		this.setStatus(STATE_DISCONNECTED);
+		long defaultWait=10000;
+		long wait=0; // 10s warten wenn connect error 0ms gebraucht hat, sofort connecten wenn connect länger 10s gebraucht hat
 		while(!this.stop) {
-			if(!firstround) {
-				Debuglog.debugln("try to reconnect ...");
-				try {
-					Thread.sleep(1000);
-					this.setStatus(STATE_DISCONNECTED);
-					Thread.sleep(9000);
-				} catch(Exception e) {
-					Debuglog.debugln("sleep error:" + e.toString());
-				}
-				firstround=false;
+			// warten damit der server nicht mit requests bombardiert wird bzw dem handy der speicher ausgeht
+			try {
+				Thread.sleep(100);
+				this.setStatus(STATE_DISCONNECTED);
+				Thread.sleep(wait);
+				wait=defaultWait;
+			} catch(Exception e) {
+				Debuglog.debugln("sleep error:" + e.toString());
 			}
+
 			this.setStatus(STATE_OPENPORT);
+			long l=java.lang.System.currentTimeMillis();
 			try {
 				this.connect();
 			} catch (java.io.IOException e) {
-				Debuglog.debugln("BT comm thread: error connecting("+e.toString()+")");
+				l=java.lang.System.currentTimeMillis()-l;
+				wait=l<defaultWait?defaultWait-l:defaultWait;
+				Debuglog.debugln("BT comm thread: error connecting("+e.toString()+"), error after"+l+"ms");
 				this.setStatus(STATE_OPENERROR);
+				Debuglog.debugln("try to reconnect (connect failed)");
 				continue;
 			}
 			this.setStatus(STATE_CONNECTING);
@@ -389,6 +393,9 @@ public class BTcommThread extends Thread{
 			if(this.doupdate) {
 				return;
 			}
+			l=java.lang.System.currentTimeMillis()-l;
+			wait=l<defaultWait?defaultWait-l:defaultWait;
+			Debuglog.debugln("try to reconnect (conn lost)");
 		}
 	}
 
