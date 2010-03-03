@@ -1,7 +1,7 @@
 .SUFFIXES:
 .PHONY: tags clean
 
-CFLAGS=-g -O0 -m32
+CFLAGS=-g -O0
 
 all: btserver
 
