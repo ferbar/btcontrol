@@ -545,10 +545,22 @@ void ClientThread::run()
 						func[j]=lokdef[addr_index].func[j].ison;
 					}
 					if(!lokdef[addr_index].initDone) {
-						srcp->sendLocoInit(lokdef[addr_index].addr, nFahrstufen, lokdef[addr_index].nFunc);
-						lokdef[addr_index].initDone=true;
+						SRCPReplyPtr replyInit = srcp->sendLocoInit(lokdef[addr_index].addr, nFahrstufen, lokdef[addr_index].nFunc);
+						if(replyInit->type != SRCPReply::OK) {
+							fprintf(stderr,"error init loco: (%s)\n",replyInit->message);
+							if(replyInit->code == 412) {
+								fprintf(stderr,"loopback, max addr < %d?\n", lokdef[addr_index].addr);
+							}
+						} else {
+							lokdef[addr_index].initDone=true;
+						}
 					}
-					srcp->sendLocoSpeed(lokdef[addr_index].addr, dir, nFahrstufen, dccSpeed, lokdef[addr_index].nFunc, func);
+					SRCPReplyPtr reply = srcp->sendLocoSpeed(lokdef[addr_index].addr, dir, nFahrstufen, dccSpeed, lokdef[addr_index].nFunc, func);
+
+					if(reply->type != SRCPReply::OK) {
+						fprintf(stderr,"error sending speed: (%s)\n",reply->message);
+					}
+
 				}
 			}
 		}
