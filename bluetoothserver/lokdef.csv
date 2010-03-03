@@ -1,7 +1,7 @@
 3,  F_DEFAULT,lok3,                    ,   12,func1,func2,func3,func4,func5,func6,func7,func8,func9,func10,func11,func12
 4,  F_DEFAULT,Ge 4/4 I (605),    ge_4_4_I.png,   12,sPfeife,sBremse,Pfeife+Echo,sAnsage,sAggregat ein/aus,sSound ein/aus,lFührerstand,Rangiergang,Ansage,sLufthahn,Pantho,Pantho,sKompressor,sVakuumpumpe,sStufenschalter,schaltbare Verzögerung,
 621,  F_DEFAULT,Ge 4/4 II (621), ge_4_4_II.png,  12,lFührerstand,2,lSchweizer Rücklicht,sPfeife,5,6,sZug fährt ab,sound,squietschen,10,11,sKompressor
-641,F_DEFAULT,Ge 4/4 III (641),  ge_4_4_III.png, 12,sHorn,sQuietschen,sPfeife,sZug fährt ab,sGeräusch,sSound ein/aus,sQuietschen,b1,b2,sSchalter,sPressluft,11,12,
+641,F_DEFAULT,Ge 4/4 III (641),  ge_4_4_III.png, 12,sHorn,sQuietschen,sPfeife,sZug fährt ab,sGeräusch,sSound ein/aus,sQuietschen,b1,b2,sSchalter,sPressluft,12,
 647,F_DEFAULT,Ge 4/4 III (647),  capito.png,     12,lFührerstand,2,3,sPfeife,5,6,7,sSound ein/aus,sQuietschen,10,11,sPressluft,
 # 5,  F_DEFAULT,lok5,
 413,F_DEFAULT,Ge 6/6 I (413),    kroko.png,      12,lFührerstand,2,3,lFührerstand,sPfeife,s6,s7,sSound ein/aus,sPfeife,sRangierpfiff,sKompressor,sPressluft,

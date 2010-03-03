@@ -24,7 +24,7 @@
 #include "clientthread.h"
 #include "lokdef.h"
 #include "srcp.h"
-#include "../usb k8055/k8055.h"
+#include "../velleman_usb_k8055/k8055.h"
 #include "utils.h"
 #include "server.h"
 
@@ -54,7 +54,7 @@ void ClientThread::sendMessage(const FBTCtlMessage &msg)
 	int msgsize=binMsg.size();
 	write(this->so, &msgsize, 4);
 	write(this->so, binMsg.data(), binMsg.size());
-	printf("messagesize: %d+4\n",binMsg.size());
+	printf("messagesize: %zu+4\n",binMsg.size());
 }
 
 void ClientThread::setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus)
@@ -182,7 +182,6 @@ void ClientThread::run()
 	for(int i=0; i <= nLokdef; i++) { changedAddrIndex[i] = false; }
 
 
-	int x=0;
 	// int speed=0;
 	// int addr=3;
 	while(1) {
@@ -431,7 +430,8 @@ void ClientThread::run()
 				printf("BTPUSH ---------------------------------------------------\n");
 				FBTCtlMessage reply(messageTypeID("BTPUSH_REPLY"));
 				std::string addr=cmd["addr"].getStringVal();
-				int type=cmd["type"].getIntVal();
+				// TODO: ussppush oder gammu push 
+				// int type=cmd["type"].getIntVal();
 				this->BTPush(addr);
 
 				// reply.dump();
@@ -502,7 +502,7 @@ void ClientThread::run()
 			int changedAddr=1;
 			if(changedAddr) {
 				int addr_index=getAddrIndex(changedAddr);
-				unsigned int a_speed=abs(lokdef[addr_index].currspeed);
+				int a_speed=abs(lokdef[addr_index].currspeed);
 				double f_speed=a_speed;
 
 				int ia1=255-(int)f_speed;
@@ -533,7 +533,7 @@ void ClientThread::run()
 					if(emergencyStop) {
 						dir=2;
 					}
-					int nFahrstufen = 127;
+					int nFahrstufen = 128;
 					if(lokdef[addr_index].flags & F_DEC14) {
 						nFahrstufen = 14;
 					} else if(lokdef[addr_index].flags & F_DEC28) {
@@ -547,18 +547,23 @@ void ClientThread::run()
 					if(!lokdef[addr_index].initDone) {
 						SRCPReplyPtr replyInit = srcp->sendLocoInit(lokdef[addr_index].addr, nFahrstufen, lokdef[addr_index].nFunc);
 						if(replyInit->type != SRCPReply::OK) {
-							fprintf(stderr,"error init loco: (%s)\n",replyInit->message);
+							fprintf(stderr,ANSI_RED"error init loco: (%s)\n"ANSI_DEFAULT,replyInit->message);
 							if(replyInit->code == 412) {
 								fprintf(stderr,"loopback, max addr < %d?\n", lokdef[addr_index].addr);
+								lokdef[addr_index].currspeed=-1;
 							}
 						} else {
 							lokdef[addr_index].initDone=true;
+							printf("try to read curr state...\n");
+							if(!srcp->getInfo(lokdef[addr_index].addr,&dir,&dccSpeed,lokdef[addr_index].nFunc, func)) {
+								fprintf(stderr,ANSI_RED"error getting state of loco: (%s)\n"ANSI_DEFAULT,replyInit->message);
+							}
 						}
 					}
 					SRCPReplyPtr reply = srcp->sendLocoSpeed(lokdef[addr_index].addr, dir, nFahrstufen, dccSpeed, lokdef[addr_index].nFunc, func);
 
 					if(reply->type != SRCPReply::OK) {
-						fprintf(stderr,"error sending speed: (%s)\n",reply->message);
+						fprintf(stderr,ANSI_RED"error sending speed: (%s)\n"ANSI_DEFAULT,reply->message);
 					}
 
 				}
