@@ -36,7 +36,8 @@ import protocol.MessageLayouts;
  */
 public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.Callback {
 	public BTcommThread btcomm;
-	String err="";
+	String infoMsg=null;
+	String lastInfoMsg=null;
 	private final Image pfeilRechts;
 	private final Image pfeilLinks;
 				
@@ -102,7 +103,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			try {
 				btcomm.addCmdToQueue(cmd,parent);
 			} catch (Exception e) {
-				err="HoldDown: Exception "+e.toString();
+				infoMsg="err: HoldDown: Exception "+e.toString();
 			}
 		}
 	}
@@ -140,7 +141,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 				}
 			}
 		} catch (Exception e) {
-			this.err=e.getMessage();
+			this.infoMsg="callback err:"+e.getMessage();
 		}
 		
 		this.repaint();
@@ -204,7 +205,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		this.btcomm=btcomm;
 		this.btcomm.pingCallback=this;
 		// this.
-		this.err="";
+		this.infoMsg=null;
 
 		if(this.notifyStatusChange != null) this.notifyStatusChange.interrupt();
 		this.notifyStatusChange = new NotifyStatusChange();
@@ -265,9 +266,9 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			}
 			// funcbits ausgeben:
 			String tmp=""; //+btcomm.currFuncBits+":";
-			for(int i=11; i >=0; i--) {
+			for(int i=17; i >=0; i--) {
 				if((currFuncBits & (1<<i)) > 0) {
-					tmp+=(i+1)+" ";
+					tmp+=(i)+" ";
 				}
 			}
 			g.drawString(tmp,0,40,Graphics.TOP|Graphics.LEFT);
@@ -293,9 +294,9 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 				g.setColor(0x000000);
 				g.drawString("conn dead",0,20+lineHeight*2,Graphics.TOP|Graphics.LEFT);
 			}
-			if(err.compareTo("")!=0) {
+			if(this.infoMsg != null && this.infoMsg.compareTo("")!=0) {
 				g.setFont(Font.getFont(Font.FACE_PROPORTIONAL, Font.STYLE_PLAIN, Font.SIZE_SMALL));
-				g.drawString("error: "+err,0,20+lineHeight*2,Graphics.TOP|Graphics.LEFT);
+				g.drawString(this.infoMsg,0,20+lineHeight*2,Graphics.TOP|Graphics.LEFT);
 			}
 			if(this.inCommandAction) {
 				g.drawString("in cmdAction",0,80,Graphics.TOP|Graphics.LEFT);
@@ -310,35 +311,49 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			if(this.currAddr==0 && this.btcomm != null && !this.btcomm.connError()) // wenn keine adresse gesetzt + verbunden
 				btrailClient.display.setCurrent(get_locoList());
 		} catch(Exception e) {
-			err=e.toString();
+			this.infoMsg="paint err:"+e.toString();
 			System.out.println( "Exception:" +e.toString() );
 		}
 	}
-	
+
+	boolean shiftKey=false;
 	/**
 	 * Called when a key is pressed.
 	 * note: stop = commandAction
 	 */
 	protected  void keyPressed(int keyCode) {
+		final String msgLockFunctionInfo="press * to lock Fn";
 		if(btcomm!=null) {
+			if(this.infoMsg != null) {
+				if(this.lastInfoMsg == this.infoMsg) { // pointer vergleich is absicht da!!!
+					this.infoMsg="";
+					this.lastInfoMsg=null;
+				} else {
+					this.lastInfoMsg=this.infoMsg;
+				}
+			}
 			FBTCtlMessage msg = new FBTCtlMessage();
 			int repeatTimeout=1000; // ms
 			boolean sendCmd = true;
 			try {
 				int func=-1;
 				switch(keyCode) {
-					case Canvas.KEY_NUM0: func=9 ; break;
-					case Canvas.KEY_NUM1: func=0 ; break;
-					case Canvas.KEY_NUM2: func=1 ; break;
-					case Canvas.KEY_NUM3: func=2 ; break;
-					case Canvas.KEY_NUM4: func=3 ; break;
-					case Canvas.KEY_NUM5: func=4 ; break;
-					case Canvas.KEY_NUM6: func=5 ; break;
-					case Canvas.KEY_NUM7: func=6 ; break;
-					case Canvas.KEY_NUM8: func=7 ; break;
-					case Canvas.KEY_NUM9: func=8 ; break;
-					case Canvas.KEY_STAR: 
-					case Canvas.KEY_POUND: sendCmd=false; break;
+					case Canvas.GAME_A:
+					case Canvas.KEY_NUM0: func=0 ; this.infoMsg=msgLockFunctionInfo; break;
+					case Canvas.GAME_B:
+					case Canvas.KEY_NUM1: func=1 ; this.infoMsg=msgLockFunctionInfo; break;
+					case Canvas.GAME_C:
+					case Canvas.KEY_NUM2: func=2 ; this.infoMsg=msgLockFunctionInfo; break;
+					case Canvas.GAME_D:
+					case Canvas.KEY_NUM3: func=3 ; this.infoMsg=msgLockFunctionInfo; break;
+					case Canvas.KEY_NUM4: func=4 ; this.infoMsg=msgLockFunctionInfo; break;
+					case Canvas.KEY_NUM5: func=5 ; this.infoMsg=msgLockFunctionInfo; break;
+					case Canvas.KEY_NUM6: func=6 ; this.infoMsg=msgLockFunctionInfo; break;
+					case Canvas.KEY_NUM7: func=7 ; this.infoMsg=msgLockFunctionInfo; break;
+					case Canvas.KEY_NUM8: func=8 ; this.infoMsg=msgLockFunctionInfo; break;
+					case Canvas.KEY_NUM9: func=9 ; this.infoMsg=msgLockFunctionInfo; break;
+					case Canvas.KEY_STAR:  sendCmd=false; this.infoMsg=null; this.timer.cancel(); this.task=null; break;
+					case Canvas.KEY_POUND: this.shiftKey=true; sendCmd=false; break;
 
 					default: 
 						repeatTimeout=250; // 4*/s senden
@@ -376,7 +391,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 									msg.get("dir").set(-1);
 								} else {
 									sendCmd=false;
-									this.err="Richtungsänderung nur wenn Lok steht!";
+									this.infoMsg="Richtungsänderung nur wenn Lok steht!";
 								}
 								break; }
 							case Canvas.RIGHT:   {
@@ -389,7 +404,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 									msg.get("dir").set(1);
 								} else {
 									sendCmd=false;
-									this.err="Richtungsänderung nur wenn Lok steht!";
+									this.infoMsg="Richtungsänderung nur wenn Lok steht!";
 								}
 								break; }
 							
@@ -400,6 +415,9 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 				}
 				if(sendCmd) {
 					if(func >= 0) {
+						if(this.shiftKey) {
+							func+=10;
+						}
 						msg.setType(MessageLayouts.messageTypeID("SETFUNC"));
 						msg.get("funcnr").set(func);
 						msg.get("value").set(1);
@@ -416,20 +434,22 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 					btcomm.addCmdToQueue(msg,this);
 				}
 			} catch (Exception e) {
-				err="keyPressed: Ex"+e.toString();
+				this.infoMsg="keyPressed: Ex"+e.toString();
 			}
-			// init holdDownKey
-			if(task != null) {
-				timer.cancel();
+			if(sendCmd) {
+				// init holdDownKey
+				if(task != null) {
+					timer.cancel();
+				}
+				timer = new Timer();
+				timerwait=new Object();
+				task = new HoldDownKeyTask(msg,this);
+
+				timer.schedule(task, repeatTimeout, repeatTimeout);
 			}
-			timer = new Timer();
-			timerwait=new Object();
-			task = new HoldDownKeyTask(msg,this);
-			
-			timer.schedule(task, repeatTimeout, repeatTimeout);
 			this.updateTitle();
 		} else {
-			err="no btcomm";
+			this.infoMsg="keyPressed err: no btcomm";
 		}
 		this.repaint();
 	}
@@ -455,16 +475,20 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	 * Called when a key is released.
 	 */
 	protected  void keyReleased(int keyCode) {
-		FBTCtlMessage cmd=((HoldDownKeyTask)task).cmd;
-		if(cmd.isType("SETFUNC")) {
-			try {
-				cmd.get("value").set(0);
-				btcomm.addCmdToQueue(cmd,this);
-			} catch (Exception e) {
-				err="keyReleased: Ex"+e.toString();
+		if(keyCode == Canvas.KEY_POUND) {
+			this.shiftKey=false;
+		} else if(task != null) {
+			FBTCtlMessage cmd=((HoldDownKeyTask)task).cmd;
+			if(cmd.isType("SETFUNC")) {
+				try {
+					cmd.get("value").set(0);
+					btcomm.addCmdToQueue(cmd,this);
+				} catch (Exception e) {
+					this.infoMsg="keyReleased: Ex"+e.toString();
+				}
 			}
+			timer.cancel();
 		}
-		timer.cancel();
 	}
 	
 	/**
@@ -841,7 +865,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			alert.setTimeout(Alert.FOREVER);
 			btrailClient.display.setCurrent(alert);
 
-			err=e.toString();
+			this.infoMsg="commandAction err:"+e.toString();
 			e.printStackTrace();
 		}
 		this.inCommandAction=false;
