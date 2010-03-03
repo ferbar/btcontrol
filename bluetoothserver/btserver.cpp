@@ -34,7 +34,7 @@ static int auth = 0;
 static int encryption = 0;
 static int secure = 0;
 static int master = 1;
-static int linger = 0;
+//static int linger = 0;
 
 /**
  *
@@ -50,10 +50,11 @@ BTServer::BTServer(int rc_channel)
 //	struct termios ti;
 //	struct sigaction sa;
 //	struct pollfd p;
-	sigset_t sigs;
-	socklen_t alen;
+//	sigset_t sigs;
+//	socklen_t alen;
 	// , devname[MAXPATHLEN]="";
-	int lm, ntry = 30;
+	int lm;
+//	int ntry = 30;
 
 	laddr.rc_family = AF_BLUETOOTH;
 	bacpy(&laddr.rc_bdaddr, BDADDR_ANY);

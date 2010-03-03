@@ -169,7 +169,7 @@ FBTCtlMessage &FBTCtlMessage::operator [](int i)
 {
 	if(this->type == MessageLayout::UNDEF) this->type=MessageLayout::ARRAY;
 	if(this->type != MessageLayout::ARRAY) throw "invalid type(array)";
-	if(arrayVal.size() <= i) {
+	if((signed)arrayVal.size() <= i) {
 		arrayVal.push_back(FBTCtlMessage(MessageLayout::STRUCT));
 	}
 	return arrayVal[i];
@@ -208,7 +208,7 @@ std::string FBTCtlMessage::getBinaryMessage(const MessageLayout *layout) const
 			fwrite(ret.data(),1,ret.size(),stdout);
 			printf(">\n");
 			*/
-			for(int i=0; i < arrayVal.size(); i++) {
+			for(size_t i=0; i < arrayVal.size(); i++) {
 				ret += arrayVal[i].getBinaryMessage(layout);
 			}
 			break; }
@@ -256,9 +256,9 @@ void FBTCtlMessage::dump(int indent, const MessageLayout *layout) const
 			printf("(STRING) %s\n",this->sval.c_str()); break;
 		case MessageLayout::ARRAY: {
 			// INDENT(); printf("array\n");
-			for(int i=0; i < arrayVal.size(); i++) {
+			for(size_t i=0; i < arrayVal.size(); i++) {
 				INDENT();
-				printf("[%d]:\n",i);
+				printf("[%zu]:\n",i);
 				arrayVal[i].dump(indent+1,layout);
 			}
 			break; }

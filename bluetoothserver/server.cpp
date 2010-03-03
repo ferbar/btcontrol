@@ -133,7 +133,7 @@ static void unregisterPhoneClient(void *data)
 static void *phoneClient(void *data)
 {
 	startupdata_t *startupData=(startupdata_t *)data;
-	printf("%d:new client\n",startupData->clientID,startupData->clientID);
+	printf("%d:new client\n",startupData->clientID);
 	pthread_cleanup_push(unregisterPhoneClient,data);
 
 	try {

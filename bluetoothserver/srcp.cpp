@@ -30,7 +30,8 @@
 
 SRCPReply::SRCPReply(const char *message)
 {
-	sscanf(message,"%f %d %*s %a[^\n]", &this->timestamp, &this->code, &this->message); 
+	// printf("SRCP scan message: %s\n",message);
+	sscanf(message,"%lf %d %a[^\n]", &this->timestamp, &this->code, &this->message); 
 	if(this->code >= 500)
 		this->type=SRCPReply::ERROR;
 	else if(this->code >= 400)
@@ -133,6 +134,7 @@ void SRCP::pwrOff()
  */
 SRCPReplyPtr SRCP::sendMessage(const char *message)
 {
+	printf("SRCP send: %s\n",message);
 	write(this->so,message,strlen(message));
 	write(this->so,"\n",1);
 	return this->readReply();
@@ -149,6 +151,7 @@ SRCPReplyPtr SRCP::readReply()
 	}
 	buffer[n]=0;
 
+	// printf("SRCP reply: %s\n",buffer);
 	return SRCPReplyPtr(new SRCPReply(buffer));
 }
 
@@ -159,20 +162,20 @@ SRCPReplyPtr SRCP::sendLocoInit(int addr, int nFahrstufen, int nFunc)
 		/* nFahrstufen:*/ "%d " /* nFunc:*/ "%d",
 		addr, 'N', addr < 128 ? 1 : 2,
 		nFahrstufen, nFunc+1);
-	printf("sending init: %s\n",cmd);
+	// printf("sending init: %s\n",cmd);
 	return this->sendMessage(cmd);
 }
 
 SRCPReplyPtr SRCP::sendLocoSpeed(int addr, int dir, int nFahrstufen, int speed, int nFunc, bool *func)
 {
-	// const char *proto = addr > 32 ? "N2" : "N1";
+	/* - für srcp 0.7
 	const char *proto=NULL;
 	switch(nFahrstufen) {
 		case 14: proto = "NB"; break;
 		case 28: proto = addr < 128 ? "N1" : "N3"; break;
 		case 127: proto = addr < 128 ? "N2" : "N4"; break;
 		default: assert(nFahrstufen == 14 || nFahrstufen == 28 || nFahrstufen == 127);
-	}
+	} */
 	const int CMDBUFLEN=256;
 	char buf[CMDBUFLEN];
 	snprintf(buf,CMDBUFLEN-1,"SET 1 GL " /* addr:*/ "%d " /* dir:*/ "%d " /* Fahrstufe:*/ "%d " /* nFahrstufen*/ "%d " /* F0:*/ "%d ",
@@ -180,13 +183,12 @@ SRCPReplyPtr SRCP::sendLocoSpeed(int addr, int dir, int nFahrstufen, int speed, 
 			dir,
 			speed,
 			nFahrstufen,
-			1,
-			nFunc);
-	for(int i=0; i < nFunc; i++) {
+			func[0]);
+	for(int i=1; i < nFunc; i++) {
 		int pos=strlen(buf);
 		snprintf(buf+pos,CMDBUFLEN-1-pos," %d",func[i]); 
 	}
-	printf("cmd: %s", buf);
+	// printf("cmd: %s\n",buf);
 	return this->sendMessage(buf);
 }
 
@@ -198,7 +200,35 @@ SRCPReplyPtr SRCP::sendPOM(int addr, int cv, int value)
 		addr,
 		cv,
 		value);
-	printf("cmd: %s\n",buf);
+	// printf("cmd: %s\n",buf);
 	return this->sendMessage(buf);
 	
+}
+
+/**
+ * fragt den status (speed,func) einer lok ab TODO: fertig machen, bringt nach einem init nix, lok ist auf 000000 resettet ...
+ * @param func muss nFunc platz haben 
+ */
+bool SRCP::getInfo(int addr, int *dir, int *dccSpeed, int nFunc, bool *func)
+{
+	const int CMDBUFLEN=256;
+	char buf[CMDBUFLEN];
+	snprintf(buf,CMDBUFLEN-1,"GET 1 GL " /* addr:*/ "%d",
+		addr);
+	// printf("cmd: %s\n",buf);
+	SRCPReplyPtr reply = this->sendMessage(buf);
+	if(reply->type == SRCPReply::INFO) {
+		printf("scanning reply: %s\n",reply->message);
+		int saddr, sdrivemode, sv, svmax;
+		// INFO 1 GL 647 0 0 128 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+		int rc=sscanf(reply->message,"%*s 1 GL " /*addr*/ "%d " /*drivemode*/ "%d " /* V */ "%d " /* V_max */ "%d " /* F0 .. Fn */,
+			&saddr,
+			&sdrivemode,
+			&sv,
+			&svmax);
+		printf("printf matched %d vars, v=%d vmax=%d\n",rc, sv, svmax);
+//	sscanf(message,"%lf %d %a[^\n]", &this->timestamp, &this->code, &this->message); 
+		return true;
+	}
+	return false;
 }

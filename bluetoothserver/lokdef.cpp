@@ -86,7 +86,7 @@ char *getnext(char **pos)
 	if(!**pos) {*pos=NULL; return NULL; }
 	(*pos)++; // , überspringen
 	// printf("skipping spaces:");
-	while(**pos && (**pos == ' ') || (**pos == '\t')) {
+	while(**pos && ((**pos == ' ') || (**pos == '\t'))) {
 		// printf("%c",**pos);
 		(*pos)++;
 	}
@@ -124,23 +124,25 @@ bool readLokdef()
 		pos_end=getnext(&pos);
 		lokdef[n].flags=str2decodertype(pos);
 		pos_end=getnext(&pos);
-		if(pos_end-pos >= sizeof(lokdef[n].name)) {
-			printf("warning: lokdef.name > size \"%.*s\"\n",pos_end-pos,pos);
+		if(pos_end-pos >= (signed)sizeof(lokdef[n].name)) {
+			printf("warning: lokdef.name > size \"%.*s\"\n",(int)(pos_end-pos),pos);
 		}
-		strncpy(lokdef[n].name, pos,  MIN(sizeof(lokdef[n].name), pos_end-pos));
+		strncpy(lokdef[n].name, pos,  MIN((signed)sizeof(lokdef[n].name), pos_end-pos));
 		strtrim(lokdef[n].name);
 		pos_end=getnext(&pos);
 		//TODO: trim
-		strncpy(lokdef[n].imgname, pos, MIN(sizeof(lokdef[n].imgname), pos_end-pos));
+		strncpy(lokdef[n].imgname, pos, MIN((signed)sizeof(lokdef[n].imgname), pos_end-pos));
 		strtrim(lokdef[n].imgname);
 		pos_end=getnext(&pos);
 		CHECKVAL("error reading nfunc");
-		lokdef[n].nFunc=atoi(pos);
+		lokdef[n].nFunc=atoi(pos)+1;
+		strcpy(lokdef[n].func[0].name,"headlight");
+		lokdef[n].func[0].ison=true;
 
-		for(int i=0; i < lokdef[n].nFunc; i++) {
+		for(int i=1; i < lokdef[n].nFunc; i++) {
 			pos_end=getnext(&pos);
 			CHECKVAL("func i = %d, nfunc %d invalid? %d function names missing",i,lokdef[n].nFunc,lokdef[n].nFunc-i);
-			strncpy(lokdef[n].func[i].name, pos, MIN(sizeof(lokdef[n].func[i].name), pos_end-pos));
+			strncpy(lokdef[n].func[i].name, pos, MIN((signed)sizeof(lokdef[n].func[i].name), pos_end-pos));
 			if(strchr(lokdef[n].func[i].name,'\n') != NULL) {
 				fprintf(stderr,"%s:%d newline in funcname (%s)- irgendwas hats da\n",LOKDEF_FILENAME,n+1,lokdef[n].func[i].name);
 				exit(1);

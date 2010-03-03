@@ -36,7 +36,7 @@
 
 #include <map>
 
-#include "../usb k8055/k8055.h"
+#include "../velleman_usb_k8055/k8055.h"
 
 #include "srcp.h"
 
@@ -76,7 +76,7 @@ std::string readFile(std::string filename)
 			const char *data=ret.data(); // mutig ...
 			fread((void*)data,1,buf.st_size,f);
 			fclose(f);
-			printf("%s:%d bytes\n",filename.c_str(),buf.st_size);
+			printf("%s:%zu bytes\n",filename.c_str(),buf.st_size);
 		}
 	} else {
 		fprintf(stderr,"error stat file %s\n",filename.c_str());

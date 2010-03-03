@@ -17,6 +17,7 @@
  */
 #include <string.h>
 #include <errno.h>
+#include <assert.h>
 #include "message_layout.h"
 #include "fbtctl_message.h"
 
@@ -173,7 +174,7 @@ int loadMessageLayouts()
 
 void MessageLayout::dump(int indent) const
 {
-	printf("sub:%d\n", this->childLayouts.size());
+	printf("sub:%zu\n", this->childLayouts.size());
 	std::vector<MessageLayout>::const_iterator it;
 	for(it=this->childLayouts.begin(); it != this->childLayouts.end(); ++it) {
 		INDENT();
@@ -230,8 +231,9 @@ std::string messageTypeName(MessageLayout::DataType type)
 			tmp += it->first;
 			tmp +=")";
 			return tmp;
-			break; }
+			}
 	}
+	assert(!"no way out of the switch");
 }
 
 MessageLayout::DataType messageTypeID(const std::string &name)
