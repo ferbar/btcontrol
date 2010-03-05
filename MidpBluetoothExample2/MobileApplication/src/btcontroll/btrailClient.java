@@ -418,16 +418,19 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 					String connectionURL=null;
 					// me4se dürfte einen bug bei getSelectedIndex haben
 					int index=this.listServer.getSelectedIndex();
-					Object o = this.listServer.getValue(index);
-					if(o != null) {
-						if(o instanceof ServiceRecord) {
-							ServiceRecord sr = (ServiceRecord) o;
-							connectionURL=sr.getConnectionURL(0, false);
-						} else if(o instanceof String) {
-							connectionURL=(String) o;
+					if(index >= 0) {
+						Object o = this.listServer.getValue(index);
+						if(o != null) {
+							if(o instanceof ServiceRecord) {
+								ServiceRecord sr = (ServiceRecord) o;
+								connectionURL=sr.getConnectionURL(0, false);
+							} else if(o instanceof String) {
+								connectionURL=(String) o;
+							}
 						}
 					}
 					if(connectionURL == null) {
+						debugForm.setTitle("nothing selected (index="+index+")");
 						Debuglog.debugln("no connection url");
 					} else {
 						ConnectThread connectThread = new ConnectThread(connectionURL);
