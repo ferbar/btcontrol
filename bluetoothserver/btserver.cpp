@@ -60,8 +60,8 @@ BTServer::BTServer(int rc_channel)
 	bacpy(&laddr.rc_bdaddr, BDADDR_ANY);
 	laddr.rc_channel = rc_channel;
 
-	this->so = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
-	if (this->so < 0) {
+	this->bt_so = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
+	if (this->bt_so < 0) {
 		perror("Can't create RFCOMM socket");
 		return;
 	}
@@ -76,23 +76,28 @@ BTServer::BTServer(int rc_channel)
 	if (secure)
 		lm |= RFCOMM_LM_SECURE;
 
-	if (lm && setsockopt(this->so, SOL_RFCOMM, RFCOMM_LM, &lm, sizeof(lm)) < 0) {
+	if (lm && setsockopt(this->bt_so, SOL_RFCOMM, RFCOMM_LM, &lm, sizeof(lm)) < 0) {
 		perror("Can't set RFCOMM link mode");
-		close(this->so);
-		this->so=0;
+		close(this->bt_so);
+		this->bt_so=-1;
 		return;
 	}
 
-	if (bind(this->so, (struct sockaddr *)&laddr, sizeof(laddr)) < 0) {
+	if (bind(this->bt_so, (struct sockaddr *)&laddr, sizeof(laddr)) < 0) {
 		perror("Can't bind RFCOMM socket");
-		close(this->so);
-		this->so=0;
+		close(this->bt_so);
+		this->bt_so=-1;
 		return;
 	}
 
 
 
-	listen(this->so, 10);
+	if(listen(this->bt_so, 10) != 0) {
+		perror("error BT listen");
+		close(this->bt_so);
+		this->bt_so=-1;
+		return;
+	}
 }
 
 /**
@@ -105,10 +110,10 @@ int BTServer::accept()
 	struct sockaddr_rc laddr,raddr;
 	char dst[18];
 
-	printf("Waiting for connection ...\n");
+	printf("Waiting for ibt connection ...\n");
 
 	socklen_t addrlen=sizeof(raddr);
-	int nsk = ::accept(this->so, (struct sockaddr *) &raddr, &addrlen);
+	int nsk = ::accept(this->bt_so, (struct sockaddr *) &raddr, &addrlen);
 
 // da könnte die lokale bt addr drinnen stehn
 	if (getsockname(nsk, (struct sockaddr *)&laddr, &addrlen) < 0) {
@@ -134,7 +139,7 @@ BTServer::~BTServer()
 {
 
 	printf("Disconnected\n");
-	close(this->so);
+	close(this->bt_so);
 
 #if 0 
 	if (linger) {
@@ -255,8 +260,10 @@ release:
 */
 }
 
-
-
+/**
+ * liefert die remote Addr für eine verbindung
+ * @param so: socket zum client (nicht der listen-socket)
+ */
 std::string BTServer::getRemoteAddr(int so)
 {
 	// struct rfcomm_dev_req req;

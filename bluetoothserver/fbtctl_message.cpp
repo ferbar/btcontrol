@@ -40,6 +40,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "fbtctl_message.h"
+#include "utils.h"
 
 /**
  * parst eine message
@@ -54,14 +55,21 @@ FBTCtlMessage::FBTCtlMessage(const char *binMessage, int len)
 void FBTCtlMessage::readMessage(InputReader &in, const MessageLayout *layout)
 {
 	clear();
-	printf("reading bin msg\n");
+	if(cfg_debug) {
+		printf("reading bin msg\n");
+	}
 
 	this->type=(MessageLayout::DataType) in.getByte();
-	printf("datatype: %d\n",this->type);
+	if(cfg_debug) {
+		printf("datatype: %d\n",this->type);
+	}
 
 	if(!layout && (this->type > MessageLayout::STRUCT)) {
 		layout=&getMessageLayout(this->type);
-		layout->dump();
+		if(cfg_debug) {
+			printf("messageLayout for type: %d\n",this->type);
+			layout->dump();
+		}
 	}
 
 	if(!layout)

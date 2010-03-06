@@ -52,9 +52,9 @@ void ClientThread::sendMessage(const FBTCtlMessage &msg)
 {
 	std::string binMsg=msg.getBinaryMessage();
 	int msgsize=binMsg.size();
+	printf("%d:  sendMessage size: %zu+4 %d=%s\n", this->clientID, binMsg.size(), msg.getType(), messageTypeName(msg.getType()).c_str());
 	write(this->so, &msgsize, 4);
 	write(this->so, binMsg.data(), binMsg.size());
-	printf("messagesize: %zu+4\n",binMsg.size());
 }
 
 void ClientThread::setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus)
@@ -203,10 +203,15 @@ void ClientThread::run()
 			throw std::string("error reading cmd.data: ") += rc; // + ")";
 		}
 		InputReader in(buffer,msgsize);
-		printf("%d:parsing msg\n",this->clientID);
+		// printf("%d:parsing msg\n",this->clientID);
 		FBTCtlMessage cmd;
 		cmd.readMessage(in);
-		// cmd.dump();
+		if(cfg_debug) {
+			printf("%d: msg",this->clientID);
+			cmd.dump();
+		} else {
+			printf("%d: msg %d=%s\n", this->clientID, cmd.getType(), messageTypeName(cmd.getType()).c_str());
+		}
 		int nr=0; // für die conrad platine
 		/*
 		int size;
@@ -300,7 +305,7 @@ void ClientThread::run()
 				}
 				sendStatusReply(lastStatus);
 			} else if(cmd.isType("DIR_MULTI")) {
-				cmd.dump();
+				// cmd.dump();
 				int n=cmd["list"].getArraySize();
 				int dir=cmd["dir"].getIntVal();
 				for(int i=0; i < n; i++) {

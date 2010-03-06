@@ -11,7 +11,7 @@ public:
 	virtual int accept();
 	static std::string getRemoteAddr(int so);
 protected:
-	int so;
+	int bt_so;
 };
 
 class Server : public BTServer {

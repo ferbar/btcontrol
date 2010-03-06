@@ -82,16 +82,18 @@ Server::Server()
  
 int Server::accept()
 {
-	assert(this->so);
-	assert(this->tcp_so);
+	// assert(this->bt_so > 0); - keine BT hardware -> this->bt_so < 0
+	assert(this->tcp_so > 0); // FD_SET mit -1 macht was hin
 
 	fd_set fd;
 	FD_ZERO(&fd);
-	FD_SET(this->so,&fd);
+	if(this->tcp_so > 0) {
+		FD_SET(this->bt_so,&fd);
+	}
 	FD_SET(this->tcp_so,&fd);
 	int rc=select(FD_SETSIZE, &fd, NULL, NULL, NULL);
 	printf("-----select rc=%d\n",rc);
-	if(FD_ISSET(this->so,&fd)) {
+	if(this->bt_so > 0 && FD_ISSET(this->bt_so,&fd)) {
 		printf("bt connection\n");
 		return BTServer::accept();
 	} else if(FD_ISSET(this->tcp_so,&fd)) {
