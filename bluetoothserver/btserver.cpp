@@ -45,6 +45,7 @@ static int master = 1;
 BTServer::BTServer(int rc_channel)
 {
 	struct sockaddr_rc laddr;
+	bzero(&laddr,sizeof(laddr));
 	// int ctl = ???
 	// int dev = /dev/rfcomm%d
 //	struct termios ti;

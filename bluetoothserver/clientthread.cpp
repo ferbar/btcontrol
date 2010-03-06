@@ -172,6 +172,7 @@ void ClientThread::run()
 	heloReply["protohash"]=protocolHash;
 	// heloReply.dump();
 	sendMessage(heloReply);
+	heloReply.clear(); // brauch ma nachher nichtmehr
 
 	int nLokdef=0;
 	while(lokdef[nLokdef].addr) nLokdef++;
