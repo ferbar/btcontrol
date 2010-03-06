@@ -154,6 +154,9 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		backForm=btrailClient.display.getCurrent();
 		this.pfeilRechts=Image.createImage("/icons/pfeilRechts.png");
 		this.pfeilLinks=Image.createImage("/icons/pfeilLinks.png");
+		if(this.hasPointerEvents()) { // eventuell braucht der das dammit die pointer* events ausgelöst werden!!!
+			Debuglog.debugln("touchscreen");
+		}
 		update(btcomm);
 		/* ------- steht im hello form!!!!!! 
 		try {
@@ -215,11 +218,14 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	/**
 	 * paint
 	 */
+	final int speedYPos=20;
+	int speedLineHeight=0;
 	public void paint(Graphics g) {
 		try {
 			int width=getWidth();
 			Font f=g.getFont();
 			int lineHeight=f.getHeight();
+			this.speedLineHeight=lineHeight;
 			g.setColor(0xffffff);
 			g.fillRect(0, 0, width, getHeight());
 			g.setColor(0x00ff00);
@@ -231,18 +237,17 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 				currFuncBits=item.funcBits;
 			}
 			int speed_len=(Math.abs(currSpeed) * width/2 / 255);
-			int line=20;
 			int middle=width/2;
 			if(currSpeed >= 0) {
-				g.fillRect(middle, line, speed_len, lineHeight);
+				g.fillRect(middle, this.speedYPos, speed_len, this.speedLineHeight);
 				g.setColor(0x0000ff);
-				g.drawString(currSpeed+" ", middle, line, Graphics.TOP|Graphics.RIGHT);
-				g.drawImage(this.pfeilRechts, middle, line, Graphics.TOP|Graphics.LEFT);
+				g.drawString(currSpeed+" ", middle, this.speedYPos, Graphics.TOP|Graphics.RIGHT);
+				g.drawImage(this.pfeilRechts, middle, this.speedYPos, Graphics.TOP|Graphics.LEFT);
 			} else {
-				g.fillRect(middle - speed_len, line, speed_len, lineHeight);
+				g.fillRect(middle - speed_len, this.speedYPos, speed_len, this.speedLineHeight);
 				g.setColor(0x0000ff);
-				g.drawString(" "+currSpeed,middle,line,Graphics.TOP|Graphics.LEFT);
-				g.drawImage(this.pfeilLinks, middle, line, Graphics.TOP|Graphics.RIGHT);
+				g.drawString(" "+currSpeed,middle,this.speedYPos,Graphics.TOP|Graphics.LEFT);
+				g.drawImage(this.pfeilLinks, middle, this.speedYPos, Graphics.TOP|Graphics.RIGHT);
 			}
 			if((this.currMultiAddr == null) && (item != null)) {
 				Image img=item.img;
@@ -333,18 +338,14 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 				}
 			}
 			FBTCtlMessage msg = new FBTCtlMessage();
-			int repeatTimeout=1000; // ms
-			boolean sendCmd = true;
+			int repeatTimeout=-1; // ms
+
 			try {
 				int func=-1;
 				switch(keyCode) {
-					case Canvas.GAME_A:
 					case Canvas.KEY_NUM0: func=0 ; this.infoMsg=msgLockFunctionInfo; break;
-					case Canvas.GAME_B:
 					case Canvas.KEY_NUM1: func=1 ; this.infoMsg=msgLockFunctionInfo; break;
-					case Canvas.GAME_C:
 					case Canvas.KEY_NUM2: func=2 ; this.infoMsg=msgLockFunctionInfo; break;
-					case Canvas.GAME_D:
 					case Canvas.KEY_NUM3: func=3 ; this.infoMsg=msgLockFunctionInfo; break;
 					case Canvas.KEY_NUM4: func=4 ; this.infoMsg=msgLockFunctionInfo; break;
 					case Canvas.KEY_NUM5: func=5 ; this.infoMsg=msgLockFunctionInfo; break;
@@ -352,14 +353,17 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 					case Canvas.KEY_NUM7: func=7 ; this.infoMsg=msgLockFunctionInfo; break;
 					case Canvas.KEY_NUM8: func=8 ; this.infoMsg=msgLockFunctionInfo; break;
 					case Canvas.KEY_NUM9: func=9 ; this.infoMsg=msgLockFunctionInfo; break;
-					case Canvas.KEY_STAR:  sendCmd=false; this.infoMsg=null; this.timer.cancel(); this.task=null; break;
-					case Canvas.KEY_POUND: this.shiftKey=true; sendCmd=false; break;
+					case Canvas.KEY_STAR:  msg=null; this.infoMsg=null; this.timer.cancel(); this.task=null; break;
+					case Canvas.KEY_POUND: this.shiftKey=true; msg=null; break;
 
 					default: 
-						repeatTimeout=250; // 4*/s senden
 						int gameAction =this.getGameAction( keyCode );
 						switch ( gameAction )
 						{
+							case Canvas.GAME_A: func=0 ; break;
+							case Canvas.GAME_B: func=1 ; break;
+							case Canvas.GAME_C: func=2 ; break;
+							case Canvas.GAME_D: func=3 ; break;
 							case Canvas.UP:
 								if(this.currMultiAddr == null)
 									msg.setType(MessageLayouts.messageTypeID("ACC"));
@@ -390,7 +394,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 										msg.setType(MessageLayouts.messageTypeID("DIR_MULTI"));
 									msg.get("dir").set(-1);
 								} else {
-									sendCmd=false;
+									msg=null;
 									this.infoMsg="Richtungsänderung nur wenn Lok steht!";
 								}
 								break; }
@@ -403,24 +407,28 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 										msg.setType(MessageLayouts.messageTypeID("DIR_MULTI"));
 									msg.get("dir").set(1);
 								} else {
-									sendCmd=false;
+									msg=null;
 									this.infoMsg="Richtungsänderung nur wenn Lok steht!";
 								}
 								break; }
 							
 							default:
-								sendCmd=false;
+								msg=null;
+								Debuglog.debugln("invalid key ("+keyCode+"/"+gameAction+")");
 								break;
 						}
 				}
-				if(sendCmd) {
+				if(msg != null) {
 					if(func >= 0) {
+						repeatTimeout=1000; // ms
 						if(this.shiftKey) {
 							func+=10;
 						}
 						msg.setType(MessageLayouts.messageTypeID("SETFUNC"));
 						msg.get("funcnr").set(func);
 						msg.get("value").set(1);
+					} else {
+						repeatTimeout=250; // 4*/s senden
 					}
 					if(func < 0 && this.currMultiAddr != null) {
 						for(int i=0; i < this.currMultiAddr.length; i++) {
@@ -436,7 +444,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			} catch (Exception e) {
 				this.infoMsg="keyPressed: Ex"+e.toString();
 			}
-			if(sendCmd) {
+			if(msg != null) {
 				// init holdDownKey
 				if(task != null) {
 					timer.cancel();
@@ -490,23 +498,82 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			timer.cancel();
 		}
 	}
-	
+
 	/**
 	 * Called when a key is repeated (held down).
 	 */
 	protected  void keyRepeated(int keyCode) {
 	}
-	
+
+	/**
+	 * Helper function for pointer*
+	 */
+	protected void pointerSendCmd(int x, int y) {
+		try {
+			int width=getWidth();
+			FBTCtlMessage msg = null;
+			if(y >= this.speedYPos && y < this.speedYPos + this.speedLineHeight) {
+				int newSpeed = ((x-(width/2))*255*2)/width;
+				AvailLocosListItem item=(AvailLocosListItem)this.availLocos.get(new Integer(this.currAddr));
+				// umpolen nicht mit schieber ... TODO: das besser machen (5s halten oder 2* schieben oder so)
+				if(item.speed > 0 && newSpeed < 0) {
+					newSpeed = 0;
+				} else if(item.speed < 0 && newSpeed > 0) {
+					newSpeed = 0;
+				}
+				int diffSpeed=newSpeed - item.speed;
+
+				msg = new FBTCtlMessage();
+				if(diffSpeed*newSpeed > 0) { // beschleunigen
+					if (this.currMultiAddr == null) {
+						msg.setType(MessageLayouts.messageTypeID("ACC"));
+					} else {
+						msg.setType(MessageLayouts.messageTypeID("ACC_MULTI"));
+					}
+				} else { // bremsen
+					if (this.currMultiAddr == null) {
+						msg.setType(MessageLayouts.messageTypeID("BREAK"));
+					} else {
+						msg.setType(MessageLayouts.messageTypeID("BREAK_MULTI"));
+					}
+				}
+			} else { // TODO: func über touch
+
+			}
+			
+			if(msg != null) {
+						
+				int func = -1;
+				if (func < 0 && this.currMultiAddr != null) {
+					for (int i = 0; i < this.currMultiAddr.length; i++) {
+						msg.get("list").get(i).get("addr").set(this.currMultiAddr[i]);
+					}
+					// msg.dump(debugForm);
+				} else {
+					msg.get("addr").set(this.currAddr);
+				}
+
+				btcomm.addCmdToQueue(msg, this);
+			}
+		} catch (Exception e) {
+			this.infoMsg = "keyPressed: Ex" + e.toString();
+		}
+	}
+
 	/**
 	 * Called when the pointer is dragged.
 	 */
 	protected  void pointerDragged(int x, int y) {
+		Debuglog.debugln("pointerDragged @"+x+':'+y);
+		pointerSendCmd(x, y);
 	}
 	
 	/**
 	 * Called when the pointer is pressed.
 	 */
 	protected  void pointerPressed(int x, int y) {
+		Debuglog.debugln("pointerPressed @"+x+':'+y);
+		pointerSendCmd(x, y);
 	}
 	
 	/**
