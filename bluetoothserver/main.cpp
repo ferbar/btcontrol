@@ -57,6 +57,7 @@
 #endif
 
 bool cfg_debug=false;
+bool cfg_dump=false;
 
 int protocolHash;
 
@@ -138,19 +139,22 @@ int main(int argc, char *argv[])
 		printf("exception %s\n",s.c_str());
 	}
 
+#warning FIXME: das auf getopt umbaun!!!!!!!
 	if(argc > 1) {
 		if(strcmp(argv[1],"--debug")==0) {
 			cfg_debug=1;
-		}
-		if(strcmp(argv[1],"--version")==0) {
+		} else if(strcmp(argv[1],"--version")==0) {
 			printf("btserver version %s\n", _STR(SVNVERSION));
 			exit(0);
-		}
-		if(strcmp(argv[1],"--help")==0) {
+		} else if(strcmp(argv[1],"--dump")==0) {
+			cfg_dump=1;
+			cfg_debug=1;
+		} else if(strcmp(argv[1],"--help")==0) {
 			printf("btserver\n"
 				"	--debug\n"
 				"	--version\n"
 				"	--help\n"
+				"   --dump\tdump protocol.dat, lokdef.csv\n"
 				"\n"
 				"connected zur conrad usb platine (PWM) oder erdcc (DCC)\n");
 			exit(0);
@@ -160,7 +164,10 @@ int main(int argc, char *argv[])
 	if( ! readLokdef() ) {
 		exit(1);
 	}
-	dumpLokdef();
+	if(cfg_dump) {
+		dumpLokdef();
+		dumpMessageLayouts();
+	}
 
 	struct sigaction sa;
 	memset(&sa,0,sizeof(sa));

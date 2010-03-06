@@ -20,18 +20,18 @@ public:
 	InputReader(const char *data, int len) : data(data), len(len), pos(0) {};
 	unsigned char getByte() { 
 		unsigned char ret=*((unsigned char *)(&this->data[this->pos])); this->pos+=1;
-		printf("getByte ret=%d = %#x\n",(int) ret, ret);
+		// printf("getByte ret=%d = %#x\n",(int) ret, ret);
 		if(this->pos > this->len) throw "getInt übers ende gelesen";
 		return ret; };
 	int getInt() { 
 		int ret=*((int *)(&this->data[this->pos])); this->pos+=4;
-		printf("getInt ret=%d\n",ret);
+		// printf("getInt ret=%d\n",ret);
 		if(this->pos > this->len) throw "getInt übers ende gelesen";
 		return ret; };
 	std::string getString() {
 		unsigned char len=this->getByte() | (this->getByte() << 8);
 		std::string ret=std::string(&this->data[this->pos],len); this->pos +=len;
-		printf("getString %s\n",ret.c_str());
+		// printf("getString %s\n",ret.c_str());
 		if(this->pos > this->len) throw "getString übers ende gelesen"; return ret; };
 	const char *data;
 	int len;

@@ -168,7 +168,6 @@ int loadMessageLayouts()
 	}
 
 	fclose(f);
-	dumpMessageLayouts();
 	return hash;
 }
 
