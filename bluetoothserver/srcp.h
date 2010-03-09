@@ -36,3 +36,5 @@ private:
 };
 
 extern SRCP *srcp;
+extern const char *cfg_hostname;
+extern int cfg_port;
