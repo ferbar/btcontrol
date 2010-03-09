@@ -20,6 +20,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <getopt.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -58,6 +59,8 @@
 
 bool cfg_debug=false;
 bool cfg_dump=false;
+const char *cfg_hostname="127.0.0.1";
+int cfg_port=4303;
 
 int protocolHash;
 
@@ -77,7 +80,7 @@ std::string readFile(std::string filename)
 			const char *data=ret.data(); // mutig ...
 			fread((void*)data,1,buf.st_size,f);
 			fclose(f);
-			printf("%s:%zu bytes\n",filename.c_str(),buf.st_size);
+			printf("%s:%lu bytes\n",filename.c_str(),buf.st_size);
 		}
 	} else {
 		fprintf(stderr,"error stat file %s\n",filename.c_str());
@@ -105,6 +108,54 @@ void signalHandler(int signo, siginfo_t *p, void *ucontext)
 
 int main(int argc, char *argv[])
 {
+	while (1) {
+		int c;
+		int option_index = 0;
+		static struct option long_options[] = {
+			{"help", 0, NULL, 'h'},
+			{"debug", 0, NULL, 'd'},
+			{"dump", 0, NULL, 'u'},
+			{"version", 0, NULL, 'v'},
+			{"server", 1, NULL, 's'},
+			{"port", 1, NULL, 'p'},
+			{0, 0, 0, 0}
+		};
+		c = getopt_long(argc, argv, "hduvs:p:", long_options, &option_index);
+		if (c == -1)
+			break;
+
+		switch (c) {
+			case 'u':
+				cfg_dump=1;
+				/* no break */	
+			case 'd':
+				cfg_debug=1;
+				break;
+			case 'v':
+				printf("btserver version %s\n", _STR(SVNVERSION));
+				exit(0);
+			case 's':
+				cfg_hostname=optarg;
+				break;
+			case 'p':
+				cfg_port=strtol(optarg, (char **) NULL, 10);
+				if (errno == ERANGE || cfg_port <= 0) {
+					printf("Port argument out of range: %s\n", optarg);
+					exit(255);
+				}
+				break;
+			default:
+				case 'h':
+				printf("btserver\n"
+					"	--debug\n"
+					"	--version\n"
+					"	--help\n"
+					"   --dump\tdump protocol.dat, lokdef.csv\n"
+					"\n"
+					"connected zur conrad usb platine (PWM) oder erdcc (DCC)\n");
+				exit(0);
+		}
+	}
 	// FBTCtlMessage test(FBTCtlMessage::STRUCT)
 	try {
 		protocolHash = loadMessageLayouts();
@@ -137,28 +188,6 @@ int main(int argc, char *argv[])
 		exit(1);
 	} catch(std::string &s) {
 		printf("exception %s\n",s.c_str());
-	}
-
-#warning FIXME: das auf getopt umbaun!!!!!!!
-	if(argc > 1) {
-		if(strcmp(argv[1],"--debug")==0) {
-			cfg_debug=1;
-		} else if(strcmp(argv[1],"--version")==0) {
-			printf("btserver version %s\n", _STR(SVNVERSION));
-			exit(0);
-		} else if(strcmp(argv[1],"--dump")==0) {
-			cfg_dump=1;
-			cfg_debug=1;
-		} else if(strcmp(argv[1],"--help")==0) {
-			printf("btserver\n"
-				"	--debug\n"
-				"	--version\n"
-				"	--help\n"
-				"   --dump\tdump protocol.dat, lokdef.csv\n"
-				"\n"
-				"connected zur conrad usb platine (PWM) oder erdcc (DCC)\n");
-			exit(0);
-		}
 	}
 
 	if( ! readLokdef() ) {

@@ -56,25 +56,23 @@ SRCPReply::~SRCPReply()
 
 SRCP::SRCP()
 {
-	int port=4303;
-	const char *hostName="127.0.0.1";
 	struct hostent *ServerHost;
 	struct sockaddr_in socketAddr;
 	const int SERVMSGLEN=1000;
 	char servermsg[SERVMSGLEN];
 	bzero(&socketAddr,sizeof(socketAddr));
 
-	ServerHost=gethostbyname(hostName);
+	ServerHost=gethostbyname(cfg_hostname);
 	socketAddr.sin_family=ServerHost->h_addrtype;
 	memcpy(&socketAddr.sin_addr,ServerHost->h_addr_list[0],sizeof(socketAddr.sin_addr)); 
-	socketAddr.sin_port= htons(port);
+	socketAddr.sin_port= htons(cfg_port);
 	if ((so = socket(AF_INET, SOCK_STREAM, 0 )) == -1) {
 		perror("socket()");
 		exit(1);
 	}
 	if ( connect(so,  (struct sockaddr *)&socketAddr, sizeof(socketAddr))<0  ) {
 		fprintf(stderr,"\nDaemon srcpd not found on host %s on port %d.\n", 
-				hostName, port);
+				cfg_hostname, cfg_port);
 		fprintf(stderr,"srcpd is not running or is running on another port.\n\n");
 		exit(1);
 	}

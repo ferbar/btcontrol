@@ -87,7 +87,7 @@ int Server::accept()
 
 	fd_set fd;
 	FD_ZERO(&fd);
-	if(this->tcp_so > 0) {
+	if(this->bt_so > 0) {
 		FD_SET(this->bt_so,&fd);
 	}
 	FD_SET(this->tcp_so,&fd);
