@@ -147,12 +147,14 @@ int main(int argc, char *argv[])
 			default:
 				case 'h':
 				printf("btserver\n"
-					"	--debug\n"
-					"	--version\n"
-					"	--help\n"
-					"   --dump\tdump protocol.dat, lokdef.csv\n"
+					"	[-d|--debug]\n"
+					"	[-v|--version]\n"
+					"	[-h--help]\n"
+					"	[-u|--dump]\tdump protocol.dat, lokdef.csv\n"
+					"	[-s|--server SERVER]\tSRCP server to connect to, default localhost\n"
+					"	[-p|--port PORT]\tSRCP port number to connect to, default 4303\n"
 					"\n"
-					"connected zur conrad usb platine (PWM) oder erdcc (DCC)\n");
+					"connects to Velleman k8055 USB board (PWM) or SRCP server (DCC)\n");
 				exit(0);
 		}
 	}
