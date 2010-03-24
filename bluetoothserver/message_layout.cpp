@@ -21,12 +21,7 @@
 #include "message_layout.h"
 #include "fbtctl_message.h"
 
-/**
- * zuordnung DataType -> name und wie schaut die message aus
- */
-typedef std::map<std::string, MessageLayout> MessageLayouts;
 MessageLayouts messageLayouts;
-bool MessageLayoutsInited=false;
 
 /**
  * nur für structs sinnvoll
@@ -108,12 +103,12 @@ MessageLayout parseMessageLayout(const char *&pos)
  * @return hash von protocol.dat (zum vergleich ob das tel die selbe protocol.dat verwendet)
  *              kommentare werden ignoriert
  */
-int loadMessageLayouts()
+int MessageLayouts::load()
 {
 	int hash=0;
-	if(MessageLayoutsInited==true)
+	if(this->loaded)
 		return 0;
-	MessageLayoutsInited=true;
+	this->loaded=true;
 	FILE *f=fopen("protocol.dat","r");
 	if(!f) {
 		printf("error reading protocol.dat\n");
@@ -168,6 +163,7 @@ int loadMessageLayouts()
 	}
 
 	fclose(f);
+	MessageLayouts::protocolHash=hash;
 	return hash;
 }
 
@@ -190,9 +186,9 @@ void MessageLayout::dump(int indent) const
 	}
 }
 
-void dumpMessageLayouts()
+void MessageLayouts::dump()
 {
-	printf("dumpMessageLayouts\n");
+	printf("dumpMessageLayouts\nloaded:%d\n",this->loaded);
 	MessageLayouts::const_iterator it;
 	for(it=messageLayouts.begin(); it != messageLayouts.end(); ++it) {
 		printf("%s=%d:\n",it->first.c_str(),it->second.type);

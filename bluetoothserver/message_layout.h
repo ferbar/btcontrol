@@ -24,14 +24,24 @@ public:
 	std::vector < MessageLayout > childLayouts;
 };
 
-// ladet die protocol.dat @return hash von der protocol.dat
-int loadMessageLayouts();
 // liefert das layout für eine message (type)
 const MessageLayout &getMessageLayout(MessageLayout::DataType type);
 std::string messageTypeName(MessageLayout::DataType type);
 
 MessageLayout::DataType messageTypeID(const std::string &name);
 
-void dumpMessageLayouts();
-
+/**
+ * zuordnung DataType -> name und wie schaut die message aus
+ */
+class MessageLayouts : public std::map<std::string, MessageLayout> {
+public:
+	MessageLayouts() : protocolHash(-1), loaded(false){};
+	int protocolHash;
+	void dump();
+	// ladet die protocol.dat @return hash von der protocol.dat
+	int load();
+private:
+	bool loaded;
+};
+extern MessageLayouts messageLayouts;
 #endif
