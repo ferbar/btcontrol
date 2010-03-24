@@ -1,3 +1,5 @@
+#ifndef FBTCTL_MESSAGE_H
+#define FBTCTL_MESSAGE_H
 /**
  * bastelt die protokoll packete zusammen und zerlegts wieder
  */
@@ -90,3 +92,4 @@ private:
 // typedef std::auto_ptr<FBTCtlMessage> FBTCtlMessagePtr;
 
 
+#endif
