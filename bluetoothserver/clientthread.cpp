@@ -28,12 +28,6 @@
 #include "utils.h"
 #include "server.h"
 
-#ifdef INCL_X
-#include <X11/Xlib.h>
-#include <X11/extensions/XTest.h>
-#endif
-
-extern int protocolHash;
 extern K8055 *platine;
 
 int ClientThread::numClients=0;
@@ -169,7 +163,7 @@ void ClientThread::run()
 	FBTCtlMessage heloReply(messageTypeID("HELO"));
 	heloReply["name"]="my bt server";
 	heloReply["version"]="0.9";
-	heloReply["protohash"]=protocolHash;
+	heloReply["protohash"]=messageLayouts.protocolHash;
 	// heloReply.dump();
 	sendMessage(heloReply);
 	heloReply.clear(); // brauch ma nachher nichtmehr
@@ -267,12 +261,6 @@ void ClientThread::run()
 				lokdef[addr_index].currspeed=0;
 				sendStatusReply(lastStatus);
 				changedAddrIndex[addr_index]=true;
-#ifdef INCL_X
-				dpy = XOpenDisplay( NULL );
-				XTestFakeKeyEvent( dpy, XKeysymToKeycode( dpy, XK_Num_Lock ), True, CurrentTime );
-				XTestFakeKeyEvent( dpy, XKeysymToKeycode( dpy, XK_Num_Lock ), False, CurrentTime );
-				XCloseDisplay( dpy );
-#endif
 			} else if(cmd.isType("ACC_MULTI")) {
 				int n=cmd["list"].getArraySize();
 				int addr=cmd["list"][0]["addr"].getIntVal();
@@ -342,9 +330,6 @@ void ClientThread::run()
 				changedAddrIndex[addr_index]=true;
 
 /*
-			} else if(STREQ(cmd,"stop")) {
-				printf("stop\n");
-				lokdef[addr_index].currspeed=0;
 			} else if(STREQ(cmd,"select")) { // ret = lokname
 				int new_addr=atoi(param1);
 				printf("%d:neue lok addr:%d\n",startupdata->clientID,new_addr);
@@ -424,7 +409,7 @@ void ClientThread::run()
 				printf("client proto error\n");
 				int protohash=cmd["protohash"].getIntVal();
 				int doupdate=cmd["doupdate"].getIntVal();
-				printf("hash=%d (me:%d), doupdate=%d\n",protohash,protocolHash,doupdate);
+				printf("hash=%d (me:%d), doupdate=%d\n",protohash,messageLayouts.protocolHash,doupdate);
 				this->sendClientUpdate();
 
 			} else if(cmd.isType("BTSCAN")) { // liste mit eingetragenen loks abrufen, format: <name>;<adresse>;...\n
