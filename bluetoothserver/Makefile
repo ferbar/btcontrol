@@ -2,11 +2,44 @@
 .PHONY: tags clean
 
 CFLAGS=-g -O0 -Wall
+CFLAGS_DEP=-MMD -MF $(dir $@).$(notdir $(basename $@)).d
+
+LDFLAGS=-g -lbluetooth -lpthread -lusb
 
 all: btserver
 
+# extra config:
+-include Makefile.config
+
+Makefile.config:
+	@echo -e "no Makefile.config - generating new config for you - if you want a new config: \n" \
+		"\trm Makefile.config; make"
+	@echo -e "checking libusb-dev for velleman_usb_k8055 board:"
+	@usblibs=$$(pkg-config --libs libusb) ;\
+		if [ $$? = 0 ] ; then \
+			echo "found" ;\
+			echo "LDFLAGS+=$$usblibs" >> Makefile.config	;\
+			echo "CFLAGS+=-Dk8055" >> Makefile.config	;\
+		else						\
+			echo "not found - velleman_usb_k8055 board disabled"	;\
+		fi
+	@echo .
+	@echo -e "checking X11-dev"
+	@# X11 + X11 test + newline wegtun
+	@x11libs=$$(pkg-config --libs x11 && pkg-config --libs xtst) ;\
+		if [ $$? = 0 ] ; then \
+			echo "found" ;\
+			x11libs=$$(echo $$x11libs) ;\
+			echo "LDFLAGS+=$$x11libs" >> Makefile.config	;\
+			echo "CFLAGS+=-DINCL_X11" >> Makefile.config	;\
+			echo "btserver: clientthread_X11.o" >> Makefile.config ;\
+		else						\
+			echo "not found - X11 disabled"	;\
+		fi
+	@echo .
+
 btserver: fbtctl_message.o message_layout.o server.o btserver.o clientthread.o lokdef.o main.o srcp.o ../velleman_usb_k8055/k8055.o
-	g++ ${CFLAGS} $+ -lbluetooth -lpthread -lusb -o btserver -DSVNVERSION=`svnversion`
+	g++ ${LDFLAGS} $+ -o btserver -DSVNVERSION=`svnversion`
 
 help:
 	@echo -e "all\t alles builden\ntags\t c-tags generieren\ncopy\t auf ibm kiste kopieren\nsearch-ibm-desktop\t ibm kiste suchen\n"
@@ -26,11 +59,13 @@ search-ibm-desktop:
 	# for i in `seq 1 240` ; do (ping -W 1 -c 1 192.168.0.$$i 2>&1| grep -B 1 "transmitted, 1") & pid=$!; done
 
 %.o : %.cpp %.h
-	g++ ${CFLAGS} -c -o $@  $(@:%.o=%.cpp)
+	g++ ${CFLAGS_DEP} ${CFLAGS} -c -o $@  $(@:%.o=%.cpp)
 
 tags:
 	find . | grep -e '\.h$$' -e '\.c$$' -e '\.cpp$$' | \
 		ctags --language-force=c++ --c++-kinds=+p --extra=+q --fields=+iaS -L-
 
 clean:
-	rm -f *.o
+	rm -f *.o Makefile.config
+
+-include .*.d
