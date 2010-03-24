@@ -33,7 +33,11 @@
 #include <assert.h>
 
 #include "server.h"
+#include "utils.h"
 #include "clientthread.h"
+#ifdef INCL_X11
+#include "clientthread_X11.h"
+#endif
 
 Server::Server()
 : clientID_counter(1)
@@ -139,8 +143,16 @@ static void *phoneClient(void *data)
 	pthread_cleanup_push(unregisterPhoneClient,data);
 
 	try {
-		ClientThread client(startupData->clientID, startupData->so);
-		client.run();
+#ifdef INCL_X11
+		if(cfg_X11) {
+			ClientThreadX11 client(startupData->clientID, startupData->so);
+			client.run();
+		} else 
+#endif
+		{
+			ClientThread client(startupData->clientID, startupData->so);
+			client.run();
+		}
 	} catch(const char *e) {
 		printf("%d:exception %s\n",startupData->clientID,e);
 	} catch(std::string &s) {

@@ -1,8 +1,9 @@
+#ifndef SERVER_H
+#define SERVER_H
+
 #include <pthread.h>
 #include <map>
 #include <string>
-
-#define STREQ(s1,s2) (strcmp(s1,s2)==0)
 
 class BTServer {
 public:
@@ -23,6 +24,7 @@ public:
 
 private:
 	int tcp_so;
+	// für IDs
 	int clientID_counter;
 	// mapping clientID => pthreadID
 	std::map<int,pthread_t> clients;
@@ -33,3 +35,4 @@ struct startupdata_t {
 	int so;
 };
 
+#endif
