@@ -45,11 +45,9 @@
 #include "lokdef.h"
 #include "message_layout.h"
 
+#include "utils.h"
 
 
-// macht aus blah "blah"
-#define     _STR(x)   _VAL(x)
-#define     _VAL(x)   #x
 
 
 // mit -D `svnversion` übergeben
@@ -62,7 +60,10 @@ bool cfg_dump=false;
 const char *cfg_hostname="127.0.0.1";
 int cfg_port=4303;
 
-int protocolHash;
+#ifdef INCL_X11
+bool cfg_X11=false;
+#endif
+
 
 K8055 *platine=NULL;
 SRCP *srcp=NULL;
@@ -118,9 +119,12 @@ int main(int argc, char *argv[])
 			{"version", 0, NULL, 'v'},
 			{"server", 1, NULL, 's'},
 			{"port", 1, NULL, 'p'},
+#ifdef INCL_X11
+			{"x11",0,NULL, 'x'},
+#endif
 			{0, 0, 0, 0}
 		};
-		c = getopt_long(argc, argv, "hduvs:p:", long_options, &option_index);
+		c = getopt_long(argc, argv, "hduvs:p:x", long_options, &option_index);
 		if (c == -1)
 			break;
 
@@ -144,6 +148,11 @@ int main(int argc, char *argv[])
 					exit(255);
 				}
 				break;
+#ifdef INCL_X11
+			case 'x':
+				cfg_X11=true;
+				break;
+#endif
 			default:
 				case 'h':
 				printf("btserver\n"
@@ -153,6 +162,9 @@ int main(int argc, char *argv[])
 					"	[-u|--dump]\tdump protocol.dat, lokdef.csv\n"
 					"	[-s|--server SERVER]\tSRCP server to connect to, default localhost\n"
 					"	[-p|--port PORT]\tSRCP port number to connect to, default 4303\n"
+#ifdef INCL_X11
+					"	[-x]--x11\tX11 ctl - disables SRCP\n"
+#endif
 					"\n"
 					"connects to Velleman k8055 USB board (PWM) or SRCP server (DCC)\n");
 				exit(0);
@@ -160,8 +172,8 @@ int main(int argc, char *argv[])
 	}
 	// FBTCtlMessage test(FBTCtlMessage::STRUCT)
 	try {
-		protocolHash = loadMessageLayouts();
-		printf("---------------protohash = %d\n",protocolHash);
+		messageLayouts.load();
+		printf("---------------protohash = %d\n",messageLayouts.protocolHash);
 /*
 		FBTCtlMessage test(messageTypeID("PING_REPLY"));
 		test["info"][0]["addr"]=1;
@@ -197,7 +209,7 @@ int main(int argc, char *argv[])
 	}
 	if(cfg_dump) {
 		dumpLokdef();
-		dumpMessageLayouts();
+		messageLayouts.dump();
 	}
 
 	struct sigaction sa;
@@ -208,24 +220,30 @@ int main(int argc, char *argv[])
 	sigaction(SIGTERM,&sa,NULL);
 	printf("btserver starting...\n");
 
-	try {
-		assert(!platine);
-		platine=new K8055(1,cfg_debug);
-		printf("init platine\n");
-		resetPlatine();
-	} catch(const char *errormsg) {
-		fprintf(stderr,"ansteuer platine error: %s\n",errormsg);
-	}
-
-	if(!platine) {
-		assert(!srcp);
+#ifdef INCL_X11
+	if(!cfg_X11) {
+#endif
 		try {
-			srcp=new SRCP();
-			printf("init erddcd\n");
+			assert(!platine);
+			platine=new K8055(1,cfg_debug);
+			printf("init platine\n");
+			resetPlatine();
 		} catch(const char *errormsg) {
-			fprintf(stderr,"error connecting to erddcd (%s)\n",errormsg);
+			fprintf(stderr,"ansteuer platine error: %s\n",errormsg);
 		}
+
+		if(!platine) {
+			assert(!srcp);
+			try {
+				srcp=new SRCP();
+				printf("init erddcd\n");
+			} catch(const char *errormsg) {
+				fprintf(stderr,"error connecting to erddcd (%s)\n",errormsg);
+			}
+		}
+#ifdef INCL_X11
 	}
+#endif
 
 
 	Server server;
