@@ -122,6 +122,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 	private Command btScanCommand=new Command("erneute BT suche", Command.SCREEN, 2);
 	private Command screenCommand_startControllCanvas=new Command("connect", Command.ITEM, 1);
 	private Command newTCPConn=new Command("TCP connect", Command.ITEM, 5);
+	private Command connAndUpdateClientCommand=new Command("bt connect + Update", Command.ITEM, 6);
 
 	private Command debugScreenCommand = new Command("debugscreen", Command.SCREEN,9);
 	
@@ -406,7 +407,13 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 				getDisplay().setCurrent(getDebugForm());
 			} else if(command == newTCPConn ) {
 				getDisplay().setCurrent(getNewTCPConnForm());
-			} else if(command == screenCommand_startControllCanvas) { // verbinden!
+			} else if((command == screenCommand_startControllCanvas) || // BT-connect
+				command == connAndUpdateClientCommand)
+			{
+				if(command == connAndUpdateClientCommand) {
+					// hash putt machen damit der updaten muss
+					MessageLayouts.hash =-1;
+				}
 				if(btcomm != null && !btcomm.isAlive()) {
 					debugForm.append("btcomm not alive -> deleting object");
 					btcomm.close();
@@ -480,7 +487,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 				}
 			}//GEN-BEGIN:MVDCACase23
 		} else if (displayable == newTCPConnForm) {
-			if(command == screenCommand_startControllCanvas) {
+			if(command == screenCommand_startControllCanvas) { // TCP - connect
 				// write post-init user code here
 				try {
 					RecordStore rs=javax.microedition.rms.RecordStore.openRecordStore("tcpservers", true);
@@ -649,6 +656,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 			listServer.addCommand(get_exitCommand());
 			listServer.addCommand(screenCommand_startControllCanvas);
 			listServer.addCommand(newTCPConn);
+			listServer.addCommand(connAndUpdateClientCommand);
 			listServer.setCommandListener(this);
 			// macht exception am neuen sony .... listServer.setSelectedFlags(new boolean[0]);
 			listServer.setSelectCommand(screenCommand_startControllCanvas);
