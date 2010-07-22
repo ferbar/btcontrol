@@ -49,6 +49,9 @@ POM=addr:I,cv:I,value:I
 # 0=fehler(???) 1=ok
 POM_REPLY=value:I
 
+POMBIT=addr:I,cv:I,bit:I,value:I
+POMBIT_REPLY=value:I
+
 GETIMAGE=imgname:S
 GETIMAGE_REPLY=img:S
 

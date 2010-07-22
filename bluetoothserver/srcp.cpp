@@ -203,6 +203,20 @@ SRCPReplyPtr SRCP::sendPOM(int addr, int cv, int value)
 	
 }
 
+SRCPReplyPtr SRCP::sendPOMBit(int addr, int cv, int bitNr, bool value)
+{
+	const int CMDBUFLEN=256;
+	char buf[CMDBUFLEN];
+	snprintf(buf,CMDBUFLEN-1,"SET 1 SM " /* addr:*/ "%d CVBIT " /* cv# */ "%d " /* bit# */ "%d " /* value */ "%d",
+		addr,
+		cv,
+		bitNr,
+		value);
+	// printf("cmd: %s\n",buf);
+	return this->sendMessage(buf);
+	
+}
+
 /**
  * fragt den status (speed,func) einer lok ab TODO: fertig machen, bringt nach einem init nix, lok ist auf 000000 resettet ...
  * @param func muss nFunc platz haben 

@@ -400,6 +400,20 @@ void ClientThread::run()
 					reply["value"]=0;
 				}
 				sendMessage(reply);
+			} else if(cmd.isType("POMBIT")) {
+				int addr=cmd["addr"].getIntVal();
+				int addr_index=getAddrIndex(addr);
+				int cv=cmd["cv"].getIntVal();
+				int bitNr=cmd["bit"].getIntVal();
+				int value=cmd["value"].getIntVal();
+				FBTCtlMessage reply(messageTypeID("POMBIT_REPLY"));
+				if(srcp) {
+					reply["value"]=1;
+					srcp->sendPOMBit(lokdef[addr_index].addr, cv, bitNr, value);
+				} else {
+					reply["value"]=0;
+				}
+				sendMessage(reply);
 			} else if(cmd.isType("GETIMAGE")) {
 				std::string imageName=cmd["imgname"].getStringVal();
 				FBTCtlMessage reply(messageTypeID("GETIMAGE_REPLY"));
