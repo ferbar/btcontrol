@@ -729,7 +729,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 							if(CVVal != 0 && CVVal != 1) {
 								textFieldPOMVal.setString("");
 							}
-							textFieldPOMBinVal.setString("-");
+							textFieldPOMBinVal.setString(textFieldPOMVal.getString());
 						} else {
 							String s="";
 							for(int i=0; i < 8; i++) {
