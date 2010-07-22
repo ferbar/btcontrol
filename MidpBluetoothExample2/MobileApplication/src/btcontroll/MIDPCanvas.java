@@ -65,14 +65,17 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	private Command multiControllCommand = new Command("Mehrfachsteuerung", Command.ITEM, 10);
 
 	private Command POMCMDGo = new Command("go", Command.OK,1);
+	private Command POMCMDToggleBitMode = new Command("bitmode", Command.ITEM,10);
 			
 	boolean inCommandAction=false;
 
 	private ValueList selectList; // für die func und lok auswahl
-	private Form form=null;
+	private Form POMform=null;
+	private boolean POMBitMode=false;
 	TextField textField1=new TextField("CV","",3,TextField.NUMERIC);
+	TextField textFieldPOMBit=new TextField("Bit# (0-7)","",1,TextField.NUMERIC);
 	TextField textFieldPOMVal=new TextField("Val","",3,TextField.NUMERIC);
-	TextField textFieldPOMBinVal=new TextField("Val (bin)","",8,TextField.NUMERIC);
+	TextField textFieldPOMBinVal=new TextField("Val (bit 0 - 7)","",8,TextField.NUMERIC);
 
 	private Displayable backForm; // damit ma wieder zurück kommen
 
@@ -707,26 +710,34 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	}  
 
 	private Form getPOMForm() {
-		if(this.form != null)
-			return this.form;
-		this.form = new Form("");
-		this.form.setCommandListener(this);
-		this.form.addCommand(POMCMDGo);
-		this.form.addCommand(locoListCMDBack);
-		this.form.append(textField1);
+		if(this.POMform != null)
+			return this.POMform;
+		this.POMform = new Form("");
+		this.POMform.setCommandListener(this);
+		this.POMform.addCommand(POMCMDGo);
+		this.POMform.addCommand(locoListCMDBack);
+		this.POMform.addCommand(POMCMDToggleBitMode);
+		this.POMform.append(textField1);
 		ItemStateListener listener = new ItemStateListener() {
 			public void itemStateChanged(Item item) {
 				if(item == textFieldPOMVal) {
-					String s="";
 					if(textFieldPOMVal.getString().equals("")) {
 						
 					} else {
 						int CVVal=Integer.parseInt(textFieldPOMVal.getString());
-						for(int i=0; i < 8; i++) {
-							s+=((CVVal & (1 << i)) == 0) ? "0" : "1";
+						if(POMBitMode) {
+							if(CVVal != 0 && CVVal != 1) {
+								textFieldPOMVal.setString("");
+							}
+							textFieldPOMBinVal.setString("-");
+						} else {
+							String s="";
+							for(int i=0; i < 8; i++) {
+								s+=((CVVal & (1 << i)) == 0) ? "0" : "1";
+							}
+							textFieldPOMBinVal.setString(s);
 						}
 					}
-					textFieldPOMBinVal.setString(s);
 				} else if(item == textFieldPOMBinVal) {
 					String s=textFieldPOMBinVal.getString();
 					boolean wrongChar=false;
@@ -749,17 +760,22 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 						int CVVal=Integer.parseInt(s,2);
 						textFieldPOMVal.setString(""+CVVal);
 					}
+				} else if(item == textFieldPOMBit) {
+					int bitNr=Integer.parseInt(textFieldPOMBit.getString());
+					if(bitNr < 0 || bitNr >= 8) {
+						textFieldPOMBit.setString("");
+					}
 				}
 			}
 		};
-		this.form.setItemStateListener(listener);
+		this.POMform.setItemStateListener(listener);
 		/*
 		textFieldPOMVal.setItemCommandListener(listener);
 		textFieldPOMBinVal.setItemCommandListener(listener);
 		 */
-		this.form.append(textFieldPOMVal);
-		this.form.append(textFieldPOMBinVal);
-		return this.form;
+		this.POMform.append(textFieldPOMVal);
+		this.POMform.append(textFieldPOMBinVal);
+		return this.POMform;
 	}
 	
 	/**
@@ -916,11 +932,27 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 				btrailClient.display.setCurrent(f);
 			} else if((command==this.POMCMDGo)) {
 				FBTCtlMessage msg = new FBTCtlMessage();
-				msg.setType(MessageLayouts.messageTypeID("POM"));
-				msg.get("addr").set(this.currAddr);
-				msg.get("cv").set(Integer.parseInt(textField1.getString()));
-				msg.get("value").set(Integer.parseInt(textFieldPOMVal.getString()));
+				if(this.POMBitMode) {
+					msg.setType(MessageLayouts.messageTypeID("POMBIT"));
+					msg.get("addr").set(this.currAddr);
+					msg.get("cv").set(Integer.parseInt(textField1.getString()));
+					msg.get("bit").set(Integer.parseInt(this.textFieldPOMBit.getString()));
+					msg.get("value").set(Integer.parseInt(textFieldPOMVal.getString()));
+				} else {
+					msg.setType(MessageLayouts.messageTypeID("POM"));
+					msg.get("addr").set(this.currAddr);
+					msg.get("cv").set(Integer.parseInt(textField1.getString()));
+					msg.get("value").set(Integer.parseInt(textFieldPOMVal.getString()));
+				}
 				btcomm.addCmdToQueue(msg);
+			} else if(command==this.POMCMDToggleBitMode) {
+				if(this.POMBitMode) {
+					this.POMform.delete(1);
+					this.POMBitMode=false;
+				} else {
+					this.POMform.insert(1, this.textFieldPOMBit);
+					this.POMBitMode=true;
+				}
 			} else {
 				this.setTitle("invalid command");
 			}
