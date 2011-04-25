@@ -184,8 +184,20 @@ void ClientThread::run()
 	
 		bool emergencyStop=false;
 
-		int msgsize;
+		int msgsize=0;
 		int rc;
+		struct timeval timeout;
+		fd_set set;
+#define RUN_SELECT() \
+		timeout.tv_sec=60; timeout.tv_usec=0;		\
+		FD_ZERO(&set); FD_SET(this->so,&set);		\
+		if((rc=select(this->so+1, &set, NULL, NULL, &timeout)) <= 0) {	\
+			if(rc != 0) {							\
+				throw std::string("error select");			\
+			}										\
+			throw std::string("timeout reading cmd");		\
+		}
+		RUN_SELECT();
 		if((rc=read(this->so, &msgsize, 4)) != 4) {
 			throw std::string("error reading cmd: ") += rc; // + ")";
 		}
@@ -194,6 +206,7 @@ void ClientThread::run()
 			throw std::string("invalid size 2big");
 		}
 		char buffer[msgsize];
+		RUN_SELECT();
 		if((rc=read(this->so, buffer, msgsize)) != msgsize) {
 			throw std::string("error reading cmd.data: ") += rc; // + ")";
 		}
