@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hello">Hello World, HelloAndroid!</string>
+    <string name="app_name">BTControll</string>
+    <string name="server_name">Server Name/IP</string>
+    <string name="connect">Verbinden</string>
+    <string name="controllFormName">btcontroll</string>
+    <string name="empty_list">[leer]</string>
+    <string name="disconnect">Verbindung trennen</string>
+</resources>
