@@ -29,6 +29,9 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import btcontroll.Debuglog;
 
+// warnings ausschalten geht im java 1.3 noch nicht, midp braucht 1.3
+// @SuppressWarnings({"rawtypes","unchecked"}) // Hashtable<> gibts im midp nicht
+
 /**
  *
  */
@@ -329,7 +332,12 @@ public class FBTCtlMessage {
 	}
 	
 	public boolean isType(String typeName) {
-		 int type=MessageLayouts.messageTypeID(typeName);
+		 int type;
+		 try{
+			 type=MessageLayouts.messageTypeID(typeName);
+		 } catch(Exception e) {
+			 return false;
+		 }
 		 if(this.type == type) {
 			 return true;
 		 } else {
