@@ -21,9 +21,16 @@
 package btcontroll;
 // import java.util.Hashtable;
 		
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import javax.microedition.midlet.*;
 import javax.microedition.lcdui.*;
 import javax.bluetooth.*;
+
+import javax.microedition.io.Connector;
+import javax.microedition.io.StreamConnection;
+
 import javax.microedition.rms.RecordStore;
 
 
@@ -330,17 +337,37 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 		}
 	}
     
+	class MidpStream implements BTcommThread.PlattformStream {
+		MidpStream(String BTCtlServerURL) {
+			this.BTCtlServerURL=BTCtlServerURL;
+		}
+		public void close() throws java.io.IOException {
+			this.BTStreamConnection.close();
+		}
+		public InputStream openInputStream()throws java.io.IOException {
+			return this.BTStreamConnection.openInputStream();
+		}
+		public OutputStream openOutputStream()throws java.io.IOException {
+			return this.BTStreamConnection.openOutputStream();
+		}
+		public void connect() throws IOException {
+			this.BTStreamConnection = (StreamConnection)Connector.open(this.BTCtlServerURL);
+		}
+		StreamConnection BTStreamConnection;
+		public String BTCtlServerURL;
+	}
+
 	class ConnectThread extends Thread {
-		String connectionURL;
-		ConnectThread(String connectionURL) {
-			this.connectionURL=connectionURL;
+		MidpStream midpStream;
+		ConnectThread(MidpStream midpStream) {
+			this.midpStream = midpStream;
 		}
 		public void run() {
 			try {
-				System.out.print("connecting:"+this.connectionURL);
+				System.out.print("connecting:"+this.midpStream.BTCtlServerURL);
 
 				Object connectedNotifyObject = new Object();
-				btcomm = new BTcommThread(this.connectionURL, connectedNotifyObject);
+				btcomm = new BTcommThread(this.midpStream, connectedNotifyObject);
 						//Thread t = new Thread(btcomm); t.start(); -> da is isAlive auf einmal nicht gesetzt
 				getDisplay().setCurrent(get_controllCanvas(btcomm));
 				btcomm.start();
@@ -357,7 +384,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 				}
 			} catch(Exception e) {
 				Alert alert;
-				alert = new Alert("commandActioon","Exception:"+e.toString(),null,null);
+				alert = new Alert("commandAction","Exception:"+e.toString(),null,null);
 				alert.setTimeout(Alert.FOREVER);
 				getDisplay().setCurrent(alert);
 			}
@@ -419,35 +446,50 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 					btcomm.close();
 					btcomm=null;
 				}
-				if(btcomm == null) {
-					debugForm.setTitle("connecting ...");
 
-					String connectionURL=null;
-					// me4se dürfte einen bug bei getSelectedIndex haben
-					int index=this.listServer.getSelectedIndex();
-					if(index >= 0) {
-						Object o = this.listServer.getValue(index);
-						if(o != null) {
-							if(o instanceof ServiceRecord) {
-								ServiceRecord sr = (ServiceRecord) o;
-								connectionURL=sr.getConnectionURL(0, false);
-							} else if(o instanceof String) {
-								connectionURL=(String) o;
-							}
+				debugForm.setTitle("get remote dev ...");
+
+				String connectionURL=null;
+				// me4se dürfte einen bug bei getSelectedIndex haben
+				int index=this.listServer.getSelectedIndex();
+				if(index >= 0) {
+					Object o = this.listServer.getValue(index);
+					if(o != null) {
+						if(o instanceof ServiceRecord) {
+							ServiceRecord sr = (ServiceRecord) o;
+							connectionURL=sr.getConnectionURL(0, false);
+						} else if(o instanceof String) {
+							connectionURL=(String) o;
 						}
 					}
-					if(connectionURL == null) {
-						debugForm.setTitle("nothing selected (index="+index+")");
-						Debuglog.debugln("no connection url");
-					} else {
-						ConnectThread connectThread = new ConnectThread(connectionURL);
+				}
+				if(connectionURL == null) {
+					debugForm.setTitle("nothing selected (index="+index+")");
+					Debuglog.debugln("no connection url");
+				} else {
+					MidpStream currStream=(MidpStream)(btcomm.BTStreamConnection);
+					if((btcomm == null) || (currStream.BTCtlServerURL.compareTo(connectionURL)) != 0) {
+						if(btcomm != null) {
+							btcomm.close();
+							btcomm.stop=true;
+							int n=0;
+							while(btcomm.isAlive()) {
+								String tmp="";
+								for(int i=0; i < n; i++) tmp+='.';
+								debugForm.setTitle("closing conn " + tmp);
+								Thread.sleep(100);
+								n++;
+							}
+							btcomm=null;
+						}
+						ConnectThread connectThread = new ConnectThread(new MidpStream(connectionURL));
 						connectThread.start();
 						// DataInputStream input = (InputConnection) connection.openDataInputStream();
 						// DataOutputStream output = connection.openDataOutputStream();
-					}
 
-				} else {
-					getDisplay().setCurrent(get_controllCanvas(btcomm));
+					} else {
+						getDisplay().setCurrent(get_controllCanvas(btcomm));
+					}
 				}
 				// Insert pre-action code here
 				/*
@@ -506,7 +548,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 
 					String connectionURL;
 					connectionURL = "socket://"+this.newTCPConnForm_host.getString()+":3030";
-					ConnectThread connectThread = new ConnectThread(connectionURL);
+					ConnectThread connectThread = new ConnectThread(new MidpStream(connectionURL));
 					connectThread.start();
 
 				} else {
@@ -523,7 +565,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 		// Insert global post-action code here
 		} catch(Exception e) {
 			Alert alert;
-			alert = new Alert("commandActioon","Exception:"+e.toString(),null,null);
+			alert = new Alert("commandAction","Exception:"+e.toString(),null,null);
 			alert.setTimeout(Alert.FOREVER);
 			getDisplay().setCurrent(alert);
 			e.printStackTrace();

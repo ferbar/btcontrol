@@ -20,39 +20,49 @@
  *
  * macht die kommunikation mit dem BT server
  *	- AddCmdQueue -tut ein kommando in die queue
+ * da herinnen dürfen keine MIDP/Android spezialitäten stehn, da gemeinsam genutzt
  * run wartet auf ein commando in der queue und sendet das dann, ruft callback auf
  */
 package btcontroll;
 
-import java.io.IOException;
+// import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 // import java.lang.Exception;
 import java.util.Timer;
 import java.util.TimerTask;
-import javax.microedition.io.Connector;
-import javax.microedition.io.StreamConnection;
 
-import javax.microedition.lcdui.*;
+
 
 import protocol.FBTCtlMessage;
 import protocol.MessageLayouts;
 import protocol.InputReader;
 import protocol.OutputWriter;
 
+
+
+
 /**
  *
  * @author chris
  */
 public class BTcommThread extends Thread{
-			
+
+	// muss für MIDP und android unterschiedlich implementiert werden
+	public interface PlattformStream {
+		public void close() throws java.io.IOException;
+		public InputStream openInputStream() throws java.io.IOException;
+		public OutputStream openOutputStream() throws java.io.IOException ;
+		public void connect() throws java.io.IOException;
+	}
+	
 	// me4se kann das nicht:
 	// DataInputStream iStream;
 	// DataOutputStream oStream;
 	InputStream iStream;
 	OutputStream oStream;
-	StreamConnection BTStreamConnection;
-	String connectionURL;
+	PlattformStream BTStreamConnection;
+	// String connectionURL;
 	
 	// private boolean err=false;
 	public boolean connError() {return (this.connState != STATE_CONNECTED && this.connState != STATE_TIMEOUT); } ;
@@ -160,13 +170,14 @@ public class BTcommThread extends Thread{
 	 * @param iStream
 	 * @param oStream
 	 */
-	public BTcommThread(String connectionURL, Object connectedNotifyObject) {
-		this.connectionURL = connectionURL;
+	public BTcommThread(PlattformStream BTStreamConnection, Object connectedNotifyObject) {
+		this.BTStreamConnection=BTStreamConnection;
+		// this.connectionURL = connectionURL;
 		this.connectedNotifyObject=connectedNotifyObject;
 	}
 
 	public void connect() throws java.io.IOException {
-		this.BTStreamConnection = (StreamConnection)Connector.open(this.connectionURL);
+		this.BTStreamConnection.connect();
 		this.iStream=BTStreamConnection.openInputStream();
 		this.oStream=BTStreamConnection.openOutputStream();
 		System.out.print("iStream: "+this.iStream+" oStream:"+this.oStream);
@@ -180,7 +191,7 @@ public class BTcommThread extends Thread{
 		}
 	}
 
-	protected void close()
+	public void close()
 	{
 		this.setStatus(STATE_DISCONNECTED);
 
