@@ -101,19 +101,29 @@ public class MessageLayouts {
 		throw new Exception("getLayout type "+type+" invalid");
 	}
 	
-	public static void dump() { MessageLayouts.dump(0);}
-	public static void dump(int indent) {
-		Enumeration e = messageLayouts.elements();
+	public static void dump() { 
+		Enumeration e = MessageLayouts.messageLayouts.keys();
 		while(e.hasMoreElements()) {
 			String name = (String) e.nextElement();
+			System.out.println("["+name+"]:");
 			MessageLayout layout = (MessageLayout) messageLayouts.get(name);
-			String messageTypeName;
-			try {
-				messageTypeName=MessageLayouts.messageTypeName(layout.type);
-			} catch(Exception ex) {
-				messageTypeName="exception:"+ex;
+			dumpMessageLayout(layout,0);
+		}		
+	}
+	public static void dumpMessageLayout(MessageLayout layout, int indent) {
+		String messageTypeName;
+		try {
+			messageTypeName=MessageLayouts.messageTypeName(layout.type);
+		} catch(Exception ex) {
+			messageTypeName="exception:"+ex;
+		}
+		for(int i=0; i < indent; i++); System.out.print("  "); System.out.println(layout.name+" ["+layout.type+'='+messageTypeName+"]");
+		if(layout.childLayout != null) {
+			Enumeration e = layout.childLayout.elements();
+			while(e.hasMoreElements()) {
+				MessageLayout childLayout = (MessageLayout) e.nextElement();
+				dumpMessageLayout(childLayout,indent+1);
 			}
-			System.out.print("["+name+"]:["+messageTypeName+"]");
 		}
 	}
 	
@@ -145,8 +155,11 @@ public class MessageLayouts {
 		}
 	}
 
-	public static int messageTypeID(String name) {
+	public static int messageTypeID(String name) throws Exception {
 		MessageLayout layout = (MessageLayout) messageLayouts.get(name);
+		if(layout==null) {
+			throw new Exception("invalid messageType: '"+name+"'");
+		}
 		return layout.type;
 	}
 }
