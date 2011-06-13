@@ -960,7 +960,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			btrailClient.display.setCurrent(this);	// canvas wieder setzen wenna in der liste is ....
 
 			Alert alert;
-			alert = new Alert("commandActioon","Exception:" + e,null,null);
+			alert = new Alert("commandAction","Exception:" + e,null,null);
 			alert.setTimeout(Alert.FOREVER);
 			btrailClient.display.setCurrent(alert);
 

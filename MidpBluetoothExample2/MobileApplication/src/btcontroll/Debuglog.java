@@ -19,7 +19,7 @@
 package btcontroll;
 import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.Font;
-import javax.microedition.lcdui.StringItem;
+// import javax.microedition.lcdui.StringItem;
 import javax.microedition.lcdui.Display;
 
 /**
@@ -66,5 +66,12 @@ public class Debuglog {
    }
 		catch(Exception ex){}
 */
+	}
+}
+
+// fake string klasse damit ma das lcdui aus BTcommThread raushaun kann
+class StringItem extends javax.microedition.lcdui.StringItem {
+	public StringItem(String a, String b) {
+		super(a,b);
 	}
 }
