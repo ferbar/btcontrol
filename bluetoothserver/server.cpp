@@ -174,6 +174,11 @@ void Server::run()
 		startupData->so=nsk;
 		pthread_t &newThread=this->clients[startupData->clientID];
 		bzero(&newThread,sizeof(newThread));
-		pthread_create(&newThread, NULL, phoneClient, (void *)startupData);
+		if(int rc=pthread_create(&newThread, NULL, phoneClient, (void *)startupData) != 0) {
+			printf("error creating new thread rc=%d\n",rc);
+			perror("error creating new thread ");
+		}
+		printf("new Thread: %lx\n",newThread);
+		pthread_detach(newThread);
 	}
 }
