@@ -34,7 +34,7 @@ STOP_MULTI=list:A{addr:I}
 # func ein/aus
 SETFUNC=addr:I,funcnr:I,value:I
 
-# notstop/power off, speed jeder lok auf 0 setzen?
+# notstop/power off, speed jeder lok auf 0 setzen?, -1 = nix ändern nur status liefern
 POWER=value:I
 POWER_REPLY=value:I
 
