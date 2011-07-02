@@ -39,7 +39,7 @@ Makefile.config:
 	@echo .
 
 btserver: fbtctl_message.o message_layout.o server.o btserver.o clientthread.o lokdef.o main.o srcp.o ../velleman_usb_k8055/k8055.o
-	g++ ${LDFLAGS} $+ -o btserver -DSVNVERSION=`svnversion`
+	g++ ${LDFLAGS} $+ -o btserver
 
 help:
 	@echo -e "all\t alles builden\ntags\t c-tags generieren\ncopy\t auf ibm kiste kopieren\nsearch-ibm-desktop\t ibm kiste suchen\n"
@@ -60,6 +60,8 @@ search-ibm-desktop:
 
 %.o : %.cpp %.h
 	g++ ${CFLAGS_DEP} ${CFLAGS} -c -o $@  $(@:%.o=%.cpp)
+main.o : main.cpp main.h
+	g++ ${CFLAGS_DEP} ${CFLAGS} -c -o $@  $(@:%.o=%.cpp) -DSVNVERSION=`svnversion`
 
 tags:
 	find . | grep -e '\.h$$' -e '\.c$$' -e '\.cpp$$' | \
