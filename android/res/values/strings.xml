@@ -7,4 +7,5 @@
     <string name="controllFormName">btcontroll</string>
     <string name="empty_list">[leer]</string>
     <string name="disconnect">Verbindung trennen</string>
+    <string name="help">Hilfe</string>
 </resources>

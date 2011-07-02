@@ -9,7 +9,11 @@
         	android:layout_height="wrap_content"
         	android:layout_marginTop="10dip"
         	android:layout_marginBottom="10dip" android:paddingTop="10dip" android:paddingBottom="10dip"></SeekBar>
-        <TextView android:text="TextView" android:id="@+id/textView1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center|center_vertical|center_horizontal|fill" android:layout_gravity="center|center_horizontal|right"></TextView>
+        <TextView android:text="TextView" android:id="@+id/textView1" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+        	<!-- android:gravity="center|center_vertical|center_horizontal|fill" android:layout_gravity="center|center_horizontal|right" -->
+        	
+        <TextView android:text="TextView" android:id="@+id/textViewStatus" android:layout_width="wrap_content" 
+        	android:layout_height="wrap_content" />
     <TableRow android:id="@+id/tableRow2" 
     	android:layout_width="match_parent"
     	android:layout_weight="1"
@@ -39,6 +43,52 @@
        	android:onClick="onClickButton" android:progress="2"/>
 	<View
         android:layout_height="2dip"
-        android:background="#FF909090" />
-	<ImageView android:layout_height="wrap_content" android:layout_width="wrap_content" android:src="@drawable/icon" android:id="@+id/imageView1"></ImageView>
+        android:background="#FF909090"
+        android:layout_marginTop="10dip"
+       	android:layout_marginBottom="10dip" />
+    <TableRow  
+    	android:layout_width="match_parent"
+    	android:layout_weight="1"
+    	android:layout_marginTop="2dip"
+       	android:layout_marginBottom="2dip"
+    	android:layout_gravity="center" android:baselineAligned="false">
+		<ToggleButton android:text="ToggleButton" android:id="@+id/bF1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textOn="F1" android:textOff="F1" android:onClick="onClickButton" />
+		<ToggleButton android:text="ToggleButton" android:id="@+id/bF2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textOn="F2" android:textOff="F2" android:onClick="onClickButton" />
+		<ToggleButton android:text="ToggleButton" android:id="@+id/bF3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textOn="F3" android:textOff="F3" android:onClick="onClickButton" />
+	</TableRow>
+    <TableRow  
+    	android:layout_width="match_parent"
+    	android:layout_weight="1"
+    	android:layout_marginTop="2dip"
+       	android:layout_marginBottom="2dip"
+    	android:layout_gravity="center" android:baselineAligned="false">
+		<ToggleButton android:text="ToggleButton" android:id="@+id/bF4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textOn="F4" android:textOff="F4" android:onClick="onClickButton" />
+		<ToggleButton android:text="ToggleButton" android:id="@+id/bF5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textOn="F5" android:textOff="F5" android:onClick="onClickButton" />
+		<ToggleButton android:text="ToggleButton" android:id="@+id/bF6" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textOn="F6" android:textOff="F6" android:onClick="onClickButton" />
+	</TableRow>
+    <TableRow  
+    	android:layout_width="match_parent"
+    	android:layout_weight="1"
+    	android:layout_marginTop="2dip"
+       	android:layout_marginBottom="10dip"
+    	android:layout_gravity="center" android:baselineAligned="false">
+		<ToggleButton android:text="ToggleButton" android:id="@+id/bF7" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textOn="F7" android:textOff="F7" android:onClick="onClickButton" />
+		<ToggleButton android:text="ToggleButton" android:id="@+id/bF8" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textOn="F8" android:textOff="F8" android:onClick="onClickButton" />
+		<ToggleButton android:text="ToggleButton" android:id="@+id/bF9" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textOn="F9" android:textOff="F9" android:onClick="onClickButton" />
+	</TableRow>
+    <TableRow  
+    	android:layout_width="match_parent"
+    	android:layout_weight="1"
+    	android:layout_marginTop="2dip"
+       	android:layout_marginBottom="10dip"
+    	android:layout_gravity="center" android:baselineAligned="false">
+		<ToggleButton android:text="ToggleButton" android:id="@+id/bF0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textOn="F0" android:textOff="F0" android:onClick="onClickButton" />
+		<ToggleButton android:text="ToggleButton" android:id="@+id/bFshift" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textOn="Fshift" android:textOff="Fshift" android:onClick="onClickButton" />
+		<ToggleButton android:text="ToggleButton" android:id="@+id/bFx" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textOn="F9" android:textOff="F9" android:onClick="onClickButton" />
+	</TableRow>
+	<!--  ImageView 
+		android:layout_width="wrap_content" 
+		android:src="@drawable/icon"
+		android:id="@+id/imageView1"
+		android:layout_height="match_parent" / -->
 </TableLayout>
