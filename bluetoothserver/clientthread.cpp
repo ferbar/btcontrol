@@ -28,6 +28,14 @@
 #include "utils.h"
 #include "server.h"
 
+// für setsockopt
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+
+
 extern K8055 *platine;
 
 int ClientThread::numClients=0;
@@ -47,8 +55,12 @@ void ClientThread::sendMessage(const FBTCtlMessage &msg)
 	std::string binMsg=msg.getBinaryMessage();
 	int msgsize=binMsg.size();
 	printf("%d:  sendMessage size: %zu+4 %d=%s\n", this->clientID, binMsg.size(), msg.getType(), messageTypeName(msg.getType()).c_str());
+	int flag = 1;
+	setsockopt(this->so, IPPROTO_TCP, TCP_CORK, (char *)&flag, sizeof(flag) ); // prepare message, stopsel rein
 	write(this->so, &msgsize, 4);
 	write(this->so, binMsg.data(), binMsg.size());
+	flag=0;
+	setsockopt(this->so, IPPROTO_TCP, TCP_CORK, (char *)&flag, sizeof(flag) ); // message fertig, senden
 }
 
 void ClientThread::setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus)
@@ -391,14 +403,15 @@ void ClientThread::run()
 					reply["info"][i]["imgname"]="";
 				}
 				sendMessage(reply);
-			} else if(cmd.isType("POWER")) {
+			} else if(cmd.isType("POWER")) { // special: value=-1   -> nix ändern, nur status liefern
+// TODO: alle loks auf speed=0 setzten, dir=notaus
 				int value=cmd["value"].getIntVal();
-				if(srcp) {
+				if(srcp && (value != -1) ) {
 					if(value) srcp->pwrOn();
 					else srcp->pwrOff();
 				}
 				FBTCtlMessage reply(messageTypeID("POWER_REPLY"));
-				reply["value"]=value;
+				reply["value"]=srcp->powered;
 				sendMessage(reply);
 			} else if(cmd.isType("POM")) {
 				int addr=cmd["addr"].getIntVal();
