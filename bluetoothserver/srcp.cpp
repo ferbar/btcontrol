@@ -26,6 +26,7 @@
 #include "srcp.h"
 #include <errno.h>
 
+bool SRCP::powered=false;
 
 
 SRCPReply::SRCPReply(const char *message)
@@ -115,6 +116,7 @@ void SRCP::pwrOn()
 		fprintf(stderr,"error power on (%s)\n",reply->message);
 	}
 	printf("STARTVOLTAGE done\n");
+	this->powered=true;
 }
 
 void SRCP::pwrOff()
@@ -124,6 +126,7 @@ void SRCP::pwrOff()
 		fprintf(stderr,"error power on (%s)\n",reply->message);
 	}
 	printf("STOPVOLTAGE done\n");
+	this->powered=false;
 }
 
 /**
