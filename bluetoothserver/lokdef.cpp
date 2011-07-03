@@ -136,7 +136,7 @@ bool readLokdef()
 		pos_end=getnext(&pos);
 		CHECKVAL("error reading nfunc");
 		lokdef[n].nFunc=atoi(pos)+1;
-		strcpy(lokdef[n].func[0].name,"headlight");
+		strcpy(lokdef[n].func[0].name,"lHeadlight");
 		lokdef[n].func[0].ison=true;
 
 		for(int i=1; i < lokdef[n].nFunc; i++) {
