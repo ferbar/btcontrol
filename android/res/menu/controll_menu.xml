@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+  xmlns:android="http://schemas.android.com/apk/res/android">
+	<item android:id="@+id/menu_selectLok"
+          android:icon="@drawable/ic_lok"
+          android:title="Lok Auswahl" />
+	<item android:id="@+id/menu_functions"
+          android:icon="@drawable/ic_lightbulb"
+          android:title="Funktionen" />
+	<item android:id="@+id/menu_POM"
+          android:icon="@drawable/ic_bits"
+          android:title="POM" />
+	<item android:id="@+id/menu_Power"
+          android:title="Power" />
+    <item android:id="@+id/help"
+          android:icon="@drawable/ic_lok"
+          android:title="@string/help" />
+</menu>
