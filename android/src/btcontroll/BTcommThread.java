@@ -1,1 +1,0 @@
-/home/chris/dev/btcontroll/MidpBluetoothExample2/MobileApplication/src/btcontroll/BTcommThread.java
