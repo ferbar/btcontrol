@@ -12,7 +12,10 @@
           android:title="POM" />
 	<item android:id="@+id/menu_Power"
           android:title="Power" />
-    <item android:id="@+id/help"
+    <item android:id="@+id/menu_help"
           android:icon="@drawable/ic_lok"
           android:title="@string/help" />
+    <item android:id="@+id/menu_multi"
+          android:icon="@drawable/ic_multi"
+    	  android:title="Mehrfachsteuerung" />
 </menu>

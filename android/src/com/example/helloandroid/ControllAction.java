@@ -1,11 +1,9 @@
 /**
  * das dings da ist für user eingabe zuständig
- * TODO: power off (notstop)
- * TODO: vol + / - als schneller /langsamer
  * TODO: schieber als input verwenden
- * TODO: aktuelle geschwindigkeit anzeigen
+ * TODO: sencommand in eine func
+ * TODO: mehrfachsteuerung
  * 
- * TODO: btcommthread/timeoutTask: wenn zu lange timeout dann conn zumachen
  */
 
 package com.example.helloandroid;
@@ -17,8 +15,12 @@ import java.util.TimerTask;
 
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.res.Resources;
+// import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -26,6 +28,8 @@ import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.PowerManager;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.ContextMenu;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -33,13 +37,16 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewParent;
+import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
+import android.widget.EditText;
 import android.widget.Toast;
-import android.widget.ToggleButton;
+// import android.widget.ToggleButton;
 import protocol.FBTCtlMessage;
 import protocol.MessageLayouts;
 import btcontroll.AndroidStream;
@@ -54,7 +61,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	// damit sich der bildschirmschoner nicht einschaltet:
 	PowerManager.WakeLock powerManager_wl;
 	String [] funcNames=null;
-	int [] funcStates=null; // beim repaint wird das geupdatet  
+	boolean [] funcStates=null; // beim repaint wird das geupdatet  
 
 	// zuordnung adresse -> lokbezeichnung,bild
 	static class AvailLocosListItem {public String name; public Bitmap img; public int speed; public int funcBits;
@@ -105,7 +112,6 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	    	this.currAddr=savedInstanceState.getInt("currAddr");
 	    }
         setContentView(R.layout.controll);
-	    // TODO Auto-generated method stub
         
         
         if(this.currAddr == 0) {
@@ -170,18 +176,20 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
         super.onActivityResult(requestCode, resultCode, intent);
-        this.currAddr=intent.getIntExtra("currAddr", -1);
-        // funcNames einlesen:
-    	FBTCtlMessage msg = new FBTCtlMessage();
-    	try {
-			msg.setType(MessageLayouts.messageTypeID("GETFUNCTIONS"));
-	    	msg.get("addr").set(this.currAddr);
-			AndroidMain.btcomm.addCmdToQueue(msg,this);
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-        this.repaint();
+        if(intent != null) {
+        	this.currAddr=intent.getIntExtra("currAddr", -1);
+        	// funcNames einlesen:
+	    	FBTCtlMessage msg = new FBTCtlMessage();
+	    	try {
+				msg.setType(MessageLayouts.messageTypeID("GETFUNCTIONS"));
+		    	msg.get("addr").set(this.currAddr);
+				AndroidMain.btcomm.addCmdToQueue(msg,this);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	        this.repaint();
+        }
     }
     
 /* ====================================================================================================================================
@@ -192,7 +200,14 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	public boolean onPrepareOptionsMenu(Menu menu) {
     	FBTCtlMessage msg = new FBTCtlMessage();
     	try {
+    		AvailLocosListItem lok=ControllAction.availLocos.get(this.currAddr);
+        	if((lok != null) && (lok.speed != 0)) {
+    			msg.setType(MessageLayouts.messageTypeID("STOP"));
+    	    	msg.get("addr").set(this.currAddr);
+    			AndroidMain.btcomm.addCmdToQueue(msg,this);
+    		}
     		powerMenuItem = (MenuItem) menu.findItem(R.id.menu_Power);
+    		msg = new FBTCtlMessage();
 			msg.setType(MessageLayouts.messageTypeID("POWER"));
 	    	msg.get("value").set(-1);
 			AndroidMain.btcomm.addCmdToQueue(msg,this);
@@ -231,6 +246,162 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 			}
 	    	powerMenuItem=null;
             return true;
+        case R.id.menu_functions: {
+        	//List items
+
+        	// final CharSequence[] items = {"Milk", "Butter", "Cheese"};
+
+        	//Prepare the list dialog box
+        	AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        	AvailLocosListItem lok=ControllAction.availLocos.get(this.currAddr);
+        	if(lok == null) {
+        		Toast.makeText(this,"keine lok", Toast.LENGTH_LONG).show();
+        		return true;
+        	}
+        	//Set its title
+        	builder.setTitle("Funktionen von "+lok.name);
+        	
+        	builder.setNeutralButton("done", new DialogInterface.OnClickListener() {
+        		 // Click listener on the neutral button of alert box
+                public void onClick(DialogInterface dialog, int arg1) {
+
+                    // The neutral button was clicked
+                    // Toast.makeText(getApplicationContext(), "'OK' button clicked", Toast.LENGTH_LONG).show();
+                	dialog.dismiss();
+                }
+            });
+// TODO: namen schön machen
+        	builder.setMultiChoiceItems(this.funcNames, this.funcStates,  new DialogInterface.OnMultiChoiceClickListener() {
+        		// Click listener
+
+        		public void onClick(DialogInterface dialog, int item, boolean on) {
+
+        	        // Toast.makeText(getApplicationContext(), funcNames[item], Toast.LENGTH_SHORT).show();
+
+    	        	FBTCtlMessage msg = new FBTCtlMessage();
+    	        	try {
+        	        	msg.setType(MessageLayouts.messageTypeID("SETFUNC"));
+        	        	msg.get("funcnr").set(item);
+        	        	msg.get("value").set(on ? 1 : 0);
+        	        	msg.get("addr").set(currAddr);
+						AndroidMain.btcomm.addCmdToQueue(msg); // TODO: callback handler vom ControllAction aufrufen
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+        	    }
+        	}
+        	);
+
+        	AlertDialog alert = builder.create();
+
+        	//display dialog box
+
+        	alert.show(); }
+        	return true; 
+        case R.id.menu_help: {
+        	  // Create the alert box
+            AlertDialog.Builder alertbox = new AlertDialog.Builder(this);
+            alertbox.setTitle("Hilfe");
+            // Set the message to display
+            alertbox.setMessage("back taste(kurz) =power off\n" +
+            	"Menu = aktueller zug stop (TODO)\n"+
+            	"im menü wird aktueller power-status richtig angezeigt"); // TODO
+
+            // Add a neutral button to the alert box and assign a click listener
+            alertbox.setNeutralButton("Ok", new DialogInterface.OnClickListener() {
+
+                // Click listener on the neutral button of alert box
+                public void onClick(DialogInterface arg0, int arg1) {
+
+                    // The neutral button was clicked
+                    // Toast.makeText(getApplicationContext(), "'OK' button clicked", Toast.LENGTH_LONG).show();
+                }
+            });
+
+             // show the alert box
+            alertbox.show(); }
+        	return true;
+        case R.id.menu_POM:
+        	// Context mContext = getApplicationContext();
+    		AvailLocosListItem lok=ControllAction.availLocos.get(this.currAddr);
+    		if(lok != null) {
+            	final Dialog dialog = new Dialog(this);
+
+            	dialog.setContentView(R.layout.pom);
+            	dialog.setTitle("Programming on the Main");
+
+            	// nettes bild + lokname setzen
+            	TextView tv = (TextView) dialog.findViewById(R.id.textView1);
+            	tv.setText(lok.name);
+            	ImageView iv = (ImageView) dialog.findViewById(R.id.imageViewLok);
+    			iv.setImageBitmap(lok.img);
+    			
+    			// onChange -> valueBits updaten
+    		    ((EditText)dialog.findViewById(R.id.editTextValue)).addTextChangedListener(new TextWatcher() {
+    		        public void afterTextChanged(Editable s) {
+    		        	View v=(View)(EditText) dialog.findViewById(R.id.editTextValue);
+		        		String value=s.toString();
+		        		int vi=Integer.parseInt(value);
+		        		if(vi > 255) {
+		        			v.setBackgroundColor(Color.RED);
+		        		} else {
+		        			// v.setBackgroundResource(0);
+		        			v.setBackgroundColor(Color.WHITE);  // TODO: da den normalen background wieder reintun
+	    		        	if(v.hasFocus()) {
+	    		        		String valueBits="";
+	    		        		for(int i=0; i < 8; i++) {
+	    		        			valueBits=(((vi >> i) & 1) == 1 ? 1 : 0 ) + valueBits;
+	    		        		}
+	    		        		EditText editTextValueBits=(EditText) dialog.findViewById(R.id.editTextValueBits);
+	    		        		editTextValueBits.setText(valueBits);
+    		        		}
+    		        	}
+    		        }
+    		        public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+    		        public void onTextChanged(CharSequence s, int start, int before, int count) { }
+    		    });
+    			// onChange -> value updaten
+    		    ((EditText)dialog.findViewById(R.id.editTextValueBits)).addTextChangedListener(new TextWatcher() {
+    		        public void afterTextChanged(Editable s) {
+    		        	View v=(View)(EditText) dialog.findViewById(R.id.editTextValueBits);
+    		        	if(v.hasFocus()) {
+    		        		String valueBits=s.toString();
+    		        		int vbi;
+    		        		try{
+    		        			vbi=Integer.parseInt(valueBits,1);
+    		        		} catch(Exception e) {
+    		        			vbi=0;
+    		        		}
+    		        		String value=""+vbi;
+    		        		EditText editTextValueBits=(EditText) dialog.findViewById(R.id.editTextValue);
+    		        		editTextValueBits.setText(value);
+    		        	}
+    		        }
+    		        public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+    		        public void onTextChanged(CharSequence s, int start, int before, int count) { }
+    		    });
+		        ((Button)dialog.findViewById(R.id.buttonGo)).setOnClickListener(new View.OnClickListener() {
+		        	public void onClick(View v) {
+		        		try {
+		        			FBTCtlMessage msg = new FBTCtlMessage();
+			    			msg.setType(MessageLayouts.messageTypeID("POWER"));
+			    	    	msg.get("value").set(-1);
+			    	    	FBTCtlMessage reply = AndroidMain.btcomm.execCmd(msg);
+			    			Toast.makeText(v.getContext(), "gesendet", Toast.LENGTH_LONG).show();
+			    		} catch (Exception e) {
+			    			// TODO Auto-generated catch block
+			    			e.printStackTrace();
+			    		}
+
+		        	}
+		        });
+            	dialog.setOwnerActivity(this);
+            	dialog.show();
+    		} else {
+    			Toast.makeText(this,"keine lok", Toast.LENGTH_LONG).show();
+    		}
+        	return true;
         default:
         	powerMenuItem=null;
             return super.onOptionsItemSelected(item);
@@ -333,13 +504,8 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 					msg.setType(MessageLayouts.messageTypeID("SETFUNC"));
 					msg.get("funcnr").set(func);
 					int value;
-					try {
-						ToggleButton tb = (ToggleButton) view;
-						value = tb.isChecked() ? 1 : 0;
-					} catch(Exception e) {
-						ImageButton ib = (ImageButton) view;
-						value=this.funcStates[func]==0 ? 1 : 0; // togglen
-					}
+
+					value=this.funcStates[func] ? 0 : 1; // togglen
 					msg.get("value").set(value);
 					break;
 				}
@@ -478,7 +644,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 				} else if(reply.isType("GETFUNCTIONS_REPLY")) {
 					int n=reply.get("info").getArraySize();
 			        this.funcNames=new String[n];
-			        this.funcStates=new int[n];
+			        this.funcStates=new boolean[n];
 					for(int i=0; i < n; i++) {
 						this.funcNames[i]=reply.get("info").get(i).get("name").getStringVal();
 					}
@@ -549,6 +715,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 				this.lastDirProgress=-1;
 				seekBar.setProgress(item.speed < 0 ? 0 : 2);
 			}
+			/*
 			for(int i=0; i < this.viewFunctions.length; i++) {
 				try {
 					ToggleButton tb=(ToggleButton)this.findViewById(this.viewFunctions[i]);
@@ -559,6 +726,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 					
 				}
 			}
+			*/
 			ImageView iv=(ImageView)this.findViewById(R.id.imageViewLok);
 			iv.setImageBitmap(item.img);
 		}
@@ -589,7 +757,8 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 		if(this.funcNames != null) {
 			int n=this.funcNames.length;
 			for(int i=0; i < this.viewFunctions.length; i++) {
-				this.funcStates[i]=(item.funcBits >> i) & 1;
+				this.funcStates[i]=((item.funcBits >> i) & 1) != 0;
+				/*
 				try {
 					ToggleButton tb=(ToggleButton)this.findViewById(this.viewFunctions[i]);
 					if(tb != null) {
@@ -609,6 +778,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 						}
 					}
 				} catch(Exception e) {
+					*/
 					ImageButton ib=(ImageButton)this.findViewById(this.viewFunctions[i]);
 					if(ib != null) {
 						if(i < n) {
@@ -618,12 +788,17 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 							case 's':
 								Drawable drawableSound=this.getResources().getDrawable(R.drawable.image_button_sound);
 								ib.setImageDrawable(drawableSound);
-								ib.setImageLevel(this.funcStates[i]);
+								ib.setImageLevel(this.funcStates[i] ? 1 : 0);
 								break;
 							case 'l':
 								Drawable drawableLight=this.getResources().getDrawable(R.drawable.image_button_light);
 								ib.setImageDrawable(drawableLight);
-								ib.setImageLevel(this.funcStates[i]);
+								ib.setImageLevel(this.funcStates[i] ? 1 : 0);
+								break;
+							case 'p':
+								Drawable drawablePantograph=this.getResources().getDrawable(R.drawable.image_button_pantograph);
+								ib.setImageDrawable(drawablePantograph);
+								ib.setImageLevel(this.funcStates[i] ? 1 : 0);
 								break;
 							default:
 								//tb.setBackgroundResource(android.R.drawable.btn_star);
@@ -633,7 +808,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 						}
 					}
 					
-				}
+				// }
 			}
 		}
 	}
@@ -715,7 +890,6 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 
 		if(seekBar.getProgress() == this.lastDirProgress) return; // wenn sich nix geändert hat gleich raus, bis die antwort kommt und repaint aufgerufen wird dauerts immer ein bissl;
 		this.lastDirProgress=progress;
-		// TODO Auto-generated method stub
 		if(seekBar.getProgress() == 1) {
 			seekBar.setProgress(2); // wemma von 0-1 nimmt ist 0-99%=0, 100%=1
 		}
@@ -724,11 +898,9 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	}
 
 	public void onStartTrackingTouch(SeekBar seekBar) {
-		// TODO Auto-generated method stub
 	}
 
 	public void onStopTrackingTouch(SeekBar seekBar) {
-		// TODO Auto-generated method stub
 	}
 	
     

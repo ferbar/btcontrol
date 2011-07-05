@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  android:orientation="vertical"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent">
+	<LinearLayout android:orientation="horizontal"
+		android:layout_width="fill_parent" android:layout_height="wrap_content"
+		android:background="#606060">
+		<ImageView android:width="100px" android:layout_width="wrap_content"
+			android:layout_height="wrap_content" android:src="@drawable/ic_lok"
+			android:id="@+id/imageViewLok" />
+		<TextView android:layout_toRightOf="@+id/imageView1"
+			android:layout_marginLeft="10dip"
+			android:text="keine Lok ausgewählt" android:id="@+id/textView1"
+			android:layout_width="wrap_content" android:layout_height="wrap_content" />
+		<!-- android:layout_weight="1" android:gravity="center|center_vertical|center_horizontal|fill" android:layout_gravity="center|center_horizontal|right" -->
+	</LinearLayout>
+	<TextView android:text="CV #" android:id="@+id/textViewCV" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+	<EditText android:layout_height="wrap_content" android:layout_width="match_parent"
+		android:id="@+id/editText1"
+		android:singleLine="true" android:inputType="numberDecimal">
+		<requestFocus></requestFocus>
+	</EditText>
+	<TextView android:text="Value" android:id="@+id/textViewValue" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+	<EditText android:layout_height="wrap_content" android:layout_width="match_parent"
+		android:id="@+id/editTextValue"
+		android:singleLine="true" android:inputType="numberDecimal"
+		/>
+	<TextView android:text="ValueBits" android:id="@+id/textViewValueBits" android:layout_width="wrap_content" android:layout_height="wrap_content"></TextView>
+	<EditText android:layout_height="wrap_content" android:layout_width="match_parent"
+		android:id="@+id/editTextValueBits"
+		android:singleLine="true" android:inputType="numberDecimal"
+		 />
+	<Button android:text="go" android:id="@+id/buttonGo" android:layout_width="wrap_content" android:layout_height="wrap_content"></Button>
+	
+</LinearLayout>
