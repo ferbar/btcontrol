@@ -1,6 +1,6 @@
 <?xml version="1.0" standalone='no'?><!--*-nxml-*-->
 <!DOCTYPE service-group SYSTEM "avahi-service.dtd">
-
+<!-- gehört ins /etc/avahi/services kopiert (sonst passt was mit den berechtigungen nicht) -->
 
 <service-group>
 
