@@ -37,6 +37,7 @@ import java.util.TimerTask;
 import protocol.FBTCtlMessage;
 import protocol.MessageLayouts;
 import protocol.InputReader;
+import protocol.MyLock;
 import protocol.OutputWriter;
 
 
@@ -61,16 +62,16 @@ public class BTcommThread extends Thread{
 	// DataOutputStream oStream;
 	InputStream iStream;
 	OutputStream oStream;
-	PlattformStream BTStreamConnection;
+	public PlattformStream BTStreamConnection;
 	// String connectionURL;
 	
 	// private boolean err=false;
 	public boolean connError() {return (this.connState != STATE_CONNECTED && this.connState != STATE_TIMEOUT); } ;
 	boolean doupdate=false;
-	private Object connectedNotifyObject;
+	public MyLock connectedNotifyObject; // da lock(); machen, wenn connected dann tut das weiter
 
 	// doClient neu starten wenn verbindung abgebrochen?
-	boolean stop=false;
+	private boolean stop=false;
 
 	public static final int STATE_DISCONNECTED = 0;
 	public static final int STATE_OPENPORT = 1;
@@ -78,6 +79,7 @@ public class BTcommThread extends Thread{
 	public static final int STATE_CONNECTED = 3;
 	public static final int STATE_TIMEOUT = 4; // connected aber gerade timeout
 	public static final int STATE_OPENERROR = 5;
+	public static final String [] statusText = {"disconnected", "open port", "connecting", "connected", "timeout", "error connecting"};
 
 	public int connState;
 
@@ -98,7 +100,7 @@ public class BTcommThread extends Thread{
 	public final Object statusChange = new Object();
 
 	// FIXME: nextMessage = 1 element queue
-	NextMessage nextMessage=null;
+	public NextMessage nextMessage=null;
 	boolean my_queue_returnReply=false;
 	private final Object queue_wait=new Object(); // thread macht nachn senden ein notify -> kamma neues reinschreiben
 	
@@ -121,22 +123,32 @@ public class BTcommThread extends Thread{
 					Debuglog.debugln("BTCallback exception: "+e.toString());
 				}
 			}
+			// TODO: wenn zu lange timeout dann connection zumachen
 			Debuglog.vibrate(30);
 		}
 	}
 	
 
-	// sachen fürs pingding:
+	/**
+	 *  sachen fürs pingen, macht die connection zu wenn 10* hintereinander aufgerufen ohne dass timeout resettet wurde
+	 */  
 	Timer timer;
 	private final Object timerwait = new Object();
 	TimerTask task;
+	int timeoutCounter=0;
 	public class PingDing extends TimerTask {
 		Object notifyObject;
 		public PingDing(Object notifyObject) {
 			this.notifyObject=notifyObject;
 		}
 		public void run() {
-			System.out.println( "Running the ping task" );
+			System.out.println("Running the ping task ("+BTcommThread.statusText[connState]+")");
+			if(connState==BTcommThread.STATE_TIMEOUT) {
+				timeoutCounter++;
+				if(timeoutCounter > 10) {
+					close(false);
+				}
+			}
 			// HelloMidlet h =
 			synchronized(this.notifyObject) {
 				// helloForm.append("timer ");
@@ -167,13 +179,18 @@ public class BTcommThread extends Thread{
 	
 	/**
 	 * Creates a new instance of BTcommThread
-	 * @param iStream
-	 * @param oStream
+	 * @param BTStreamConnection für MIDP/android spezifisches connect
 	 */
-	public BTcommThread(PlattformStream BTStreamConnection, Object connectedNotifyObject) {
+	public BTcommThread(PlattformStream BTStreamConnection /*, Object connectedNotifyObject */) {
 		this.BTStreamConnection=BTStreamConnection;
 		// this.connectionURL = connectionURL;
-		this.connectedNotifyObject=connectedNotifyObject;
+		this.connectedNotifyObject=new MyLock();
+		try {
+			this.connectedNotifyObject.lock();
+		} catch (InterruptedException e) { // nachdem MyLock neu ist können wir immer ein lock machen
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	public void connect() throws java.io.IOException {
@@ -191,8 +208,15 @@ public class BTcommThread extends Thread{
 		}
 	}
 
-	public void close()
+	/**
+	 * macht die connection zu
+	 * @param stop
+	 *          a) zum cleanup -> reconnect -> stop=false
+	 *          b) zum connection zumachen, kein reconnect -> stop = true
+	 */
+	public void close(boolean stop)
 	{
+		this.stop=stop;
 		this.setStatus(STATE_DISCONNECTED);
 
 		Debuglog.debugln("BTcommThread::close");
@@ -209,6 +233,7 @@ public class BTcommThread extends Thread{
 		}
 		Debuglog.debugln("BTcommThread::close done");
 		Debuglog.vibrate(500);
+		this.connectedNotifyObject.unlock();
 	}
 	
 	public void addCmdToQueue(FBTCtlMessage message) throws Exception {
@@ -406,7 +431,11 @@ public class BTcommThread extends Thread{
 			}
 			l=java.lang.System.currentTimeMillis()-l;
 			wait=l<defaultWait?defaultWait-l:defaultWait;
-			Debuglog.debugln("try to reconnect (conn lost)");
+			if(this.stop) {
+				Debuglog.debugln("btcommthread ended, conn aborted");
+			} else {
+				Debuglog.debugln("btcommthread ended, try to reconnect");
+			}
 		}
 	}
 
@@ -417,7 +446,8 @@ public class BTcommThread extends Thread{
 		// init pingding
 		timer = new Timer();
 		task = new PingDing(timerwait);
-		int pingTimeout=2000;
+		int pingTimeout=2000; // alle 2 sekunden ein ping schicken
+		// int pingTimeout=20000; // fürs debuggen auf 20000 setzen
 		timer.schedule(task, pingTimeout, pingTimeout);
 		
 		try {
@@ -448,7 +478,7 @@ public class BTcommThread extends Thread{
 					heloReply.get("doupdate").set(0);
 				this.sendMessage(heloReply);
 				Debuglog.debugln("invalid protocol.dat hash (server:"+protocolHash+" me:"+MessageLayouts.hash+")");
-				this.close();
+				this.close(true);
 				throw new Exception("invalid protocol.dat hash (server:"+protocolHash+" me:"+MessageLayouts.hash+")");
 			}
 			
@@ -479,10 +509,10 @@ public class BTcommThread extends Thread{
 			debugForm.debug("writeChars done\n");
 			 */
 			// byte []buffer=new byte[50];
-			synchronized(connectedNotifyObject) {
-				this.connectedNotifyObject.notify();
-			}
 			this.setStatus(STATE_CONNECTED);
+			synchronized(connectedNotifyObject) {
+				this.connectedNotifyObject.unlock();
+			}
 
 			int commandNr=0;
 			StringItem pingtext=new StringItem("pingtext","");
@@ -499,14 +529,14 @@ public class BTcommThread extends Thread{
 			while(true) {
 				if(this.nextMessage == null) { // kein befehl in der queue -> auf timerwait warten (= entweder timeout/nop oder ein neuer befehl
 					synchronized(timerwait) {
-						try {
+						// try { // da kein extra try/catch da bei wait()-interruped unten der catch block ausfegührt werden soll
 							// helloForm.append("wait...");
-							timerwait.wait();
+							timerwait.wait();  // close -> unten cleanup machen
 							// helloForm.append("...wait done\n");
-						} catch (Exception e) {
+						/*} catch (Exception e) {
 							Debuglog.debugln("wait exception ("+e.toString()+')');
 							return;
-						}
+						}*/
 					}
 				}
 				long startTime = System.currentTimeMillis();
@@ -661,6 +691,7 @@ public class BTcommThread extends Thread{
 					this.setStatus(STATE_CONNECTED);
 				}
 				timeoutTimer.cancel();
+				this.timeoutCounter=0;
 				// debugForm.debug("done ("+commandNr+")\n");
 			}
 		} catch (java.io.IOException e) {
@@ -677,13 +708,15 @@ public class BTcommThread extends Thread{
 		}
 		*/
 		Debuglog.debugln("BT comm thread: ended\n");
-		close();
+		close(this.stop); // da this.stop nicht neu setzen -> wenn verbindung verloren dann reconnect, wenn close(true) aufgerufen wurde tät das des stop wieder zurücksetzen
 		timer.cancel(); // ping timer stoppen sonst gibts eventuell irgendwann 2 davon ...
+		// timer.purge(); // PingDing stoppen 
 		synchronized(queue_wait) {
 			queue_wait.notifyAll(); // damit das prog nicht in einem queue wait hängen bleibt
 		}
 		synchronized(connectedNotifyObject) {
-			connectedNotifyObject.notify(); // zur sicherheit damit nix hängen bleibt
+			connectedNotifyObject.notifyAll(); // zur sicherheit damit nix hängen bleibt
 		}
+		this.setStatus(BTcommThread.STATE_DISCONNECTED);
 	}
 }

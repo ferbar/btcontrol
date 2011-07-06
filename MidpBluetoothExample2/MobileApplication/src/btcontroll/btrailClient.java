@@ -366,15 +366,14 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 			try {
 				System.out.print("connecting:"+this.midpStream.BTCtlServerURL);
 
-				Object connectedNotifyObject = new Object();
-				btcomm = new BTcommThread(this.midpStream, connectedNotifyObject);
+				btcomm = new BTcommThread(this.midpStream);
 						//Thread t = new Thread(btcomm); t.start(); -> da is isAlive auf einmal nicht gesetzt
 				getDisplay().setCurrent(get_controllCanvas(btcomm));
 				btcomm.start();
 
 				// update check:
-				synchronized(connectedNotifyObject) {
-					connectedNotifyObject.wait();
+				synchronized(btcomm.connectedNotifyObject) {
+					btcomm.connectedNotifyObject.lock();
 				}
 				if(!btcomm.connError()) {
 					// debugForm.setTitle("connected");
@@ -443,7 +442,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 				}
 				if(btcomm != null && !btcomm.isAlive()) {
 					debugForm.append("btcomm not alive -> deleting object");
-					btcomm.close();
+					btcomm.close(true);
 					btcomm=null;
 				}
 
@@ -470,8 +469,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 					MidpStream currStream=(MidpStream)(btcomm.BTStreamConnection);
 					if((btcomm == null) || (currStream.BTCtlServerURL.compareTo(connectionURL)) != 0) {
 						if(btcomm != null) {
-							btcomm.close();
-							btcomm.stop=true;
+							btcomm.close(true);
 							int n=0;
 							while(btcomm.isAlive()) {
 								String tmp="";
@@ -540,7 +538,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 				}
 				if(btcomm != null && !btcomm.isAlive()) {
 					debugForm.append("btcomm not alive -> deleting object");
-					btcomm.close();
+					btcomm.close(true);
 					btcomm=null;
 				}
 				if(btcomm == null) {
