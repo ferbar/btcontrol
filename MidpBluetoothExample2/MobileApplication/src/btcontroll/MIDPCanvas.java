@@ -286,6 +286,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 				g.fillRect(0, 20+lineHeight, getWidth(), lineHeight);
 				g.setColor(0x000000);
 				String msg;
+				// TODO: das auf btcomm.statusText umbaun
 				switch(btcomm.connState) {
 					case BTcommThread.STATE_DISCONNECTED: msg="disconnected"; break;
 					case BTcommThread.STATE_TIMEOUT: msg="timeout"; break;
