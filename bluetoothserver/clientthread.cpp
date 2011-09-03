@@ -580,7 +580,7 @@ void ClientThread::run()
 						if(replyInit->type != SRCPReply::OK) {
 							fprintf(stderr,ANSI_RED"error init loco: (%s)\n"ANSI_DEFAULT,replyInit->message);
 							if(replyInit->code == 412) {
-								fprintf(stderr,"loopback, max addr < %d?\n", lokdef[addr_index].addr);
+								fprintf(stderr,"loopback/ddl|number_gl, max addr < %d?\n", lokdef[addr_index].addr);
 								lokdef[addr_index].currspeed=-1;
 							}
 						} else {
