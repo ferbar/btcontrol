@@ -353,6 +353,9 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 		public void connect() throws IOException {
 			this.BTStreamConnection = (StreamConnection)Connector.open(this.BTCtlServerURL);
 		}
+		public String toString() {
+			return "url:"+this.BTCtlServerURL;
+		}
 		StreamConnection BTStreamConnection;
 		public String BTCtlServerURL;
 	}
