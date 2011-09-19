@@ -25,7 +25,7 @@ struct lokdef_t {
 	char imgname[32];
 };
 
-// darf kein pointer sein weil .currspeed und func wird ja geändert
+// darf kein pointer auf const sein weil .currspeed und func wird ja geändert
 extern lokdef_t *lokdef; 
 /*= {
 //	{1,"lok1"},
