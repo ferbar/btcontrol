@@ -1,7 +1,7 @@
 /**
  * das dings da ist für user eingabe zuständig
- * TODO: schieber als input verwenden
- * TODO: sencommand in eine func
+ * TODO: schieber grösser/schöner machen
+ * TODO: sendcommand in eine func
  * TODO: mehrfachsteuerung
  * 
  */
@@ -17,14 +17,18 @@ import java.util.TimerTask;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.content.Context;
+//import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 // import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.LinearGradient;
+import android.graphics.Shader.TileMode;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.ShapeDrawable;
+import android.graphics.drawable.shapes.RectShape;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.PowerManager;
@@ -37,15 +41,18 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewParent;
+//import android.view.ViewParent;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
 import android.widget.EditText;
 import android.widget.Toast;
+import android.graphics.PorterDuff;
+
 // import android.widget.ToggleButton;
 import protocol.FBTCtlMessage;
 import protocol.MessageLayouts;
@@ -69,6 +76,9 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 			this.name=name; this.img=img; this.speed=speed; this.funcBits=funcBits;} }
 	static public Hashtable<Integer, AvailLocosListItem> availLocos=new Hashtable<Integer, AvailLocosListItem>();
 	// private Hashtable imgCache=new Hashtable();
+	
+	final int repeatTimeout=250; // 4*/s senden
+	// repeatTimeout=1000; <- zum debuggen
 	
 	// Need handler for callbacks to the UI thread
     final Handler mHandler = new Handler();
@@ -97,7 +107,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
     };
     
     
-    SeekBar seekBarDirection;
+    // SeekBar seekBarDirection;
     int [] viewFunctions={R.id.bF0, R.id.bF1, R.id.bF2, R.id.bF3, R.id.bF4, R.id.bF5, R.id.bF6, R.id.bF7, R.id.bF8, R.id.bF9};
 
 	
@@ -120,8 +130,21 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
         	startActivityForResult(i, ACTIVITY_SELECT_LOK);
         }
 		
-		this.seekBarDirection = (SeekBar)findViewById(R.id.seekBarDirection);
-        this.seekBarDirection.setOnSeekBarChangeListener(this);
+		//this.seekBarDirection = (SeekBar)findViewById(R.id.seekBarDirection);
+        // bunter hintergrund:
+        SeekBar seekBarSpeed = (SeekBar)findViewById(R.id.seekBarSpeed2);
+        seekBarSpeed.setOnSeekBarChangeListener(this);
+        LinearGradient test = new LinearGradient(0.f, 0.f, 300.f, 0.0f,  
+        	      new int[] { 0xFF000000, 0xFF0000FF, 0xFF00FF00, 0xFF00FFFF,
+        	      0xFFFF0000, 0xFFFF00FF, 0xFFFFFF00, 0xFFFFFFFF}, 
+        	      null, TileMode.CLAMP);
+        ShapeDrawable shape = new ShapeDrawable(new RectShape());
+        shape.getPaint().setShader(test);
+  //      seekBarSpeed.setProgressDrawable(shape);
+        seekBarSpeed.setProgressDrawable(null);
+        seekBarSpeed.getHeight();
+  //      seekBarSpeed.setSecondaryProgress(50);
+        	
         this.update_btcomm();
         
         // TODO: geht das ned vielleicht gleich übers xml ?
@@ -205,6 +228,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
     			msg.setType(MessageLayouts.messageTypeID("STOP"));
     	    	msg.get("addr").set(this.currAddr);
     			AndroidMain.btcomm.addCmdToQueue(msg,this);
+    			this.updateSpeedSlider(0,0);
     		}
     		powerMenuItem = (MenuItem) menu.findItem(R.id.menu_Power);
     		msg = new FBTCtlMessage();
@@ -304,9 +328,11 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
             AlertDialog.Builder alertbox = new AlertDialog.Builder(this);
             alertbox.setTitle("Hilfe");
             // Set the message to display
-            alertbox.setMessage("back taste(kurz) =power off\n" +
-            	"Menu = aktueller zug stop (TODO)\n"+
-            	"im menü wird aktueller power-status richtig angezeigt"); // TODO
+            alertbox.setMessage("back taste(kurz) = power off\n" +
+            	"Menu = aktueller zug stop\n" +
+            	"Slider drücken = geschwindigkeit setzen\n" +
+            	"Vol +/- gedrückt halten = beschleunigen/bremsen\n" +
+            	"im menü wird aktueller power-status richtig angezeigt");
 
             // Add a neutral button to the alert box and assign a click listener
             alertbox.setNeutralButton("Ok", new DialogInterface.OnClickListener() {
@@ -342,21 +368,26 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
     		        public void afterTextChanged(Editable s) {
     		        	View v=(View)(EditText) dialog.findViewById(R.id.editTextValue);
 		        		String value=s.toString();
-		        		int vi=Integer.parseInt(value);
-		        		if(vi > 255) {
-		        			v.setBackgroundColor(Color.RED);
-		        		} else {
-		        			// v.setBackgroundResource(0);
-		        			v.setBackgroundColor(Color.WHITE);  // TODO: da den normalen background wieder reintun
-	    		        	if(v.hasFocus()) {
-	    		        		String valueBits="";
-	    		        		for(int i=0; i < 8; i++) {
-	    		        			valueBits=(((vi >> i) & 1) == 1 ? 1 : 0 ) + valueBits;
+		        		int vi=0;
+		        		try{
+		        			vi=Integer.parseInt(value);
+			        		if(vi > 255) {
+			        			v.setBackgroundColor(Color.RED);
+			        		} else {
+			        			// v.setBackgroundResource(0);
+			        			v.setBackgroundColor(Color.WHITE);  // TODO: da den normalen background wieder reintun
+		    		        	if(v.hasFocus()) {
+		    		        		String valueBits="";
+		    		        		for(int i=0; i < 8; i++) {
+		    		        			valueBits=(((vi >> i) & 1) == 1 ? 1 : 0 ) + valueBits;
+		    		        		}
+		    		        		EditText editTextValueBits=(EditText) dialog.findViewById(R.id.editTextValueBits);
+		    		        		editTextValueBits.setText(valueBits);
 	    		        		}
-	    		        		EditText editTextValueBits=(EditText) dialog.findViewById(R.id.editTextValueBits);
-	    		        		editTextValueBits.setText(valueBits);
-    		        		}
-    		        	}
+			        		}
+		        		} catch(Exception e) {
+		        			v.setBackgroundColor(Color.RED);
+		        		}
     		        }
     		        public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
     		        public void onTextChanged(CharSequence s, int start, int before, int count) { }
@@ -369,9 +400,11 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
     		        		String valueBits=s.toString();
     		        		int vbi;
     		        		try{
-    		        			vbi=Integer.parseInt(valueBits,1);
+    		        			vbi=Integer.parseInt(valueBits,2);
+    		        			v.setBackgroundColor(Color.WHITE);
     		        		} catch(Exception e) {
     		        			vbi=0;
+    		        			v.setBackgroundColor(Color.RED);
     		        		}
     		        		String value=""+vbi;
     		        		EditText editTextValueBits=(EditText) dialog.findViewById(R.id.editTextValue);
@@ -388,7 +421,9 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 			    			msg.setType(MessageLayouts.messageTypeID("POWER"));
 			    	    	msg.get("value").set(-1);
 			    	    	FBTCtlMessage reply = AndroidMain.btcomm.execCmd(msg);
-			    			Toast.makeText(v.getContext(), "gesendet", Toast.LENGTH_LONG).show();
+			    	    	if(reply != null) {
+			    	    		Toast.makeText(v.getContext(), "gesendet", Toast.LENGTH_LONG).show();
+			    	    	}
 			    		} catch (Exception e) {
 			    			// TODO Auto-generated catch block
 			    			e.printStackTrace();
@@ -449,6 +484,27 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
             return myView.getTop() + getRelativeTop((View) myView.getParent());
     }
     
+    /**
+     * @param pos slider auf eine pos setzen
+     * @param acc 1 => acc, -1 =>break, 0 = pos verwenden
+     */
+    private void updateSpeedSlider(final int pos, final int acc) {
+		runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				SeekBar speedSeekBar=(SeekBar)findViewById(R.id.seekBarSpeed2);
+				int pos2=pos;
+				if(acc!=0) {
+					AvailLocosListItem item=ControllAction.availLocos.get(currAddr);
+					if(item != null) {
+						pos2=Math.abs(item.speed)+acc*5;
+					}
+				}
+				speedSeekBar.setProgress(pos2);
+			}
+		});
+    }
+    
 	/**
 	 * als callback funk im .xml definiert
 	 * @param view
@@ -459,14 +515,30 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 			switch(view.getId()) {
 			case R.id.buttonBREAK:
 				msg.setType(MessageLayouts.messageTypeID("BREAK"));
+				updateSpeedSlider(0,-1);
 				break;
 			case R.id.buttonACC:
 				msg.setType(MessageLayouts.messageTypeID("ACC"));
+				updateSpeedSlider(0,1);
 				break;
+			case R.id.buttonDirLeft:
+			case R.id.buttonDirRight: {
+				if(Math.abs(availLocos.get(this.currAddr).speed) > 1) {
+					System.out.println("error: changing dir only when stopped ("+availLocos.get(this.currAddr).speed+")");
+					Toast.makeText(this, "geht nur bei v=0", Toast.LENGTH_LONG).show();
+					return;
+				}
+				msg.setType(MessageLayouts.messageTypeID("DIR"));
+				int val=(view.getId() == R.id.buttonDirRight) ? 1 : -1;
+				int currDir=availLocos.get(this.currAddr).speed < 0 ? -1 : 1;
+				if(val == currDir) return; // nur senden wenn sichs geändert hat
+				msg.get("dir").set(val);
+				break; }
+			/* gibts nichtmehr
 			case R.id.seekBarDirection:
 				if(Math.abs(availLocos.get(this.currAddr).speed) > 1) {
 					System.out.println("error: changing dir only when stopped ("+availLocos.get(this.currAddr).speed+")");
-					// TODO: message ausgeben
+					Toast.makeText(this, "geht nur bei v=0", 0).show();
 					return;
 				}
 				msg.setType(MessageLayouts.messageTypeID("DIR"));
@@ -476,7 +548,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 				int currDir=availLocos.get(this.currAddr).speed < 0 ? -1 : 1;
 				if(val == currDir) return; // nur senden wenn sichs geändert hat
 				msg.get("dir").set(val);
-				break;
+				break; */
 			default:
 				// check ob Fx taste gedrückt wurde:
 				int func=-1;
@@ -511,6 +583,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 				}
 				// andere taste -> stop
 				msg.setType(MessageLayouts.messageTypeID("STOP"));
+	    		this.updateSpeedSlider(0,0);
 				break;
 			}
 			msg.get("addr").set(this.currAddr);
@@ -537,8 +610,10 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 		}
 		public void run() {
 			try {
-				if(AndroidMain.btcomm.nextMessage == null) // nur was neues in die queue schieben wenns leer is
+				if(AndroidMain.btcomm.nextMessage == null) { // nur was neues in die queue schieben wenns leer is
 					AndroidMain.btcomm.addCmdToQueue(cmd,parent);
+		    		updateSpeedSlider(0,cmd.isType("ACC") ? 1 : -1);
+				}
 			} catch (Exception e) {
 				infoMsg="err: HoldDown: Exception "+e.toString();
 			}
@@ -549,8 +624,6 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if((keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP)) {
         	if(event.getRepeatCount()==0) { // beim ersten durchgang den timer starten
-        		int repeatTimeout=250; // 4*/s senden
-        		// repeatTimeout=1000; <- zum debuggen
 	        	FBTCtlMessage msg = new FBTCtlMessage();
 	        	try {
 	    			msg.setType(MessageLayouts.messageTypeID(keyCode == KeyEvent.KEYCODE_VOLUME_DOWN ? "BREAK" : "ACC"));
@@ -560,6 +633,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	    			// TODO Auto-generated catch block
 	    			e.printStackTrace();
 	    		}
+	    		this.updateSpeedSlider(0,msg.isType("ACC") ? 1 : -1);
 	
 	    		// init holdDownKey
 				if(task != null) {
@@ -704,10 +778,11 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 		tv.setText("currLok:"+this.currAddr);
 		AvailLocosListItem item=ControllAction.availLocos.get(this.currAddr);
 		if(item != null) {
-			SeekBar seekBar = (SeekBar) findViewById(R.id.seekBar1);
-			seekBar.setMax(255);
+			ProgressBar seekBar = (ProgressBar) findViewById(R.id.seekBarSpeed);
+			// seekBar.setMax(255);
 			seekBar.setProgress(Math.abs(item.speed));
 			tv.setText(item.name);
+			/* seekBarDir gibts nimma
 			seekBar = (SeekBar) findViewById(R.id.seekBarDirection);
 			int currProgress=seekBar.getProgress();
 			int currDir=item.speed < 0 ? 0 : 2;
@@ -715,6 +790,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 				this.lastDirProgress=-1;
 				seekBar.setProgress(item.speed < 0 ? 0 : 2);
 			}
+			*/
 			/*
 			for(int i=0; i < this.viewFunctions.length; i++) {
 				try {
@@ -729,6 +805,32 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 			*/
 			ImageView iv=(ImageView)this.findViewById(R.id.imageViewLok);
 			iv.setImageBitmap(item.img);
+			
+			// richtungswechesl buttons nur bei speed=0 anzeigen, stop nur bei speed != 0 
+			Button bSTOP = (Button) findViewById(R.id.buttonSTOP);
+			Button bDirLeft = (Button) findViewById(R.id.buttonDirLeft);
+			Button bDirRight = (Button) findViewById(R.id.buttonDirRight);
+			Button bBREAK = (Button) findViewById(R.id.buttonBREAK);
+			if(Math.abs(item.speed) <= 1) {
+				bSTOP.setVisibility(View.GONE);
+				bDirLeft.setVisibility(View.VISIBLE);
+				bDirRight.setVisibility(View.VISIBLE);
+				// bDirLeft.setBackgroundDrawable(bSTOP.getBackground());
+				// bDirRight.setBackgroundDrawable(bSTOP.getBackground());
+				if(item.speed >= 0) {
+					bDirLeft.getBackground().setColorFilter(null);
+					bDirRight.getBackground().setColorFilter(0xFF00FF00, PorterDuff.Mode.MULTIPLY);
+				} else {
+					bDirLeft.getBackground().setColorFilter(0xFFFF0000, PorterDuff.Mode.MULTIPLY);
+					bDirRight.getBackground().setColorFilter(null);
+				}
+				bBREAK.setEnabled(false);
+			} else {
+				bSTOP.setVisibility(View.VISIBLE);
+				bDirLeft.setVisibility(View.GONE);
+				bDirRight.setVisibility(View.GONE);
+				bBREAK.setEnabled(true);
+			}
 		}
 		String title="btcontroll ";
 		String info="";
@@ -757,6 +859,12 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 		if(this.funcNames != null) {
 			int n=this.funcNames.length;
 			for(int i=0; i < this.viewFunctions.length; i++) {
+				ImageButton ib=(ImageButton)this.findViewById(this.viewFunctions[i]);
+				if(i >= n) { // lok hat weniger als 10 funktions -> button disablen
+					ib.setEnabled(false);
+					continue;
+				}
+				ib.setEnabled(true);
 				this.funcStates[i]=((item.funcBits >> i) & 1) != 0;
 				/*
 				try {
@@ -779,7 +887,6 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 					}
 				} catch(Exception e) {
 					*/
-					ImageButton ib=(ImageButton)this.findViewById(this.viewFunctions[i]);
 					if(ib != null) {
 						if(i < n) {
 							String funcName=this.funcNames[i];
@@ -813,13 +920,21 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 		}
 	}
 	
+	abstract static class CallbackProgressRunnable implements Runnable {
+		public int progress=0;
+		public abstract void run();
+	}
+	
 	/**
 	 * @param reply antwort auf GETLOCOS - da steht auch aktueller speed + func der loks drinnen
 	 * @param selectList liste die filllistthread erzeugt hat (wegen den bildern)
 	 * @throws java.lang.Exception
 	 */
-	public static void setAvailLocos(FBTCtlMessage reply) throws Exception {
+	public static void setAvailLocos(CallbackProgressRunnable callbackProgress, CallbackProgressRunnable callbackTotal, FBTCtlMessage reply) throws Exception {
+		callbackProgress.progress=0; callbackProgress.run();
+        
 		int n=reply.get("info").getArraySize();
+		callbackTotal.progress=n; callbackTotal.run();
 		for(int i=0; i < n; i++) {
 			Integer addr = new Integer(reply.get("info").get(i).get("addr").getIntVal());
 			String name = reply.get("info").get(i).get("name").getStringVal();
@@ -828,6 +943,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 			String imgname=reply.get("info").get(i).get("imgname").getStringVal();
 			Bitmap img=ControllAction.getImageCached(imgname);
 			ControllAction.availLocos.put(addr,new AvailLocosListItem(name, img, speed,func));
+			callbackProgress.progress=i+1; callbackProgress.run();
 		}
 	}
 
@@ -884,8 +1000,11 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	}
 	
 
-	int lastDirProgress=-1;
+	//int lastDirProgress=-1;
+	/**
+	 */
 	public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+		/* das war vom seekBarDir:
 		if(!fromUser) return;
 
 		if(seekBar.getProgress() == this.lastDirProgress) return; // wenn sich nix geändert hat gleich raus, bis die antwort kommt und repaint aufgerufen wird dauerts immer ein bissl;
@@ -895,12 +1014,63 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 		}
 		this.onClickButton(seekBar);
 		this.repaint();
+		*/
+	}
+	
+	public class HoldDownSliderTask extends TimerTask {
+		BTcommThread.Callback parent;
+		private FBTCtlMessage msgAcc;
+		private FBTCtlMessage msgBreak;
+		public HoldDownSliderTask(BTcommThread.Callback parent) {
+			this.parent=parent;
+			this.msgAcc=new FBTCtlMessage();
+			this.msgBreak=new FBTCtlMessage();
+        	try {
+    			msgAcc.setType(MessageLayouts.messageTypeID("ACC"));
+    	    	msgAcc.get("addr").set(currAddr);
+    			msgBreak.setType(MessageLayouts.messageTypeID("BREAK"));
+    	    	msgBreak.get("addr").set(currAddr);
+    		} catch (Exception e) {
+    			// TODO Auto-generated catch block
+    			e.printStackTrace();
+    		}
+		}
+		public void run() {
+			try {
+				if(AndroidMain.btcomm.nextMessage == null) { // nur was neues in die queue schieben wenns leer is
+					SeekBar seekBarSpeed = (SeekBar)findViewById(R.id.seekBarSpeed2);
+					AvailLocosListItem item=ControllAction.availLocos.get(currAddr);
+					if(item != null) {
+						if(Math.abs(item.speed) < seekBarSpeed.getProgress()) {
+							AndroidMain.btcomm.addCmdToQueue(msgAcc,parent);
+						} else {
+							AndroidMain.btcomm.addCmdToQueue(msgBreak,parent);
+						}
+					}
+				}
+			} catch (Exception e) {
+				infoMsg="err: HoldDown: Exception "+e.toString();
+			}
+		}
 	}
 
 	public void onStartTrackingTouch(SeekBar seekBar) {
+		if(seekBar.getId() == R.id.seekBarSpeed2) {
+			// init holdDownKey
+			if(task != null) {
+				timer.cancel();
+			}
+			timer = new Timer();
+			timerwait=new Object();
+			task = new HoldDownSliderTask(this);
+			timer.schedule(task, repeatTimeout, repeatTimeout);
+		}
 	}
 
 	public void onStopTrackingTouch(SeekBar seekBar) {
+		if(seekBar.getId() == R.id.seekBarSpeed2) {
+			timer.cancel();
+		}
 	}
 	
     
