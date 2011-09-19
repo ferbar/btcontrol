@@ -29,6 +29,10 @@ public class AndroidStream implements PlattformStream {
 		System.out.println("connecting:"+this.server+":"+this.port);
 		this.socket = new Socket(this.server, this.port);
 	}
+	
+	public String toString() {
+		return "Server:"+this.server+":"+this.port+" connected:"+((this.socket != null) ? this.socket.isConnected() : "0");
+	}
 
 	public String server;
 	public int port;
