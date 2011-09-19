@@ -9,6 +9,7 @@ import btcontroll.Debuglog;
 import protocol.FBTCtlMessage;
 import protocol.MessageLayouts;
 import android.app.ListActivity;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -34,57 +35,9 @@ public class ControllListAction extends ListActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.list);
         registerForContextMenu(getListView());
-        fillData();
-        try {
-        	synchronized(this.listAdapter_notify) {
-        		this.listAdapter_notify.wait();
-        	}
-        	// R.layout.list_item, strings) {
-        	//,ControllAction.availLocos
-	    	this.listAdapter=new ArrayAdapter<AvailLocosListItemAddr>(this, android.R.layout.simple_list_item_1) {
-	    		@Override
-        		public View getView(int position, View convertView, ViewGroup parent) {
-	    				ViewHolder holder;
-	        			if(convertView == null) {
-			        		convertView = mInflater.inflate(R.layout.list_item, null);
-			        		holder = new ViewHolder();
-			        		holder.name = (TextView) convertView.findViewById(R.id.list_item_name);
-			        		holder.addr = (TextView) convertView.findViewById(R.id.list_item_addr);
-			        		holder.img =  (ImageView) convertView.findViewById(R.id.list_item_img);
-			        		convertView.setTag(holder);
-			        	} else {
-			        		holder = (ViewHolder) convertView.getTag();
-		        		}
-	        			AvailLocosListItemAddr item=getItem(position);
-	        			System.out.println("set list item name:"+item.name);
-		        		holder.name.setText(item.name);
-	        			System.out.println("set list item addr:"+item.addr);
-		        		holder.addr.setText(""+item.addr);
-		        		holder.img.setImageBitmap(item.img);
-		        		// convertView.setBackgroundColor(Color.parseColor(getItem(position)));
-		        		return convertView;
-		        	}
-        	
-	    	};
-	    	Enumeration<Integer> e = ControllAction.availLocos.keys();
-	    	while(e.hasMoreElements()) {
-	    		Integer addr=e.nextElement();
-	    		AvailLocosListItem i=(AvailLocosListItem)ControllAction.availLocos.get(addr);
-	    		this.listAdapter.add(new AvailLocosListItemAddr(addr,i.name,i.img, i.speed,i.funcBits));
-	    	}
-	    	this.listAdapter.sort(new Comparator<AvailLocosListItemAddr>() {
-				public int compare(AvailLocosListItemAddr object1, AvailLocosListItemAddr object2) {
-					// TODO Auto-generated method stub
-					return object1.name.compareTo(object2.name);
-				}
-	    	});
-	    	
-	    	
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		this.setListAdapter(this.listAdapter);        
+
+        
+        startFillData();
         // String[] mStrings = new String[]{"Android", "Google", "Eclipse"};
 		// this.setListAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, mStrings));
     }
@@ -113,19 +66,6 @@ public class ControllListAction extends ListActivity {
 		TextView addr;
 		TextView name;
 	}
-    
-    void fillData() {
-		FBTCtlMessage msg = new FBTCtlMessage();
-		try {
-			msg.setType(MessageLayouts.messageTypeID("GETLOCOS"));
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		Thread th = new FillListThread(this,msg);
-		th.start();
-
-    }
 
     @Override
     protected void onListItemClick(ListView l, View v, int position, long id) {
@@ -136,18 +76,103 @@ public class ControllListAction extends ListActivity {
         setResult(RESULT_OK,i);
         finish();
     }
-
     
+    void fillData() {
+    	// R.layout.list_item, strings) {
+    	//,ControllAction.availLocos
+    	this.listAdapter=new ArrayAdapter<AvailLocosListItemAddr>(this, android.R.layout.simple_list_item_1) {
+    		@Override
+    		public View getView(int position, View convertView, ViewGroup parent) {
+    				ViewHolder holder;
+        			if(convertView == null) {
+		        		convertView = mInflater.inflate(R.layout.list_item, null);
+		        		holder = new ViewHolder();
+		        		holder.name = (TextView) convertView.findViewById(R.id.list_item_name);
+		        		holder.addr = (TextView) convertView.findViewById(R.id.list_item_addr);
+		        		holder.img =  (ImageView) convertView.findViewById(R.id.list_item_img);
+		        		convertView.setTag(holder);
+		        	} else {
+		        		holder = (ViewHolder) convertView.getTag();
+	        		}
+        			AvailLocosListItemAddr item=getItem(position);
+        			System.out.println("set list item name:"+item.name);
+	        		holder.name.setText(item.name);
+        			System.out.println("set list item addr:"+item.addr);
+	        		holder.addr.setText(""+item.addr);
+	        		holder.img.setImageBitmap(item.img);
+	        		// convertView.setBackgroundColor(Color.parseColor(getItem(position)));
+	        		return convertView;
+	        	}
+    	
+    	};
+    	Enumeration<Integer> e = ControllAction.availLocos.keys();
+    	while(e.hasMoreElements()) {
+    		Integer addr=e.nextElement();
+    		AvailLocosListItem i=(AvailLocosListItem)ControllAction.availLocos.get(addr);
+    		this.listAdapter.add(new AvailLocosListItemAddr(addr,i.name,i.img, i.speed,i.funcBits));
+    	}
+    	this.listAdapter.sort(new Comparator<AvailLocosListItemAddr>() {
+			public int compare(AvailLocosListItemAddr object1, AvailLocosListItemAddr object2) {
+				// TODO Auto-generated method stub
+				return object1.name.compareTo(object2.name);
+			}
+    	});
+		this.setListAdapter(this.listAdapter);
+    }
 
+
+	// Progress Dialog anlegen:
+	ProgressDialog loadProgressDialog;
+    
+    public void startFillData() {
+		FBTCtlMessage msg = new FBTCtlMessage();
+		try {
+			msg.setType(MessageLayouts.messageTypeID("GETLOCOS"));
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		loadProgressDialog = new ProgressDialog(this);
+        loadProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        loadProgressDialog.setMessage("Loading...");
+        loadProgressDialog.setCancelable(false);
+        loadProgressDialog.setProgress(0);
+        loadProgressDialog.show();
+
+		Thread th = new FillListThread(new ControllAction.CallbackProgressRunnable() {
+			public void run() { // neues runnable objekt welches immer im UIThread rennen muss
+				runOnUiThread(new Runnable() {
+					@Override
+					public void run() {
+						loadProgressDialog.setProgress(progress+1);					
+					}
+				});
+			}
+		},
+		new ControllAction.CallbackProgressRunnable() {
+			public void run() { // neues runnable objekt welches immer im UIThread rennen muss
+				runOnUiThread(new Runnable() {
+					@Override
+					public void run() {
+				      	loadProgressDialog.setMax(progress+1);
+					}
+				});
+			}
+		}, msg);
+		th.start();
+    }
+	
 	/**
 	 * ladet die lok-liste, async damit das UI nicht steht wenns länger dauert
 	 */
 	class FillListThread extends Thread
 	{
-		Context context;
+		ControllAction.CallbackProgressRunnable callbackProgress;
+		ControllAction.CallbackProgressRunnable callbackTotal;
 		private FBTCtlMessage cmd;
-		public FillListThread(Context context, FBTCtlMessage cmd) {
-			this.context=context;
+		public FillListThread(ControllAction.CallbackProgressRunnable runnable, ControllAction.CallbackProgressRunnable total, FBTCtlMessage cmd) {
+			this.callbackProgress=runnable;
+			this.callbackTotal=total;
 			this.cmd=cmd;
 		}
 		
@@ -159,7 +184,8 @@ public class ControllListAction extends ListActivity {
 		    	//setTitle("reading...");
 				// li.clear(); // sollte eigentlich eh leer sein 
 				FBTCtlMessage reply=AndroidMain.btcomm.execCmd(cmd);
-				ControllAction.setAvailLocos(reply);
+				this.callbackProgress.progress=0;this.callbackProgress.run();
+				ControllAction.setAvailLocos(this.callbackProgress, this.callbackTotal, reply);
 				// lastReply=reply;
 				/*
 				int n=reply.get("info").getArraySize();
@@ -213,13 +239,20 @@ public class ControllListAction extends ListActivity {
 				// setTitle(this.title);
 				listAdapter=li;
 				*/
+		        runOnUiThread(new Runnable() {
+		        	public void run() {
+		        		fillData();
+		        	}
+		        });
 			} catch(Exception e) {
 				//setTitle("ex:"+e.toString());
 				Debuglog.debugln("FillListThread|||"+e.getMessage());
-			}
-			// ... sonst wartet der main thread bis zum kill
-			synchronized(listAdapter_notify) {
-				listAdapter_notify.notify();
+			} finally {
+				runOnUiThread(new Runnable() {
+					public void run() {
+				        loadProgressDialog.dismiss();
+					}
+				});
 			}
 		}
 	}

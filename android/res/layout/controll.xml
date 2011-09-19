@@ -1,12 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-	android:orientation="vertical"
-	android:layout_width="fill_parent" android:layout_height="fill_parent">
-	<SeekBar android:id="@+id/seekBar1"
-		android:layout_width="match_parent" android:layout_height="wrap_content"
-		android:layout_marginTop="10dip" android:layout_marginBottom="10dip"
-		android:paddingTop="10dip" android:paddingBottom="10dip" />
+	android:layout_width="fill_parent" android:layout_height="fill_parent" android:orientation="vertical" android:weightSum="1">
+	<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    >
+		<ProgressBar android:id="@+id/seekBarSpeed"
+			android:layout_width="match_parent" android:layout_height="wrap_content"
+			android:layout_marginTop="10dip" android:layout_marginBottom="10dip"
+			android:paddingTop="10dip" android:paddingBottom="10dip"
+			style="?android:attr/progressBarStyleHorizontal"
+			android:max="255"
+		/>
+		<SeekBar android:id="@+id/seekBarSpeed2"
+	        android:layout_width="match_parent" android:layout_height="wrap_content"
+	        android:layout_marginTop="10dip" android:layout_marginBottom="10dip"
+	        android:paddingTop="10dip" android:paddingBottom="10dip" 
+	        android:max="255"
+        />
+	</FrameLayout>
 	<LinearLayout android:orientation="horizontal"
 		android:layout_width="fill_parent" android:layout_height="wrap_content"
 		android:background="#606060">
@@ -22,23 +36,28 @@
 	<TextView android:text="TextView" android:id="@+id/textViewStatus"
 		android:layout_width="wrap_content" android:layout_height="wrap_content" />
 	<TableRow android:id="@+id/tableRow2"
-		android:layout_gravity="center" android:baselineAligned="false"
-		android:orientation="horizontal"
-    	android:layout_width="fill_parent" android:layout_height="wrap_content" >
-		<Button android:text="-" android:id="@+id/buttonBREAK"
-			android:layout_width="50dip" android:layout_height="wrap_content"
-			android:onClick="onClickButton" />
-		<Button android:text="stop" android:id="@+id/buttonSTOP"
-			android:layout_width="50dip" android:layout_height="wrap_content"
-			android:onClick="onClickButton" android:layout_gravity="center_horizontal" />
-		<Button android:text="+" android:id="@+id/buttonACC"
-			android:layout_width="50dip" android:layout_height="wrap_content"
-			android:onClick="onClickButton" />
+    	android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="fill_horizontal">
+    	<TableRow android:layout_width="match_parent"
+			android:layout_marginTop="2dip" android:layout_marginBottom="2dip"
+			android:layout_gravity="center" android:baselineAligned="false"
+			android:layout_height="60dp">
+			<Button android:text="-" android:id="@+id/buttonBREAK"
+				android:onClick="onClickButton"
+				android:layout_weight="10"  android:layout_height="match_parent"/>
+			<Button android:text="stop" android:id="@+id/buttonSTOP"
+				android:onClick="onClickButton" android:layout_gravity="center_horizontal" 
+				android:layout_weight="10" android:layout_height="match_parent"/>
+			<Button android:text="&lt;" android:id="@+id/buttonDirLeft"
+				android:onClick="onClickButton" android:layout_gravity="center_horizontal" 
+				android:layout_weight="11" android:layout_height="match_parent"/>
+			<Button android:text="&gt;" android:id="@+id/buttonDirRight"
+				android:onClick="onClickButton" android:layout_gravity="center_horizontal" 
+				android:layout_weight="11" android:layout_height="match_parent"/>
+			<Button android:text="+" android:id="@+id/buttonACC"
+				android:onClick="onClickButton"
+				android:layout_weight="10" android:layout_height="match_parent"/>
+		</TableRow>
 	</TableRow>
-	<SeekBar android:layout_height="wrap_content" android:id="@+id/seekBarDirection"
-		android:layout_width="match_parent" android:layout_marginTop="10dip"
-		android:layout_marginBottom="10dip" android:max="2" android:onClick="onClickButton"
-		android:progress="2"  />
 	<View android:layout_height="2dip" android:background="#FF909090"
 		android:layout_marginTop="10dip" android:layout_marginBottom="10dip"
 		android:layout_width="match_parent"
