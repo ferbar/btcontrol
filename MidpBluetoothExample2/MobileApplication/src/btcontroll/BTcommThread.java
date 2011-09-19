@@ -55,6 +55,7 @@ public class BTcommThread extends Thread{
 		public InputStream openInputStream() throws java.io.IOException;
 		public OutputStream openOutputStream() throws java.io.IOException ;
 		public void connect() throws java.io.IOException;
+		public String toString();
 	}
 	
 	// me4se kann das nicht:
@@ -73,6 +74,7 @@ public class BTcommThread extends Thread{
 	// doClient neu starten wenn verbindung abgebrochen?
 	private boolean stop=false;
 
+	
 	public static final int STATE_DISCONNECTED = 0;
 	public static final int STATE_OPENPORT = 1;
 	public static final int STATE_CONNECTING = 2;
@@ -82,6 +84,7 @@ public class BTcommThread extends Thread{
 	public static final String [] statusText = {"disconnected", "open port", "connecting", "connected", "timeout", "error connecting"};
 
 	public int connState;
+	public String stateMessage; // da steht meistens e.toString() drinnen 
 
 	public interface Callback {
 		public void BTCallback(FBTCtlMessage reply);
@@ -201,8 +204,9 @@ public class BTcommThread extends Thread{
 		System.out.print("str: i:"+this.iStream.toString()+" o:"+this.oStream.toString());
 	}
 
-	private void setStatus(int connState) {
+	private void setStatus(int connState,String message) {
 		this.connState=connState;
+		this.stateMessage=message;
 		synchronized(this.statusChange) {
 			this.statusChange.notifyAll();
 		}
@@ -217,7 +221,7 @@ public class BTcommThread extends Thread{
 	public void close(boolean stop)
 	{
 		this.stop=stop;
-		this.setStatus(STATE_DISCONNECTED);
+		this.setStatus(STATE_DISCONNECTED,"");
 
 		Debuglog.debugln("BTcommThread::close");
 		try {
@@ -397,21 +401,21 @@ public class BTcommThread extends Thread{
 	 * der thread
 	 */
 	public void run() {
-		this.setStatus(STATE_DISCONNECTED);
+		this.setStatus(STATE_DISCONNECTED,"");
 		long defaultWait=10000;
 		long wait=0; // 10s warten wenn connect error 0ms gebraucht hat, sofort connecten wenn connect länger 10s gebraucht hat
 		while(!this.stop) {
 			// warten damit der server nicht mit requests bombardiert wird bzw dem handy der speicher ausgeht
 			try {
 				Thread.sleep(100);
-				this.setStatus(STATE_DISCONNECTED);
+				this.setStatus(STATE_DISCONNECTED,"");
 				Thread.sleep(wait);
 				wait=defaultWait;
 			} catch(Exception e) {
 				Debuglog.debugln("sleep error:" + e.toString());
 			}
 
-			this.setStatus(STATE_OPENPORT);
+			this.setStatus(STATE_OPENPORT,this.BTStreamConnection.toString());
 			long l=java.lang.System.currentTimeMillis();
 			try {
 				this.connect();
@@ -419,11 +423,11 @@ public class BTcommThread extends Thread{
 				l=java.lang.System.currentTimeMillis()-l;
 				wait=l<defaultWait?defaultWait-l:defaultWait;
 				Debuglog.debugln("BT comm thread: error connecting("+e.toString()+"), error after"+l+"ms");
-				this.setStatus(STATE_OPENERROR);
+				this.setStatus(STATE_OPENERROR,e.toString());
 				Debuglog.debugln("try to reconnect (connect failed)");
 				continue;
 			}
-			this.setStatus(STATE_CONNECTING);
+			this.setStatus(STATE_CONNECTING,"");
 
 			doClient();
 			if(this.doupdate) {
@@ -444,6 +448,7 @@ public class BTcommThread extends Thread{
 	 */
 	public void doClient(){
 		// init pingding
+		String stateMessage=""; // errormessage, wird unten an setState übgeben
 		timer = new Timer();
 		task = new PingDing(timerwait);
 		int pingTimeout=2000; // alle 2 sekunden ein ping schicken
@@ -509,7 +514,7 @@ public class BTcommThread extends Thread{
 			debugForm.debug("writeChars done\n");
 			 */
 			// byte []buffer=new byte[50];
-			this.setStatus(STATE_CONNECTED);
+			this.setStatus(STATE_CONNECTED,this.BTStreamConnection.toString());
 			synchronized(connectedNotifyObject) {
 				this.connectedNotifyObject.unlock();
 			}
@@ -688,15 +693,17 @@ public class BTcommThread extends Thread{
 				avgTPing+=t;
 				pingstat.setText("curr:"+t+" min: "+minTPing+" max:"+maxTPing+" avg:"+(avgTPing/commandNr));
 				if(!timeoutTask.called) {
-					this.setStatus(STATE_CONNECTED);
+					this.setStatus(STATE_CONNECTED,this.BTStreamConnection.toString());
 				}
 				timeoutTimer.cancel();
 				this.timeoutCounter=0;
 				// debugForm.debug("done ("+commandNr+")\n");
 			}
 		} catch (java.io.IOException e) {
+			stateMessage=e.toString();
 			Debuglog.debugln("BT comm thread: IO exception("+e.toString()+")");
 		} catch (Exception e) {
+			stateMessage=e.toString();
 			Debuglog.debugln("BT comm thread: exception("+e.toString()+")");
 			e.printStackTrace();
 		}
@@ -717,6 +724,6 @@ public class BTcommThread extends Thread{
 		synchronized(connectedNotifyObject) {
 			connectedNotifyObject.notifyAll(); // zur sicherheit damit nix hängen bleibt
 		}
-		this.setStatus(BTcommThread.STATE_DISCONNECTED);
+		this.setStatus(BTcommThread.STATE_DISCONNECTED,stateMessage);
 	}
 }
