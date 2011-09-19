@@ -1,20 +1,35 @@
 package com.example.helloandroid;
 
+import java.io.IOException;
+import java.util.Hashtable;
+
 import android.app.Activity;
+
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+// import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.View;
+// import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 import btcontroll.BTcommThread;
 import btcontroll.AndroidStream;
 import btcontroll.Debuglog;
 import protocol.MessageLayouts;
 
+import javax.jmdns.JmDNS;
+import javax.jmdns.ServiceEvent;
+// import javax.jmdns.ServiceInfo;
+import javax.jmdns.ServiceListener;
+
 import com.example.helloandroid.ControllAction;
+
 
 public class AndroidMain extends Activity {
 	public static final String PREFS_NAME = "btcontroll";
@@ -26,6 +41,17 @@ public class AndroidMain extends Activity {
 	static int foregroundActivities=0;
 	static String sserver; // server name
 	
+	android.net.wifi.WifiManager wifi;
+	android.net.wifi.WifiManager.MulticastLock lock;
+	private String bonjourType = "_btcontroll._tcp.local.";
+	// TODO: das auf liste umbaun ArrayAdapter<AvailBonjourServiceItem> listAdapter=null;
+	
+	// private String bonjourType = "_workstation._tcp.local.";
+	// private String bonjourType = "_ssh._tcp.local.";
+	private JmDNS jmdns = null;
+	private ServiceListener listener = null;
+	// private ServiceInfo serviceInfo;
+	
 	// Need handler for callbacks to the UI thread
     final Handler mHandler = new Handler();
 	// Create runnable for posting
@@ -34,6 +60,16 @@ public class AndroidMain extends Activity {
             repaint();
         }
     };
+    
+    /*
+    class AvailBonjourServiceItem {
+    	public AvailBonjourServiceItem(String name, String ip) {
+    		// super(name, img, speed, funcBits);
+    		this.name=name;
+    	}
+    	String name;
+    	String ip;
+    }*/
 	
     /** Called when the activity is first created. */
     @Override
@@ -52,11 +88,9 @@ public class AndroidMain extends Activity {
 		EditText server = (EditText) findViewById(R.id.editText1);
 		String text = settings.getString("server", "");
 		server.setText(text);
-/*
-        TextView tv = new TextView(this);
-        tv.setText("Hello, Android");
-        setContentView(tv);
-*/
+
+		this.wifi = (android.net.wifi.WifiManager)
+	              getSystemService(android.content.Context.WIFI_SERVICE);
     }
     
     @Override
@@ -73,6 +107,82 @@ public class AndroidMain extends Activity {
 
         // Commit the edits!
         editor.commit();
+    }
+    
+    Hashtable<String, String> mDNSHosts=new Hashtable<String,String>();
+    
+    @Override
+    public void onResume() {
+    	super.onResume();
+    	
+    	this.lock = this.wifi.createMulticastLock("btcontroll.jmDNS.lock");
+        this.lock.setReferenceCounted(true);
+        this.lock.acquire();
+        
+        try {
+			this.jmdns = JmDNS.create();
+	        this.jmdns.addServiceListener(bonjourType, listener = new ServiceListener() {
+	            public void serviceResolved(final ServiceEvent ev) {
+	                notifyUser("Service resolved: "
+	                         + ev.getInfo().getQualifiedName()
+	                         + " port:" + ev.getInfo().getPort());
+	                final EditText eHost=(EditText) findViewById(R.id.editText1);
+	                final LinearLayout list=(LinearLayout) findViewById(R.id.linearLayoutBonjourServer);
+	                runOnUiThread(new Runnable() {
+	                	public void run() {
+	                		String ip=ev.getInfo().getHostAddresses()[0];
+	                		String hostname=ev.getInfo().getServer();
+	                		if(mDNSHosts.containsKey(hostname)) { // hoffentlich macht der da ein compare.to ...
+	                			return;
+	                		}
+	                		mDNSHosts.put(hostname, ip);
+	    	                final TextView tvHost=new TextView(list.getContext());
+	    	                tvHost.setText(ip);
+	                		list.addView(tvHost);
+	                		final Button bHost=new Button(list.getContext());
+	                		bHost.setText(hostname);
+	                		bHost.setOnClickListener(new View.OnClickListener() {
+	                			public void onClick(View v) {
+	                				eHost.setText(mDNSHosts.get(bHost.getText()));
+	                			}
+	                		});
+	                		list.addView(bHost);
+	                	}
+	                });
+	            }
+	            public void serviceRemoved(ServiceEvent ev) {
+	                notifyUser("Service removed: " + ev.getInfo().getQualifiedName()+ " port:" + ev.getInfo().getPort());
+	            }
+	            public void serviceAdded(ServiceEvent event) {
+	                // Required to force serviceResolved to be called again
+	                // (after the first search)
+	                jmdns.requestServiceInfo(event.getType(), event.getName(), 1);
+	            }
+	        });
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    }
+    @Override
+    public void onPause() {
+    	super.onPause();
+    	
+    	if(this.lock != null) {
+    		this.lock.release();
+    		this.lock=null;
+    	}
+    	
+    	if(this.jmdns != null) {
+    		jmdns.removeServiceListener(bonjourType, listener);
+    		try {
+				jmdns.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+    		jmdns=null;
+    	}
     }
     
 	class ConnectThread extends Thread {
@@ -102,6 +212,7 @@ public class AndroidMain extends Activity {
 					startActivity(i);
 					// debugForm.setTitle("connected");
 				} else {
+					AndroidMain.btcommMessage="btcomm connError (state: "+BTcommThread.statusText[AndroidMain.btcomm.connState]+")";
 					AndroidMain.stopConnection();
 				}
 				// TextView tv=(TextView)c.findViewById(R.id.textViewStatus);
@@ -182,6 +293,8 @@ public class AndroidMain extends Activity {
     	String text=BTcommThread.statusText[BTcommThread.STATE_DISCONNECTED];
     	if(AndroidMain.btcomm != null) {
     		text=BTcommThread.statusText[btcomm.connState];
+    		if(AndroidMain.btcomm.stateMessage != null && AndroidMain.btcomm.stateMessage.length() > 0)
+    			text+=" ("+AndroidMain.btcomm.stateMessage+")";
     	}
     	if(AndroidMain.btcommMessage != null) {
     		text+=" ("+AndroidMain.btcommMessage+")";
@@ -215,4 +328,16 @@ public class AndroidMain extends Activity {
     		checkIfBackgrounded();
     	}
     };
+    
+    public void notifyUser(final String text) {
+    	System.out.println("NotifyUser:" + text);
+    	this.runOnUiThread(new Runnable() {
+    		public void run() {
+    	    	makeToast(text);
+    		}
+    	});
+    }
+    public void makeToast(String text) {
+    	Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
+    }
 }
