@@ -15,6 +15,10 @@
 	android:layout_height="wrap_content"
 	android:text="chris-pc"
 	android:singleLine="true"/>
+<LinearLayout 
+	android:layout_width="match_parent" android:layout_height="wrap_content"
+	android:orientation="vertical" >
+    <TableRow android:id="@+id/tableRow1" android:layout_height="wrap_content" android:layout_width="match_parent">
 <Button android:layout_width="wrap_content" android:layout_height="wrap_content"
 	android:text="@string/connect"
 	android:id="@+id/button1"
@@ -24,6 +28,21 @@
 	android:layout_width="wrap_content"
 	android:layout_height="wrap_content"
 	android:onClick="onButtonDisconnect" />
+    </TableRow>
+</LinearLayout>
 <TextView android:text="status" android:id="@+id/textViewStatus"
-	android:layout_width="wrap_content" android:layout_height="wrap_content" />
+	android:layout_width="wrap_content" android:layout_height="wrap_content"
+	android:shadowDx="2"
+	android:shadowDy="2"
+	android:shadowRadius="2"
+	/>
+<TextView android:text="---------------------------------" android:id="@+id/textView2" android:layout_height="2px" android:layout_width="wrap_content"
+	android:background="#505050" />
+<TextView android:text="gefundene Bonjour Dienste:" android:id="@+id/textView1" android:layout_width="wrap_content" android:layout_height="wrap_content"></TextView>
+<LinearLayout android:id="@+id/linearLayoutBonjourServer" 
+	android:layout_width="match_parent" android:layout_height="wrap_content"
+	android:orientation="vertical" />
+<!-- ListView android:id="@+id/linearLayoutBonjourServer"
+	android:layout_width="wrap_content"
+	android:layout_height="wrap_content" -->
 </LinearLayout>
