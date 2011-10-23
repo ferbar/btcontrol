@@ -4,7 +4,8 @@
 641,F_DEFAULT,Ge 4/4 III (641),  ge_4_4_III.png, 12,sHorn,sQuietschen,sPfeife,sZug fährt ab,sGeräusch,sSound ein/aus,sQuietschen,p1,p2,sSchalter,sPressluft,11,12,
 647,F_DEFAULT,Ge 4/4 III (647),  capito.png,     12,lFührerstand,2,3,sPfeife,5,6,sThis Train remains in Landquart,sSound ein/aus,sQuietschen,10,11,sPressluft,
 # 5,  F_DEFAULT,lok5,
-413,F_DEFAULT,Ge 6/6 I (413),    kroko.png,      12,lFührerstand,2,3,lFührerstand,sPfeife,s6,s7,sSound ein/aus,sPfeife,sRangierpfiff,sKompressor,sPressluft,
+413,F_DEFAULT,Ge 6/6 I (413),    kroko.png,      12,lRücklicht,sPfeife,sPfiff,sKupplung,sKupplung,pBügel1,pBügel2,sSound ein/aus,sQuietschen,10,11,sVakuumbremse,sKompressor,sAnsage,15,sSound inv
+33,F_DEFAULT,AbE (33),    kroko.png,             12,lInnenbeleuchtung,sPfeife,sPfiff,sKupplung,sKupplung,pBügel1,pBügel2,sSound ein/aus,sQuietschen,sSchalter,11,sVakuumbremse,sKompressor,sAnsage,15,sSound inv
 6,  F_DEFAULT,Ge 6/6 II (703),   ge_6_6_II.png,   8,sSound ein/aus,sPfeife,sRangierpfiff,sKompressor,sPressluft,Rangiergang,,,
 11, F_DEC28,G 3/4 Heidi,  dampf.png
 108,F_DEFAULT,G 4/5 (108),       dampf.png,      12,lFührerstand,2,3,lFührerstand,sPfeife,s6,s7,sSound ein/aus,sPfeife,sRangierpfiff,sKompressor,sPressluft,
