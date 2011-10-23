@@ -10,7 +10,7 @@
 		<ProgressBar android:id="@+id/seekBarSpeed"
 			android:layout_width="match_parent" android:layout_height="wrap_content"
 			android:layout_marginTop="10dip" android:layout_marginBottom="10dip"
-			android:paddingTop="10dip" android:paddingBottom="10dip"
+			android:paddingTop="15dip" android:paddingBottom="15dip"
 			style="?android:attr/progressBarStyleHorizontal"
 			android:max="255"
 		/>
@@ -19,7 +19,7 @@
 	        android:layout_marginTop="10dip" android:layout_marginBottom="10dip"
 	        android:paddingTop="10dip" android:paddingBottom="10dip" 
 	        android:max="255"
-        />
+		/>
 	</FrameLayout>
 	<LinearLayout android:orientation="horizontal"
 		android:layout_width="fill_parent" android:layout_height="wrap_content"
