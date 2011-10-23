@@ -162,7 +162,7 @@ SRCPReplyPtr SRCP::sendLocoInit(int addr, int nFahrstufen, int nFunc)
 	snprintf(cmd,sizeof(cmd),"INIT 1 GL "/* addr:*/ "%d " /* proto:*/ "%c " /* protoversion:*/ "%d " 
 		/* nFahrstufen:*/ "%d " /* nFunc:*/ "%d",
 		addr, 'N', addr < 128 ? 1 : 2,
-		nFahrstufen, nFunc+1);
+		nFahrstufen, nFunc);
 	// printf("sending init: %s\n",cmd);
 	return this->sendMessage(cmd);
 }
@@ -179,13 +179,12 @@ SRCPReplyPtr SRCP::sendLocoSpeed(int addr, int dir, int nFahrstufen, int speed, 
 	} */
 	const int CMDBUFLEN=256;
 	char buf[CMDBUFLEN];
-	snprintf(buf,CMDBUFLEN-1,"SET 1 GL " /* addr:*/ "%d " /* dir:*/ "%d " /* Fahrstufe:*/ "%d " /* nFahrstufen*/ "%d " /* F0:*/ "%d ",
+	snprintf(buf,CMDBUFLEN-1,"SET 1 GL " /* addr:*/ "%d " /* dir:*/ "%d " /* Fahrstufe:*/ "%d " /* nFahrstufen*/ "%d ",
 			addr,
 			dir,
 			speed,
-			nFahrstufen,
-			func[0]);
-	for(int i=1; i < nFunc; i++) {
+			nFahrstufen );
+	for(int i=0; i < nFunc; i++) {
 		int pos=strlen(buf);
 		snprintf(buf+pos,CMDBUFLEN-1-pos," %d",func[i]); 
 	}
