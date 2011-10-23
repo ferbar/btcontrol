@@ -136,6 +136,10 @@ bool readLokdef()
 		pos_end=getnext(&pos);
 		CHECKVAL("error reading nfunc");
 		lokdef[n].nFunc=atoi(pos)+1;
+		if(lokdef[n].nFunc > MAX_NFUNC) {
+			fprintf(stderr,"error: lokdef.nFunc > MAX_NFUNC\n");
+			abort();
+		}
 		strcpy(lokdef[n].func[0].name,"lHeadlight");
 		lokdef[n].func[0].ison=true;
 
