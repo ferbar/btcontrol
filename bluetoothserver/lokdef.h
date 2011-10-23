@@ -3,6 +3,7 @@
 #define F_DEC14 1
 #define F_DEC28 2
 
+#define MAX_NFUNC 17
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -18,7 +19,7 @@ struct lokdef_t {
 	int flags;		// LGB loks mit 14 fahrstufen ansteuern
 	char name[20];
 	int nFunc;
-	func_t func[17]; // 16+1 0=licht, 1=F1, 2=F2
+	func_t func[MAX_NFUNC]; // 16+1 0=licht, 1=F1, 2=F2
 	int currspeed;
 	int currdir;
 	bool initDone;
