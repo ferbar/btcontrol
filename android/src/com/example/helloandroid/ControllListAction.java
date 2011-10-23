@@ -31,7 +31,7 @@ public class ControllListAction extends ListActivity {
 	/** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
-    	mInflater = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE); // TODO: rausfinden was das ist ;-)
+    	mInflater = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.list);
         registerForContextMenu(getListView());
