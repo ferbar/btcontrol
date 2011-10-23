@@ -1,9 +1,10 @@
 /**
  * das dings da ist für user eingabe zuständig
- * TODO: schieber grösser/schöner machen
  * TODO: sendcommand in eine func
  * TODO: mehrfachsteuerung
- * 
+ * TODO: schieber wurde mit drücken gesetzt, v!= schieber -> nach ein paar sekunden schieber auf v setzen
+ * TODO: ConnectionManager ins display einbaun, ping als balken alle 0,5s updaten
+ * TODO: shift tasterichten
  */
 
 package com.example.helloandroid;
@@ -18,17 +19,20 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 //import android.content.Context;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 // import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.graphics.LinearGradient;
-import android.graphics.Shader.TileMode;
+// import android.graphics.LinearGradient;
+// import android.graphics.Shader.TileMode;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.ShapeDrawable;
-import android.graphics.drawable.shapes.RectShape;
+// import android.graphics.drawable.ShapeDrawable;
+// import android.graphics.drawable.shapes.RectShape;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.PowerManager;
@@ -59,6 +63,7 @@ import protocol.MessageLayouts;
 import btcontroll.AndroidStream;
 import btcontroll.BTcommThread;
 import btcontroll.Debuglog;
+
 
 public class ControllAction extends Activity implements BTcommThread.Callback, OnSeekBarChangeListener {
 	private static final int ACTIVITY_SELECT_LOK=0;
@@ -131,20 +136,28 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
         }
 		
 		//this.seekBarDirection = (SeekBar)findViewById(R.id.seekBarDirection);
-        // bunter hintergrund:
         SeekBar seekBarSpeed = (SeekBar)findViewById(R.id.seekBarSpeed2);
         seekBarSpeed.setOnSeekBarChangeListener(this);
-        LinearGradient test = new LinearGradient(0.f, 0.f, 300.f, 0.0f,  
+        
+        // bunter hintergrund:
+ /*       LinearGradient test = new LinearGradient(0.f, 0.f, 300.f, 0.0f,  
         	      new int[] { 0xFF000000, 0xFF0000FF, 0xFF00FF00, 0xFF00FFFF,
         	      0xFFFF0000, 0xFFFF00FF, 0xFFFFFF00, 0xFFFFFFFF}, 
         	      null, TileMode.CLAMP);
         ShapeDrawable shape = new ShapeDrawable(new RectShape());
         shape.getPaint().setShader(test);
-  //      seekBarSpeed.setProgressDrawable(shape);
+        seekBarSpeed.setProgressDrawable(shape);
+        
+        // hintergrund wegtun:
+/* 
+        int h=seekBarSpeed.getHeight();
         seekBarSpeed.setProgressDrawable(null);
-        seekBarSpeed.getHeight();
+        // seekBarSpeed.set
   //      seekBarSpeed.setSecondaryProgress(50);
-        	
+*/
+        seekBarSpeed.getProgressDrawable().setColorFilter(0x00000000, PorterDuff.Mode.MULTIPLY);
+        
+        
         this.update_btcomm();
         
         // TODO: geht das ned vielleicht gleich übers xml ?
@@ -330,7 +343,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
             // Set the message to display
             alertbox.setMessage("back taste(kurz) = power off\n" +
             	"Menu = aktueller zug stop\n" +
-            	"Slider drücken = geschwindigkeit setzen\n" +
+            	"Slider drücken = V wird langsam gesetzt\n" +
             	"Vol +/- gedrückt halten = beschleunigen/bremsen\n" +
             	"im menü wird aktueller power-status richtig angezeigt");
 
@@ -372,10 +385,9 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 		        		try{
 		        			vi=Integer.parseInt(value);
 			        		if(vi > 255) {
-			        			v.setBackgroundColor(Color.RED);
+			        			v.getBackground().setColorFilter(0xFFFF0000, PorterDuff.Mode.MULTIPLY);
 			        		} else {
-			        			// v.setBackgroundResource(0);
-			        			v.setBackgroundColor(Color.WHITE);  // TODO: da den normalen background wieder reintun
+    							v.getBackground().setColorFilter(null);
 		    		        	if(v.hasFocus()) {
 		    		        		String valueBits="";
 		    		        		for(int i=0; i < 8; i++) {
@@ -386,7 +398,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	    		        		}
 			        		}
 		        		} catch(Exception e) {
-		        			v.setBackgroundColor(Color.RED);
+							v.getBackground().setColorFilter(0xFFFF0000, PorterDuff.Mode.MULTIPLY);
 		        		}
     		        }
     		        public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
@@ -399,12 +411,12 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
     		        	if(v.hasFocus()) {
     		        		String valueBits=s.toString();
     		        		int vbi;
-    		        		try{
+    		        		try {
     		        			vbi=Integer.parseInt(valueBits,2);
-    		        			v.setBackgroundColor(Color.WHITE);
+    							v.getBackground().setColorFilter(null);
     		        		} catch(Exception e) {
     		        			vbi=0;
-    		        			v.setBackgroundColor(Color.RED);
+    							v.getBackground().setColorFilter(0xFFFF0000, PorterDuff.Mode.MULTIPLY);
     		        		}
     		        		String value=""+vbi;
     		        		EditText editTextValueBits=(EditText) dialog.findViewById(R.id.editTextValue);
@@ -415,14 +427,21 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
     		        public void onTextChanged(CharSequence s, int start, int before, int count) { }
     		    });
 		        ((Button)dialog.findViewById(R.id.buttonGo)).setOnClickListener(new View.OnClickListener() {
-		        	public void onClick(View v) {
+		        	public void onClick(View goButton) {
 		        		try {
+		        			EditText v=(EditText) dialog.findViewById(R.id.editTextValue);
+			    			int value=Integer.parseInt(v.getText().toString());
+		        			v=(EditText) dialog.findViewById(R.id.editTextCV);
+			    			int cv=Integer.parseInt(v.getText().toString());
+		        		
 		        			FBTCtlMessage msg = new FBTCtlMessage();
-			    			msg.setType(MessageLayouts.messageTypeID("POWER"));
-			    	    	msg.get("value").set(-1);
+			    			msg.setType(MessageLayouts.messageTypeID("POM"));
+			    	    	msg.get("addr").set(currAddr);
+			    	    	msg.get("cv").set(cv);
+			    	    	msg.get("value").set(value);
 			    	    	FBTCtlMessage reply = AndroidMain.btcomm.execCmd(msg);
 			    	    	if(reply != null) {
-			    	    		Toast.makeText(v.getContext(), "gesendet", Toast.LENGTH_LONG).show();
+			    	    		Toast.makeText(v.getContext(), "CV "+cv+" = "+value+" gesendet", Toast.LENGTH_LONG).show();
 			    	    	}
 			    		} catch (Exception e) {
 			    			// TODO Auto-generated catch block
@@ -528,11 +547,14 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 					Toast.makeText(this, "geht nur bei v=0", Toast.LENGTH_LONG).show();
 					return;
 				}
-				msg.setType(MessageLayouts.messageTypeID("DIR"));
 				int val=(view.getId() == R.id.buttonDirRight) ? 1 : -1;
 				int currDir=availLocos.get(this.currAddr).speed < 0 ? -1 : 1;
-				if(val == currDir) return; // nur senden wenn sichs geändert hat
-				msg.get("dir").set(val);
+				if(val == currDir) { // wenn sich die richtugn nicht geändert hat dann stop senden
+					msg.setType(MessageLayouts.messageTypeID("STOP"));
+				} else {
+					msg.setType(MessageLayouts.messageTypeID("DIR"));
+					msg.get("dir").set(val);
+				}
 				break; }
 			/* gibts nichtmehr
 			case R.id.seekBarDirection:
@@ -563,7 +585,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 					if(funcname.length() > 0)
 						funcname=funcname.substring(1);
 					// Toast.makeText(getBaseContext(), funcname, Toast.LENGTH_SHORT).show();
-					Toast toast = Toast.makeText(this, funcname, Toast.LENGTH_LONG);
+					Toast toast = Toast.makeText(this, funcname, Toast.LENGTH_SHORT);
 					toast.getView().buildDrawingCache(true); // resolveSize(size, measureSpec);
 					int top=this.getRelativeTop(view)-view.getHeight(); // view=button - stimmt zwar nicht ganz aber kann ned so daneben sein
 					int left=this.getRelativeLeft(view);
@@ -917,6 +939,12 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 					
 				// }
 			}
+		}
+		ConnectivityManager conMan = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+		android.net.NetworkInfo.State wifi = conMan.getNetworkInfo(1).getState();
+		if(wifi == NetworkInfo.State.CONNECTED) {
+		} else if(wifi == NetworkInfo.State.CONNECTING) {
+			
 		}
 	}
 	
