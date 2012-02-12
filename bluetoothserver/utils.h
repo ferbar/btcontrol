@@ -8,6 +8,7 @@ std::string readFile(std::string filename);
 #define STREQ(s1,s2) (strcmp(s1,s2)==0)
 
 extern bool cfg_debug;
+extern int cfg_tcpTimeout;
 
 #ifdef INCL_X11
 extern bool cfg_X11;
@@ -16,5 +17,8 @@ extern bool cfg_X11;
 // macht aus blah "blah"
 #define     _STR(x)   _VAL(x)
 #define     _VAL(x)   #x
+
+#define read myRead
+int myRead(int so, void *data, size_t size);
 
 #endif
