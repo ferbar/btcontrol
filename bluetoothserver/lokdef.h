@@ -24,6 +24,7 @@ struct lokdef_t {
 	int currdir;
 	bool initDone;
 	char imgname[32];
+	int lastClientID;
 };
 
 // darf kein pointer auf const sein weil .currspeed und func wird ja geändert
