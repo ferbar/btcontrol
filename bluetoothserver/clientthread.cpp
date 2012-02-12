@@ -63,6 +63,24 @@ void ClientThread::sendMessage(const FBTCtlMessage &msg)
 	setsockopt(this->so, IPPROTO_TCP, TCP_CORK, (char *)&flag, sizeof(flag) ); // message fertig, senden
 }
 
+/**
+ * wartet bis daten daherkommen, macht exception wenn keine innerhalb von timeout gekommen sind
+ */
+void ClientThread::readSelect()
+{
+	struct timeval timeout;
+	fd_set set;
+	timeout.tv_sec=cfg_tcpTimeout; timeout.tv_usec=0;
+	FD_ZERO(&set); FD_SET(this->so,&set);
+	int rc;
+	if((rc=select(this->so+1, &set, NULL, NULL, &timeout)) <= 0) {
+		if(rc != 0) {
+			throw std::string("error select");
+		}
+		throw std::string("timeout reading cmd");
+	}
+}
+
 void ClientThread::setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus)
 {
 	// FBTCtlMessage test(messageTypeID("PING_REPLY"));
@@ -198,27 +216,16 @@ void ClientThread::run()
 
 		int msgsize=0;
 		int rc;
-		struct timeval timeout;
-		fd_set set;
-#define RUN_SELECT() \
-		timeout.tv_sec=60; timeout.tv_usec=0;		\
-		FD_ZERO(&set); FD_SET(this->so,&set);		\
-		if((rc=select(this->so+1, &set, NULL, NULL, &timeout)) <= 0) {	\
-			if(rc != 0) {							\
-				throw std::string("error select");			\
-			}										\
-			throw std::string("timeout reading cmd");		\
-		}
-		RUN_SELECT();
+		this->readSelect(); // auf daten warten, macht exception wenn innerhalb vom timeout nix kommt
 		if((rc=read(this->so, &msgsize, 4)) != 4) {
 			throw std::string("error reading cmd: ") += rc; // + ")";
 		}
-		printf("%d:reading msg.size: %d bytes\n",this->clientID,msgsize);
+		// printf("%d:reading msg.size: %d bytes\n",this->clientID,msgsize);
 		if(msgsize < 0 || msgsize > 10000) {
-			throw std::string("invalid size 2big");
+			throw std::string("invalid size msgsize 2big");
 		}
 		char buffer[msgsize];
-		RUN_SELECT();
+		this->readSelect();
 		if((rc=read(this->so, buffer, msgsize)) != msgsize) {
 			throw std::string("error reading cmd.data: ") += rc; // + ")";
 		}
@@ -227,10 +234,10 @@ void ClientThread::run()
 		FBTCtlMessage cmd;
 		cmd.readMessage(in);
 		if(cfg_debug) {
-			printf("%d: msg",this->clientID);
+			printf("%d/%d: msg",this->clientID, this->msgNum);
 			cmd.dump();
 		} else {
-			printf("%d: msg %d=%s\n", this->clientID, cmd.getType(), messageTypeName(cmd.getType()).c_str());
+			printf("%d/%d: msg %d=%s\n", this->clientID, this->msgNum, cmd.getType(), messageTypeName(cmd.getType()).c_str());
 		}
 		int nr=0; // für die conrad platine
 		/*
@@ -344,12 +351,13 @@ void ClientThread::run()
 				int funcNr=cmd["funcnr"].getIntVal();
 				int value=cmd["value"].getIntVal();
 				if(funcNr >= 0 && funcNr < lokdef[addr_index].nFunc) {
+					if(cfg_debug) printf("%d/%d:set funcNr[%d]=%d\n",this->clientID,this->msgNum,funcNr,value);
 					if(value)
 						lokdef[addr_index].func[funcNr].ison = true;
 					else
 						lokdef[addr_index].func[funcNr].ison = false;
 				} else {
-					printf("%d:invalid funcNr out of bounds(%d)\n",this->clientID,funcNr);
+					printf(ANSI_RED "%d/%d:invalid funcNr out of bounds(%d)\n" ANSI_DEFAULT, this->clientID,this->msgNum,funcNr);
 				}
 				sendStatusReply(lastStatus);
 				changedAddrIndex[addr_index]=true;
@@ -394,7 +402,7 @@ void ClientThread::run()
 				int addr=cmd["addr"].getIntVal();
 				int addr_index=getAddrIndex(addr);
 				FBTCtlMessage reply(messageTypeID("GETFUNCTIONS_REPLY"));
-				printf("funclist for addr %d\n",addr);
+				printf("%d/%d: funclist for addr %d\n",this->clientID,this->msgNum,addr);
 				// char buffer[32];
 				for(int i=0; i < lokdef[addr_index].nFunc; i++) {
 					// snprintf(buffer,sizeof(buffer)," %d;%d;%s\n",j+1,lokdef[addr_index].func[j].ison,lokdef[addr_index].func[j].name);
@@ -446,7 +454,7 @@ void ClientThread::run()
 				reply["img"]=readFile("img/"+imageName);
 				sendMessage(reply);
 			} else if(cmd.isType("HELO_ERR")) {
-				printf("client proto error\n");
+				printf(ANSI_RED "%d/%d: client proto error\n" ANSI_DEFAULT, this->clientID, this->msgNum);
 				int protohash=cmd["protohash"].getIntVal();
 				int doupdate=cmd["doupdate"].getIntVal();
 				printf("hash=%d (me:%d), doupdate=%d\n",protohash,messageLayouts.protocolHash,doupdate);
@@ -469,8 +477,8 @@ void ClientThread::run()
 				reply["rc"]=1;
 				sendMessage(reply);
 			} else {
-				printf("%d:----------------- invalid/unimplemented command (%d,%s)------------------------\n",
-					this->clientID,cmd.getType(),messageTypeName(cmd.getType()).c_str());
+				printf(ANSI_RED"%d/%d:----------------- invalid/unimplemented command (%d,%s)------------------------\n"ANSI_DEFAULT,
+				this->clientID,this->msgNum,cmd.getType(),messageTypeName(cmd.getType()).c_str());
 			/*
 			if(memcmp(cmd,"invalid_key",10)==0) {
 				printf("%d:invalid key ! param1: %s\n",startupdata->clientID,param1);
@@ -560,6 +568,24 @@ void ClientThread::run()
 				if(changedAddrIndex[i]) {
 					changedAddrIndex[i]=false;
 					int addr_index=i;
+					this->sendLoco(addr_index,emergencyStop);
+
+				}
+			}
+		}
+		msgNum++;
+	}
+	printf("%d:client exit\n",this->clientID);
+	} catch(const char *e) {
+		printf(ANSI_RED "%d:exception %s\n" ANSI_DEFAULT, this->clientID,e);
+	} catch(std::string &s) {
+		printf(ANSI_RED "%d:exception %s\n" ANSI_DEFAULT, this->clientID,s.c_str());
+	}
+}
+
+
+void ClientThread::sendLoco(int addr_index, bool emergencyStop) {
+	lokdef[addr_index].lastClientID = this->clientID;
 					int dir= lokdef[addr_index].currdir < 0 ? 0 : 1;
 					if(emergencyStop) {
 						dir=2;
@@ -578,35 +604,24 @@ void ClientThread::run()
 					if(!lokdef[addr_index].initDone) {
 						SRCPReplyPtr replyInit = srcp->sendLocoInit(lokdef[addr_index].addr, nFahrstufen, lokdef[addr_index].nFunc);
 						if(replyInit->type != SRCPReply::OK) {
-							fprintf(stderr,ANSI_RED"error init loco: (%s)\n"ANSI_DEFAULT,replyInit->message);
+							fprintf(stderr,ANSI_RED"%d/%d: error init loco: (%s)\n"ANSI_DEFAULT, this->clientID, this->msgNum, replyInit->message);
 							if(replyInit->code == 412) {
-								fprintf(stderr,"loopback/ddl|number_gl, max addr < %d?\n", lokdef[addr_index].addr);
+								fprintf(stderr,"%d/%d: loopback/ddl|number_gl, max addr < %d?\n", this->clientID, this->msgNum, lokdef[addr_index].addr);
 								lokdef[addr_index].currspeed=-1;
 							}
 						} else {
 							lokdef[addr_index].initDone=true;
 							printf("try to read curr state...\n");
 							if(!srcp->getInfo(lokdef[addr_index].addr,&dir,&dccSpeed,lokdef[addr_index].nFunc, func)) {
-								fprintf(stderr,ANSI_RED"error getting state of loco: (%s)\n"ANSI_DEFAULT,replyInit->message);
+								fprintf(stderr,ANSI_RED"%d/%d: error getting state of loco: (%s)\n"ANSI_DEFAULT, this->clientID, this->msgNum, replyInit->message);
 							}
 						}
 					}
 					SRCPReplyPtr reply = srcp->sendLocoSpeed(lokdef[addr_index].addr, dir, nFahrstufen, dccSpeed, lokdef[addr_index].nFunc, func);
 
 					if(reply->type != SRCPReply::OK) {
-						fprintf(stderr,ANSI_RED"error sending speed: (%s)\n"ANSI_DEFAULT,reply->message);
+						fprintf(stderr,ANSI_RED"%d/%d: error sending speed: (%s)\n"ANSI_DEFAULT, this->clientID, this->msgNum, reply->message);
 					}
-
-				}
-			}
-		}
-	}
-	printf("%d:client exit\n",this->clientID);
-	} catch(const char *e) {
-		printf("%d:exception %s\n",this->clientID,e);
-	} catch(std::string &s) {
-		printf("%d:exception %s\n",this->clientID,s.c_str());
-	}
 }
 
 /**
@@ -614,27 +629,33 @@ void ClientThread::run()
  */
 ClientThread::~ClientThread()
 {
+	printf("%d:~ClientThread numClientd=%d\n",this->clientID, this->numClients);
 	if(--this->numClients == 0) {
+		// letzter client => alles notstop
 		if(srcp) { // erddcd/srcpd/dcc:
 			int addr_index=0;
 			while(lokdef[addr_index].addr) {
 		printf("last client [%d]=%d\n",addr_index,lokdef[addr_index].currspeed);
 				if(lokdef[addr_index].currspeed != 0) {
 					printf("emgstop [%d]=addr:%d\n",addr_index, lokdef[addr_index].addr);
-					int nFahrstufen = 127;
-					if(lokdef[addr_index].flags & F_DEC14) {
-						nFahrstufen = 14;
-					} else if(lokdef[addr_index].flags & F_DEC28) {
-						nFahrstufen = 28;
-					}
-					int dir=2; // emergency stop
-					int dccSpeed=0;
-					bool func[16];
-					for(int j=0; j < lokdef[addr_index].nFunc; j++) {
-						func[j]=lokdef[addr_index].func[j].ison;
-					}
 					lokdef[addr_index].currspeed=0;
-					srcp->sendLocoSpeed(lokdef[addr_index].addr, dir, nFahrstufen, dccSpeed, lokdef[addr_index].nFunc, func);
+					this->sendLoco(addr_index, true);
+					lokdef[addr_index].lastClientID=0;
+				}
+				addr_index++;
+			}
+		}
+	} else {
+		// nicht letzter client => alle loks die von mir gesteuert wurden notstop
+		printf("lastClient, stopping my Locos\n");
+		if(srcp) {
+			int addr_index=0;
+			while(lokdef[addr_index].addr) {
+				if(lokdef[addr_index].lastClientID == this->clientID ) {
+					printf("\tstop %d\n",addr_index);
+					lokdef[addr_index].currspeed=0;
+					this->sendLoco(addr_index, true);
+					lokdef[addr_index].lastClientID=0;
 				}
 				addr_index++;
 			}
