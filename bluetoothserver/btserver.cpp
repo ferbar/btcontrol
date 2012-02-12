@@ -58,7 +58,10 @@ BTServer::BTServer(int rc_channel)
 //	int ntry = 30;
 
 	laddr.rc_family = AF_BLUETOOTH;
-	bacpy(&laddr.rc_bdaddr, BDADDR_ANY);
+	// das kompiliert der gcc 4.6 nichtmehr:
+	// bacpy(&laddr.rc_bdaddr, BDADDR_ANY);
+	// bugfix: bzero, #define BDADDR_ANY (&(bdaddr_t) {{0, 0, 0, 0, 0, 0}})
+	bzero(&laddr.rc_bdaddr,sizeof(laddr.rc_bdaddr));
 	laddr.rc_channel = rc_channel;
 
 	this->bt_so = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
