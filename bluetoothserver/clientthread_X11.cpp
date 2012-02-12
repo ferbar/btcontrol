@@ -31,7 +31,6 @@
 #include <X11/keysym.h>
 
 
-
 #define sendToPhone(text) \
 		if(strlen(text) != write(startupdata->so,text,strlen(text))) { \
 			printf("%d:error writing message (%s)\n",startupdata->clientID, strerror(errno)); \
@@ -75,16 +74,18 @@ void ClientThreadX11::run()
 	
 		bool emergencyStop=false;
 
-		int msgsize;
+		int msgsize=0;
 		int rc;
+		this->readSelect(); // auf daten warten, macht exception wenn innerhalb vom timeout nix kommt
 		if((rc=read(this->so, &msgsize, 4)) != 4) {
 			throw std::string("error reading cmd: ") += rc; // + ")";
 		}
-		printf("%d:reading msg.size: %d bytes\n",this->clientID,msgsize);
+		// printf("%d:reading msg.size: %d bytes\n",this->clientID,msgsize);
 		if(msgsize < 0 || msgsize > 10000) {
-			throw std::string("invalid size 2big");
+			throw std::string("invalid size msgsize 2big");
 		}
 		char buffer[msgsize];
+		this->readSelect();
 		if((rc=read(this->so, buffer, msgsize)) != msgsize) {
 			throw std::string("error reading cmd.data: ") += rc; // + ")";
 		}
@@ -93,10 +94,10 @@ void ClientThreadX11::run()
 		FBTCtlMessage cmd;
 		cmd.readMessage(in);
 		if(cfg_debug) {
-			printf("%d: msg",this->clientID);
+			printf("%d/%d: msg",this->clientID, this->msgNum);
 			cmd.dump();
 		} else {
-			printf("%d: msg %d=%s\n", this->clientID, cmd.getType(), messageTypeName(cmd.getType()).c_str());
+			printf("%d/%d: msg %d=%s\n", this->clientID, this->msgNum, cmd.getType(), messageTypeName(cmd.getType()).c_str());
 		}
 		int nr=0; // für die conrad platine
 		/*
@@ -226,12 +227,13 @@ void ClientThreadX11::run()
 				int funcNr=cmd["funcnr"].getIntVal();
 				int value=cmd["value"].getIntVal();
 				if(funcNr >= 0 && funcNr < lokdef[addr_index].nFunc) {
+					if(cfg_debug) printf("%d/%d:set funcNr[%d]=%d\n",this->clientID,this->msgNum,funcNr,value);
 					if(value)
 						lokdef[addr_index].func[funcNr].ison = true;
 					else
 						lokdef[addr_index].func[funcNr].ison = false;
 				} else {
-					printf("%d:invalid funcNr out of bounds(%d)\n",this->clientID,funcNr);
+					printf(ANSI_RED "%d/%d:invalid funcNr out of bounds(%d)\n" ANSI_DEFAULT, this->clientID,this->msgNum,funcNr);
 				}
 				sendStatusReply(lastStatus);
 				changedAddrIndex[addr_index]=true;
@@ -276,7 +278,7 @@ void ClientThreadX11::run()
 				int addr=cmd["addr"].getIntVal();
 				int addr_index=getAddrIndex(addr);
 				FBTCtlMessage reply(messageTypeID("GETFUNCTIONS_REPLY"));
-				printf("funclist for addr %d\n",addr);
+				printf("%d/%d: funclist for addr %d\n",this->clientID,this->msgNum,addr);
 				// char buffer[32];
 				for(int i=0; i < lokdef[addr_index].nFunc; i++) {
 					// snprintf(buffer,sizeof(buffer)," %d;%d;%s\n",j+1,lokdef[addr_index].func[j].ison,lokdef[addr_index].func[j].name);
@@ -303,7 +305,7 @@ void ClientThreadX11::run()
 				reply["img"]=readFile("img/"+imageName);
 				sendMessage(reply);
 			} else if(cmd.isType("HELO_ERR")) {
-				printf("client proto error\n");
+				printf(ANSI_RED "%d/%d: client proto error\n" ANSI_DEFAULT, this->clientID, this->msgNum);
 				int protohash=cmd["protohash"].getIntVal();
 				int doupdate=cmd["doupdate"].getIntVal();
 				printf("hash=%d (me:%d), doupdate=%d\n",protohash,messageLayouts.protocolHash,doupdate);
@@ -326,8 +328,8 @@ void ClientThreadX11::run()
 				reply["rc"]=1;
 				sendMessage(reply);
 			} else {
-				printf("%d:----------------- invalid/unimplemented command (%d,%s)------------------------\n",
-					this->clientID,cmd.getType(),messageTypeName(cmd.getType()).c_str());
+				printf(ANSI_RED"%d/%d:----------------- invalid/unimplemented command (%d,%s)------------------------\n"ANSI_DEFAULT,
+				this->clientID,this->msgNum,cmd.getType(),messageTypeName(cmd.getType()).c_str());
 			/*
 			if(memcmp(cmd,"invalid_key",10)==0) {
 				printf("%d:invalid key ! param1: %s\n",startupdata->clientID,param1);
@@ -383,12 +385,12 @@ void ClientThreadX11::run()
 		*/
 
 	}
-	} catch(const char *e) {
-		printf("%d:exception %s\n",this->clientID,e);
-	} catch(std::string &s) {
-		printf("%d:exception %s\n",this->clientID,s.c_str());
-	}
 	printf("%d:client exit\n",this->clientID);
+	} catch(const char *e) {
+		printf(ANSI_RED "%d:exception %s\n" ANSI_DEFAULT, this->clientID,e);
+	} catch(std::string &s) {
+		printf(ANSI_RED "%d:exception %s\n" ANSI_DEFAULT, this->clientID,s.c_str());
+	}
 }
 
 /**
