@@ -64,9 +64,29 @@ int cfg_port=4303;
 bool cfg_X11=false;
 #endif
 
+int cfg_tcpTimeout=10; // TCP RX Timeout in sekunden
 
 K8055 *platine=NULL;
 SRCP *srcp=NULL;
+
+#undef read
+int myRead(int so, void *data, size_t size) {
+	int read=0;
+	// printf("myRead: %zd\n",size);
+	while(read < (int) size) {
+		// printf("read: %zd\n",size-read);
+		int rc=::read(so,((char *) data)+read,size-read);
+		// printf("rc: %d\n",rc);
+		if(rc < 0) {
+			throw std::string("error reading data");
+		} else if(rc == 0) { // stream is blocking -> sollt nie vorkommen
+			throw std::string("nothing to read");
+		}
+		read+=rc;
+	}
+	return read;
+}
+
 
 std::string readFile(std::string filename)
 {
@@ -134,6 +154,7 @@ int main(int argc, char *argv[])
 				/* no break */	
 			case 'd':
 				cfg_debug=1;
+				cfg_tcpTimeout=100000;
 				break;
 			case 'v':
 				printf("btserver version %s\n", _STR(SVNVERSION));
@@ -174,6 +195,7 @@ int main(int argc, char *argv[])
 	try {
 		messageLayouts.load();
 		printf("---------------protohash = %d\n",messageLayouts.protocolHash);
+		printf("TCP RX Timeout = %d\n",cfg_tcpTimeout);
 /*
 		FBTCtlMessage test(messageTypeID("PING_REPLY"));
 		test["info"][0]["addr"]=1;
