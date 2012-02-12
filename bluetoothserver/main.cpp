@@ -48,6 +48,7 @@
 #include "utils.h"
 
 
+#include "qrcode.h"
 
 
 // mit -D `svnversion` übergeben
@@ -191,6 +192,11 @@ int main(int argc, char *argv[])
 				exit(0);
 		}
 	}
+
+#ifdef INCL_QRCODE
+	printQRCode("");
+#endif
+
 	// FBTCtlMessage test(FBTCtlMessage::STRUCT)
 	try {
 		messageLayouts.load();

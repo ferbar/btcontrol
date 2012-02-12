@@ -24,6 +24,7 @@ Makefile.config:
 			echo "not found - velleman_usb_k8055 board disabled"	;\
 		fi
 	@echo .
+	
 	@echo -e "checking X11-dev"
 	@# X11 + X11 test + newline wegtun
 	@x11libs=$$(pkg-config --libs x11 && pkg-config --libs xtst) ;\
@@ -35,6 +36,18 @@ Makefile.config:
 			echo "btserver: clientthread_X11.o" >> Makefile.config ;\
 		else						\
 			echo "not found - X11 disabled"	;\
+		fi
+	@echo .
+	
+	@echo -e "checking libqrencode (qrencode-devel)"
+	@qrcodelibs=$$(pkg-config --libs libqrencode) ;\
+		if [ $$? = 0 ] ; then \
+			echo "found" ;\
+			echo "LDFLAGS+=$$qrcodelibs" >> Makefile.config	;\
+			echo "CFLAGS+=-DINCL_QRCODE" >> Makefile.config	;\
+			echo "btserver: qrcode.o" >> Makefile.config ;\
+		else						\
+			echo "not found - qrcode disabled"	;\
 		fi
 	@echo .
 
@@ -59,15 +72,15 @@ search-ibm-desktop:
 	# for i in `seq 1 240` ; do (ping -W 1 -c 1 192.168.0.$$i 2>&1| grep -B 1 "transmitted, 1") & pid=$!; done
 
 %.o : %.cpp %.h
-	g++ ${CFLAGS_DEP} ${CFLAGS} -c -o $@  $(@:%.o=%.cpp)
+	g++ ${CFLAGS_DEP} ${CFLAGS} -c -o $@  $<
 main.o : main.cpp main.h
-	g++ ${CFLAGS_DEP} ${CFLAGS} -c -o $@  $(@:%.o=%.cpp) -DSVNVERSION=`svnversion`
+	g++ ${CFLAGS_DEP} ${CFLAGS} -c -o $@  $< -DSVNVERSION=`svnversion`
 
 tags:
 	find . | grep -e '\.h$$' -e '\.c$$' -e '\.cpp$$' | \
 		ctags --language-force=c++ --c++-kinds=+p --extra=+q --fields=+iaS -L-
 
 clean:
-	rm -f *.o Makefile.config
+	rm -f *.o .*.d Makefile.config
 
 -include .*.d
