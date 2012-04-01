@@ -1,15 +1,18 @@
 /**
- * das dings da ist für user eingabe zuständig
+ * das dings da ist für user Eingabe zuständig
  * TODO: sendcommand in eine func
  * TODO: mehrfachsteuerung
  * TODO: schieber wurde mit drücken gesetzt, v!= schieber -> nach ein paar sekunden schieber auf v setzen
  * TODO: ConnectionManager ins display einbaun, ping als balken alle 0,5s updaten
- * TODO: shift tasterichten
+ * TODO: shift taste richten
+ * fix 20120211: home taste -> power off
  */
 
 package com.example.helloandroid;
 
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -34,7 +37,7 @@ import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
-import android.os.Handler;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -45,10 +48,12 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.WindowManager;
 //import android.view.ViewParent;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
@@ -68,7 +73,7 @@ import btcontroll.Debuglog;
 public class ControllAction extends Activity implements BTcommThread.Callback, OnSeekBarChangeListener {
 	private static final int ACTIVITY_SELECT_LOK=0;
 	String infoMsg="";
-	int currAddr=0;
+	static ArrayList<Integer> currSelectedAddr=new ArrayList<Integer>();
 	
 	// damit sich der bildschirmschoner nicht einschaltet:
 	PowerManager.WakeLock powerManager_wl;
@@ -85,9 +90,6 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	final int repeatTimeout=250; // 4*/s senden
 	// repeatTimeout=1000; <- zum debuggen
 	
-	// Need handler for callbacks to the UI thread
-    final Handler mHandler = new Handler();
-
     // Create runnable for posting
     final Runnable mUpdateResults = new Runnable() {
         public void run() {
@@ -123,13 +125,15 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 		PowerManager pm = (PowerManager) getSystemService(ControllAction.POWER_SERVICE);
 		powerManager_wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK, "My Tag");
 		
+		/* das bringt nix weil wird nur restored wenns gekillt wird während eine action drüber liegt 
 	    if(savedInstanceState != null) {
-	    	this.currAddr=savedInstanceState.getInt("currAddr");
+	    	this.currSelectedAddr=savedInstanceState.getIntegerArrayList("currAddr");
 	    }
+	    */
         setContentView(R.layout.controll);
         
         
-        if(this.currAddr == 0) {
+        if(ControllAction.currSelectedAddr.size() == 0) {
         	// lok liste laden
         	Intent i = new Intent(this, ControllListAction.class);
         	startActivityForResult(i, ACTIVITY_SELECT_LOK);
@@ -183,10 +187,13 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 		// TODO: alle threads stoppen
 
 	}
+	/* - bringt nix
 	@Override
 	public void onSaveInstanceState(Bundle outState) {
-		outState.putInt("currAddr", this.currAddr);
+		outState.putIntegerArrayList("currAddr", this.currSelectedAddr);
 	}
+	*/
+	
 	/*
 	@Override
 	public void onStop() {
@@ -213,12 +220,16 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
     protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
         super.onActivityResult(requestCode, resultCode, intent);
         if(intent != null) {
-        	this.currAddr=intent.getIntExtra("currAddr", -1);
-        	// funcNames einlesen:
+        	ArrayList<Integer> tmp=intent.getIntegerArrayListExtra("currAddr");
+        	if(tmp == null) { // programmfehler, darf ned passieren
+        		throw new NullPointerException("onActivityResult: nullpointer");
+        	}
+        	ControllAction.currSelectedAddr = tmp;
+        	// funcNames von der 1. Lok einlesen:
 	    	FBTCtlMessage msg = new FBTCtlMessage();
 	    	try {
 				msg.setType(MessageLayouts.messageTypeID("GETFUNCTIONS"));
-		    	msg.get("addr").set(this.currAddr);
+		    	msg.get("addr").set(ControllAction.currSelectedAddr.get(0));
 				AndroidMain.btcomm.addCmdToQueue(msg,this);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
@@ -236,13 +247,14 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	public boolean onPrepareOptionsMenu(Menu menu) {
     	FBTCtlMessage msg = new FBTCtlMessage();
     	try {
-    		AvailLocosListItem lok=ControllAction.availLocos.get(this.currAddr);
+    		// aktuelle lok stoppen:
+    		AvailLocosListItem lok=ControllAction.availLocos.get(ControllAction.currSelectedAddr.get(0));
         	if((lok != null) && (lok.speed != 0)) {
-    			msg.setType(MessageLayouts.messageTypeID("STOP"));
-    	    	msg.get("addr").set(this.currAddr);
+    			this.setMessageAddrField(msg, "STOP");
     			AndroidMain.btcomm.addCmdToQueue(msg,this);
     			this.updateSpeedSlider(0,0);
     		}
+        	// power status abfragen + icon setzen:
     		powerMenuItem = (MenuItem) menu.findItem(R.id.menu_Power);
     		msg = new FBTCtlMessage();
 			msg.setType(MessageLayouts.messageTypeID("POWER"));
@@ -256,6 +268,10 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
     	
     }
     @Override
+    public void onOptionsMenuClosed(Menu menu) {
+    	powerMenuItem=null;
+    }
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.controll_menu, menu);
@@ -265,13 +281,11 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle item selection
         switch (item.getItemId()) {
-        case R.id.menu_selectLok:
+        case R.id.menu_selectLok: { // lok auswahl starten
         	Intent i = new Intent(this, ControllListAction.class);
         	startActivityForResult(i, ACTIVITY_SELECT_LOK);
-        	powerMenuItem=null;
-            return true;
-        case R.id.menu_Power:
-            //showHelp();
+            return true; }
+        case R.id.menu_Power: { // Power togglen
         	FBTCtlMessage msg = new FBTCtlMessage();
 			try {
 				msg.setType(MessageLayouts.messageTypeID("POWER"));
@@ -281,16 +295,15 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-	    	powerMenuItem=null;
-            return true;
-        case R.id.menu_functions: {
+            return true; }
+        case R.id.menu_functions: { // function dialog aufmachen
         	//List items
 
         	// final CharSequence[] items = {"Milk", "Butter", "Cheese"};
 
         	//Prepare the list dialog box
         	AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        	AvailLocosListItem lok=ControllAction.availLocos.get(this.currAddr);
+        	AvailLocosListItem lok=ControllAction.availLocos.get(ControllAction.currSelectedAddr.get(0));
         	if(lok == null) {
         		Toast.makeText(this,"keine lok", Toast.LENGTH_LONG).show();
         		return true;
@@ -307,7 +320,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
                 	dialog.dismiss();
                 }
             });
-// TODO: namen schön machen
+// TODO: namen schön machen + icon anzeigen
         	builder.setMultiChoiceItems(this.funcNames, this.funcStates,  new DialogInterface.OnMultiChoiceClickListener() {
         		// Click listener
 
@@ -320,7 +333,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
         	        	msg.setType(MessageLayouts.messageTypeID("SETFUNC"));
         	        	msg.get("funcnr").set(item);
         	        	msg.get("value").set(on ? 1 : 0);
-        	        	msg.get("addr").set(currAddr);
+        	        	msg.get("addr").set(ControllAction.currSelectedAddr.get(0));
 						AndroidMain.btcomm.addCmdToQueue(msg); // TODO: callback handler vom ControllAction aufrufen
 					} catch (Exception e) {
 						// TODO Auto-generated catch block
@@ -341,8 +354,9 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
             AlertDialog.Builder alertbox = new AlertDialog.Builder(this);
             alertbox.setTitle("Hilfe");
             // Set the message to display
-            alertbox.setMessage("back taste(kurz) = power off\n" +
-            	"Menu = aktueller zug stop\n" +
+            alertbox.setMessage("Back(kurz) = power off, zurück zum Connect Dialog\n" +
+            	"Home (kurz) = power off, App zu\n" +
+            	"Menu = aktueller Zug stop\n" +
             	"Slider drücken = V wird langsam gesetzt\n" +
             	"Vol +/- gedrückt halten = beschleunigen/bremsen\n" +
             	"im menü wird aktueller power-status richtig angezeigt");
@@ -361,9 +375,9 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
              // show the alert box
             alertbox.show(); }
         	return true;
-        case R.id.menu_POM:
+        case R.id.menu_POM: { // Programming on the main dialog
         	// Context mContext = getApplicationContext();
-    		AvailLocosListItem lok=ControllAction.availLocos.get(this.currAddr);
+    		AvailLocosListItem lok=ControllAction.availLocos.get(ControllAction.currSelectedAddr.get(0));
     		if(lok != null) {
             	final Dialog dialog = new Dialog(this);
 
@@ -436,7 +450,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 		        		
 		        			FBTCtlMessage msg = new FBTCtlMessage();
 			    			msg.setType(MessageLayouts.messageTypeID("POM"));
-			    	    	msg.get("addr").set(currAddr);
+			    	    	msg.get("addr").set(ControllAction.currSelectedAddr.get(0));
 			    	    	msg.get("cv").set(cv);
 			    	    	msg.get("value").set(value);
 			    	    	FBTCtlMessage reply = AndroidMain.btcomm.execCmd(msg);
@@ -456,8 +470,21 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
     			Toast.makeText(this,"keine lok", Toast.LENGTH_LONG).show();
     		}
         	return true;
+        }
+        case R.id.menu_multi: { // Mehrfachsteuerung lok auswahl starten
+        	Intent i = new Intent(this, ControllListAction.class);
+        	i.putExtra("Mehrfachsteuerung", true);
+        	startActivityForResult(i, ACTIVITY_SELECT_LOK);
+        	return true;
+        }
+        case R.id.menu_exitNoPowerOff: {
+        	Intent startMain = new Intent(Intent.ACTION_MAIN);
+        	startMain.addCategory(Intent.CATEGORY_HOME);
+        	startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        	startActivity(startMain);
+        	return true;
+        }
         default:
-        	powerMenuItem=null;
             return super.onOptionsItemSelected(item);
         }
     }
@@ -514,7 +541,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 				SeekBar speedSeekBar=(SeekBar)findViewById(R.id.seekBarSpeed2);
 				int pos2=pos;
 				if(acc!=0) {
-					AvailLocosListItem item=ControllAction.availLocos.get(currAddr);
+					AvailLocosListItem item=ControllAction.availLocos.get(ControllAction.currSelectedAddr.get(0));
 					if(item != null) {
 						pos2=Math.abs(item.speed)+acc*5;
 					}
@@ -533,26 +560,27 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 		try {
 			switch(view.getId()) {
 			case R.id.buttonBREAK:
-				msg.setType(MessageLayouts.messageTypeID("BREAK"));
+				this.setMessageAddrField(msg, "BREAK");
 				updateSpeedSlider(0,-1);
 				break;
 			case R.id.buttonACC:
-				msg.setType(MessageLayouts.messageTypeID("ACC"));
+				this.setMessageAddrField(msg, "ACC");
 				updateSpeedSlider(0,1);
 				break;
 			case R.id.buttonDirLeft:
 			case R.id.buttonDirRight: {
-				if(Math.abs(availLocos.get(this.currAddr).speed) > 1) {
-					System.out.println("error: changing dir only when stopped ("+availLocos.get(this.currAddr).speed+")");
+				int main_addr=ControllAction.currSelectedAddr.get(0);
+				if(Math.abs(availLocos.get(main_addr).speed) > 1) {
+					System.out.println("error: changing dir only when stopped ("+availLocos.get(main_addr).speed+")");
 					Toast.makeText(this, "geht nur bei v=0", Toast.LENGTH_LONG).show();
 					return;
 				}
 				int val=(view.getId() == R.id.buttonDirRight) ? 1 : -1;
-				int currDir=availLocos.get(this.currAddr).speed < 0 ? -1 : 1;
+				int currDir=availLocos.get(main_addr).speed < 0 ? -1 : 1;
 				if(val == currDir) { // wenn sich die richtugn nicht geändert hat dann stop senden
-					msg.setType(MessageLayouts.messageTypeID("STOP"));
+					this.setMessageAddrField(msg, "STOP");
 				} else {
-					msg.setType(MessageLayouts.messageTypeID("DIR"));
+					this.setMessageAddrField(msg, "DIR");
 					msg.get("dir").set(val);
 				}
 				break; }
@@ -571,7 +599,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 				if(val == currDir) return; // nur senden wenn sichs geändert hat
 				msg.get("dir").set(val);
 				break; */
-			default:
+			default: {
 				// check ob Fx taste gedrückt wurde:
 				int func=-1;
 				int viewid=view.getId();
@@ -595,7 +623,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 					// toast.setDuration(Toast.LENGTH_LONG);
 					toast.show();
 
-					msg.setType(MessageLayouts.messageTypeID("SETFUNC"));
+					this.setMessageAddrField(msg, "SETFUNC");
 					msg.get("funcnr").set(func);
 					int value;
 
@@ -604,14 +632,16 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 					break;
 				}
 				// andere taste -> stop
-				msg.setType(MessageLayouts.messageTypeID("STOP"));
+				this.setMessageAddrField(msg, "STOP");
 	    		this.updateSpeedSlider(0,0);
-				break;
+				break; }
 			}
-			msg.get("addr").set(this.currAddr);
+			
+			// message für mehrfachsteuerung umbaun:
+
 			AndroidMain.btcomm.addCmdToQueue(msg,this);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			Toast.makeText(this, "error sending cmd:" + e.toString(), Toast.LENGTH_LONG).show();
 			e.printStackTrace();
 		}
 	}
@@ -644,30 +674,46 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if((keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP)) {
-        	if(event.getRepeatCount()==0) { // beim ersten durchgang den timer starten
+        switch(keyCode) {
+        case KeyEvent.KEYCODE_VOLUME_DOWN:
+        case KeyEvent.KEYCODE_VOLUME_UP: {
+	        	if(event.getRepeatCount()==0) { // beim ersten durchgang den timer starten
+		        	FBTCtlMessage msg = new FBTCtlMessage();
+		        	try {
+		    	    	this.setMessageAddrField(msg, keyCode == KeyEvent.KEYCODE_VOLUME_DOWN ? "BREAK" : "ACC");
+		    			AndroidMain.btcomm.addCmdToQueue(msg,this);
+		    		} catch (Exception e) {
+		    			// TODO Auto-generated catch block
+		    			e.printStackTrace();
+		    		}
+		    		this.updateSpeedSlider(0,msg.isType("ACC") ? 1 : -1);
+		
+		    		// init holdDownKey
+					if(task != null) {
+						timer.cancel();
+					}
+					timer = new Timer();
+					timerwait=new Object();
+					task = new HoldDownKeyTask(msg,this);
+					timer.schedule(task, repeatTimeout, repeatTimeout);
+		        	System.out.println("key down ("+event.toString()+")");
+	        	}
+	            return true;
+        	}
+        // das geht nur mit der onAttachedToWindow-anomalie:
+        case KeyEvent.KEYCODE_HOME: {
 	        	FBTCtlMessage msg = new FBTCtlMessage();
 	        	try {
-	    			msg.setType(MessageLayouts.messageTypeID(keyCode == KeyEvent.KEYCODE_VOLUME_DOWN ? "BREAK" : "ACC"));
-	    	    	msg.get("addr").set(this.currAddr);
-	    			AndroidMain.btcomm.addCmdToQueue(msg,this);
+		        	msg.setType(MessageLayouts.messageTypeID("POWER"));
+			    	msg.get("value").set(0);
+					AndroidMain.btcomm.addCmdToQueue(msg,this);
 	    		} catch (Exception e) {
 	    			// TODO Auto-generated catch block
 	    			e.printStackTrace();
 	    		}
-	    		this.updateSpeedSlider(0,msg.isType("ACC") ? 1 : -1);
-	
-	    		// init holdDownKey
-				if(task != null) {
-					timer.cancel();
-				}
-				timer = new Timer();
-				timerwait=new Object();
-				task = new HoldDownKeyTask(msg,this);
-				timer.schedule(task, repeatTimeout, repeatTimeout);
-	        	System.out.println("key down ("+event.toString()+")");
+	    		this.finish();
+				break; // unten dann normales onHome aufrufen
         	}
-            return true;
         }
         return super.onKeyDown(keyCode, event);
     }
@@ -680,6 +726,15 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
             return true;
         }
         return super.onKeyDown(keyCode, event);
+    }
+    /**
+     * keine ahnung was das tut aber mit dem funktioniert dann das keyevent_home
+     */
+    @Override
+    public void onAttachedToWindow() {
+        this.getWindow().setType(WindowManager.LayoutParams.TYPE_KEYGUARD);
+
+        super.onAttachedToWindow();
     }
 
     /**
@@ -747,9 +802,9 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 				} else if(reply.isType("POWER_REPLY")) {
 		    		powerMenuItemState=reply.get("value").getIntVal();
 					if(powerMenuItemState > 0) {
-						mHandler.post(mUpdatePowerMenuItemOn);
+						this.runOnUiThread(mUpdatePowerMenuItemOn);
 					} else {
-						mHandler.post(mUpdatePowerMenuItemOff);
+						this.runOnUiThread(mUpdatePowerMenuItemOff);
 					}
 					return;
 				} else {
@@ -760,7 +815,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 			this.infoMsg="callback err:"+e.getMessage();
 		}
 		
-		mHandler.post(mUpdateResults); // TODO: runOnUiThread checken
+		this.runOnUiThread(mUpdateResults);
 	}
 
 	/**
@@ -776,7 +831,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 						// Debuglog.debugln("starting NotifyStatusChange locked");
 						AndroidMain.btcomm.statusChange.wait();
 					}
-					mHandler.post(mUpdateResults);
+					ControllAction.this.runOnUiThread(mUpdateResults);
 				} catch (InterruptedException ex) {
 					return;
 				}
@@ -785,6 +840,10 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	}
 	
 	public void update_btcomm()  {
+		if(AndroidMain.btcomm == null) {
+			// FIXME: da war auch einmal eine nullpointer exception weil btcomm = null war (warum???)
+			Toast.makeText(this, "error: comm=null", Toast.LENGTH_LONG).show();
+		}
 		AndroidMain.btcomm.pingCallback=this;
 		// this.
 		this.infoMsg=null;
@@ -796,14 +855,25 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	
 	
 	public void repaint() {
-		TextView tv=(TextView)this.findViewById(R.id.textView1);
-		tv.setText("currLok:"+this.currAddr);
-		AvailLocosListItem item=ControllAction.availLocos.get(this.currAddr);
+		// check obs uithread is
+		if(Looper.getMainLooper().getThread() != Thread.currentThread()) {
+			System.out.println("drawDealers wrong thread");
+			throw new NullPointerException("error: not called from UI thread");
+		}
+		if(!this.hasWindowFocus()) {
+			// Activity is im hintergrund
+			return;
+		}
+		AvailLocosListItem item = null;
+		if(ControllAction.currSelectedAddr.size() > 0) {
+			int main_addr=ControllAction.currSelectedAddr.get(0);
+			item=ControllAction.availLocos.get(main_addr);
+		}
 		if(item != null) {
 			ProgressBar seekBar = (ProgressBar) findViewById(R.id.seekBarSpeed);
 			// seekBar.setMax(255);
 			seekBar.setProgress(Math.abs(item.speed));
-			tv.setText(item.name);
+			
 			/* seekBarDir gibts nimma
 			seekBar = (SeekBar) findViewById(R.id.seekBarDirection);
 			int currProgress=seekBar.getProgress();
@@ -825,8 +895,23 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 				}
 			}
 			*/
-			ImageView iv=(ImageView)this.findViewById(R.id.imageViewLok);
-			iv.setImageBitmap(item.img);
+			
+			// Status zeile mit der aktuellen lok updaten:
+			LinearLayout ll=(LinearLayout) this.findViewById(R.id.linearLayoutCurrLok);
+			ll.removeAllViews();
+			String text="";
+			for(Integer addr : ControllAction.currSelectedAddr) {
+				AvailLocosListItem currItem = ControllAction.availLocos.get(addr);
+				ImageView iv = new ImageView(this);
+				iv.setImageBitmap(currItem.img);
+				ll.addView(iv);
+				if(text.length() > 0) text+=", ";
+				text+=currItem.name;
+			}
+			TextView tv=new TextView(this);
+			tv.setId(R.id.textView1);
+			tv.setText(text);
+			ll.addView(tv);
 			
 			// richtungswechesl buttons nur bei speed=0 anzeigen, stop nur bei speed != 0 
 			Button bSTOP = (Button) findViewById(R.id.buttonSTOP);
@@ -853,7 +938,13 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 				bDirRight.setVisibility(View.GONE);
 				bBREAK.setEnabled(true);
 			}
+
+			
+		} else {
+			TextView tv=(TextView)this.findViewById(R.id.textView1);
+			tv.setText("invalid Lok addr:"+ControllAction.currSelectedAddr.toString());
 		}
+		
 		String title="btcontroll ";
 		String info="";
 		if(AndroidMain.btcomm != null) {
@@ -867,15 +958,18 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 			title += " " + this.infoMsg;
 		}
 		this.setTitle(title);
-		tv=(TextView)this.findViewById(R.id.textViewStatus);
-		if(AndroidMain.btcomm != null && AndroidMain.btcomm.connState == BTcommThread.STATE_CONNECTED) {
-			info=Debuglog.pingstat;
-			tv.setBackgroundColor(Color.TRANSPARENT);
-		} else {
-			tv.setBackgroundColor(Color.RED);
+		// Status leiste updaten:
+		{
+			TextView tv=(TextView)this.findViewById(R.id.textViewStatus);
+			if(AndroidMain.btcomm != null && AndroidMain.btcomm.connState == BTcommThread.STATE_CONNECTED) {
+				info=Debuglog.pingstat;
+				tv.setBackgroundColor(Color.TRANSPARENT);
+			} else {
+				tv.setBackgroundColor(Color.RED);
+			}
+			tv.setText(info);
+			// TODO: wlan empfang? ???
 		}
-		tv.setText(info);
-		
 		
 		// func buttons neu zeichnen TODO: nur nach änderung machen!!!
 		if(this.funcNames != null) {
@@ -940,6 +1034,26 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 				// }
 			}
 		}
+		
+		// restliche fahrende Loks anzeigen:
+		LinearLayout statusOther = (LinearLayout)this.findViewById(R.id.linearLayoutStatusOther);
+		statusOther.removeAllViews();
+		Enumeration<Integer> e = ControllAction.availLocos.keys();
+		while(e.hasMoreElements()) {
+			int addr=e.nextElement();
+			if(!ControllAction.currSelectedAddr.contains(addr)) {
+				item = ControllAction.availLocos.get(addr);
+				if((item.speed < 0) || (item.speed > 1)) {
+					ImageView iv=new ImageView(this);
+					iv.setImageBitmap(item.img);
+					statusOther.addView(iv);
+					TextView tv=new TextView(this);
+					tv.setText(""+item.speed);
+					statusOther.addView(tv);
+				}
+			}
+		}
+
 		ConnectivityManager conMan = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 		android.net.NetworkInfo.State wifi = conMan.getNetworkInfo(1).getState();
 		if(wifi == NetworkInfo.State.CONNECTED) {
@@ -1054,10 +1168,8 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 			this.msgAcc=new FBTCtlMessage();
 			this.msgBreak=new FBTCtlMessage();
         	try {
-    			msgAcc.setType(MessageLayouts.messageTypeID("ACC"));
-    	    	msgAcc.get("addr").set(currAddr);
-    			msgBreak.setType(MessageLayouts.messageTypeID("BREAK"));
-    	    	msgBreak.get("addr").set(currAddr);
+        		ControllAction.this.setMessageAddrField(msgAcc, "ACC");
+        		ControllAction.this.setMessageAddrField(msgBreak,"BREAK");
     		} catch (Exception e) {
     			// TODO Auto-generated catch block
     			e.printStackTrace();
@@ -1067,7 +1179,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 			try {
 				if(AndroidMain.btcomm.nextMessage == null) { // nur was neues in die queue schieben wenns leer is
 					SeekBar seekBarSpeed = (SeekBar)findViewById(R.id.seekBarSpeed2);
-					AvailLocosListItem item=ControllAction.availLocos.get(currAddr);
+					AvailLocosListItem item=ControllAction.availLocos.get(ControllAction.currSelectedAddr.get(0));
 					if(item != null) {
 						if(Math.abs(item.speed) < seekBarSpeed.getProgress()) {
 							AndroidMain.btcomm.addCmdToQueue(msgAcc,parent);
@@ -1101,5 +1213,16 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 		}
 	}
 	
-    
+	public void setMessageAddrField(FBTCtlMessage msg, String msgType) throws Exception {
+		if(!msgType.equals("SETFUNCTION") && (ControllAction.currSelectedAddr.size() > 1)) {
+			msg.setType(MessageLayouts.messageTypeID(msgType+"_MULTI"));
+			for(int i=0; i < ControllAction.currSelectedAddr.size(); i++) {
+				Integer addr = ControllAction.currSelectedAddr.get(i);
+				msg.get("list").get(i).get("addr").set(addr);
+			}
+		} else {
+			msg.setType(MessageLayouts.messageTypeID(msgType));
+			msg.get("addr").set(ControllAction.currSelectedAddr.get(0));
+		}
+	}
 }
