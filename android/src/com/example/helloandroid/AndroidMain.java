@@ -4,11 +4,17 @@ import java.io.IOException;
 import java.util.Hashtable;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 // import android.graphics.Bitmap;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.View;
@@ -41,7 +47,7 @@ public class AndroidMain extends Activity {
 	static int foregroundActivities=0;
 	static String sserver; // server name
 	
-	android.net.wifi.WifiManager wifi;
+	android.net.wifi.WifiManager wifiManager;
 	android.net.wifi.WifiManager.MulticastLock lock;
 	private String bonjourType = "_btcontroll._tcp.local.";
 	// TODO: das auf liste umbaun ArrayAdapter<AvailBonjourServiceItem> listAdapter=null;
@@ -89,9 +95,30 @@ public class AndroidMain extends Activity {
 		String text = settings.getString("server", "");
 		server.setText(text);
 
-		this.wifi = (android.net.wifi.WifiManager)
-	              getSystemService(android.content.Context.WIFI_SERVICE);
+		this.wifiManager = (android.net.wifi.WifiManager) getSystemService(android.content.Context.WIFI_SERVICE);
+		// this.wifiManager.getWifiState()
+
+// FIXME: E/ActivityThread(29021): Activity com.example.helloandroid.AndroidMain has leaked IntentReceiver com.example.helloandroid.AndroidMain$3@40555948 that was originally registered here. Are you missing a call to unregisterReceiver()?
+// FIXME:		E/ActivityThread(29021): android.app.IntentReceiverLeaked: Activity com.example.helloandroid.AndroidMain has leaked IntentReceiver com.example.helloandroid.AndroidMain$3@40555948 that was originally registered here. Are you missing a call to unregisterReceiver()?
+
+		BroadcastReceiver myWifiReceiver = new BroadcastReceiver() {
+			@Override
+			public void onReceive(Context arg0, Intent arg1) {
+				// TODO Auto-generated method stub
+				NetworkInfo networkInfo = (NetworkInfo) arg1.getParcelableExtra(ConnectivityManager.EXTRA_NETWORK_INFO);
+				if(networkInfo.getType() == ConnectivityManager.TYPE_WIFI){
+					// DisplayWifiState();
+					Toast.makeText(AndroidMain.this, networkInfo.toString(), Toast.LENGTH_SHORT).show();
+				}
+			}
+		};
+
+		// FIXME: da hats was !!!!!
+    	this.registerReceiver(myWifiReceiver,
+		         new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
     }
+    
+  
     
     @Override
     public void onStop() {
@@ -115,7 +142,7 @@ public class AndroidMain extends Activity {
     public void onResume() {
     	super.onResume();
     	
-    	this.lock = this.wifi.createMulticastLock("btcontroll.jmDNS.lock");
+    	this.lock = this.wifiManager.createMulticastLock("btcontroll.jmDNS.lock");
         this.lock.setReferenceCounted(true);
         this.lock.acquire();
         
@@ -210,6 +237,10 @@ public class AndroidMain extends Activity {
 				if(!btcomm.connError()) {
 					Intent i = new Intent(this.c, ControllAction.class);
 					startActivity(i);
+					synchronized(AndroidMain.this.loadProgressDialog) {
+						AndroidMain.this.loadProgressDialog.dismiss();
+						AndroidMain.this.loadProgressDialog=null;
+					}
 					// debugForm.setTitle("connected");
 				} else {
 					AndroidMain.btcommMessage="btcomm connError (state: "+BTcommThread.statusText[AndroidMain.btcomm.connState]+")";
@@ -248,6 +279,9 @@ public class AndroidMain extends Activity {
 			}
 		}
 	}
+	
+	// Progress Dialog anlegen:
+	ProgressDialog loadProgressDialog;
     
 	public void onButtonConnect(View view) {
 		if(AndroidMain.btcomm != null) {
@@ -258,6 +292,25 @@ public class AndroidMain extends Activity {
 		AndroidMain.sserver = server.getText().toString();
 		System.out.println("server:"+AndroidMain.sserver);
 		//startActivityForResult(i, ACTIVITY_CREATE);
+		
+		// warte dialog auf:
+		loadProgressDialog = new ProgressDialog(this);
+        loadProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        loadProgressDialog.setMessage("Connecting...");
+        loadProgressDialog.setCancelable(false);
+        loadProgressDialog.setProgress(0);
+        loadProgressDialog.setMax(10);
+        loadProgressDialog.setButton("Abbrechen", new DialogInterface.OnClickListener() {
+        	public void onClick(DialogInterface dialog, int which) {
+        		onButtonDisconnect(null);
+        		synchronized(loadProgressDialog) {
+        			loadProgressDialog.dismiss();
+        			loadProgressDialog=null;
+        		}
+        	}
+
+        });
+        loadProgressDialog.show();
 		
 		this.restartConnection();
 	}
@@ -272,9 +325,13 @@ public class AndroidMain extends Activity {
     		AndroidMain.btcomm.interrupt();
     	}
     	AndroidMain.btcomm=null;
-    	AndroidMain.notifyStatusChange.interrupt(); // thread killen damit das wait(); nicht für immer und ehwig auf einem alten btcomm object lauscht
-    	AndroidMain.notifyStatusChange=null;
+    	
+    	if(AndroidMain.notifyStatusChange != null) { // ... wenn schon gestoppt isses null
+    		AndroidMain.notifyStatusChange.interrupt(); // thread killen damit das wait(); nicht für immer und ehwig auf einem alten btcomm object lauscht
+    		AndroidMain.notifyStatusChange=null;
+    	}
     }
+    
 
     public void restartConnection() {
 		if(AndroidMain.btcomm == null) {
@@ -301,6 +358,12 @@ public class AndroidMain extends Activity {
     	}
 		TextView tv=(TextView)this.findViewById(R.id.textViewStatus);
 		tv.setText(text);
+		if(this.loadProgressDialog != null) {
+			synchronized(this.loadProgressDialog) {
+				this.loadProgressDialog.setProgress(btcomm.connState);
+				this.loadProgressDialog.setMessage(text);
+			}
+		}
     }
     
     /**

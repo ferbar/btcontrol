@@ -1,7 +1,9 @@
 package com.example.helloandroid;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Enumeration;
+import java.util.List;
 
 import com.example.helloandroid.ControllAction.AvailLocosListItem;
 
@@ -13,12 +15,17 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.view.KeyEvent;
 import android.view.ViewGroup;
 import android.view.LayoutInflater;
 
@@ -28,14 +35,31 @@ public class ControllListAction extends ListActivity {
 	Object listAdapter_notify=new Object();
 	private LayoutInflater mInflater;
 	
+	private boolean selectMehrfachsteuerung=false;
+	private Drawable orgStartMultiButtonImage=null;
+	List<Integer> selectedLocosPos;
+	
+	
 	/** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
-    	mInflater = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         super.onCreate(savedInstanceState);
+        
+        // TODO. aus bundle nehmen
+        this.selectedLocosPos = new ArrayList<Integer>();
+        
+    	mInflater = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         setContentView(R.layout.list);
         registerForContextMenu(getListView());
-
+        
+        Bundle bundle = getIntent().getExtras();
+        if(bundle != null) {
+        	this.selectMehrfachsteuerung=bundle.getBoolean("Mehrfachsteuerung",false);
+        	ImageButton ib = (ImageButton) this.findViewById(R.id.imageButtonStartMulti);
+        	this.orgStartMultiButtonImage = ib.getDrawable();
+        } else {
+        	this.findViewById(R.id.linearLayoutMulti).setVisibility(View.GONE);
+        }
         
         startFillData();
         // String[] mStrings = new String[]{"Android", "Google", "Eclipse"};
@@ -53,6 +77,25 @@ public class ControllListAction extends ListActivity {
 		System.out.println("ControllAction::onPause isFinishing:"+this.isFinishing());
 		AndroidMain.minusActivity();
 	}
+
+	/**
+	 * das rumgefummel mit onKeyDown ist weil sich das ControllAction sonst gerne auch beendet weils das onBackPressed auch bekommt ....
+	 * @see android.app.Activity#onKeyDown(int, android.view.KeyEvent)
+	 */
+	@Override
+	public boolean onKeyDown(int keyCode, KeyEvent event) {
+		if(keyCode == KeyEvent.KEYCODE_BACK)
+			return true; 
+		return super.onKeyDown(keyCode, event);
+	}
+	@Override
+	public boolean onKeyUp(int keyCode, KeyEvent event) {
+		if(keyCode == KeyEvent.KEYCODE_BACK) {
+			this.finish();
+			return true; 
+		}
+		return super.onKeyDown(keyCode, event);
+	}
 	
     class AvailLocosListItemAddr extends AvailLocosListItem {
     	public AvailLocosListItemAddr(int addr, String name, Bitmap img, int speed, int funcBits) {
@@ -65,22 +108,83 @@ public class ControllListAction extends ListActivity {
     	ImageView img;
 		TextView addr;
 		TextView name;
+		CheckBox cb;
 	}
 
+    /**
+     * wenn ein button oder checkbox in der liste ist wird das hier nicht "normal" aufgerufen
+     */
     @Override
     protected void onListItemClick(ListView l, View v, int position, long id) {
         super.onListItemClick(l, v, position, id);
+        if(this.selectMehrfachsteuerung) {
+        	CheckBox cb = (CheckBox) v.findViewById(R.id.list_item_checkBox);
+        	cb.toggle();
+        	// lok in die liste eintragen:
+        	if(cb.isChecked()) {
+        		if(!this.selectedLocosPos.contains(position)) {
+        			this.selectedLocosPos.add(position);
+        		}
+        	} else {
+        		this.selectedLocosPos.remove(new Integer(position));
+        	}
+        	
+        	// ausgewählte loks in der image button anzeigen:
+		    List <Bitmap>images=new ArrayList<Bitmap>();
+		    int width=0;
+		    int height=0;
+        	for(int loco_pos : this.selectedLocosPos) {
+       			Bitmap bm = this.listAdapter.getItem(loco_pos).img;
+       			if(bm != null) {
+       				images.add(bm);
+       				width+=bm.getWidth();
+       				if(height < bm.getHeight()) height = bm.getHeight();
+       			}
+        	}
 
-        Intent i=new Intent();
-        i.putExtra("currAddr", this.listAdapter.getItem(position).addr);
-        setResult(RESULT_OK,i);
-        finish();
+        	ImageButton ib = (ImageButton) this.findViewById(R.id.imageButtonStartMulti);
+        	if(images.size() == 0) { // kein bild ausgewählt: button disable, default icon anzeigen
+        		ib.setImageDrawable(this.orgStartMultiButtonImage);
+        		ib.setEnabled(false);
+        	} else {
+    		    Bitmap out = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+    		    int wpos=0;
+    		    Canvas comboImage = new Canvas(out);
+    		    for(Bitmap pic : images) {
+    		    	comboImage.drawBitmap(pic, wpos, 0f, null);
+    		    	wpos+=pic.getWidth();
+    		    }
+    		    ib.setImageBitmap(out);
+        		ib.setEnabled(true);
+        	}
+        	
+        } else { // normale lok auswahl:
+	        Intent intent=new Intent();
+	        ArrayList<Integer> value = new ArrayList<Integer>();
+        	value.add(this.listAdapter.getItem(position).addr);
+	        intent.putIntegerArrayListExtra("currAddr", value);
+	        intent.putExtra("currAddr", value);
+	        setResult(RESULT_OK, intent);
+	        finish();
+        }
+    }
+    
+    public void onClickMultiButton(View v) {
+        Intent intent=new Intent();
+        ArrayList<Integer> value = new ArrayList<Integer>();
+        for(int position : this.selectedLocosPos) {
+        	value.add(this.listAdapter.getItem(position).addr);
+        }
+        intent.putIntegerArrayListExtra("currAddr", value);
+        intent.putExtra("currAddr", value);
+        setResult(RESULT_OK, intent);
+        finish();    	
     }
     
     void fillData() {
     	// R.layout.list_item, strings) {
     	//,ControllAction.availLocos
-    	this.listAdapter=new ArrayAdapter<AvailLocosListItemAddr>(this, android.R.layout.simple_list_item_1) {
+    	this.listAdapter=new ArrayAdapter<AvailLocosListItemAddr>(this, R.layout.list_item) {
     		@Override
     		public View getView(int position, View convertView, ViewGroup parent) {
     				ViewHolder holder;
@@ -91,6 +195,7 @@ public class ControllListAction extends ListActivity {
 		        		holder.addr = (TextView) convertView.findViewById(R.id.list_item_addr);
 		        		holder.img =  (ImageView) convertView.findViewById(R.id.list_item_img);
 		        		convertView.setTag(holder);
+		        		holder.cb =  (CheckBox) convertView.findViewById(R.id.list_item_checkBox);
 		        	} else {
 		        		holder = (ViewHolder) convertView.getTag();
 	        		}
@@ -100,6 +205,14 @@ public class ControllListAction extends ListActivity {
         			System.out.println("set list item addr:"+item.addr);
 	        		holder.addr.setText(""+item.addr);
 	        		holder.img.setImageBitmap(item.img);
+	        		if(ControllListAction.this.selectMehrfachsteuerung) {
+	        			holder.cb.setChecked(ControllListAction.this.selectedLocosPos.contains(position));
+	        		} else {
+		        		// cb.setVisibility(View.GONE); -> dann funktioniert das alignLeftOf CheckBox nichtmehr !!!
+		        		// cb.setVisibility(View.INVISIBLE);
+		        		holder.cb.setWidth(0);
+		        		holder.cb.setPadding(0,0,0,0);
+	        		}
 	        		// convertView.setBackgroundColor(Color.parseColor(getItem(position)));
 	        		return convertView;
 	        	}
@@ -113,7 +226,6 @@ public class ControllListAction extends ListActivity {
     	}
     	this.listAdapter.sort(new Comparator<AvailLocosListItemAddr>() {
 			public int compare(AvailLocosListItemAddr object1, AvailLocosListItemAddr object2) {
-				// TODO Auto-generated method stub
 				return object1.name.compareTo(object2.name);
 			}
     	});

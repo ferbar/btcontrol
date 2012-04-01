@@ -21,18 +21,45 @@
 	        android:max="255"
 		/>
 	</FrameLayout>
-	<LinearLayout android:orientation="horizontal"
-		android:layout_width="fill_parent" android:layout_height="wrap_content"
-		android:background="#606060">
-		<ImageView android:width="100px" android:layout_width="wrap_content"
-			android:layout_height="wrap_content" android:src="@drawable/ic_lok"
-			android:id="@+id/imageViewLok" />
-		<TextView android:layout_toRightOf="@+id/imageView1"
-			android:layout_marginLeft="10dip"
-			android:text="keine Lok ausgewählt" android:id="@+id/textView1"
-			android:layout_width="wrap_content" android:layout_height="wrap_content" />
-		<!-- android:layout_weight="1" android:gravity="center|center_vertical|center_horizontal|fill" android:layout_gravity="center|center_horizontal|right" -->
-	</LinearLayout>
+
+	<RelativeLayout
+	    android:layout_width="fill_parent"
+	    android:layout_height="wrap_content"
+	    android:background="#606060"
+	    android:orientation="horizontal" >
+
+	    <LinearLayout
+	        android:id="@+id/linearLayoutCurrLok"
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:layout_alignParentLeft="true" >
+
+	        <ImageView
+	            android:id="@+id/imageViewLok"
+	            android:layout_width="wrap_content"
+	            android:layout_height="wrap_content"
+	            android:src="@drawable/ic_lok"
+	            android:width="100px" />
+
+	        <TextView
+	            android:id="@+id/textView1"
+	            android:layout_width="wrap_content"
+	            android:layout_height="wrap_content"
+	            android:layout_marginLeft="10dip"
+	            android:text="keine Lok ausgewählt" />
+
+	    </LinearLayout>
+
+	    <!-- android:layout_weight="1" android:gravity="center|center_vertical|center_horizontal|fill" android:layout_gravity="center|center_horizontal|right" -->
+
+	    <LinearLayout
+	        android:id="@+id/linearLayoutStatusOther"
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:layout_alignParentRight="true" >
+	    </LinearLayout>
+	</RelativeLayout>
+
 	<TextView android:text="TextView" android:id="@+id/textViewStatus"
 		android:layout_width="wrap_content" android:layout_height="wrap_content" />
 	<TableRow android:id="@+id/tableRow2"

@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-	xmlns:android="http://schemas.android.com/apk/res/android"
-	android:orientation="horizontal"
-	android:layout_width="fill_parent"
-	android:layout_height="fill_parent"
-	>
 <RelativeLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
 	android:layout_width="fill_parent"
 	android:layout_height="fill_parent"
 	>
@@ -22,20 +17,34 @@
 	android:layout_width="wrap_content"
 	android:layout_height="wrap_content"
 	android:textSize="12px"
+	android:text="[addr]"
 	/>
+
+	<!-- hint: wenn das focusable ist funktioniert das onItemClick nichtmehr -->
+
+	<CheckBox
+	    android:id="@+id/list_item_checkBox"
+	    android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:layout_alignParentRight="true"
+	    android:layout_alignParentTop="true"
+	    android:enabled="false"
+	    android:focusable="false"
+	    android:text="" />
+	
 	<TextView
-	android:id="@+id/list_item_name"
-	android:layout_width="wrap_content"
-	android:layout_height="wrap_content"
-	android:textSize="30px"
-	android:shadowDx="2"
-	android:shadowDy="2"
-	android:shadowRadius="2"
-	android:layout_below="@id/list_item_addr"
-	android:layout_alignParentRight="true"
-	android:layout_marginRight="10dip"
-	/>
+	    android:id="@+id/list_item_name"
+	    android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:layout_below="@id/list_item_addr"
+	    android:layout_marginRight="10dip"
+	    android:layout_toLeftOf="@id/list_item_checkBox"
+	    android:shadowDx="2"
+	    android:shadowDy="2"
+	    android:shadowRadius="2"
+	    android:text="[name]"
+	    android:textSize="30px" />
+
 
 </RelativeLayout>
 
-</LinearLayout>
