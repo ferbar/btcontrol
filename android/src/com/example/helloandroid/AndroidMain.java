@@ -321,10 +321,12 @@ public class AndroidMain extends Activity {
     
     public static void stopConnection() {
     	if(AndroidMain.btcomm != null) {
-    		AndroidMain.btcomm.close(true);
-    		AndroidMain.btcomm.interrupt();
+    		synchronized(AndroidMain.btcomm) {
+    			AndroidMain.btcomm.close(true);
+    			AndroidMain.btcomm.interrupt();
+    	    	AndroidMain.btcomm=null;
+    		}
     	}
-    	AndroidMain.btcomm=null;
     	
     	if(AndroidMain.notifyStatusChange != null) { // ... wenn schon gestoppt isses null
     		AndroidMain.notifyStatusChange.interrupt(); // thread killen damit das wait(); nicht für immer und ehwig auf einem alten btcomm object lauscht
