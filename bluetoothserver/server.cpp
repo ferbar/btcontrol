@@ -45,6 +45,8 @@
 #include "clientthread_X11.h"
 #endif
 
+#include <stdexcept>
+
 bool Server::isrunning=false;
 bool Server::exit=false;
 std::map <int,pthread_t> Server::clients;
@@ -108,7 +110,7 @@ int Server::accept()
 #endif
 	FD_SET(this->tcp_so,&fd);
 	int rc=select(FD_SETSIZE, &fd, NULL, NULL, NULL);
-	printf("-----select rc=%d errno:%s\n",rc,strerror(errno));
+	printf("Server::accept - select rc=%d errno:%s\n",rc,strerror(errno));
 	if( rc == -1 ) {
 		perror("select/accept error");
 		return -1;
@@ -128,7 +130,7 @@ int Server::accept()
 		int csock = ::accept(this->tcp_so, (struct sockaddr *)&addr2, &siz);
 		if(csock < 0) {
 			perror("so->accept error:");
-			throw std::string("so->accept error");
+			throw std::runtime_error("so->accept error");
 		}
 		printf("socket: %d\n",csock);
 		return csock;
@@ -178,11 +180,13 @@ static void *phoneClient(void *data)
 			client.run();
 		}
 	} catch(const char *e) {
-		printf("%d:exception %s\n",startupData->clientID,e);
-	} catch(std::string &s) {
-		printf("%d:exception %s\n",startupData->clientID,s.c_str());
+		printf(ANSI_RED "%d: exception %s - client thread killed\n" ANSI_DEFAULT, startupData->clientID,e);
+	} catch(std::RuntimeExceptionWithBacktrace &e) {
+		printf(ANSI_RED "%d: Runtime Exception %s - client thread killed\n" ANSI_DEFAULT, startupData->clientID,e.what());
+	} catch(std::exception &e) {
+		printf(ANSI_RED "%d: exception %s - client thread killed\n" ANSI_DEFAULT, startupData->clientID,e.what());
 	} catch (abi::__forced_unwind&) { // http://gcc.gnu.org/bugzilla/show_bug.cgi?id=28145
-		printf("%d: forced unwind exception\n",startupData->clientID);
+		printf(ANSI_RED "%d: forced unwind exception - client thread killed\n" ANSI_DEFAULT, startupData->clientID);
 		// copy &paste:
 		// printf("%d:client exit\n",startupData->clientID);
 		// pthread_cleanup_pop(true);

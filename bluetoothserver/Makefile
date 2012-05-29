@@ -67,7 +67,7 @@ Makefile.config:
 		fi
 	@echo .
 	
-	@# -std=c++11 für zsp.cpp
+	@# -std=c++11 für zsp.cpp,  -std=gnu++0x für gcc <= 6.3
 	@echo -e "checking alsa:"
 	@alsalibs=$$(pkg-config --libs alsa) ;\
 		if [ $$? = 0 ] ; then \
@@ -80,11 +80,19 @@ Makefile.config:
 		fi
 	@echo .
 	
+	@# 
+	@echo -e "checking raspi ACT led:"
+	@if [ -f "/sys/class/leds/led0/brightness" ] ; then \
+		echo "found" ;\
+		echo "CFLAGS+=-DHAVE_RASPI_ACT_LED" >> Makefile.config ; \
+	else						\
+		echo "not found - raspi ACT led disabled"	;\
+	fi
 
 btserver: fbtctl_message.o message_layout.o server.o clientthread.o lokdef.o main.o srcp.o utils.o
 	${CPP} ${LDFLAGS} $+ -o btserver
 
-digispark_test: USBDigispark.cpp
+digispark_test: USBDigispark.cpp utils.o
 	${CPP} ${CFLAGS} ${LDFLAGS} $+ -DDIGISPARK_TEST -o digispark_test
 
 zsptest: zsptest.cpp sound.cpp

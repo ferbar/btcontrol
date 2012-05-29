@@ -35,6 +35,7 @@
 #include <signal.h>
 #include <assert.h>
 #include <math.h>
+#include <stdexcept>
 
 #include <pthread.h>
 
@@ -96,16 +97,16 @@ int myRead(int so, void *data, size_t size) {
 		int rc=::read(so,((char *) data)+read,size-read);
 		// printf("rc: %d\n",rc);
 		if(rc < 0) {
-			throw std::string("error reading data");
+			throw std::runtime_error("error reading data");
 		} else if(rc == 0) { // stream is blocking -> sollt nie vorkommen
-			throw std::string("nothing to read");
+			throw std::runtime_error("nothing to read");
 		}
 		read+=rc;
 	}
 	return read;
 }
 
-
+// FIXME: das ins utils.cpp ?
 std::string readFile(std::string filename)
 {
 	std::string ret;
@@ -120,14 +121,14 @@ std::string readFile(std::string filename)
 		filename.insert(0,std::string(linkpath) + '/');
 		if(stat(filename.c_str(), &buf) != 0) {
 			fprintf(stderr,"error stat file %s\n",filename.c_str());
-			throw std::string("error stat file");
+			throw std::runtime_error("error stat file");
 		}
 	}
 	ret.resize(buf.st_size,'\0');
 	FILE *f=fopen(filename.c_str(),"r");
 	if(!f) {
 		fprintf(stderr,"error reading file %s\n",filename.c_str());
-		throw std::string("error reading file");
+		throw std::runtime_error("error reading file");
 	} else {
 		const char *data=ret.data(); // mutig ...
 		fread((void*)data,1,buf.st_size,f);
@@ -147,18 +148,20 @@ void initPlatine()
 	printf("init platine\n");
 	try {
 		platine=new K8055(1,cfg_debug);
-	} catch(const char *errormsg) {
-		printf("K8055: error: %s\n",errormsg);
+	} catch(std::exception &errormsg) {
+		printf("K8055: error: %s\n",errormsg.what());
 	}
 	try {
 		platine=new USBDigispark(1,cfg_debug);
-	} catch(const char *errormsg) {
-		printf("USBDigispark: error: %s\n",errormsg);
+	} catch(std::exception &errormsg) {
+		printf("USBDigispark init: error: %s\n",errormsg.what());
 	}
 	printf("... done\n");
 #ifdef HAVE_ALSA
 	SoundType *soundFiles=loadZSP();
-	Sound::loadSoundFiles(soundFiles);
+	if(soundFiles) {
+		Sound::loadSoundFiles(soundFiles);
+	}
 #endif
 #endif
 }
@@ -286,8 +289,8 @@ int main(int argc, char *argv[])
 	} catch(const char *e) {
 		printf("exception %s\n",e);
 		exit(1);
-	} catch(std::string &s) {
-		printf("exception %s\n",s.c_str());
+	} catch(std::runtime_error &e) {
+		printf("exception %s\n",e.what());
 	}
 
 	if( ! readLokdef() ) {
@@ -334,8 +337,8 @@ int main(int argc, char *argv[])
 	Server server;
 	try {
 		server.run();
-	} catch(std::string &s) {
-		printf("exception: %s\n", s.c_str());
+	} catch(std::runtime_error &e) {
+		printf("exception: %s\n", e.what());
 	}
 
 	server.waitExit();

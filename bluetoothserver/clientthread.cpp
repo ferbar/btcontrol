@@ -29,6 +29,7 @@
 #include "lokdef.h"
 #include "srcp.h"
 #include "USBPlatine.h"
+#include <stdexcept>
 
 // für setsockopt
 #include <sys/types.h>
@@ -85,10 +86,10 @@ void ClientThread::readSelect()
 	int rc;
 	if((rc=select(this->so+1, &set, NULL, NULL, &timeout)) <= 0) {
 		if(rc != 0) {
-			throw std::string("error select");
+			throw std::runtime_error("error select");
 		}
 		printf("ClientThread::readSelect error in select(%d) %s\n", this->so, strerror(errno));
-		throw std::string("timeout reading cmd");
+		throw std::runtime_error("timeout reading cmd");
 	}
 }
 
@@ -153,10 +154,9 @@ void ClientThread::run()
 {
 	// startupdata_t *startupdata=(startupdata_t *)data;
 
-	try {
 #ifdef HAVE_ALSA
-	Sound sound(cfg_soundFiles);
-	if(platine) {
+	FahrSound sound(cfg_soundFiles);
+	if(platine && FahrSound::soundFiles != NULL) { // nur wenn eine platine angeschlossen und sound files geladen
 		sound.init();
 		sound.run();
 	}
@@ -206,7 +206,7 @@ continue;
 		*/
 		this->readSelect(); // auf daten warten, macht exception wenn innerhalb vom timeout nix kommt
 		if((rc=read(this->so, &msgsize, 4)) != 4) {
-			throw std::string("error reading cmd: ") += rc; // + ")";
+			throw std::runtime_error("error reading cmd: " + rc);
 		}
 		/*
 		gettimeofday(&t, NULL);
@@ -215,12 +215,12 @@ continue;
 		*/
 		// printf("%d:reading msg.size: %d bytes\n",this->clientID,msgsize);
 		if(msgsize < 0 || msgsize > 10000) {
-			throw std::string("invalid size msgsize 2big");
+			throw std::runtime_error("invalid size msgsize 2big");
 		}
 		char buffer[msgsize];
 		this->readSelect();
 		if((rc=read(this->so, buffer, msgsize)) != msgsize) {
-			throw std::string("error reading cmd.data: ") += rc; // + ")";
+			throw std::runtime_error("error reading cmd.data: " + rc );
 		}
 		InputReader in(buffer,msgsize);
 		// printf("%d:parsing msg\n",this->clientID);
@@ -272,10 +272,10 @@ continue;
 				int addr_index=getAddrIndex(addr);
 				int dir=cmd["dir"].getIntVal();
 				if(dir != 1 && dir != -1) {
-					throw "invalid dir";
+					throw std::runtime_error("invalid dir");
 				}
 				if(lokdef[addr_index].currspeed != 0) {
-					throw "speed != 0";
+					throw std::runtime_error("speed != 0");
 				}
 				lokdef[addr_index].currdir=dir;
 				sendStatusReply(lastStatus);
@@ -551,11 +551,6 @@ continue;
 				if(f_speed < 5) {
 					f_speed=0;
 				} else {
-					// Umrechnen in PWM einheiten
-					// Velleman: K8055 const double motorStart=180; // bei dem Wert fangt der Motor an sich zu drehen
-					const double motorStart=70; // bei dem Wert fangt der Motor an sich zu drehen
-					const double fullSpeed=128; // DCC full speed
-					f_speed=f_speed*(fullSpeed-motorStart)/255+motorStart;
 				}
 
 				platine->setDir(lokdef[addr_index].currdir < 0 ? 1 : 0 );
@@ -572,7 +567,17 @@ continue;
 				sound.setSpeed(a_speed);
 				if(lokdef[addr_index].func[1].ison) {
 					lokdef[addr_index].func[1].ison=false;
-					system("aplay /home/pi/taurus.wav&");
+					Sound horn;
+					horn.init();
+					horn.setBlocking(false);
+					horn.playSingleSound(CFG_FUNC_SOUND_HORN);
+				}
+				if(lokdef[addr_index].func[2].ison) {
+					lokdef[addr_index].func[2].ison=false;
+					Sound horn;
+					horn.init();
+					horn.setBlocking(false);
+					horn.playSingleSound(CFG_FUNC_SOUND_ABFAHRT);
 				}
 #endif
 			}
@@ -591,11 +596,6 @@ continue;
 		msgNum++;
 	}
 	printf("%d:client exit\n",this->clientID);
-	} catch(const char *e) {
-		printf(ANSI_RED "%d:exception %s\n" ANSI_DEFAULT, this->clientID,e);
-	} catch(std::string &s) {
-		printf(ANSI_RED "%d:exception %s\n" ANSI_DEFAULT, this->clientID,s.c_str());
-	}
 }
 
 

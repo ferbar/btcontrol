@@ -2,6 +2,7 @@
 
 #include <string>
 #include <map>
+#include <stdlib.h>
 std::string readFile(std::string filename);
 #define ANSI_RED "\x1b[31m"
 #define ANSI_DEFAULT "\x1b[0m"
@@ -48,4 +49,34 @@ private:
 };
 
 extern Config config;
+
+#include <string>
+#include <sstream>
+
+namespace utils
+{
+	template < typename T > std::string to_string( const T& n )
+	{
+		std::ostringstream stm ;
+		stm << n ;
+		return stm.str() ;
+	}
+	int stoi(const std::string &in);
+}
+
+#include <stdexcept>
+
+namespace std
+{
+
+class RuntimeExceptionWithBacktrace : public std::runtime_error {
+public:
+	RuntimeExceptionWithBacktrace(const std::string &what);
+	virtual ~RuntimeExceptionWithBacktrace() throw ();
+private:
+};
+
+}
+#define runtime_error RuntimeExceptionWithBacktrace
+
 #endif

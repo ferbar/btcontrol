@@ -26,6 +26,7 @@
 #include <ctype.h>
 #include "lokdef.h"
 #include "utils.h"
+#include <stdexcept>
 
 lokdef_t *lokdef; 
 
@@ -43,13 +44,13 @@ int getAddrIndex(int addr)
 		}
 		i++;
 	}
-	throw "invalid address";
+	throw std::runtime_error("getAddrIndex: invalid address " + utils::to_string(addr));
 }
 
 #define CHECKVAL(_FMT, ...)	\
 		if(!pos) {	\
 			fprintf(stderr,"%s:%d " _FMT " \n",LOKDEF_FILENAME,n+1, ## __VA_ARGS__);	\
-			throw(_FMT);	\
+			throw std::runtime_error(_FMT);	\
 		}
 
 
