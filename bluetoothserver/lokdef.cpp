@@ -172,7 +172,7 @@ void dumpLokdef()
 		for(int i=0; i < lokdef[n].nFunc; i++) {
 			printf("%s:%d ",lokdef[n].func[i].name,lokdef[n].func[i].ison);
 		}
-		printf("currspeed:%d\n",lokdef[n].currspeed);
+		printf("currspeed:%d currdir:%d\n",lokdef[n].currspeed,lokdef[n].currdir);
 		n++;
 
 	}
