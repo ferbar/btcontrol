@@ -362,8 +362,13 @@ public class AndroidMain extends Activity {
 		tv.setText(text);
 		if(this.loadProgressDialog != null) {
 			synchronized(this.loadProgressDialog) {
-				this.loadProgressDialog.setProgress(btcomm.connState);
-				this.loadProgressDialog.setMessage(text);
+				if(this.btcomm != null) {
+					this.loadProgressDialog.setProgress(btcomm.connState);
+					this.loadProgressDialog.setMessage(text);
+				} else {
+					this.loadProgressDialog.setProgress(0);
+					this.loadProgressDialog.setMessage("no connection");
+				}
 			}
 		}
     }
