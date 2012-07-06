@@ -5,6 +5,7 @@
  * TODO: schieber wurde mit drücken gesetzt, v!= schieber -> nach ein paar sekunden schieber auf v setzen
  * TODO: ConnectionManager ins display einbaun, ping als balken alle 0,5s updaten
  * TODO: shift taste richten
+ * TODO: dec datei beim POM anzeigen
  * fix 20120211: home taste -> power off
  */
 
@@ -84,7 +85,8 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	static class AvailLocosListItem {public String name; public Bitmap img; public int speed; public int funcBits;
 		public AvailLocosListItem(String name, Bitmap img, int speed, int funcBits) {
 			this.name=name; this.img=img; this.speed=speed; this.funcBits=funcBits;} }
-	static public Hashtable<Integer, AvailLocosListItem> availLocos=new Hashtable<Integer, AvailLocosListItem>();
+	// sollte nach jedem reconnect auf null gesetzt werden!
+	static public Hashtable<Integer, AvailLocosListItem> availLocos;
 	// private Hashtable imgCache=new Hashtable();
 	
 	final int repeatTimeout=250; // 4*/s senden
@@ -122,6 +124,8 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 	    super.onCreate(savedInstanceState);
+	    ControllAction.availLocos=new Hashtable<Integer, AvailLocosListItem>(); // bt.reconnect = liste wird neu übertragen
+	    
 		PowerManager pm = (PowerManager) getSystemService(ControllAction.POWER_SERVICE);
 		powerManager_wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK, "My Tag");
 		
@@ -137,6 +141,19 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
         	// lok liste laden
         	Intent i = new Intent(this, ControllListAction.class);
         	startActivityForResult(i, ACTIVITY_SELECT_LOK);
+        } else { // schon eine lok ausgewählt dann funk liste laden:
+    		try {
+        		FBTCtlMessage msg = new FBTCtlMessage();
+    			msg.setType(MessageLayouts.messageTypeID("GETLOCOS"));
+				AndroidMain.btcomm.addCmdToQueue(msg,this);
+	    		msg = new FBTCtlMessage();
+				msg.setType(MessageLayouts.messageTypeID("GETFUNCTIONS"));
+		    	msg.get("addr").set(ControllAction.currSelectedAddr.get(0));
+				AndroidMain.btcomm.addCmdToQueue(msg,this);
+    		} catch (Exception e) {
+    			e.printStackTrace();
+    			Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
+    		}
         }
 		
 		//this.seekBarDirection = (SeekBar)findViewById(R.id.seekBarDirection);
@@ -799,6 +816,8 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 					for(int i=0; i < n; i++) {
 						this.funcNames[i]=reply.get("info").get(i).get("name").getStringVal();
 					}
+				} else if(reply.isType("GETLOCOS_REPLY")) {
+					ControllAction.setAvailLocos(null, null, reply);
 				} else if(reply.isType("POWER_REPLY")) {
 		    		powerMenuItemState=reply.get("value").getIntVal();
 					if(powerMenuItemState > 0) {
@@ -896,7 +915,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 			}
 			*/
 			
-			// Status zeile mit der aktuellen lok updaten:
+			// Status zeile mit der aktuellefahrenden loks updaten:
 			LinearLayout ll=(LinearLayout) this.findViewById(R.id.linearLayoutCurrLok);
 			ll.removeAllViews();
 			String text="";
@@ -972,7 +991,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 		}
 		
 		// func buttons neu zeichnen TODO: nur nach änderung machen!!!
-		if(this.funcNames != null) {
+		if(this.funcNames != null && item != null) { // add item != null, beim starten kanns sein dass die liste noch leer ist
 			int n=this.funcNames.length;
 			for(int i=0; i < this.viewFunctions.length; i++) {
 				ImageButton ib=(ImageButton)this.findViewById(this.viewFunctions[i]);
@@ -1007,24 +1026,37 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 						if(i < n) {
 							String funcName=this.funcNames[i];
 							char c=funcName.length() > 0 ? funcName.charAt(0) : 'x';
+							int imageID=0;
 							switch(c) {
 							case 's':
-								Drawable drawableSound=this.getResources().getDrawable(R.drawable.image_button_sound);
-								ib.setImageDrawable(drawableSound);
-								ib.setImageLevel(this.funcStates[i] ? 1 : 0);
+								String imgName=funcName;
+								int p=funcName.indexOf('|');
+								if(p==-1) {
+									imgName=funcName.substring(p+1);
+								}
+								if(imgName.startsWith("sDurchsage")) {
+									imageID=R.drawable.image_button_sound_durchsage;
+								} else if(imgName.startsWith("sHorn")) {
+									imageID=R.drawable.image_button_sound_horn;
+								} else if(imgName.startsWith("sPfeife")) {
+									imageID=R.drawable.image_button_sound_pfeife;
+								} else {
+									imageID=R.drawable.image_button_sound;									
+								}
 								break;
 							case 'l':
-								Drawable drawableLight=this.getResources().getDrawable(R.drawable.image_button_light);
-								ib.setImageDrawable(drawableLight);
-								ib.setImageLevel(this.funcStates[i] ? 1 : 0);
+								imageID=R.drawable.image_button_light;
 								break;
 							case 'p':
-								Drawable drawablePantograph=this.getResources().getDrawable(R.drawable.image_button_pantograph);
-								ib.setImageDrawable(drawablePantograph);
-								ib.setImageLevel(this.funcStates[i] ? 1 : 0);
+								imageID=R.drawable.image_button_pantograph;
 								break;
 							default:
 								//tb.setBackgroundResource(android.R.drawable.btn_star);
+							}
+							if(imageID != 0) {
+								Drawable drawablePantograph=this.getResources().getDrawable(imageID);
+								ib.setImageDrawable(drawablePantograph);
+								ib.setImageLevel(this.funcStates[i] ? 1 : 0);
 							}
 						} else {
 							// tb.setBackgroundResource(android.R.drawable.btn_star);
@@ -1073,10 +1105,11 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	 * @throws java.lang.Exception
 	 */
 	public static void setAvailLocos(CallbackProgressRunnable callbackProgress, CallbackProgressRunnable callbackTotal, FBTCtlMessage reply) throws Exception {
-		callbackProgress.progress=0; callbackProgress.run();
-        
 		int n=reply.get("info").getArraySize();
-		callbackTotal.progress=n; callbackTotal.run();
+		if(callbackProgress != null) {
+			callbackProgress.progress=0; callbackProgress.run();
+			callbackTotal.progress=n; callbackTotal.run();
+		}
 		for(int i=0; i < n; i++) {
 			Integer addr = new Integer(reply.get("info").get(i).get("addr").getIntVal());
 			String name = reply.get("info").get(i).get("name").getStringVal();
@@ -1085,7 +1118,9 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 			String imgname=reply.get("info").get(i).get("imgname").getStringVal();
 			Bitmap img=ControllAction.getImageCached(imgname);
 			ControllAction.availLocos.put(addr,new AvailLocosListItem(name, img, speed,func));
-			callbackProgress.progress=i+1; callbackProgress.run();
+			if(callbackProgress != null) {
+				callbackProgress.progress=i+1; callbackProgress.run();
+			}
 		}
 	}
 
