@@ -285,8 +285,10 @@ public class AndroidMain extends Activity {
     
 	public void onButtonConnect(View view) {
 		if(AndroidMain.btcomm != null) {
-			AndroidMain.btcomm.close(true);
-			AndroidMain.btcomm=null;
+			synchronized(AndroidMain.btcomm) {
+				AndroidMain.btcomm.close(true);
+				AndroidMain.btcomm=null;
+			}
 		}
 		EditText server = (EditText) findViewById(R.id.editText1);
 		AndroidMain.sserver = server.getText().toString();
