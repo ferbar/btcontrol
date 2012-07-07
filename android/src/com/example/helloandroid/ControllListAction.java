@@ -45,7 +45,6 @@ public class ControllListAction extends ListActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // TODO. aus bundle nehmen
         this.selectedLocosPos = new ArrayList<Integer>();
         
     	mInflater = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
