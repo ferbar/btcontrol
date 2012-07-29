@@ -147,7 +147,7 @@ public class AndroidMain extends Activity {
         this.lock.acquire();
         
         try {
-			this.jmdns = JmDNS.create();
+			this.jmdns = JmDNS.create();  // Achtung !!! im strict mode macht das eine Network Exception!!!
 	        this.jmdns.addServiceListener(bonjourType, listener = new ServiceListener() {
 	            public void serviceResolved(final ServiceEvent ev) {
 	                notifyUser("Service resolved: "
