@@ -15,4 +15,7 @@
           android:icon="@drawable/ic_lok"
           android:title="@string/help" />
     <item android:id="@+id/menu_exitNoPowerOff" android:title="App Exit ohne Power Off" />
+	<item android:id="@+id/menu_POM_Neu"
+          android:icon="@drawable/ic_bits"
+          android:title="POM neu" />
 </menu>
