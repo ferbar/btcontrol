@@ -30,9 +30,13 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.LinearGradient;
+import android.graphics.Shader.TileMode;
 // import android.graphics.LinearGradient;
 // import android.graphics.Shader.TileMode;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.ShapeDrawable;
+import android.graphics.drawable.shapes.RectShape;
 // import android.graphics.drawable.ShapeDrawable;
 // import android.graphics.drawable.shapes.RectShape;
 import android.net.ConnectivityManager;
@@ -117,7 +121,9 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
     
     
     // SeekBar seekBarDirection;
-    int [] viewFunctions={R.id.bF0, R.id.bF1, R.id.bF2, R.id.bF3, R.id.bF4, R.id.bF5, R.id.bF6, R.id.bF7, R.id.bF8, R.id.bF9};
+    int [] viewFunctions={R.id.bF0, R.id.bF1, R.id.bF2, R.id.bF3, R.id.bF4, R.id.bF5, R.id.bF6, R.id.bF7, R.id.bF8, R.id.bF9, 
+    		R.id.bF10, R.id.bF11, R.id.bF12, R.id.bF13, R.id.bF14, R.id.bF15, R.id.bF16, R.id.bF17, R.id.bF18
+    };
 
 	
 	/** Called when the activity is first created. */
@@ -128,6 +134,22 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	    
 		PowerManager pm = (PowerManager) getSystemService(ControllAction.POWER_SERVICE);
 		powerManager_wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK, "My Tag");
+		
+		if(AndroidMain.btcomm == null) {
+			// FIXME: da war auch einmal eine nullpointer exception weil btcomm = null war (warum???)
+			Toast.makeText(this, "error: comm=null", Toast.LENGTH_LONG).show();
+			this.finish();
+			return;
+		} else {
+			synchronized(AndroidMain.btcomm) {
+				// für den fall dasses gelockt ist ...
+			}
+			if(AndroidMain.btcomm == null) {
+				Toast.makeText(this, "error: comm=null, wurde gefladert", Toast.LENGTH_LONG).show();
+				this.finish();
+				return;
+			}
+		}
 		
 		/* das bringt nix weil wird nur restored wenns gekillt wird während eine action drüber liegt 
 	    if(savedInstanceState != null) {
@@ -159,9 +181,9 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 		//this.seekBarDirection = (SeekBar)findViewById(R.id.seekBarDirection);
         SeekBar seekBarSpeed = (SeekBar)findViewById(R.id.seekBarSpeed2);
         seekBarSpeed.setOnSeekBarChangeListener(this);
-        
+
         // bunter hintergrund:
- /*       LinearGradient test = new LinearGradient(0.f, 0.f, 300.f, 0.0f,  
+/*        LinearGradient test = new LinearGradient(0.f, 0.f, 300.f, 0.0f,  
         	      new int[] { 0xFF000000, 0xFF0000FF, 0xFF00FF00, 0xFF00FFFF,
         	      0xFFFF0000, 0xFFFF00FF, 0xFFFFFF00, 0xFFFFFFFF}, 
         	      null, TileMode.CLAMP);
@@ -392,6 +414,10 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
              // show the alert box
             alertbox.show(); }
         	return true;
+        case R.id.menu_POM_Neu: { // pom neu mit jmri dialog starten [test]
+        	Intent i = new Intent(this, PomAction.class);
+        	startActivityForResult(i, ACTIVITY_SELECT_LOK);
+            return true; }
         case R.id.menu_POM: { // Programming on the main dialog
         	// Context mContext = getApplicationContext();
     		AvailLocosListItem lok=ControllAction.availLocos.get(ControllAction.currSelectedAddr.get(0));
@@ -734,6 +760,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
         }
         return super.onKeyDown(keyCode, event);
     }
+    
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
         if((keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP)) {
@@ -742,8 +769,9 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
         	timer.cancel();
             return true;
         }
-        return super.onKeyDown(keyCode, event);
+        return super.onKeyUp(keyCode, event);
     }
+    
     /**
      * keine ahnung was das tut aber mit dem funktioniert dann das keyevent_home
      */
@@ -859,10 +887,6 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	}
 	
 	public void update_btcomm()  {
-		if(AndroidMain.btcomm == null) {
-			// FIXME: da war auch einmal eine nullpointer exception weil btcomm = null war (warum???)
-			Toast.makeText(this, "error: comm=null", Toast.LENGTH_LONG).show();
-		}
 		AndroidMain.btcomm.pingCallback=this;
 		// this.
 		this.infoMsg=null;
@@ -1027,13 +1051,13 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 							String funcName=this.funcNames[i];
 							char c=funcName.length() > 0 ? funcName.charAt(0) : 'x';
 							int imageID=0;
+							String imgName=funcName;
+							int p=funcName.indexOf('|');
+							if(p==-1) {
+								imgName=funcName.substring(p+1);
+							}
 							switch(c) {
 							case 's':
-								String imgName=funcName;
-								int p=funcName.indexOf('|');
-								if(p==-1) {
-									imgName=funcName.substring(p+1);
-								}
 								if(imgName.startsWith("sDurchsage")) {
 									imageID=R.drawable.image_button_sound_durchsage;
 								} else if(imgName.startsWith("sHorn")) {
@@ -1045,7 +1069,11 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 								}
 								break;
 							case 'l':
-								imageID=R.drawable.image_button_light;
+								if(imgName.startsWith("lRauchfang")) {
+									imageID=R.drawable.image_button_rauchfang;
+								} else {
+									imageID=R.drawable.image_button_light;
+								}
 								break;
 							case 'p':
 								imageID=R.drawable.image_button_pantograph;
