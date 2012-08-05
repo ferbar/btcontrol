@@ -162,6 +162,7 @@ SRCPReplyPtr SRCP::sendLocoInit(int addr, int nFahrstufen, int nFunc)
 	snprintf(cmd,sizeof(cmd),"INIT 1 GL "/* addr:*/ "%d " /* proto:*/ "%c " /* protoversion:*/ "%d " 
 		/* nFahrstufen:*/ "%d " /* nFunc:*/ "%d",
 		addr, 'N', addr < 128 ? 1 : 2,
+		// addr, 'N', addr < 128 ? 1 : 4,
 		nFahrstufen, nFunc);
 	// printf("sending init: %s\n",cmd);
 	return this->sendMessage(cmd);
