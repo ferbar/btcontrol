@@ -4,6 +4,8 @@
 621,  F_DEFAULT,Ge 4/4 II (621), ge_4_4_II.png,  12,sPfeife,2,lSchweizer Rücklicht,lFührerstand,5,lFernlicht,sDurchsage Zug fährt ab,sSound ein/aus,sQuietschen,10,11,sKompressor
 641,F_DEFAULT,Ge 4/4 III (641),  ge_4_4_III.png, 12,sHorn,sQuietschen,sPfeife,sDurchsage Zug fährt ab,sGeräusch,sSound ein/aus,p1,p2,sSchalter,sPressluft,sPffft,sZischen
 647,F_DEFAULT,Ge 4/4 III (647),  capito.png,     12,lFührerstand,2,3,sPfeife,5,6,sDurchsage This Train remains in Landquart,sSound ein/aus,sQuietschen,10,11,sPressluft,
+802,  F_DEFAULT,RhB Murmeli (802),    ge_4_4_I.png,   12,sF1,sF2,sPfeife,sPfeife lang,lFührerstand,sSound ein/aus,lSchweizer Rücklicht,sDurchsage,sSchaffnerpfiff,sLüfter,sKomppressor,Rangiergang
+#,Kuppeln,zweiter Dieselmotor, sQuietschen
 # 5,  F_DEFAULT,lok5,
 413,F_DEFAULT,Ge 6/6 I (413),    kroko.png,      12,lRücklicht,sPfeife,sPfiff,sKupplung,sKupplung,pBügel1,pBügel2,sSound ein/aus,sQuietschen,10,11,sVakuumbremse,sKompressor,sDurchsage,15,sSound inv
 33,F_DEFAULT,AbE (33),    abe_4_4_1.png,         12,lInnenbeleuchtung,sPfeife,sPfiff,sDurchsage,sKupplung,pBügel1,pBügel2,sSound ein/aus,sQuietschen,sSchalter,11,sVakuumbremse,sKompressor,sDurchsage,15,sSound inv
