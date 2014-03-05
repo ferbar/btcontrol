@@ -33,7 +33,7 @@ void printQRCode(const char *url) {
 		QRcode_free(qrcode);
 		printf("\n");
 	} else {
-		printf("error: %m\n",errno);
+		printf("error: %m\n"); // %m = strerror(errno) ohne argument
 		exit(1);
 	}
 
