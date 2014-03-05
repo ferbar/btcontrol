@@ -97,10 +97,13 @@ int Server::accept()
 	FD_SET(this->tcp_so,&fd);
 	int rc=select(FD_SETSIZE, &fd, NULL, NULL, NULL);
 	printf("-----select rc=%d\n",rc);
+#ifdef INCL_BT
 	if(this->bt_so > 0 && FD_ISSET(this->bt_so,&fd)) {
 		printf("bt connection\n");
 		return BTServer::accept();
-	} else if(FD_ISSET(this->tcp_so,&fd)) {
+	} else
+#endif
+	if(FD_ISSET(this->tcp_so,&fd)) {
 		printf("tcp connection\n");
 
 		struct sockaddr_in addr2;
@@ -113,6 +116,9 @@ int Server::accept()
 		}
 		printf("socket: %d\n",csock);
 		return csock;
+	} else {
+		printf("Puit?\n");
+		abort();
 	}
 	/*
 	   struct linger ling;
