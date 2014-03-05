@@ -24,9 +24,9 @@
 #include "clientthread.h"
 #include "lokdef.h"
 #include "srcp.h"
+#ifdef INCL_k8055
 #include "../velleman_usb_k8055/k8055.h"
-#include "utils.h"
-#include "server.h"
+#endif
 
 // für setsockopt
 #include <sys/types.h>
@@ -34,9 +34,15 @@
 #include <sys/time.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <unistd.h>
+
+#include "utils.h"
+#include "server.h"
 
 
+#ifdef INCL_k8055
 extern K8055 *platine;
+#endif
 
 int ClientThread::numClients=0;
 
@@ -534,6 +540,7 @@ void ClientThread::run()
 		*/
 
 		// PLATINE ANSTEUERN ------------
+#ifdef INCL_k8055
 		if(platine) {
 			// geschwindigkeit 
 			// double f_speed=sqrt(sqrt((double)lokdef[addr_index].currspeed/255.0))*255.0; // für üperhaupt keine elektronik vorm motor gut (schienentraktor)
@@ -562,7 +569,9 @@ void ClientThread::run()
 				}
 				platine->write_output(ia1, ia2, id8);
 			}
-		} else if(srcp) { // erddcd/srcpd/dcc:
+		} else
+#endif
+		if(srcp) { // erddcd/srcpd/dcc:
 			// wegen X_MULTI gucken was wir geändert ham:
 			for(int i=0; i <= nLokdef; i++) {
 				if(changedAddrIndex[i]) {

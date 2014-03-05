@@ -37,7 +37,9 @@
 
 #include <map>
 
+#ifdef INCL_k8055
 #include "../velleman_usb_k8055/k8055.h"
+#endif
 
 #include "srcp.h"
 
@@ -66,8 +68,11 @@ bool cfg_X11=false;
 #endif
 
 int cfg_tcpTimeout=10; // TCP RX Timeout in sekunden
-
+#ifdef INCL_k8055
 K8055 *platine=NULL;
+#else
+void *platine=NULL;
+#endif
 SRCP *srcp=NULL;
 
 #undef read
@@ -110,10 +115,33 @@ std::string readFile(std::string filename)
 	return ret;
 }
 
+/**
+ * Velleman k8055 init
+ */
 void resetPlatine()
 {
+#ifdef INCL_k8055
 	if(platine)
 		platine->write_output(255, 255, 0xaa);
+#endif
+}
+
+void initPlatine()
+{
+#ifdef INCL_k8055
+	assert(!platine);
+	platine=new K8055(1,cfg_debug);
+	printf("init platine\n");
+	resetPlatine();
+#endif
+}
+
+void deletePlatine()
+{
+#ifdef INCL_k8055
+	resetPlatine();
+	delete platine;
+#endif
 }
 
 void signalHandler(int signo, siginfo_t *p, void *ucontext)
@@ -252,10 +280,7 @@ int main(int argc, char *argv[])
 	if(!cfg_X11) {
 #endif
 		try {
-			assert(!platine);
-			platine=new K8055(1,cfg_debug);
-			printf("init platine\n");
-			resetPlatine();
+			initPlatine();
 		} catch(const char *errormsg) {
 			fprintf(stderr,"ansteuer platine error: %s\n",errormsg);
 		}
@@ -278,8 +303,7 @@ int main(int argc, char *argv[])
 	server.run();
 
 	if(platine) {
-		resetPlatine();
-		delete platine;
+		deletePlatine();
 	}
 
 }
