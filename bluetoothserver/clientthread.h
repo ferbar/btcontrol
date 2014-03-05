@@ -24,9 +24,7 @@ public:
 
 	void sendLoco(int addr_index, bool emergencyStop);
 
-	void BTPush(std::string addr);
 	void sendClientUpdate();
-	void BTScan(FBTCtlMessage &reply);
 
 	int so;
 	// ID vom client
