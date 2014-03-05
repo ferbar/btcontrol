@@ -133,58 +133,7 @@ void ClientThread::sendStatusReply(lastStatus_t *lastStatus)
  */
 void ClientThread::sendClientUpdate()
 {
-	std::string clientAddr = BTServer::getRemoteAddr(this->so);
-	for(int i=0; i < 10; i++) {
-		printf("."); fflush(stdout);
-		sleep(1);
-	}
-	this->BTPush(clientAddr);
-}
-
-void ClientThread::BTPush(std::string addr)
-{
-	printf("BT send update: to %s\n", addr.c_str());
-	std::string cmd;
-	cmd+="./ussp-push " + addr + "@ btcontroll.jar btcontroll.jar";
-	system(cmd.c_str());
-}
-
-void ClientThread::BTScan(FBTCtlMessage &reply)
-{
-	FILE *f=popen("hcitool scanning --flush","r");
-	if(f) {
-		char buffer[1024];
-		if(fgets(buffer,sizeof(buffer),f) == NULL) {
-			fprintf(stderr,"error reading header\n");
-		} else if(!STREQ(buffer,"Scanning ...\n")) {
-			fprintf(stderr,"wrong header\n");
-		} else {
-			int i=0;
-			while(fgets(buffer,sizeof(buffer),f)) {
-				int n=strlen(buffer);
-				if(n > 1) {
-					buffer[n-1]='\0';
-				}
-				char addr[1024];
-				char name[1024];
-				if(sscanf(buffer,"%s %12c",addr,name) == 2 ) {
-					printf("addr: [%s], name: [%s]\n",addr,name);
-					reply["info"][i]["addr"]=addr;
-					reply["info"][i]["name"]=name;
-					i++;
-				} else {
-					fprintf(stderr,"error scanning line %s\n",buffer);
-				}
-
-			}
-		}
-		int rc=pclose(f);
-		if(rc) {
-			fprintf(stderr,"hcitool error");
-		}
-	} else {
-		perror("hcitool scanning --flush error");
-	}
+	BTServer::pushUpdate(this->so);
 }
 
 /**
@@ -468,7 +417,7 @@ void ClientThread::run()
 
 			} else if(cmd.isType("BTSCAN")) { // liste mit eingetragenen loks abrufen, format: <name>;<adresse>;...\n
 				FBTCtlMessage reply(messageTypeID("BTSCAN_REPLY"));
-				this->BTScan(reply);
+				BTServer::BTScan(reply);
 				// reply.dump();
 				sendMessage(reply);
 			} else if(cmd.isType("BTPUSH")) { // 
@@ -477,7 +426,7 @@ void ClientThread::run()
 				std::string addr=cmd["addr"].getStringVal();
 				// TODO: ussppush oder gammu push 
 				// int type=cmd["type"].getIntVal();
-				this->BTPush(addr);
+				BTServer::BTPush(addr);
 
 				// reply.dump();
 				reply["rc"]=1;
