@@ -4,7 +4,8 @@
 CFLAGS=-g -O0 -Wall
 CFLAGS_DEP=-MMD -MF $(dir $@).$(notdir $(basename $@)).d
 
-LDFLAGS=-g -lbluetooth -lpthread -lusb
+LDFLAGS=-g -lbluetooth -lpthread
+# LDFLAGS=-g -lbluetooth -lpthread -lusb
 
 all: btserver
 
@@ -19,7 +20,8 @@ Makefile.config:
 		if [ $$? = 0 ] ; then \
 			echo "found" ;\
 			echo "LDFLAGS+=$$usblibs" >> Makefile.config	;\
-			echo "CFLAGS+=-Dk8055" >> Makefile.config	;\
+			echo "CFLAGS+=-DINCL_k8055" >> Makefile.config	;\
+			echo "btserver: ../velleman_usb_k8055/k8055.o;" >> Makefile.config   ;\
 		else						\
 			echo "not found - velleman_usb_k8055 board disabled"	;\
 		fi
@@ -51,7 +53,7 @@ Makefile.config:
 		fi
 	@echo .
 
-btserver: fbtctl_message.o message_layout.o server.o btserver.o clientthread.o lokdef.o main.o srcp.o ../velleman_usb_k8055/k8055.o
+btserver: fbtctl_message.o message_layout.o server.o btserver.o clientthread.o lokdef.o main.o srcp.o
 	g++ ${LDFLAGS} $+ -o btserver
 
 help:
