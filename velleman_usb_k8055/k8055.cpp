@@ -270,6 +270,11 @@ int K8055::write_output ( unsigned char a1, unsigned char a2, unsigned char d ) 
 
 /*
 	Read input values
+	@param a1	-> wert PWM1
+	@param a2	-> wert PWM2
+	@param d	-> wert digital out
+	@param c1	-> counter1
+	@param c2	-> counter2
 */
 int K8055::read_input ( unsigned char *a1, unsigned char *a2, unsigned char *d, unsigned short *c1, unsigned short *c2 ) {
 	unsigned char data[8];
