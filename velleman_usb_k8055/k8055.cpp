@@ -247,12 +247,12 @@ int K8055::write_dbt_command ( unsigned char command, unsigned char t1, unsigned
 	return true;
 }
 
-/*
-	Write output values
-*/
+/**
+ *	Write output values
+ */
 int K8055::write_output ( unsigned char a1, unsigned char a2, unsigned char d ) {
 	unsigned char data[8];
-	memset(	data,0,8);								
+	memset(	data,0,8);
 
 	data[0] = CMD_SETOUTPUT;
 	data[1] = d;
