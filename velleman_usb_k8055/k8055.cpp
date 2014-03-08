@@ -36,6 +36,8 @@
 #include <usb.h>
 #include <assert.h>
 #include <sys/time.h>
+// fürs sleep
+#include <unistd.h>
     
 #include "k8055.h"
 
@@ -92,6 +94,14 @@ K8055::K8055(int ipid, bool debug):debug(debug),
 
 K8055::~K8055()
 {
+	printf("platine -> write_out 255 255 0xaa\n");
+	this->write_output(255, 255, 0xaa);
+	// doppelt hilft besser:
+	this->write_output(255, 255, 0xaa);
+	sleep(1);
+	unsigned char a1, a2, d; short unsigned int c1, c2;
+	this->read_input(&a1, &a2, &d, &c1, &c2 ); // irgendwas einlesen - write_output und dann gleich ein close => kommt nie an
+	printf("read: pwm1: %u, %u, %x, %u, %u\n", a1, a2, d, c1, c2);
 	usb_close(xsv_handle);
 }
 

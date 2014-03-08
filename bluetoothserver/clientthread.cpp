@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <strings.h>
 #include <string.h>
+#include <assert.h>
 #include "clientthread.h"
 #include "lokdef.h"
 #include "srcp.h"
@@ -133,7 +134,12 @@ void ClientThread::sendStatusReply(lastStatus_t *lastStatus)
  */
 void ClientThread::sendClientUpdate()
 {
+#ifdef INCL_BT
 	BTServer::pushUpdate(this->so);
+#else
+	printf("ClientThread::sendClientUpdate ohne BT\n");
+	abort();
+#endif
 }
 
 /**
@@ -414,7 +420,7 @@ void ClientThread::run()
 				int doupdate=cmd["doupdate"].getIntVal();
 				printf("hash=%d (me:%d), doupdate=%d\n",protohash,messageLayouts.protocolHash,doupdate);
 				this->sendClientUpdate();
-
+#ifdef INCL_BT
 			} else if(cmd.isType("BTSCAN")) { // liste mit eingetragenen loks abrufen, format: <name>;<adresse>;...\n
 				FBTCtlMessage reply(messageTypeID("BTSCAN_REPLY"));
 				BTServer::BTScan(reply);
@@ -431,6 +437,7 @@ void ClientThread::run()
 				// reply.dump();
 				reply["rc"]=1;
 				sendMessage(reply);
+#endif
 			} else {
 				printf(ANSI_RED"%d/%d:----------------- invalid/unimplemented command (%d,%s)------------------------\n"ANSI_DEFAULT,
 				this->clientID,this->msgNum,cmd.getType(),messageTypeName(cmd.getType()).c_str());
@@ -494,28 +501,39 @@ void ClientThread::run()
 			// geschwindigkeit 
 			// double f_speed=sqrt(sqrt((double)lokdef[addr_index].currspeed/255.0))*255.0; // für üperhaupt keine elektronik vorm motor gut (schienentraktor)
 			// TODO: wemmas wieder brauchen sollt gucken ob sich wirklich was geändert hat
-			int changedAddr=1;
+			int changedAddr=3; // eine adresse mit der nummer muss in der lokdef eingetragen sein
 			if(changedAddr) {
 				int addr_index=getAddrIndex(changedAddr);
+				assert(addr_index >= 0);
 				int a_speed=abs(lokdef[addr_index].currspeed);
 				double f_speed=a_speed;
 
 				int ia1=255-(int)f_speed;
-				printf("%d:lokdef[addr_index].currspeed: %d (%f)\n",this->clientID,ia1,f_speed);
-				int ia2=lokdef[addr_index].currspeed < 0 ? 255 : 0; // 255 -> relais zieht an
+				// int ia2=lokdef[addr_index].currdir < 0 ? 255 : 0; // 255 -> relais zieht an
+				int ia2=0;
+				printf("%d:lokdef[addr_index=%d].currspeed: %d dir: %d pwm1 val=>%d pwm2 %d (%f)\n",this->clientID,addr_index,lokdef[addr_index].currspeed,lokdef[addr_index].currdir,ia1,ia2,f_speed);
 				int id8=0;
+				if( lokdef[addr_index].currdir < 0 ) {
+					id8=0x80;
+				} else {
+					id8=0x40;
+				}
 				// printf("lokdef[addr_index].currspeed=%d: ",lokdef[addr_index].currspeed);
+				/*
 				for(int i=1; i < 9; i++) {
 					// printf("%d ",255*i/(9));
 					if( a_speed >= 255*i/(9)) {
 						id8 |= 1 << (i-1);
 					}
-				}
+				} */
 				// printf("\n");
 				if(lokdef[addr_index].currspeed==0) { // lauflicht anzeigen
 					int a=1 << (nr&3);
-					id8=a | a << 4;
+					// id8=a | a << 4;
+					id8 |= a << 4;
 				}
+				platine->write_output(ia1, ia2, id8);
+				// doppelt hilft besser:
 				platine->write_output(ia1, ia2, id8);
 			}
 		} else
