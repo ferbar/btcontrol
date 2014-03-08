@@ -4,7 +4,7 @@
 CFLAGS=-g -O0 -Wall
 CFLAGS_DEP=-MMD -MF $(dir $@).$(notdir $(basename $@)).d
 
-LDFLAGS=-g -lbluetooth -lpthread
+LDFLAGS=-g -lpthread
 # LDFLAGS=-g -lbluetooth -lpthread -lusb
 
 all: btserver
@@ -21,7 +21,7 @@ Makefile.config:
 			echo "found" ;\
 			echo "LDFLAGS+=$$usblibs" >> Makefile.config	;\
 			echo "CFLAGS+=-DINCL_k8055" >> Makefile.config	;\
-			echo "btserver: ../velleman_usb_k8055/k8055.o;" >> Makefile.config   ;\
+			echo "btserver: ../velleman_usb_k8055/k8055.o" >> Makefile.config   ;\
 		else						\
 			echo "not found - velleman_usb_k8055 board disabled"	;\
 		fi
@@ -52,8 +52,21 @@ Makefile.config:
 			echo "not found - qrcode disabled"	;\
 		fi
 	@echo .
+	
+	@echo -e "checking blueZ:"
+	@bluez=$$(pkg-config --libs bluez) ;\
+		if [ $$? = 0 ] ; then \
+			echo "found" ;\
+			echo "LDFLAGS+=$$bluez" >> Makefile.config	;\
+			echo "CFLAGS+=-DINCL_BT" >> Makefile.config	;\
+			echo "btserver: btserver.o;" >> Makefile.config   ;\
+		else						\
+			echo "not found - BT disabled"	;\
+		fi
+	@echo .
+	
 
-btserver: fbtctl_message.o message_layout.o server.o btserver.o clientthread.o lokdef.o main.o srcp.o
+btserver: fbtctl_message.o message_layout.o server.o clientthread.o lokdef.o main.o srcp.o
 	g++ ${LDFLAGS} $+ -o btserver
 
 help:
