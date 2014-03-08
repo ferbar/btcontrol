@@ -91,9 +91,11 @@ int Server::accept()
 
 	fd_set fd;
 	FD_ZERO(&fd);
+#ifdef INCL_BT	
 	if(this->bt_so > 0) {
 		FD_SET(this->bt_so,&fd);
 	}
+#endif
 	FD_SET(this->tcp_so,&fd);
 	int rc=select(FD_SETSIZE, &fd, NULL, NULL, NULL);
 	printf("-----select rc=%d\n",rc);
