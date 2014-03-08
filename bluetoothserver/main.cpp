@@ -118,28 +118,18 @@ std::string readFile(std::string filename)
 /**
  * Velleman k8055 init
  */
-void resetPlatine()
-{
-#ifdef INCL_k8055
-	if(platine)
-		platine->write_output(255, 255, 0xaa);
-#endif
-}
-
 void initPlatine()
 {
 #ifdef INCL_k8055
 	assert(!platine);
 	platine=new K8055(1,cfg_debug);
 	printf("init platine\n");
-	resetPlatine();
 #endif
 }
 
 void deletePlatine()
 {
 #ifdef INCL_k8055
-	resetPlatine();
 	delete platine;
 #endif
 }
@@ -148,7 +138,7 @@ void signalHandler(int signo, siginfo_t *p, void *ucontext)
 {
 	printf("signalHandler\n");
 	// TODO: programm nicht gleich killen - exit-msg an die clients schicken
-	resetPlatine();
+	deletePlatine();
 	if(srcp) {
 		delete(srcp);
 		srcp=NULL;
