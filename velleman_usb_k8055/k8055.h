@@ -16,10 +16,10 @@ public:
 	int reset_counter1 ( );
 	int reset_counter2 ( );
 private:
+	int debug ;
+
 	struct usb_device *cfg_devHandle;
 	struct usb_dev_handle *xsv_handle;
-
-	int debug ;
 
 	int ipid;
 

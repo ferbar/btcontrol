@@ -153,7 +153,7 @@ int K8055::takeover_device( int interface )
 		return false;
 		
 	} else if ( debug ) 
-		fprintf( stderr,"Find interface %s\n", interface);
+		fprintf( stderr,"Find interface %d\n", interface);
       
 	if ( debug ) 
 		fprintf( stderr, "Took over the device\n");
@@ -210,7 +210,7 @@ int K8055::write_empty_command ( unsigned char command )
 	data[0] = command;
 	
 	if ( debug )
-		fprintf(stderr,"write_empty_command(0x%x,0x%x);\n",xsv_handle,command);
+		fprintf(stderr,"write_empty_command(0x%p,0x%x);\n",xsv_handle,command);
 	
 	if ( 0 > usb_interrupt_write(xsv_handle,0x1, (char*) data,8,20) )
 		return false;
@@ -238,7 +238,7 @@ int K8055::write_dbt_command ( unsigned char command, unsigned char t1, unsigned
 	data[7] = t2;
 	
 	if ( debug )
-		fprintf(stderr,"write_dbt_command(0x%x,0x%x,%d,%d);\n",xsv_handle,command,t1,t2);
+		fprintf(stderr,"write_dbt_command(0x%p,0x%x,%d,%d);\n",xsv_handle,command,t1,t2);
 
 	
 	if ( 0 > usb_interrupt_write(xsv_handle,0x1, (char*) data,8,20) )
@@ -260,7 +260,7 @@ int K8055::write_output ( unsigned char a1, unsigned char a2, unsigned char d ) 
 	data[3] = a2;
 	
 	if ( debug )
-		fprintf(stderr,"write_dbt_command(0x%x,%d,%d,0x%x);\n",xsv_handle,a1,a2,d);
+		fprintf(stderr,"write_dbt_command(0x%p,%d,%d,0x%x);\n",xsv_handle,a1,a2,d);
 		
 	if ( 0 > usb_interrupt_write(xsv_handle,0x1, (char*) data,8,20) )
 		return false;
@@ -299,6 +299,7 @@ int K8055::read_input ( unsigned char *a1, unsigned char *a2, unsigned char *d, 
 	if ( c2 ) 
 		*c2 = data[6] | data[7]<<8;
 		
+	return true;
 }
 
 /*
