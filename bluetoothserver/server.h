@@ -19,7 +19,11 @@ protected:
 	int bt_so;
 };
 
-class Server : public BTServer {
+class Server
+#ifdef INCL_DB
+ : public BTServer
+#endif
+ {
 public:
 	Server();
 	virtual ~Server() {};
