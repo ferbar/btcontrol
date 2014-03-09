@@ -4,8 +4,10 @@
 CFLAGS=-g -O0 -Wall
 CFLAGS_DEP=-MMD -MF $(dir $@).$(notdir $(basename $@)).d
 
-LDFLAGS=-g -lpthread
+LDFLAGS=-g -lpthread -lstdc++
 # LDFLAGS=-g -lbluetooth -lpthread -lusb
+
+CPP=colorgcc
 
 all: btserver
 
@@ -67,7 +69,7 @@ Makefile.config:
 	
 
 btserver: fbtctl_message.o message_layout.o server.o clientthread.o lokdef.o main.o srcp.o
-	g++ ${LDFLAGS} $+ -o btserver
+	${CPP} ${LDFLAGS} $+ -o btserver
 
 help:
 	@echo -e "all\t alles builden\ntags\t c-tags generieren\ncopy\t auf ibm kiste kopieren\nsearch-ibm-desktop\t ibm kiste suchen\n"
@@ -87,9 +89,9 @@ search-ibm-desktop:
 	# for i in `seq 1 240` ; do (ping -W 1 -c 1 192.168.0.$$i 2>&1| grep -B 1 "transmitted, 1") & pid=$!; done
 
 %.o : %.cpp %.h
-	g++ ${CFLAGS_DEP} ${CFLAGS} -c -o $@  $<
+	${CPP} ${CFLAGS_DEP} ${CFLAGS} -c -o $@  $<
 main.o : main.cpp main.h
-	g++ ${CFLAGS_DEP} ${CFLAGS} -c -o $@  $< -DSVNVERSION=`svnversion`
+	${CPP} ${CFLAGS_DEP} ${CFLAGS} -c -o $@  $< -DSVNVERSION=`svnversion`
 
 tags:
 	find . | grep -e '\.h$$' -e '\.c$$' -e '\.cpp$$' | \
