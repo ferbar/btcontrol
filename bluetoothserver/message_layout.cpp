@@ -16,10 +16,12 @@
  * message generation
  */
 #include <string.h>
+#include <sstream>
 #include <errno.h>
 #include <assert.h>
 #include "message_layout.h"
 #include "fbtctl_message.h"
+#include "utils.h"
 
 MessageLayouts messageLayouts;
 
@@ -109,20 +111,14 @@ int MessageLayouts::load()
 	if(this->loaded)
 		return 0;
 	this->loaded=true;
-	FILE *f=fopen("protocol.dat","r");
-	if(!f) {
-		printf("error reading protocol.dat\n");
-		throw "error reading protocol.dat";
-	}
-	char buffer[1024];
+	std::string protocolDat = readFile("protocol.dat");
 	int typeNr=MessageLayout::STRUCT+1;
-	while(!feof(f)) {
-		if(fgets(buffer,sizeof(buffer)-1,f) == NULL) {
-			if(!feof(f)) {
-				printf("error reading line (%s)\n",strerror(errno));
-			}
-			break;
-		}
+	std::string line;
+	const char *buffer;
+	std::istringstream f(protocolDat);
+	while (std::getline(f, line)) {
+		buffer = line.c_str();
+		/*
 		int n=strlen(buffer);
 		if((n>=1) && ((buffer[n-1] == '\n') || (buffer[n-1] == '\r'))) {
 			buffer[n-1]='\0';
@@ -130,6 +126,7 @@ int MessageLayouts::load()
 		if((n>=2) && ((buffer[n-2] == '\n') || (buffer[n-2] == '\r'))) {
 			buffer[n-2]='\0';
 		}
+		*/
 		if(buffer[0]=='#') {
 			continue;
 		}
@@ -162,7 +159,6 @@ int MessageLayouts::load()
 		typeNr++;
 	}
 
-	fclose(f);
 	MessageLayouts::protocolHash=hash;
 	return hash;
 }

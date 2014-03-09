@@ -19,8 +19,10 @@
 #include <stdlib.h>
 #include <strings.h>
 #include <string.h>
+#include <sstream>
 #include <ctype.h>
 #include "lokdef.h"
+#include "utils.h"
 
 lokdef_t *lokdef; 
 
@@ -44,8 +46,7 @@ int getAddrIndex(int addr)
 #define CHECKVAL(_FMT, ...)	\
 		if(!pos) {	\
 			fprintf(stderr,"%s:%d " _FMT " \n",LOKDEF_FILENAME,n+1, ## __VA_ARGS__);	\
-			fclose(flokdef);	\
-			return false;	\
+			throw(_FMT);	\
 		}
 
 
@@ -75,7 +76,7 @@ int str2decodertype(const char *pos)
 	return F_DEFAULT;
 }
 
-char *getnext(char **pos)
+const char *getnext(const char **pos)
 {
 	// printf("skipping value:");
 	while(**pos && (strchr(",\r\n",**pos) == NULL)) {
@@ -91,7 +92,7 @@ char *getnext(char **pos)
 		(*pos)++;
 	}
 	// printf("\n");
-	char *endpos=*pos;
+	const char *endpos=*pos;
 	while(*endpos && (strchr(",\r\n",*endpos) == NULL)) endpos++;
 	return endpos;
 }
@@ -103,23 +104,23 @@ char *getnext(char **pos)
 bool readLokdef()
 {
 #define LOKDEF_FILENAME "lokdef.csv"
-	FILE *flokdef=fopen(LOKDEF_FILENAME,"r");
-	if(!flokdef) {
-		fprintf(stderr,"error reading %s \n",LOKDEF_FILENAME);
-		return false;
-	}
-	char buffer[1024];
+	std::string lokdefCsv = readFile(LOKDEF_FILENAME);
+	std::string line;
+	const char *buffer;
+	std::istringstream f(lokdefCsv);
+
 	int n=0;
-	int line=0;
-	while(fgets(buffer,sizeof(buffer),flokdef)) {
-		line++;
+	int lineNo=0;
+	while (std::getline(f, line)) {
+		buffer = line.c_str();
+		lineNo++;
 		// printf("line %d\n",line);
 		if(buffer[0] =='#') continue;
 		lokdef = (lokdef_t *) realloc(lokdef, sizeof(lokdef_t)*(n+1));
 		bzero(&lokdef[n],sizeof(lokdef_t));
 		lokdef[n].currdir=1;
-		char *pos=buffer;
-		char *pos_end;
+		const char *pos=buffer;
+		const char *pos_end;
 		lokdef[n].addr=atoi(pos);
 		pos_end=getnext(&pos);
 		lokdef[n].flags=str2decodertype(pos);
@@ -155,7 +156,6 @@ bool readLokdef()
 
 		n++;
 	}
-	fclose(flokdef);
 	// listen-ende:
 	lokdef = (lokdef_t *) realloc(lokdef, sizeof(lokdef_t)*(n+1));
 	bzero(&lokdef[n],sizeof(lokdef_t));

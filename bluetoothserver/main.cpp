@@ -35,6 +35,9 @@
 
 #include <pthread.h>
 
+// dirname
+#include <libgen.h>
+
 #include <map>
 
 #ifdef INCL_k8055
@@ -98,19 +101,30 @@ std::string readFile(std::string filename)
 {
 	std::string ret;
 	struct stat buf;
-	if(stat(filename.c_str(), &buf) == 0) {
-		ret.resize(buf.st_size,'\0');
-		FILE *f=fopen(filename.c_str(),"r");
-		if(!f) {
-			fprintf(stderr,"error reading file %s\n",filename.c_str());
-		} else {
-			const char *data=ret.data(); // mutig ...
-			fread((void*)data,1,buf.st_size,f);
-			fclose(f);
-			printf("%s:%lu bytes\n",filename.c_str(),buf.st_size);
+	int rc=0;
+	if(stat(filename.c_str(), &buf) != 0) {
+		char execpath[MAXPATHLEN];
+		if(readlink("/proc/self/exe", execpath, sizeof(execpath)) <= 0) {
+			printf("error reading /proc/self/exe\n");
+			abort();
 		}
+		char *linkpath=dirname(execpath);
+		filename.insert(0,std::string(linkpath) + '/');
+		if(stat(filename.c_str(), &buf) != 0) {
+			fprintf(stderr,"error stat file %s\n",filename.c_str());
+			throw std::string("error stat file");
+		}
+	}
+	ret.resize(buf.st_size,'\0');
+	FILE *f=fopen(filename.c_str(),"r");
+	if(!f) {
+		fprintf(stderr,"error reading file %s\n",filename.c_str());
+		throw std::string("error reading file");
 	} else {
-		fprintf(stderr,"error stat file %s\n",filename.c_str());
+		const char *data=ret.data(); // mutig ...
+		fread((void*)data,1,buf.st_size,f);
+		fclose(f);
+		printf("%s:%lu bytes\n",filename.c_str(),buf.st_size);
 	}
 	return ret;
 }
