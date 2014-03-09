@@ -1,9 +1,9 @@
 ### BEGIN INIT INFO
 # Provides:          btcontroll
-# Required-Start:    avahi-daemon networking
+# Required-Start:    avahi networking $remote_fs $syslog
 # Required-Stop:     networking
-# Default-Start:     3 4 5
-# Default-Stop:      0 1 2 6
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
 # Short-Description: ferbsis btcontoll
 # Description:       Gartenbahn Steuerung
 #                    übers Handy (Midp | Android, BT | Wlan)
