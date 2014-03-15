@@ -38,6 +38,7 @@
 #include <sys/time.h>
 // fürs sleep
 #include <unistd.h>
+#include <errno.h>
     
 #include "k8055.h"
 
@@ -51,6 +52,12 @@
 #define CMD_RESETCNT1   0x03
 #define CMD_RESETCNT2   0x04
 #define CMD_SETOUTPUT   0x05
+
+#define PACKET_LEN 8
+#define USB_TIMEOUT 100
+#define USB_OUT_EP 0x01	/* USB output endpoint */
+#define USB_INP_EP 0x81 /* USB Input endpoint */
+
 
 K8055::K8055(int ipid, bool debug):debug(debug),
 	xsv_handle(NULL)
@@ -90,18 +97,16 @@ K8055::K8055(int ipid, bool debug):debug(debug),
 		write_empty_command(CMD_INIT);
 	}
 		
+	this->write_output(0, 0, 0x01);
 }
 
 K8055::~K8055()
 {
-	printf("platine -> write_out 255 255 0xaa\n");
-	this->write_output(255, 255, 0xaa);
-	// doppelt hilft besser:
-	this->write_output(255, 255, 0xaa);
-	sleep(1);
+	printf("platine -> write_out 0 0 0x0a\n");
+	this->write_output(0, 0, 0x02);
 	unsigned char a1, a2, d; short unsigned int c1, c2;
 	this->read_input(&a1, &a2, &d, &c1, &c2 ); // irgendwas einlesen - write_output und dann gleich ein close => kommt nie an
-	printf("read: pwm1: %u, %u, %x, %u, %u\n", a1, a2, d, c1, c2);
+	printf("read: pwm1: %u, pwm2:%u, d:%x, counter1:%u, counter2:%u\n", a1, a2, d, c1, c2);
 	usb_close(xsv_handle);
 }
 
@@ -222,7 +227,7 @@ int K8055::write_empty_command ( unsigned char command )
 	if ( debug )
 		fprintf(stderr,"write_empty_command(0x%p,0x%x);\n",xsv_handle,command);
 	
-	if ( 0 > usb_interrupt_write(xsv_handle,0x1, (char*) data,8,20) )
+	if (usb_interrupt_write(xsv_handle,0x1, (char*) data,PACKET_LEN,20) )
 		return false;
 		
 	return true;
@@ -251,7 +256,7 @@ int K8055::write_dbt_command ( unsigned char command, unsigned char t1, unsigned
 		fprintf(stderr,"write_dbt_command(0x%p,0x%x,%d,%d);\n",xsv_handle,command,t1,t2);
 
 	
-	if ( 0 > usb_interrupt_write(xsv_handle,0x1, (char*) data,8,20) )
+	if ( 0 > usb_interrupt_write(xsv_handle,0x1, (char*) data,PACKET_LEN,20) )
 		return false;
 		
 	return true;
@@ -272,16 +277,23 @@ int K8055::write_output ( unsigned char a1, unsigned char a2, unsigned char d ) 
 	if ( debug )
 		fprintf(stderr,"write_dbt_command(0x%p,%d,%d,0x%x);\n",xsv_handle,a1,a2,d);
 		
-	if ( 0 > usb_interrupt_write(xsv_handle,0x1, (char*) data,8,20) )
-		return false;
+	int rc;
+	for(int i=0; i < 3; i++) {
+		rc=usb_interrupt_write(xsv_handle,0x1, (char*) data,PACKET_LEN,20);
+		if(rc == PACKET_LEN) {
+			return true;
+		}
+		printf("K8055::write_output error %s\n",strerror(errno));
+		usleep(200000);
+	}
+	return false;
 		
-	return true;
 }
 
 /*
 	Read input values
-	@param a1	-> wert PWM1
-	@param a2	-> wert PWM2
+	@param a1	-> wert analog in 1
+	@param a2	-> wert analog in 2
 	@param d	-> wert digital out
 	@param c1	-> counter1
 	@param c2	-> counter2
@@ -289,9 +301,17 @@ int K8055::write_output ( unsigned char a1, unsigned char a2, unsigned char d ) 
 int K8055::read_input ( unsigned char *a1, unsigned char *a2, unsigned char *d, unsigned short *c1, unsigned short *c2 ) {
 	unsigned char data[8];
 
-	if ( 0 > usb_interrupt_read(xsv_handle,0x81, (char*) data,8,20) )
-		return false;
-
+	int rc;
+	for(int i=0; i < 3; i++) {
+		rc=usb_interrupt_read(xsv_handle, USB_INP_EP, (char*) data,PACKET_LEN,USB_TIMEOUT);
+		if(rc == PACKET_LEN) {
+			goto weiter;
+		}
+		printf("K8055::read_input error reading %dbytes [%d=%s]\n",PACKET_LEN,rc,strerror(errno));
+		usleep(200000);
+	}
+	return false;
+weiter:
 	if ( a1 )
 		*a1 = data[2];
 		
