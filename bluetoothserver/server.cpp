@@ -31,6 +31,9 @@
 #include <netdb.h>
 #include <string.h>
 #include <assert.h>
+#include <errno.h>
+
+#include <cxxabi.h>
 
 #include "server.h"
 #include "utils.h"
@@ -38,6 +41,10 @@
 #ifdef INCL_X11
 #include "clientthread_X11.h"
 #endif
+
+bool Server::isrunning=false;
+bool Server::exit=false;
+std::map <int,pthread_t> Server::clients;
 
 Server::Server()
 : clientID_counter(1)
@@ -55,7 +62,7 @@ Server::Server()
 	this->tcp_so = socket(AF_INET, SOCK_STREAM, 0);
 	if(this->tcp_so < 0) {
 		perror("Error in socket ");
-		exit(1);
+		abort();
 	}
 	setsockopt(this->tcp_so, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on));
 
@@ -64,7 +71,7 @@ Server::Server()
 	struct hostent *hp=gethostbyname("0.0.0.0");
 	if(! hp) {
 		perror("invalid IP");
-		exit(1);
+		abort();
 	}
 
 	memcpy((char *)&address.sin_addr,(char *)hp->h_addr,(size_t)hp->h_length);
@@ -74,13 +81,13 @@ Server::Server()
 	if (rc!=0)
 	{
 		perror("bind error");
-		exit(1);
+		abort();
 	}
 	rc = ::listen(this->tcp_so, 20);
 	if (rc!=0)
 	{
 		perror("Error in Listen");
-		exit(1);
+		abort();
 	}
 }
  
@@ -98,7 +105,11 @@ int Server::accept()
 #endif
 	FD_SET(this->tcp_so,&fd);
 	int rc=select(FD_SETSIZE, &fd, NULL, NULL, NULL);
-	printf("-----select rc=%d\n",rc);
+	printf("-----select rc=%d errno:%s\n",rc,strerror(errno));
+	if( rc == -1 ) {
+		perror("select/accept error");
+		return -1;
+	}
 #ifdef INCL_BT
 	if(this->bt_so > 0 && FD_ISSET(this->bt_so,&fd)) {
 		printf("bt connection\n");
@@ -106,7 +117,7 @@ int Server::accept()
 	} else
 #endif
 	if(FD_ISSET(this->tcp_so,&fd)) {
-		printf("tcp connection\n");
+		printf("tcp connection (%d)\n",this->tcp_so);
 
 		struct sockaddr_in addr2;
 		socklen_t siz;
@@ -114,7 +125,7 @@ int Server::accept()
 		int csock = ::accept(this->tcp_so, (struct sockaddr *)&addr2, &siz);
 		if(csock < 0) {
 			perror("so->accept error:");
-			exit(1);
+			throw std::string("so->accept error");
 		}
 		printf("socket: %d\n",csock);
 		return csock;
@@ -138,6 +149,8 @@ int Server::accept()
 static void unregisterPhoneClient(void *data)
 {
 	startupdata_t *startupData=(startupdata_t *)data;
+	printf("%d:unregisterPhoneClient\n",startupData->clientID);
+	Server::clientDone(startupData->clientID);
 	free(startupData);
 }
 
@@ -165,6 +178,12 @@ static void *phoneClient(void *data)
 		printf("%d:exception %s\n",startupData->clientID,e);
 	} catch(std::string &s) {
 		printf("%d:exception %s\n",startupData->clientID,s.c_str());
+	} catch (abi::__forced_unwind&) { // http://gcc.gnu.org/bugzilla/show_bug.cgi?id=28145
+		printf("%d: forced unwind exception\n",startupData->clientID);
+		// copy &paste:
+		// printf("%d:client exit\n",startupData->clientID);
+		// pthread_cleanup_pop(true);
+		throw; // rethrow exeption bis zum pthread_create, dort isses dann aus
 	}
 	printf("%d:client exit\n",startupData->clientID);
 
@@ -174,13 +193,21 @@ static void *phoneClient(void *data)
 
 void Server::run()
 {
+	assert(Server::isrunning==false); // darf nur einmal gestartet wern
+	Server::isrunning=true;
 	while(1) {
 		int nsk = this->accept();
+		if(nsk < 0) {
+			if(this->exit) {
+				Server::isrunning=false;
+				break;
+			}
+		}
 	// client thread vorbereiten + starten
 		startupdata_t *startupData=(startupdata_t*) calloc(sizeof(startupdata_t),1);
 		startupData->clientID=this->clientID_counter++;
 		startupData->so=nsk;
-		pthread_t &newThread=this->clients[startupData->clientID];
+		pthread_t &newThread=Server::clients[startupData->clientID];
 		bzero(&newThread,sizeof(newThread));
 		if(int rc=pthread_create(&newThread, NULL, phoneClient, (void *)startupData) != 0) {
 			printf("error creating new thread rc=%d\n",rc);
@@ -190,3 +217,44 @@ void Server::run()
 		pthread_detach(newThread);
 	}
 }
+
+/**
+ * setzt nur das exit - flag!
+ */
+void Server::setExit() {
+	Server::exit=true;
+	for (std::map<int,pthread_t>::iterator it=Server::clients.begin(); it!=Server::clients.end(); ++it) {
+		if(pthread_cancel(it->second) != 0) {
+			perror("error sending pthread cancel");
+		}
+	}
+}
+
+/**
+ * wartet drauf dass alle threads weg sind:
+ * mainThread geht nur weg wenna ein INTR bekommt (vom ctrl+c z.b.)
+ */
+void Server::waitExit() {
+	printf("waiting for main thread exit\n");  // 
+	while(Server::isrunning){
+		printf(".");
+		sleep(1);
+	}
+	// lock ??
+	printf("waiting for client threads\n");
+	while(true) {
+		if(Server::clients.empty()) {
+			break;
+		}
+		for (std::map<int,pthread_t>::iterator it=Server::clients.begin(); it!=Server::clients.end(); ++it) {
+			printf("%d:%lu\n",it->first,it->second);
+		}
+		sleep(1);
+	}
+	printf("done\n");
+}
+
+void Server::clientDone(int clientID) {
+	Server::clients.erase(clientID);
+}
+
