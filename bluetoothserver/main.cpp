@@ -136,14 +136,16 @@ void initPlatine()
 {
 #ifdef INCL_k8055
 	assert(!platine);
-	platine=new K8055(1,cfg_debug);
 	printf("init platine\n");
+	platine=new K8055(1,cfg_debug);
+	printf("... done\n");
 #endif
 }
 
 void deletePlatine()
 {
 #ifdef INCL_k8055
+	printf("delete Platine\n");
 	delete platine;
 #endif
 }
@@ -151,13 +153,16 @@ void deletePlatine()
 void signalHandler(int signo, siginfo_t *p, void *ucontext)
 {
 	printf("signalHandler\n");
+	/*
 	// TODO: programm nicht gleich killen - exit-msg an die clients schicken
-	deletePlatine();
+	// deletePlatine();
 	if(srcp) {
 		delete(srcp);
 		srcp=NULL;
 	}
 	exit(0);
+	*/
+	Server::setExit();
 }
 
 int main(int argc, char *argv[])
@@ -304,7 +309,13 @@ int main(int argc, char *argv[])
 
 
 	Server server;
-	server.run();
+	try {
+		server.run();
+	} catch(std::string &s) {
+		printf("exception: %s\n", s.c_str());
+	}
+
+	server.waitExit();
 
 	if(platine) {
 		deletePlatine();
