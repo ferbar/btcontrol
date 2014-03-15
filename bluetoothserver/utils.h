@@ -7,6 +7,10 @@ std::string readFile(std::string filename);
 
 #define STREQ(s1,s2) (strcmp(s1,s2)==0)
 
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
+
 extern bool cfg_debug;
 extern int cfg_tcpTimeout;
 

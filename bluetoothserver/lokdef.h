@@ -5,8 +5,6 @@
 
 #define MAX_NFUNC 17
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-
 struct func_t {
 	char name[32];
 	bool pulse; // nur einmal einschalten dann gleich wieder aus
