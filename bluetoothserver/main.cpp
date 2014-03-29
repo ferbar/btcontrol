@@ -41,7 +41,7 @@
 #include <map>
 
 #ifdef INCL_k8055
-#include "../velleman_usb_k8055/k8055.h"
+#include "K8055.h"
 #endif
 
 #include "srcp.h"
@@ -101,7 +101,6 @@ std::string readFile(std::string filename)
 {
 	std::string ret;
 	struct stat buf;
-	int rc=0;
 	if(stat(filename.c_str(), &buf) != 0) {
 		char execpath[MAXPATHLEN];
 		if(readlink("/proc/self/exe", execpath, sizeof(execpath)) <= 0) {
@@ -277,12 +276,14 @@ int main(int argc, char *argv[])
 		messageLayouts.dump();
 	}
 
+#ifndef NO_THREADS
 	struct sigaction sa;
 	memset(&sa,0,sizeof(sa));
 	sa.sa_sigaction=signalHandler;
 	sa.sa_flags=SA_SIGINFO;
 	sigaction(SIGINT,&sa,NULL);
 	sigaction(SIGTERM,&sa,NULL);
+#endif
 	printf("btserver starting...\n");
 
 #ifdef INCL_X11
