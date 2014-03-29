@@ -26,7 +26,7 @@
 #include "lokdef.h"
 #include "srcp.h"
 #ifdef INCL_k8055
-#include "../velleman_usb_k8055/k8055.h"
+#include "K8055.h"
 #endif
 
 // für setsockopt
@@ -55,7 +55,6 @@ int ClientThread::numClients=0;
 			printf("%d: ->%s",startupdata->clientID,text); \
 		}
 
-#define MAXPATHLEN 255
 
 void ClientThread::sendMessage(const FBTCtlMessage &msg)
 {
@@ -168,19 +167,40 @@ void ClientThread::run()
 	for(int i=0; i <= nLokdef; i++) { changedAddrIndex[i] = false; }
 
 
+	printf("%d:hello done, enter main loop\n",this->clientID);
 	// int speed=0;
 	// int addr=3;
+// int sleepTime=0; -> velleman platine test
 	while(1) {
 		// addr_index sollte immer gültig sin - sonst gibts an segv ....
-	
+/* velleman platine antwortet bei einem command abstand von < 1s immer brav, 1-2s wartets immer bis zur vollen sekunde, >2s passt meistens
+if(sleepTime <= 0) {
+	sleepTime= 3000000;
+}
+printf("sleep: %d\n",sleepTime);
+usleep(sleepTime);
+sleepTime-=90000;
+platine->onebench();
+continue;
+*/
+
 		bool emergencyStop=false;
 
 		int msgsize=0;
 		int rc;
+		/*
+		struct timeval t,t0;
+		gettimeofday(&t0, NULL);
+		*/
 		this->readSelect(); // auf daten warten, macht exception wenn innerhalb vom timeout nix kommt
 		if((rc=read(this->so, &msgsize, 4)) != 4) {
 			throw std::string("error reading cmd: ") += rc; // + ")";
 		}
+		/*
+		gettimeofday(&t, NULL);
+		int us=(t.tv_sec - t0.tv_sec) * 1000000 + t.tv_usec - t0.tv_usec;
+		printf("select + read in %dµs\n",us);
+		*/
 		// printf("%d:reading msg.size: %d bytes\n",this->clientID,msgsize);
 		if(msgsize < 0 || msgsize > 10000) {
 			throw std::string("invalid size msgsize 2big");
@@ -502,21 +522,30 @@ void ClientThread::run()
 			// double f_speed=sqrt(sqrt((double)lokdef[addr_index].currspeed/255.0))*255.0; // für üperhaupt keine elektronik vorm motor gut (schienentraktor)
 			// TODO: wemmas wieder brauchen sollt gucken ob sich wirklich was geändert hat
 			int changedAddr=3; // eine adresse mit der nummer muss in der lokdef eingetragen sein
+			//	if(changedAddrIndex[i]) { changedAddrIndex[i]=false;
 			if(changedAddr) {
 				int addr_index=getAddrIndex(changedAddr);
 				assert(addr_index >= 0);
 				int a_speed=abs(lokdef[addr_index].currspeed);
+
 				double f_speed=a_speed;
+				if(f_speed < 5) {
+					f_speed=0;
+				} else {
+					// Umrechnen in PWM einheiten
+					const double motorStart=180; // bei dem Wert fangt der Motor an sich zu drehen
+					f_speed=f_speed*(255.0-motorStart)/255+motorStart;
+				}
 
 				int ia1=255-(int)f_speed;
 				// int ia2=lokdef[addr_index].currdir < 0 ? 255 : 0; // 255 -> relais zieht an
 				int ia2=0;
 				printf("%d:lokdef[addr_index=%d].currspeed: %d dir: %d pwm1 val=>%d pwm2 %d (%f)\n",this->clientID,addr_index,lokdef[addr_index].currspeed,lokdef[addr_index].currdir,ia1,ia2,f_speed);
 				int id8=0;
-				if( lokdef[addr_index].currdir < 0 ) {
-					id8=0x80;
-				} else {
+				if( lokdef[addr_index].currdir < 0 ) { // vorsicht: höchste adresse blinkt beim booten!
 					id8=0x40;
+				} else {
+					id8=0x20;
 				}
 				// printf("lokdef[addr_index].currspeed=%d: ",lokdef[addr_index].currspeed);
 				/*
@@ -532,9 +561,16 @@ void ClientThread::run()
 					// id8=a | a << 4;
 					id8 |= a << 4;
 				}
+	
 				platine->write_output(ia1, ia2, id8);
-				// doppelt hilft besser:
-				platine->write_output(ia1, ia2, id8);
+	unsigned char a1, a2, d; short unsigned int c1, c2;
+	if(platine->read_input(&a1, &a2, &d, &c1, &c2 ) ) // irgendwas einlesen - write_output und dann gleich ein close => kommt nie an
+		printf("read: a1: %u, a2:%u, d:%x, counter1:%u, counter2:%u\n", a1, a2, d, c1, c2);
+
+				if(lokdef[addr_index].func[1].ison) {
+					lokdef[addr_index].func[1].ison=false;
+					system("aplay /home/pi/taurus.wav&");
+				}
 			}
 		} else
 #endif
@@ -611,7 +647,7 @@ ClientThread::~ClientThread()
 		if(srcp) { // erddcd/srcpd/dcc:
 			int addr_index=0;
 			while(lokdef[addr_index].addr) {
-		printf("last client [%d]=%d\n",addr_index,lokdef[addr_index].currspeed);
+				printf("last client [%d]=%d\n",addr_index,lokdef[addr_index].currspeed);
 				if(lokdef[addr_index].currspeed != 0) {
 					printf("emgstop [%d]=addr:%d\n",addr_index, lokdef[addr_index].addr);
 					lokdef[addr_index].currspeed=0;
@@ -621,6 +657,11 @@ ClientThread::~ClientThread()
 				addr_index++;
 			}
 		}
+#ifdef INCL_k8055
+		else if(platine) {
+			platine->write_output(0, 0, 3);
+		}
+#endif
 	} else {
 		// nicht letzter client => alle loks die von mir gesteuert wurden notstop
 		printf("lastClient, stopping my Locos\n");
