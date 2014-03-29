@@ -209,12 +209,17 @@ void Server::run()
 		startupData->so=nsk;
 		pthread_t &newThread=Server::clients[startupData->clientID];
 		bzero(&newThread,sizeof(newThread));
+#ifdef NO_THREADS
+		phoneClient((void *)startupData);
+		printf("k8055 client func done: %lx\n",newThread);
+#else
 		if(int rc=pthread_create(&newThread, NULL, phoneClient, (void *)startupData) != 0) {
 			printf("error creating new thread rc=%d\n",rc);
 			perror("error creating new thread ");
 		}
 		printf("new Thread: %lx\n",newThread);
 		pthread_detach(newThread);
+#endif
 	}
 }
 
