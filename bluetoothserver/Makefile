@@ -18,12 +18,12 @@ Makefile.config:
 	@echo -e "no Makefile.config - generating new config for you - if you want a new config: \n" \
 		"\trm Makefile.config; make"
 	@echo -e "checking libusb-dev for velleman_usb_k8055 board:"
-	@usblibs=$$(pkg-config --libs libusb) ;\
+	@usblibs=$$(pkg-config --libs libusb-1.0) ;\
 		if [ $$? = 0 ] ; then \
 			echo "found" ;\
 			echo "LDFLAGS+=$$usblibs" >> Makefile.config	;\
 			echo "CFLAGS+=-DINCL_k8055" >> Makefile.config	;\
-			echo "btserver: ../velleman_usb_k8055/k8055.o" >> Makefile.config   ;\
+			echo "btserver: ../jodersky_k8055/src/k8055.o K8055.o" >> Makefile.config   ;\
 		else						\
 			echo "not found - velleman_usb_k8055 board disabled"	;\
 		fi
