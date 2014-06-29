@@ -40,7 +40,7 @@
 
 #include <map>
 
-#ifdef INCL_k8055
+#ifdef HAVE_LIBUSB
 #include "K8055.h"
 #endif
 
@@ -71,8 +71,8 @@ bool cfg_X11=false;
 #endif
 
 int cfg_tcpTimeout=10; // TCP RX Timeout in sekunden
-#ifdef INCL_k8055
-K8055 *platine=NULL;
+#ifdef HAVE_LIBUSB
+USBPlatine *platine=NULL;
 #else
 void *platine=NULL;
 #endif
@@ -133,7 +133,7 @@ std::string readFile(std::string filename)
  */
 void initPlatine()
 {
-#ifdef INCL_k8055
+#ifdef HAVE_LIBUSB
 	assert(!platine);
 	printf("init platine\n");
 	platine=new K8055(1,cfg_debug);
@@ -143,7 +143,7 @@ void initPlatine()
 
 void deletePlatine()
 {
-#ifdef INCL_k8055
+#ifdef HAVE_LIBUSB
 	printf("delete Platine\n");
 	delete platine;
 #endif

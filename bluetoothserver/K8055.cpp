@@ -14,7 +14,8 @@
  */
 
 
-K8055::K8055(int devnr, bool debug) {
+K8055::K8055(int devnr, bool debug) :
+	USBPlatine(debug) {
 	k8055_debug(true);
 	// devnr war beim alten 1...4 da isses jetzt 0...3
 	int rc=k8055_open_device(devnr-1, &this->dev);
