@@ -20,7 +20,7 @@ protected:
 };
 
 class Server
-#ifdef INCL_DB
+#ifdef INCL_BT
  : public BTServer
 #endif
  {
