@@ -42,6 +42,7 @@
 
 #ifdef HAVE_LIBUSB
 #include "K8055.h"
+#include "USBDigispark.h"
 #endif
 
 #include "srcp.h"
@@ -136,7 +137,16 @@ void initPlatine()
 #ifdef HAVE_LIBUSB
 	assert(!platine);
 	printf("init platine\n");
-	platine=new K8055(1,cfg_debug);
+	try {
+		platine=new K8055(1,cfg_debug);
+	} catch(const char *errormsg) {
+		printf("K8055: error: %s\n",errormsg);
+	}
+	try {
+		platine=new USBDigispark(1,cfg_debug);
+	} catch(const char *errormsg) {
+		printf("USBDigispark: error: %s\n",errormsg);
+	}
 	printf("... done\n");
 #endif
 }

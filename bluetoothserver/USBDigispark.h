@@ -1,17 +1,24 @@
-#include "USBPlatine"
+#include "USBPlatine.h"
 
-class USBDigispark : USBPlatine {
+class USBDigispark : public USBPlatine {
 public:
 	USBDigispark(int devnr, bool debug);
-	~USBDigispark();
-	int write_output ( unsigned char a1, unsigned char a2, unsigned char d );
-	int read_input ( unsigned char *a1, unsigned char *a2, unsigned char *d, unsigned short *c1, unsigned short *c2 );
+	virtual ~USBDigispark();
+	virtual void setPWM(unsigned char pwm);
+	virtual void setDir(unsigned char dir);
+	// brauch ma da ned:
+	virtual void commit() {};
+	virtual void fullstop();
+	// int write_output ( unsigned char a1, unsigned char a2, unsigned char d );
+	// int read_input ( unsigned char *a1, unsigned char *a2, unsigned char *d, unsigned short *c1, unsigned short *c2 );
 
 
 private:
+	void init(int devnr);
+	void release();
 	int takeover_device( int interface );
 
+	struct libusb_device_handle *devHandle;
 
-	k8055_device *dev;
-	unsigned char d;
+	int dir;
 };
