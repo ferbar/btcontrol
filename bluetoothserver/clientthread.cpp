@@ -25,9 +25,7 @@
 #include "clientthread.h"
 #include "lokdef.h"
 #include "srcp.h"
-#ifdef INCL_k8055
-#include "K8055.h"
-#endif
+#include "USBPlatine.h"
 
 // für setsockopt
 #include <sys/types.h>
@@ -41,9 +39,7 @@
 #include "server.h"
 
 
-#ifdef INCL_k8055
-extern K8055 *platine;
-#endif
+extern USBPlatine *platine;
 
 int ClientThread::numClients=0;
 
@@ -516,7 +512,6 @@ continue;
 		*/
 
 		// PLATINE ANSTEUERN ------------
-#ifdef INCL_k8055
 		if(platine) {
 			// geschwindigkeit 
 			// double f_speed=sqrt(sqrt((double)lokdef[addr_index].currspeed/255.0))*255.0; // für üperhaupt keine elektronik vorm motor gut (schienentraktor)
@@ -573,7 +568,6 @@ continue;
 				}
 			}
 		} else
-#endif
 		if(srcp) { // erddcd/srcpd/dcc:
 			// wegen X_MULTI gucken was wir geändert ham:
 			for(int i=0; i <= nLokdef; i++) {
@@ -657,11 +651,9 @@ ClientThread::~ClientThread()
 				addr_index++;
 			}
 		}
-#ifdef INCL_k8055
 		else if(platine) {
 			platine->write_output(0, 0, 3);
 		}
-#endif
 	} else {
 		// nicht letzter client => alle loks die von mir gesteuert wurden notstop
 		printf("lastClient, stopping my Locos\n");
