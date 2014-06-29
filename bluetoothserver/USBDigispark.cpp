@@ -125,6 +125,7 @@ void USBDigispark::init(int devnr) {
 	}
 	*/
 
+	printf("digispark init done\n");
 }
 
 void USBDigispark::setPWM(unsigned char pwm) {
@@ -133,6 +134,7 @@ void USBDigispark::setPWM(unsigned char pwm) {
 	snprintf(buffer, sizeof(buffer), "M%02x\n", pwm);
 	char *pos=buffer;
 	while(*pos != '\0') {
+		printf("USBDigispark write char %c\n",*pos);
 		// TODO: *pos == uint16_t wValue da könnt ma Mxx statt 4 bytes einzeln machen!
 		result = libusb_control_transfer(this->devHandle, (0x01 << 5), 0x09, 0, *pos, 0, 0, 1000);
 		//printf("Writing character \"%c\" to DigiSpark.\n", input[i]);
@@ -140,6 +142,7 @@ void USBDigispark::setPWM(unsigned char pwm) {
 			printf("Error %i writing to USB device [pwm]\n", result);
 			throw "error writing to usb device";
 		}
+		pos++;
     }
 	// TODO: return einlesen!
 }
@@ -150,12 +153,14 @@ void USBDigispark::setDir(unsigned char dir) {
 	snprintf(buffer, sizeof(buffer), "D%d\n", dir);
 	char *pos=buffer;
 	while(*pos != '\0') {
+		printf("USBDigispark write char %c\n",*pos);
 		result = libusb_control_transfer(this->devHandle, (0x01 << 5), 0x09, 0, *pos, 0, 0, 1000);
 		//printf("Writing character \"%c\" to DigiSpark.\n", input[i]);
 		if(result < 0) {
 			printf("Error %i writing to USB device\n", result);
 			throw "error writing to usb device [dir]";
 		}
+		pos++;
     }
 	// TODO: return einlesen!
 }
