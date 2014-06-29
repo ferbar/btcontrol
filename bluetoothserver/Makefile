@@ -21,7 +21,7 @@ Makefile.config:
 	@usblibs=$$(pkg-config --libs libusb-1.0) ;\
 		if [ $$? = 0 ] ; then \
 			echo "found" ;\
-			echo "LDFLAGS+=$$usblibs" >> Makefile.config	;\
+			echo "LDFLAGS+=$$usblibs -lm" >> Makefile.config	;\
 			echo "CFLAGS+=-DHAVE_LIBUSB" >> Makefile.config	;\
 			echo "btserver: ../jodersky_k8055/src/k8055.o K8055.o USBDigispark.o" >> Makefile.config   ;\
 		else						\
