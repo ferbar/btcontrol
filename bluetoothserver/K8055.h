@@ -5,6 +5,13 @@ class K8055 : public USBPlatine {
 public:
 	K8055(int devnr, bool debug);
 	~K8055();
+
+	virtual void setPWM(unsigned char pwm);
+	virtual void setDir(unsigned char dir);
+	virtual void commit();
+	virtual void fullstop();
+
+private:
 	int write_output ( unsigned char a1, unsigned char a2, unsigned char d );
 	int read_input ( unsigned char *a1, unsigned char *a2, unsigned char *d, unsigned short *c1, unsigned short *c2 );
 	void benchmark ( );
@@ -23,5 +30,7 @@ private:
 	int takeover_device( int interface );
 
 	k8055_device *dev;
-	unsigned char d;
+	// TODO: das raushaun, das steht auch im *dev drinnen
+	unsigned char dir;
+	unsigned char pwm;
 };

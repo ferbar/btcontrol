@@ -24,6 +24,60 @@ K8055::K8055(int devnr, bool debug) :
 		throw "error open dev";
 	}
 }
+
+K8055::~K8055() {
+	k8055_close_device(this->dev);
+	this->dev=NULL;
+}
+
+void K8055::setPWM(unsigned char pwm) {
+	this->pwm=pwm;
+}
+
+void K8055::setDir(unsigned char dir) {
+	this->dir=dir;
+}
+
+void K8055::commit() {
+
+	int ia1=255-(int)this->pwm;
+	int ia2=0;
+	int id8=0;
+	if( this->dir < 0 ) { // vorsicht: höchste adresse blinkt beim booten!
+		id8=0x40;
+	} else {
+		id8=0x20;
+	}
+	// printf("lokdef[addr_index].currspeed=%d: ",lokdef[addr_index].currspeed);
+	/* geschwindigkeits led balken anzeigen:
+	for(int i=1; i < 9; i++) {
+		// printf("%d ",255*i/(9));
+		if( a_speed >= 255*i/(9)) {
+			id8 |= 1 << (i-1);
+		}
+	} */
+	// printf("\n");
+	/*
+	// lauflicht anzeigen
+	if(lokdef[addr_index].currspeed==0) {
+		int a=1 << (nr&3);
+		// id8=a | a << 4;
+		id8 |= a << 4;
+	}
+	*/
+
+	this->write_output(ia1, ia2, id8);
+	unsigned char a1, a2, d; short unsigned int c1, c2;
+	if(this->read_input(&a1, &a2, &d, &c1, &c2 ) ) // irgendwas einlesen - write_output und dann gleich ein close => kommt nie an
+		printf("read: a1: %u, a2:%u, d:%x, counter1:%u, counter2:%u\n", a1, a2, d, c1, c2);
+
+	this->write_output(ia1, ia2, id8);
+}
+
+void K8055::fullstop() {
+	this->write_output(0, 0, 3);
+}
+
 void K8055::benchmark() {
 	assert(this->dev);
 	printf("=========================K8055::benchmark()\n");
@@ -71,11 +125,6 @@ void K8055::onebench() {
 		}
 		gettimeofday(&t, NULL);
 		us += (t.tv_sec - t0.tv_sec) * 1000000 + t.tv_usec - t0.tv_usec;
-}
-
-K8055::~K8055() {
-	k8055_close_device(this->dev);
-	this->dev=NULL;
 }
 
 int K8055::takeover_device( int interface ) {

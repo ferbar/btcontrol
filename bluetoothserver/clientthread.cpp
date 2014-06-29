@@ -216,8 +216,8 @@ continue;
 		} else {
 			printf("%d/%d: msg %d=%s\n", this->clientID, this->msgNum, cmd.getType(), messageTypeName(cmd.getType()).c_str());
 		}
-		int nr=0; // für die conrad platine
 		/*
+		int nr=0; // für die conrad platine
 		int size;
 		char buffer[256];
 		if((size = read(startupdata->so, buffer, sizeof(buffer))) <= 0) {
@@ -532,35 +532,17 @@ continue;
 					f_speed=f_speed*(255.0-motorStart)/255+motorStart;
 				}
 
-				int ia1=255-(int)f_speed;
+				platine->setDir(lokdef[addr_index].currdir < 0 ? 1 : 0 );
+				platine->setPWM(f_speed);
+				/*
 				// int ia2=lokdef[addr_index].currdir < 0 ? 255 : 0; // 255 -> relais zieht an
 				int ia2=0;
 				printf("%d:lokdef[addr_index=%d].currspeed: %d dir: %d pwm1 val=>%d pwm2 %d (%f)\n",this->clientID,addr_index,lokdef[addr_index].currspeed,lokdef[addr_index].currdir,ia1,ia2,f_speed);
-				int id8=0;
-				if( lokdef[addr_index].currdir < 0 ) { // vorsicht: höchste adresse blinkt beim booten!
-					id8=0x40;
-				} else {
-					id8=0x20;
-				}
 				// printf("lokdef[addr_index].currspeed=%d: ",lokdef[addr_index].currspeed);
-				/*
-				for(int i=1; i < 9; i++) {
-					// printf("%d ",255*i/(9));
-					if( a_speed >= 255*i/(9)) {
-						id8 |= 1 << (i-1);
-					}
-				} */
-				// printf("\n");
-				if(lokdef[addr_index].currspeed==0) { // lauflicht anzeigen
-					int a=1 << (nr&3);
-					// id8=a | a << 4;
-					id8 |= a << 4;
-				}
-	
-				platine->write_output(ia1, ia2, id8);
-	unsigned char a1, a2, d; short unsigned int c1, c2;
-	if(platine->read_input(&a1, &a2, &d, &c1, &c2 ) ) // irgendwas einlesen - write_output und dann gleich ein close => kommt nie an
-		printf("read: a1: %u, a2:%u, d:%x, counter1:%u, counter2:%u\n", a1, a2, d, c1, c2);
+				*/
+				platine->commit();
+
+
 
 				if(lokdef[addr_index].func[1].ison) {
 					lokdef[addr_index].func[1].ison=false;
@@ -652,7 +634,7 @@ ClientThread::~ClientThread()
 			}
 		}
 		else if(platine) {
-			platine->write_output(0, 0, 3);
+			platine->fullstop();
 		}
 	} else {
 		// nicht letzter client => alle loks die von mir gesteuert wurden notstop

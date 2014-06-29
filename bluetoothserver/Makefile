@@ -23,7 +23,7 @@ Makefile.config:
 			echo "found" ;\
 			echo "LDFLAGS+=$$usblibs" >> Makefile.config	;\
 			echo "CFLAGS+=-DHAVE_LIBUSB" >> Makefile.config	;\
-			echo "btserver: ../jodersky_k8055/src/k8055.o K8055.o" >> Makefile.config   ;\
+			echo "btserver: ../jodersky_k8055/src/k8055.o K8055.o USBDigispark.o" >> Makefile.config   ;\
 		else						\
 			echo "not found - velleman_usb_k8055 board disabled"	;\
 		fi
