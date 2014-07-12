@@ -187,7 +187,7 @@ public class FBTCtlMessage {
 					childNode.getBinaryMessage(childLayout, out);
 				}
 				break; }
-			default: {
+			default: { // struct oder messageLayoutID
 				
 				if(layout.childLayout==null)
 					throw new Exception("no child Layout");
