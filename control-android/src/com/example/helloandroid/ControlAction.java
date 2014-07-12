@@ -74,7 +74,7 @@ import btcontrol.BTcommThread;
 import btcontrol.Debuglog;
 
 
-public class ControllAction extends Activity implements BTcommThread.Callback, OnSeekBarChangeListener {
+public class ControlAction extends Activity implements BTcommThread.Callback, OnSeekBarChangeListener {
 	private static final int ACTIVITY_SELECT_LOK=0;
 	String infoMsg="";
 	static ArrayList<Integer> currSelectedAddr=new ArrayList<Integer>();
@@ -129,9 +129,9 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 	    super.onCreate(savedInstanceState);
-	    ControllAction.availLocos=new Hashtable<Integer, AvailLocosListItem>(); // bt.reconnect = liste wird neu übertragen
+	    ControlAction.availLocos=new Hashtable<Integer, AvailLocosListItem>(); // bt.reconnect = liste wird neu übertragen
 	    
-		PowerManager pm = (PowerManager) getSystemService(ControllAction.POWER_SERVICE);
+		PowerManager pm = (PowerManager) getSystemService(ControlAction.POWER_SERVICE);
 		powerManager_wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK, "My Tag");
 		
 		if(AndroidMain.btcomm == null) {
@@ -155,12 +155,12 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	    	this.currSelectedAddr=savedInstanceState.getIntegerArrayList("currAddr");
 	    }
 	    */
-        setContentView(R.layout.controll);
+        setContentView(R.layout.control);
         
         
-        if(ControllAction.currSelectedAddr.size() == 0) {
+        if(ControlAction.currSelectedAddr.size() == 0) {
         	// lok liste laden
-        	Intent i = new Intent(this, ControllListAction.class);
+        	Intent i = new Intent(this, ControlListAction.class);
         	startActivityForResult(i, ACTIVITY_SELECT_LOK);
         } else { // schon eine lok ausgewählt dann funk liste laden:
     		try {
@@ -169,7 +169,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 				AndroidMain.btcomm.addCmdToQueue(msg,this);
 	    		msg = new FBTCtlMessage();
 				msg.setType(MessageLayouts.messageTypeID("GETFUNCTIONS"));
-		    	msg.get("addr").set(ControllAction.currSelectedAddr.get(0));
+		    	msg.get("addr").set(ControlAction.currSelectedAddr.get(0));
 				AndroidMain.btcomm.addCmdToQueue(msg,this);
     		} catch (Exception e) {
     			e.printStackTrace();
@@ -212,14 +212,14 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	@Override
 	public void onResume() {
 		super.onResume();
-		System.out.println("ControllAction::onResume");
+		System.out.println("ControlAction::onResume");
 		AndroidMain.plusActivity();
 		powerManager_wl.acquire();
 	}
 	@Override
 	public void onPause() {
 		super.onPause();
-		System.out.println("ControllAction::onPause isFinishing:"+this.isFinishing());
+		System.out.println("ControlAction::onPause isFinishing:"+this.isFinishing());
 		AndroidMain.minusActivity();
 		powerManager_wl.release();
 		// TODO: alle threads stoppen
@@ -237,18 +237,18 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	public void onStop() {
 		super.onStop();
 		// @todo: btcom zumachen (ist die activity gepaused oder das ganze prog?)
-		System.out.println("ControllAction::onStop");
+		System.out.println("ControlAction::onStop");
 		// AndroidMain.stopConnection();
 	}
 	@Override
 	public void onStart() {
 		super.onStart();
-		System.out.println("ControllAction::onStart");
+		System.out.println("ControlAction::onStart");
 	}
 	@Override
 	public void onDestroy() {
 		super.onStart();
-		System.out.println("ControllAction::onDestroy");
+		System.out.println("ControlAction::onDestroy");
 	} */
 
 	/**
@@ -262,12 +262,12 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
         	if(tmp == null) { // programmfehler, darf ned passieren
         		throw new NullPointerException("onActivityResult: nullpointer");
         	}
-        	ControllAction.currSelectedAddr = tmp;
+        	ControlAction.currSelectedAddr = tmp;
         	// funcNames von der 1. Lok einlesen:
 	    	FBTCtlMessage msg = new FBTCtlMessage();
 	    	try {
 				msg.setType(MessageLayouts.messageTypeID("GETFUNCTIONS"));
-		    	msg.get("addr").set(ControllAction.currSelectedAddr.get(0));
+		    	msg.get("addr").set(ControlAction.currSelectedAddr.get(0));
 				AndroidMain.btcomm.addCmdToQueue(msg,this);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
@@ -286,7 +286,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
     	FBTCtlMessage msg = new FBTCtlMessage();
     	try {
     		// aktuelle lok stoppen:
-    		AvailLocosListItem lok=ControllAction.availLocos.get(ControllAction.currSelectedAddr.get(0));
+    		AvailLocosListItem lok=ControlAction.availLocos.get(ControlAction.currSelectedAddr.get(0));
         	if((lok != null) && (lok.speed != 0)) {
     			this.setMessageAddrField(msg, "STOP");
     			AndroidMain.btcomm.addCmdToQueue(msg,this);
@@ -312,7 +312,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.controll_menu, menu);
+        inflater.inflate(R.menu.control_menu, menu);
         return true;
     }
     @Override
@@ -320,7 +320,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
         // Handle item selection
         switch (item.getItemId()) {
         case R.id.menu_selectLok: { // lok auswahl starten
-        	Intent i = new Intent(this, ControllListAction.class);
+        	Intent i = new Intent(this, ControlListAction.class);
         	startActivityForResult(i, ACTIVITY_SELECT_LOK);
             return true; }
         case R.id.menu_Power: { // Power togglen
@@ -341,7 +341,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 
         	//Prepare the list dialog box
         	AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        	AvailLocosListItem lok=ControllAction.availLocos.get(ControllAction.currSelectedAddr.get(0));
+        	AvailLocosListItem lok=ControlAction.availLocos.get(ControlAction.currSelectedAddr.get(0));
         	if(lok == null) {
         		Toast.makeText(this,"keine lok", Toast.LENGTH_LONG).show();
         		return true;
@@ -371,8 +371,8 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
         	        	msg.setType(MessageLayouts.messageTypeID("SETFUNC"));
         	        	msg.get("funcnr").set(item);
         	        	msg.get("value").set(on ? 1 : 0);
-        	        	msg.get("addr").set(ControllAction.currSelectedAddr.get(0));
-						AndroidMain.btcomm.addCmdToQueue(msg); // TODO: callback handler vom ControllAction aufrufen
+        	        	msg.get("addr").set(ControlAction.currSelectedAddr.get(0));
+						AndroidMain.btcomm.addCmdToQueue(msg); // TODO: callback handler vom ControlAction aufrufen
 					} catch (Exception e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -419,7 +419,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
             return true; }
         case R.id.menu_POM: { // Programming on the main dialog
         	// Context mContext = getApplicationContext();
-    		AvailLocosListItem lok=ControllAction.availLocos.get(ControllAction.currSelectedAddr.get(0));
+    		AvailLocosListItem lok=ControlAction.availLocos.get(ControlAction.currSelectedAddr.get(0));
     		if(lok != null) {
             	final Dialog dialog = new Dialog(this);
 
@@ -492,7 +492,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 		        		
 		        			FBTCtlMessage msg = new FBTCtlMessage();
 			    			msg.setType(MessageLayouts.messageTypeID("POM"));
-			    	    	msg.get("addr").set(ControllAction.currSelectedAddr.get(0));
+			    	    	msg.get("addr").set(ControlAction.currSelectedAddr.get(0));
 			    	    	msg.get("cv").set(cv);
 			    	    	msg.get("value").set(value);
 			    	    	FBTCtlMessage reply = AndroidMain.btcomm.execCmd(msg);
@@ -514,7 +514,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
         	return true;
         }
         case R.id.menu_multi: { // Mehrfachsteuerung lok auswahl starten
-        	Intent i = new Intent(this, ControllListAction.class);
+        	Intent i = new Intent(this, ControlListAction.class);
         	i.putExtra("Mehrfachsteuerung", true);
         	startActivityForResult(i, ACTIVITY_SELECT_LOK);
         	return true;
@@ -583,7 +583,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 				SeekBar speedSeekBar=(SeekBar)findViewById(R.id.seekBarSpeed2);
 				int pos2=pos;
 				if(acc!=0) {
-					AvailLocosListItem item=ControllAction.availLocos.get(ControllAction.currSelectedAddr.get(0));
+					AvailLocosListItem item=ControlAction.availLocos.get(ControlAction.currSelectedAddr.get(0));
 					if(item != null) {
 						pos2=Math.abs(item.speed)+acc*5;
 					}
@@ -611,7 +611,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 				break;
 			case R.id.buttonDirLeft:
 			case R.id.buttonDirRight: {
-				int main_addr=ControllAction.currSelectedAddr.get(0);
+				int main_addr=ControlAction.currSelectedAddr.get(0);
 				if(Math.abs(availLocos.get(main_addr).speed) > 1) {
 					System.out.println("error: changing dir only when stopped ("+availLocos.get(main_addr).speed+")");
 					Toast.makeText(this, "geht nur bei v=0", Toast.LENGTH_LONG).show();
@@ -828,7 +828,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 						System.out.println("addr:"+addr+
 							" speed: "+reply.get("info").get(i).get("speed").getIntVal()+
 							" func: "+reply.get("info").get(i).get("functions").getIntVal());
-						AvailLocosListItem item=(AvailLocosListItem)ControllAction.availLocos.get(new Integer(addr));
+						AvailLocosListItem item=(AvailLocosListItem)ControlAction.availLocos.get(new Integer(addr));
 						if(item != null) {
 							item.speed=reply.get("info").get(i).get("speed").getIntVal();
 							item.funcBits=reply.get("info").get(i).get("functions").getIntVal();
@@ -844,7 +844,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 						this.funcNames[i]=reply.get("info").get(i).get("name").getStringVal();
 					}
 				} else if(reply.isType("GETLOCOS_REPLY")) {
-					ControllAction.setAvailLocos(null, null, reply);
+					ControlAction.setAvailLocos(null, null, reply);
 				} else if(reply.isType("POWER_REPLY")) {
 		    		powerMenuItemState=reply.get("value").getIntVal();
 					if(powerMenuItemState > 0) {
@@ -877,7 +877,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 						// Debuglog.debugln("starting NotifyStatusChange locked");
 						AndroidMain.btcomm.statusChange.wait();
 					}
-					ControllAction.this.runOnUiThread(mUpdateResults);
+					ControlAction.this.runOnUiThread(mUpdateResults);
 				} catch (InterruptedException ex) {
 					return;
 				}
@@ -907,9 +907,9 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 			return;
 		}
 		AvailLocosListItem item = null;
-		if(ControllAction.currSelectedAddr.size() > 0) {
-			int main_addr=ControllAction.currSelectedAddr.get(0);
-			item=ControllAction.availLocos.get(main_addr);
+		if(ControlAction.currSelectedAddr.size() > 0) {
+			int main_addr=ControlAction.currSelectedAddr.get(0);
+			item=ControlAction.availLocos.get(main_addr);
 		}
 		if(item != null) {
 			ProgressBar seekBar = (ProgressBar) findViewById(R.id.seekBarSpeed);
@@ -942,8 +942,8 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 			LinearLayout ll=(LinearLayout) this.findViewById(R.id.linearLayoutCurrLok);
 			ll.removeAllViews();
 			String text="";
-			for(Integer addr : ControllAction.currSelectedAddr) {
-				AvailLocosListItem currItem = ControllAction.availLocos.get(addr);
+			for(Integer addr : ControlAction.currSelectedAddr) {
+				AvailLocosListItem currItem = ControlAction.availLocos.get(addr);
 				ImageView iv = new ImageView(this);
 				iv.setImageBitmap(currItem.img);
 				ll.addView(iv);
@@ -984,10 +984,10 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 			
 		} else {
 			TextView tv=(TextView)this.findViewById(R.id.textView1);
-			tv.setText("invalid Lok addr:"+ControllAction.currSelectedAddr.toString());
+			tv.setText("invalid Lok addr:"+ControlAction.currSelectedAddr.toString());
 		}
 		
-		String title="btcontroll ";
+		String title="btcontrol ";
 		String info="";
 		if(AndroidMain.btcomm != null) {
 			info = BTcommThread.statusText[AndroidMain.btcomm.connState];
@@ -1097,11 +1097,11 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 		// restliche fahrende Loks anzeigen:
 		LinearLayout statusOther = (LinearLayout)this.findViewById(R.id.linearLayoutStatusOther);
 		statusOther.removeAllViews();
-		Enumeration<Integer> e = ControllAction.availLocos.keys();
+		Enumeration<Integer> e = ControlAction.availLocos.keys();
 		while(e.hasMoreElements()) {
 			int addr=e.nextElement();
-			if(!ControllAction.currSelectedAddr.contains(addr)) {
-				item = ControllAction.availLocos.get(addr);
+			if(!ControlAction.currSelectedAddr.contains(addr)) {
+				item = ControlAction.availLocos.get(addr);
 				if((item.speed < 0) || (item.speed > 1)) {
 					ImageView iv=new ImageView(this);
 					iv.setImageBitmap(item.img);
@@ -1143,8 +1143,8 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 			int speed = reply.get("info").get(i).get("speed").getIntVal();
 			int func = reply.get("info").get(i).get("functions").getIntVal();
 			String imgname=reply.get("info").get(i).get("imgname").getStringVal();
-			Bitmap img=ControllAction.getImageCached(imgname);
-			ControllAction.availLocos.put(addr,new AvailLocosListItem(name, img, speed,func));
+			Bitmap img=ControlAction.getImageCached(imgname);
+			ControlAction.availLocos.put(addr,new AvailLocosListItem(name, img, speed,func));
 			if(callbackProgress != null) {
 				callbackProgress.progress=i+1; callbackProgress.run();
 			}
@@ -1230,8 +1230,8 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 			this.msgAcc=new FBTCtlMessage();
 			this.msgBreak=new FBTCtlMessage();
         	try {
-        		ControllAction.this.setMessageAddrField(msgAcc, "ACC");
-        		ControllAction.this.setMessageAddrField(msgBreak,"BREAK");
+        		ControlAction.this.setMessageAddrField(msgAcc, "ACC");
+        		ControlAction.this.setMessageAddrField(msgBreak,"BREAK");
     		} catch (Exception e) {
     			// TODO Auto-generated catch block
     			e.printStackTrace();
@@ -1241,7 +1241,7 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 			try {
 				if(AndroidMain.btcomm.nextMessage == null) { // nur was neues in die queue schieben wenns leer is
 					SeekBar seekBarSpeed = (SeekBar)findViewById(R.id.seekBarSpeed2);
-					AvailLocosListItem item=ControllAction.availLocos.get(ControllAction.currSelectedAddr.get(0));
+					AvailLocosListItem item=ControlAction.availLocos.get(ControlAction.currSelectedAddr.get(0));
 					if(item != null) {
 						if(Math.abs(item.speed) < seekBarSpeed.getProgress()) {
 							AndroidMain.btcomm.addCmdToQueue(msgAcc,parent);
@@ -1276,15 +1276,15 @@ public class ControllAction extends Activity implements BTcommThread.Callback, O
 	}
 	
 	public void setMessageAddrField(FBTCtlMessage msg, String msgType) throws Exception {
-		if(!msgType.equals("SETFUNCTION") && (ControllAction.currSelectedAddr.size() > 1)) {
+		if(!msgType.equals("SETFUNCTION") && (ControlAction.currSelectedAddr.size() > 1)) {
 			msg.setType(MessageLayouts.messageTypeID(msgType+"_MULTI"));
-			for(int i=0; i < ControllAction.currSelectedAddr.size(); i++) {
-				Integer addr = ControllAction.currSelectedAddr.get(i);
+			for(int i=0; i < ControlAction.currSelectedAddr.size(); i++) {
+				Integer addr = ControlAction.currSelectedAddr.get(i);
 				msg.get("list").get(i).get("addr").set(addr);
 			}
 		} else {
 			msg.setType(MessageLayouts.messageTypeID(msgType));
-			msg.get("addr").set(ControllAction.currSelectedAddr.get(0));
+			msg.get("addr").set(ControlAction.currSelectedAddr.get(0));
 		}
 	}
 }

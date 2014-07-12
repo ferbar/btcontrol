@@ -5,7 +5,7 @@ import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.List;
 
-import com.example.helloandroid.ControllAction.AvailLocosListItem;
+import com.example.helloandroid.ControlAction.AvailLocosListItem;
 
 import btcontrol.Debuglog;
 import protocol.FBTCtlMessage;
@@ -29,7 +29,7 @@ import android.view.KeyEvent;
 import android.view.ViewGroup;
 import android.view.LayoutInflater;
 
-public class ControllListAction extends ListActivity {
+public class ControlListAction extends ListActivity {
 
 	ArrayAdapter<AvailLocosListItemAddr> listAdapter=null;
 	Object listAdapter_notify=new Object();
@@ -204,8 +204,8 @@ public class ControllListAction extends ListActivity {
         			System.out.println("set list item addr:"+item.addr);
 	        		holder.addr.setText(""+item.addr);
 	        		holder.img.setImageBitmap(item.img);
-	        		if(ControllListAction.this.selectMehrfachsteuerung) {
-	        			holder.cb.setChecked(ControllListAction.this.selectedLocosPos.contains(position));
+	        		if(ControlListAction.this.selectMehrfachsteuerung) {
+	        			holder.cb.setChecked(ControlListAction.this.selectedLocosPos.contains(position));
 	        		} else {
 		        		// cb.setVisibility(View.GONE); -> dann funktioniert das alignLeftOf CheckBox nichtmehr !!!
 		        		// cb.setVisibility(View.INVISIBLE);
@@ -217,10 +217,10 @@ public class ControllListAction extends ListActivity {
 	        	}
     	
     	};
-    	Enumeration<Integer> e = ControllAction.availLocos.keys();
+    	Enumeration<Integer> e = ControlAction.availLocos.keys();
     	while(e.hasMoreElements()) {
     		Integer addr=e.nextElement();
-    		AvailLocosListItem i=(AvailLocosListItem)ControllAction.availLocos.get(addr);
+    		AvailLocosListItem i=(AvailLocosListItem)ControlAction.availLocos.get(addr);
     		this.listAdapter.add(new AvailLocosListItemAddr(addr,i.name,i.img, i.speed,i.funcBits));
     	}
     	this.listAdapter.sort(new Comparator<AvailLocosListItemAddr>() {
@@ -250,7 +250,7 @@ public class ControllListAction extends ListActivity {
         loadProgressDialog.setProgress(0);
         loadProgressDialog.show();
 
-		Thread th = new FillListThread(new ControllAction.CallbackProgressRunnable() {
+		Thread th = new FillListThread(new ControlAction.CallbackProgressRunnable() {
 			public void run() { // neues runnable objekt welches immer im UIThread rennen muss
 				runOnUiThread(new Runnable() {
 					@Override
@@ -260,7 +260,7 @@ public class ControllListAction extends ListActivity {
 				});
 			}
 		},
-		new ControllAction.CallbackProgressRunnable() {
+		new ControlAction.CallbackProgressRunnable() {
 			public void run() { // neues runnable objekt welches immer im UIThread rennen muss
 				runOnUiThread(new Runnable() {
 					@Override
@@ -278,10 +278,10 @@ public class ControllListAction extends ListActivity {
 	 */
 	class FillListThread extends Thread
 	{
-		ControllAction.CallbackProgressRunnable callbackProgress;
-		ControllAction.CallbackProgressRunnable callbackTotal;
+		ControlAction.CallbackProgressRunnable callbackProgress;
+		ControlAction.CallbackProgressRunnable callbackTotal;
 		private FBTCtlMessage cmd;
-		public FillListThread(ControllAction.CallbackProgressRunnable runnable, ControllAction.CallbackProgressRunnable total, FBTCtlMessage cmd) {
+		public FillListThread(ControlAction.CallbackProgressRunnable runnable, ControlAction.CallbackProgressRunnable total, FBTCtlMessage cmd) {
 			this.callbackProgress=runnable;
 			this.callbackTotal=total;
 			this.cmd=cmd;
@@ -296,7 +296,7 @@ public class ControllListAction extends ListActivity {
 				// li.clear(); // sollte eigentlich eh leer sein 
 				FBTCtlMessage reply=AndroidMain.btcomm.execCmd(cmd);
 				this.callbackProgress.progress=0;this.callbackProgress.run();
-				ControllAction.setAvailLocos(this.callbackProgress, this.callbackTotal, reply);
+				ControlAction.setAvailLocos(this.callbackProgress, this.callbackTotal, reply);
 				// lastReply=reply;
 				/*
 				int n=reply.get("info").getArraySize();

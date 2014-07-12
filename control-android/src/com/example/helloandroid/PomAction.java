@@ -39,7 +39,7 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
-import com.example.helloandroid.ControllAction.AvailLocosListItem;
+import com.example.helloandroid.ControlAction.AvailLocosListItem;
 
 import btcontrol.Debuglog;
 import protocol.FBTCtlMessage;
