@@ -1,11 +1,11 @@
-package btcontroll;
+package btcontrol;
 
 import java.io.IOException;
 import java.net.Socket;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import btcontroll.BTcommThread.PlattformStream;
+import btcontrol.BTcommThread.PlattformStream;
 
 public class AndroidStream implements PlattformStream {
 

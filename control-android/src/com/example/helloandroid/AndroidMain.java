@@ -5,7 +5,6 @@ import java.util.Hashtable;
 
 import android.app.Activity;
 import android.app.ProgressDialog;
-
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -24,9 +23,9 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-import btcontroll.BTcommThread;
-import btcontroll.AndroidStream;
-import btcontroll.Debuglog;
+import btcontrol.AndroidStream;
+import btcontrol.BTcommThread;
+import btcontrol.Debuglog;
 import protocol.MessageLayouts;
 
 import javax.jmdns.JmDNS;

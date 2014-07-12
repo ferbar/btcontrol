@@ -41,7 +41,7 @@ import org.xml.sax.SAXException;
 
 import com.example.helloandroid.ControllAction.AvailLocosListItem;
 
-import btcontroll.Debuglog;
+import btcontrol.Debuglog;
 import protocol.FBTCtlMessage;
 import protocol.MessageLayouts;
 import android.annotation.TargetApi;

@@ -7,7 +7,7 @@ import java.util.List;
 
 import com.example.helloandroid.ControllAction.AvailLocosListItem;
 
-import btcontroll.Debuglog;
+import btcontrol.Debuglog;
 import protocol.FBTCtlMessage;
 import protocol.MessageLayouts;
 import android.app.ListActivity;
