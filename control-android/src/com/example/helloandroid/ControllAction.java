@@ -18,7 +18,6 @@ import java.util.Hashtable;
 import java.util.Timer;
 import java.util.TimerTask;
 
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -70,9 +69,9 @@ import android.graphics.PorterDuff;
 // import android.widget.ToggleButton;
 import protocol.FBTCtlMessage;
 import protocol.MessageLayouts;
-import btcontroll.AndroidStream;
-import btcontroll.BTcommThread;
-import btcontroll.Debuglog;
+import btcontrol.AndroidStream;
+import btcontrol.BTcommThread;
+import btcontrol.Debuglog;
 
 
 public class ControllAction extends Activity implements BTcommThread.Callback, OnSeekBarChangeListener {

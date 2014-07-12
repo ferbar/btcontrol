@@ -1,4 +1,4 @@
-package btcontroll;
+package btcontrol;
 
 /**
 *
