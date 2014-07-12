@@ -1,5 +1,5 @@
 ### BEGIN INIT INFO
-# Provides:          btcontroll
+# Provides:          btcontrol
 # Required-Start:    avahi networking $remote_fs $syslog
 # Required-Stop:     networking
 # Default-Start:     2 3 4 5
@@ -12,9 +12,9 @@
 # Using the lsb functions to perform the operations.
 . /lib/lsb/init-functions
 # Process name ( For display )
-NAME=btcontroll
+NAME=btcontrol
 # Daemon name, where is the actual executable
-DAEMON=/home/pi/dev/btcontroll/bluetoothserver/btserver
+DAEMON=/home/pi/dev/btcontrol/bluetoothserver/btserver
 # pid file for the daemon
 PIDFILE=/var/run/btserver.pid
 

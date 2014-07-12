@@ -7,7 +7,7 @@
   <name replace-wildcards="yes">%h</name>
 
   <service>
-    <type>_btcontroll._tcp</type>
+    <type>_btcontrol._tcp</type>
     <port>3030</port>
   </service>
 
