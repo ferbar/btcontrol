@@ -1,17 +1,17 @@
 /*
- *  This file is part of btcontroll
- *  btcontroll is free software: you can redistribute it and/or modify
+ *  This file is part of btcontrol
+ *  btcontrol is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  btcontroll is distributed in the hope that it will be useful,
+ *  btcontrol is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with btcontroll.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with btcontrol.  If not, see <http://www.gnu.org/licenses/>.
  *
  *
  * bluetooth - server - part
@@ -300,7 +300,7 @@ void BTServer::BTPush(std::string addr)
 {
 	printf("BT send update: to %s\n", addr.c_str());
 	std::string cmd;
-	cmd+="./ussp-push " + addr + "@ btcontroll.jar btcontroll.jar";
+	cmd+="./ussp-push " + addr + "@ btcontrol.jar btcontrol.jar";
 	system(cmd.c_str());
 }
 

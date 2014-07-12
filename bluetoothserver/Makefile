@@ -76,7 +76,7 @@ help:
 
 copy:
 	cp ../ussp-push-0.11/src/ussp-push \
-		../MidpBluetoothExample2/MobileApplication/dist/btcontroll.jar \
+		../MidpBluetoothExample2/MobileApplication/dist/btcontrol.jar \
 		btserver \
 		protocol.dat \
 		~/download/lgb/srcpd_trunk/srcpd/src/srcpd \
