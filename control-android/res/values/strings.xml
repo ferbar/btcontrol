@@ -4,7 +4,7 @@
     <string name="app_name">BTControll</string>
     <string name="server_name">Server Name/IP</string>
     <string name="connect">Verbinden</string>
-    <string name="controllFormName">btcontroll</string>
+    <string name="controlFormName">btcontrol</string>
     <string name="empty_list">[leer]</string>
     <string name="disconnect">Verbindung trennen</string>
     <string name="help">Hilfe</string>

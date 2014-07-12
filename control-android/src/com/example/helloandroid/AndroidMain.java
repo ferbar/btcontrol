@@ -33,11 +33,11 @@ import javax.jmdns.ServiceEvent;
 // import javax.jmdns.ServiceInfo;
 import javax.jmdns.ServiceListener;
 
-import com.example.helloandroid.ControllAction;
+import com.example.helloandroid.ControlAction;
 
 
 public class AndroidMain extends Activity {
-	public static final String PREFS_NAME = "btcontroll";
+	public static final String PREFS_NAME = "btcontrol";
 	
 	static BTcommThread btcomm = null;
 	static ConnectThread connectThread;
@@ -48,7 +48,7 @@ public class AndroidMain extends Activity {
 	
 	android.net.wifi.WifiManager wifiManager;
 	android.net.wifi.WifiManager.MulticastLock lock;
-	private String bonjourType = "_btcontroll._tcp.local.";
+	private String bonjourType = "_btcontrol._tcp.local.";
 	// TODO: das auf liste umbaun ArrayAdapter<AvailBonjourServiceItem> listAdapter=null;
 	
 	// private String bonjourType = "_workstation._tcp.local.";
@@ -141,7 +141,7 @@ public class AndroidMain extends Activity {
     public void onResume() {
     	super.onResume();
     	
-    	this.lock = this.wifiManager.createMulticastLock("btcontroll.jmDNS.lock");
+    	this.lock = this.wifiManager.createMulticastLock("btcontrol.jmDNS.lock");
         this.lock.setReferenceCounted(true);
         this.lock.acquire();
         
@@ -222,7 +222,7 @@ public class AndroidMain extends Activity {
 			try {
 
 						//Thread t = new Thread(btcomm); t.start(); -> da is isAlive auf einmal nicht gesetzt
-//				getDisplay().setCurrent(get_controllCanvas(btcomm));
+//				getDisplay().setCurrent(get_controlCanvas(btcomm));
 				AndroidMain.btcomm.start();
 				// update check:
 				synchronized(AndroidMain.btcomm.connectedNotifyObject) {
@@ -234,7 +234,7 @@ public class AndroidMain extends Activity {
 					}
 				}
 				if(!btcomm.connError()) {
-					Intent i = new Intent(this.c, ControllAction.class);
+					Intent i = new Intent(this.c, ControlAction.class);
 					startActivity(i);
 					synchronized(AndroidMain.this.loadProgressDialog) {
 						AndroidMain.this.loadProgressDialog.dismiss();
