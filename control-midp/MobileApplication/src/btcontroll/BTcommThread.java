@@ -47,7 +47,7 @@ import protocol.OutputWriter;
  *
  * @author chris
  */
-public class BTcommThread extends Thread{
+public class BTcommThread extends Thread {
 
 	// muss für MIDP und android unterschiedlich implementiert werden
 	public interface PlattformStream {
@@ -406,6 +406,7 @@ public class BTcommThread extends Thread{
 		long wait=0; // 10s warten wenn connect error 0ms gebraucht hat, sofort connecten wenn connect länger 10s gebraucht hat
 		while(!this.stop) {
 			// warten damit der server nicht mit requests bombardiert wird bzw dem handy der speicher ausgeht
+			// TODO: der thread sollt ein interrupt bekommen wenn das handy wieder empfang hat
 			try {
 				Thread.sleep(100);
 				this.setStatus(STATE_DISCONNECTED,"");
@@ -451,7 +452,7 @@ public class BTcommThread extends Thread{
 		String stateMessage=""; // errormessage, wird unten an setState übgeben
 		timer = new Timer();
 		task = new PingDing(timerwait);
-		int pingTimeout=2000; // alle 2 sekunden ein ping schicken
+		int pingTimeout=3000; // alle 2 sekunden ein ping schicken, vorsicht: velleman k8055 spinnt wenns alle 1-2 sekunden angesteuert wird
 		// int pingTimeout=20000; // fürs debuggen auf 20000 setzen
 		timer.schedule(task, pingTimeout, pingTimeout);
 		
