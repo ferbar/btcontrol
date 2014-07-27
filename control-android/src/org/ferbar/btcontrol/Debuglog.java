@@ -1,4 +1,4 @@
-package btcontrol;
+package org.ferbar.btcontrol;
 
 /**
 *

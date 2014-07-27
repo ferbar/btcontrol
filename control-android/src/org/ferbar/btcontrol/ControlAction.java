@@ -9,7 +9,7 @@
  * fix 20120211: home taste -> power off
  */
 
-package com.example.helloandroid;
+package org.ferbar.btcontrol;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -69,9 +69,9 @@ import android.graphics.PorterDuff;
 // import android.widget.ToggleButton;
 import protocol.FBTCtlMessage;
 import protocol.MessageLayouts;
-import btcontrol.AndroidStream;
-import btcontrol.BTcommThread;
-import btcontrol.Debuglog;
+import org.ferbar.btcontrol.AndroidStream;
+import org.ferbar.btcontrol.BTcommThread;
+import org.ferbar.btcontrol.Debuglog;
 
 
 public class ControlAction extends Activity implements BTcommThread.Callback, OnSeekBarChangeListener {

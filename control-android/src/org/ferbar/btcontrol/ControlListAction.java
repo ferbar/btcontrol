@@ -1,13 +1,18 @@
-package com.example.helloandroid;
+package org.ferbar.btcontrol;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.List;
 
-import com.example.helloandroid.ControlAction.AvailLocosListItem;
+import org.ferbar.btcontrol.ControlAction.AvailLocosListItem;
+import org.ferbar.btcontrol.ControlAction.CallbackProgressRunnable;
 
-import btcontrol.Debuglog;
+
+// import com.example.helloandroid.R;
+// import com.example.helloandroid.R.id;
+// import com.example.helloandroid.R.layout;
+
 import protocol.FBTCtlMessage;
 import protocol.MessageLayouts;
 import android.app.ListActivity;
@@ -67,18 +72,18 @@ public class ControlListAction extends ListActivity {
 	@Override
 	public void onResume() {
 		super.onResume();
-		System.out.println("ControllAction::onResume");
+		System.out.println("ControlAction::onResume");
 		AndroidMain.plusActivity();
 	}
 	@Override
 	public void onPause() {
 		super.onPause();
-		System.out.println("ControllAction::onPause isFinishing:"+this.isFinishing());
+		System.out.println("ControlAction::onPause isFinishing:"+this.isFinishing());
 		AndroidMain.minusActivity();
 	}
 
 	/**
-	 * das rumgefummel mit onKeyDown ist weil sich das ControllAction sonst gerne auch beendet weils das onBackPressed auch bekommt ....
+	 * das rumgefummel mit onKeyDown ist weil sich das ControlAction sonst gerne auch beendet weils das onBackPressed auch bekommt ....
 	 * @see android.app.Activity#onKeyDown(int, android.view.KeyEvent)
 	 */
 	@Override
@@ -182,7 +187,7 @@ public class ControlListAction extends ListActivity {
     
     void fillData() {
     	// R.layout.list_item, strings) {
-    	//,ControllAction.availLocos
+    	//,ControlAction.availLocos
     	this.listAdapter=new ArrayAdapter<AvailLocosListItemAddr>(this, R.layout.list_item) {
     		@Override
     		public View getView(int position, View convertView, ViewGroup parent) {
