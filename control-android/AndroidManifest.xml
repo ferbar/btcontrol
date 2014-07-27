@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.helloandroid"
+    package="org.ferbar.btcontrol"
     android:versionCode="1"
     android:versionName="1.0" >
     <!-- 7 = Android 2.1 -->
@@ -31,12 +31,12 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="ControllAction"
+            android:name="ControlAction"
             android:label="@string/controlFormName"
             android:screenOrientation="portrait" >
         </activity>
         <activity
-            android:name="ControllListAction"
+            android:name="ControlListAction"
             android:launchMode="singleTop"
             android:screenOrientation="portrait" >
         </activity>
