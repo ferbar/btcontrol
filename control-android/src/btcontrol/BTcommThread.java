@@ -1,1 +1,0 @@
-../../../control-midp/MobileApplication/src/btcontroll/BTcommThread.java

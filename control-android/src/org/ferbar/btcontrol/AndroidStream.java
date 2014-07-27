@@ -1,11 +1,12 @@
-package btcontrol;
+package org.ferbar.btcontrol;
 
 import java.io.IOException;
 import java.net.Socket;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import btcontrol.BTcommThread.PlattformStream;
+import org.ferbar.btcontrol.BTcommThread.PlattformStream;
+
 
 public class AndroidStream implements PlattformStream {
 

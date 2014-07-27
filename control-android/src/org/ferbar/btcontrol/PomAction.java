@@ -3,7 +3,7 @@
  * ladet die decoder definition von jmri.org runter
  */
 
-package com.example.helloandroid;
+package org.ferbar.btcontrol;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -30,6 +30,7 @@ import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
+import org.ferbar.btcontrol.ControlAction.AvailLocosListItem;
 import org.w3c.dom.Comment;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
@@ -39,9 +40,6 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
-import com.example.helloandroid.ControlAction.AvailLocosListItem;
-
-import btcontrol.Debuglog;
 import protocol.FBTCtlMessage;
 import protocol.MessageLayouts;
 import android.annotation.TargetApi;
@@ -437,18 +435,18 @@ public class PomAction extends Activity {
 	@Override
 	public void onResume() {
 		super.onResume();
-		System.out.println("ControllAction::onResume");
+		System.out.println("ControlAction::onResume");
 		AndroidMain.plusActivity();
 	}
 	@Override
 	public void onPause() {
 		super.onPause();
-		System.out.println("ControllAction::onPause isFinishing:"+this.isFinishing());
+		System.out.println("ControlAction::onPause isFinishing:"+this.isFinishing());
 		AndroidMain.minusActivity();
 	}
 
 	/**
-	 * das rumgefummel mit onKeyDown ist weil sich das ControllAction sonst gerne auch beendet weils das onBackPressed auch bekommt ....
+	 * das rumgefummel mit onKeyDown ist weil sich das ControlAction sonst gerne auch beendet weils das onBackPressed auch bekommt ....
 	 * @see android.app.Activity#onKeyDown(int, android.view.KeyEvent)
 	 */
 	@Override

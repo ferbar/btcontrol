@@ -1,4 +1,4 @@
-package com.example.helloandroid;
+package org.ferbar.btcontrol;
 
 import java.io.IOException;
 import java.util.Hashtable;
@@ -23,9 +23,6 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-import btcontrol.AndroidStream;
-import btcontrol.BTcommThread;
-import btcontrol.Debuglog;
 import protocol.MessageLayouts;
 
 import javax.jmdns.JmDNS;
@@ -33,7 +30,10 @@ import javax.jmdns.ServiceEvent;
 // import javax.jmdns.ServiceInfo;
 import javax.jmdns.ServiceListener;
 
-import com.example.helloandroid.ControlAction;
+import org.ferbar.btcontrol.R;
+import org.ferbar.btcontrol.R.id;
+import org.ferbar.btcontrol.R.layout;
+
 
 
 public class AndroidMain extends Activity {
@@ -363,7 +363,7 @@ public class AndroidMain extends Activity {
 		tv.setText(text);
 		if(this.loadProgressDialog != null) {
 			synchronized(this.loadProgressDialog) {
-				if(this.btcomm != null) {
+				if(AndroidMain.btcomm != null) {
 					this.loadProgressDialog.setProgress(btcomm.connState);
 					this.loadProgressDialog.setMessage(text);
 				} else {
