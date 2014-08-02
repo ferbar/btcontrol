@@ -23,7 +23,7 @@
  * da herinnen dürfen keine MIDP/Android spezialitäten stehn, da gemeinsam genutzt
  * run wartet auf ein commando in der queue und sendet das dann, ruft callback auf
  */
-package btcontrol;
+package org.ferbar.btcontrol;
 
 // import java.io.IOException;
 import java.io.InputStream;

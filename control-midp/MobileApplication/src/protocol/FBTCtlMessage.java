@@ -27,7 +27,8 @@ import java.util.Hashtable;
 import java.util.Enumeration;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import btcontrol.Debuglog;
+
+import org.ferbar.btcontrol.Debuglog;
 
 // warnings ausschalten geht im java 1.3 noch nicht, midp braucht 1.3
 // @SuppressWarnings({"rawtypes","unchecked"}) // Hashtable<> gibts im midp nicht
