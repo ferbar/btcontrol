@@ -18,7 +18,7 @@
  * Created on 15. Juli 2007, 14:47
  */
 
-package btcontroll;
+package org.ferbar.btcontrol;
 // import java.util.Hashtable;
 		
 import java.io.IOException;

@@ -1,4 +1,4 @@
-package btcontroll;
+package org.ferbar.btcontrol;
 // import java.lang.*;
 // import java.io.*;
 import java.util.*;

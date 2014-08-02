@@ -16,7 +16,7 @@
  * ja/nein abfrage - fenster
  */
 
-package btcontroll;
+package org.ferbar.btcontrol;
 import javax.microedition.lcdui.*;
 
 /**

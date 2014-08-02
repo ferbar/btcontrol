@@ -16,7 +16,7 @@
  * liste, speichert zusätzlich noch ein object
  */
 
-package btcontroll;
+package org.ferbar.btcontrol;
 import java.util.Vector;
 import javax.microedition.lcdui.Font;
 

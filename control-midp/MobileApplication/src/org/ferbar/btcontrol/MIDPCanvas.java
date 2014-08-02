@@ -18,7 +18,7 @@
  * Created on 4. September 2007, 18:58
  */
 
-package btcontroll;
+package org.ferbar.btcontrol;
 
 import java.util.Timer;
 import java.util.TimerTask;

@@ -16,7 +16,7 @@
  * logging facility
  */
 
-package btcontroll;
+package org.ferbar.btcontrol;
 import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.Font;
 // import javax.microedition.lcdui.StringItem;
