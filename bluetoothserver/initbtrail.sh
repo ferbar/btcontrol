@@ -2,10 +2,10 @@
 # sdptool browse ff:ff:ff:00:00:00 -> port registrierungen anzeigen
 # port 30 als SerialProfile registrieren
 SDPTOOL="sudo sdptool"
-if SDPTOOL browse ff:ff:ff:00:00:00 | grep -q btrail ; then
+if $SDPTOOL browse ff:ff:ff:00:00:00 | grep -q btrail ; then
 	echo "sdp service schon registriert"
 else
-	if SDPTOOL add --channel=30 SP && SDPTOOL setattr 0x10005 0x100 "btrail" ; then
+	if $SDPTOOL add --channel=30 SP && $SDPTOOL setattr 0x10005 0x100 "btrail" ; then
 		echo "sdp registered"
 	else
 		echo "error registering SDP" >&2
