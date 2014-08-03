@@ -35,6 +35,8 @@
 #include <netinet/tcp.h>
 #include <unistd.h>
 
+#include <errno.h>
+
 #include "utils.h"
 #include "server.h"
 
@@ -79,6 +81,7 @@ void ClientThread::readSelect()
 		if(rc != 0) {
 			throw std::string("error select");
 		}
+		printf("ClientThread::readSelect error in select(%d) %s\n", this->so, strerror(errno));
 		throw std::string("timeout reading cmd");
 	}
 }
