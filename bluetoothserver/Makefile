@@ -7,7 +7,7 @@ CFLAGS_DEP=-MMD -MF $(dir $@).$(notdir $(basename $@)).d
 LDFLAGS=-g -lpthread -lstdc++
 # LDFLAGS=-g -lbluetooth -lpthread -lusb
 
-CPP=colorgcc
+CPP=gcc
 
 all: btserver
 
