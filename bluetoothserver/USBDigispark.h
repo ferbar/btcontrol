@@ -12,6 +12,7 @@ public:
 	// int write_output ( unsigned char a1, unsigned char a2, unsigned char d );
 	// int read_input ( unsigned char *a1, unsigned char *a2, unsigned char *d, unsigned short *c1, unsigned short *c2 );
 
+	virtual const char *readLine();
 
 private:
 	void init(int devnr);
@@ -21,4 +22,5 @@ private:
 	struct libusb_device_handle *devHandle;
 
 	int dir;
+	char buffer[1024];
 };
