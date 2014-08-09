@@ -5,6 +5,7 @@
 #include <string.h>
 #include <libusb-1.0/libusb.h>        // libusb-1.0
 #include <stdlib.h>
+#include <unistd.h>
 #include "USBDigispark.h"
 
 static libusb_context* context = NULL;
@@ -169,6 +170,28 @@ void USBDigispark::fullstop() {
 	setPWM(0);
 }
 
+const char *USBDigispark::readLine() {
+	unsigned char thechar=' ';
+	int result;
+	int pos=0;
+	while(thechar != 4) {
+		result = libusb_control_transfer(this->devHandle, (0x01 << 5) | 0x80, 0x01, 0, 0, &thechar, 1, 1000);
+		if(result <= 0) {
+			break;
+		}
+//		thechar != '\n' && 
+		if(pos > sizeof(this->buffer)-1) {
+			printf("buffer overrun\n");
+			break;
+		}
+		printf("readLine: char %c=%#x\n", thechar,thechar);
+		buffer[pos++]=thechar;
+		usleep(100000);
+
+	}
+	buffer[pos]='\0';
+	return buffer;
+}
 /*
     int i = 0;
     int a = 0;
@@ -269,3 +292,22 @@ void USBDigispark::fullstop() {
     //printf("received %c (%d)\n", c, (int) c);
 }
 */
+
+#ifdef DIGISPARK_TEST
+#include <unistd.h>
+int main(int argc, char* argv[]) {
+	printf("Digispark test mode\n");
+	USBDigispark test(0,true);
+	while(1) {
+		test.setPWM(99);
+		const char *blah=test.readLine();
+		printf("result: %s\n", blah);
+		sleep(2);
+		test.setPWM(0);
+		const char *blub=test.readLine();
+		printf("result: %s\n", blub);
+		sleep(2);
+	}
+
+}
+#endif

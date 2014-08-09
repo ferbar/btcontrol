@@ -71,6 +71,9 @@ Makefile.config:
 btserver: fbtctl_message.o message_layout.o server.o clientthread.o lokdef.o main.o srcp.o
 	${CPP} ${LDFLAGS} $+ -o btserver
 
+digispark_test: USBDigispark.cpp
+	${CPP} ${LDFLAGS} $+ -DDIGISPARK_TEST -o digispark_test
+
 help:
 	@echo -e "all\t alles builden\ntags\t c-tags generieren\ncopy\t auf ibm kiste kopieren\nsearch-ibm-desktop\t ibm kiste suchen\n"
 
