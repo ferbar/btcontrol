@@ -1,0 +1,9 @@
+eventuell da was wegen timer ändern:
+
+chris@eeepc:~/bin/Digispark-Arduino-1.0.4/hardware/digispark/cores/tiny> vi core_build_options.h
+chris@eeepc:~/bin/Digispark-Arduino-1.0.4/hardware/digispark/cores/tiny> vi wiring.c
+
+vorsicht: in irgendeinem debian paket [war nach bluetooth setup da] ist ein modul drinnen dass den selben usb id hat wie der digispark - muss ma im /etc/modprobe.d/ blacklisten
+radio-ma901
+
+
