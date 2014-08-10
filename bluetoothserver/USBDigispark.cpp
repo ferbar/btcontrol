@@ -6,9 +6,128 @@
 #include <libusb-1.0/libusb.h>        // libusb-1.0
 #include <stdlib.h>
 #include <unistd.h>
+#include <pthread.h>
+#include <errno.h>
 #include "USBDigispark.h"
+#include "utils.h"
+
+bool useCommthread=true;
+
+char read(libusb_device_handle *devHandle);
 
 static libusb_context* context = NULL;
+
+pthread_t commThread;
+int x,y;
+pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+char commBuffer[1024];
+
+USBDigispark *usbDigispark;
+
+float timediff(timespec &start, timespec &done) {
+	float ret = done.tv_sec - start.tv_sec + (done.tv_nsec - start.tv_nsec)/1000000000.0;
+	return ret;
+}
+
+/**
+ * ping thread
+ */
+static void *startCommThread(void *data)
+{
+	printf("start comm thread\n");
+
+	try {
+	while(true) {
+		struct timespec timeout,start,done;
+		int retcode;
+		// printf("X try lock\n");
+		// pthread_mutex_lock(&mut);
+		// printf("X locked\n");
+		clock_gettime(CLOCK_REALTIME, &timeout);
+		timeout.tv_nsec += 100000000;
+		timeout.tv_sec += timeout.tv_nsec/1000000000; // macht sonst exception
+		timeout.tv_nsec = timeout.tv_nsec%1000000000;
+
+		clock_gettime(CLOCK_REALTIME, &start);
+		retcode = 0;
+		usleep(100000);
+		printf("S "); fflush(stdout);
+		/*
+		while (x <= y && retcode == 0) {
+			// printf("X cond_timedwait %d %d timeout:%ld\n", x, y, timeout.tv_nsec);
+			retcode = pthread_cond_timedwait(&cond, &mut, &timeout);
+		}
+		*/
+		clock_gettime(CLOCK_REALTIME, &done);
+		// printf("X x:%d, y:%d, retcode=%s waittime=%g\n",x,y,strerror(retcode),timediff(start,done));
+		if(x <= y) {
+			retcode=ETIMEDOUT;
+		}
+		if (retcode == ETIMEDOUT) {
+			// printf("X timeout\n");
+			/* timeout occurred */
+			/*
+			unsigned char thechar=' ';
+			// zeichen lesen wenn timeout
+			int result = libusb_control_transfer(usbDigispark->devHandle, (0x01 << 5) | 0x80, 0x01, 0, 0, &thechar, 1, 1000);
+			printf("X r:%c=%d rc:%d\n",thechar, thechar, result);
+			*/
+			while( read(usbDigispark->devHandle) ) {
+				usleep(10000);
+			}
+			// pthread_mutex_unlock(&mut);
+			// printf("X unlocked\n");
+		} else if(retcode != 0) {
+			printf("X retcode = %s\n", strerror(retcode));
+			abort();
+		} else {
+			printf("X x > y\n");
+			/* operate on x and y */
+			// kein timeout also x > y => command im buffer:
+			y++;
+			pthread_mutex_lock(&mut);
+			char buffer[1024];
+			strcpy(buffer,commBuffer);
+			pthread_mutex_unlock(&mut);
+			// printf("X unlocked\n");
+			char *pos=buffer;
+			while(*pos != '\0') {
+				printf("W " ANSI_RED1 "%c" ANSI_DEFAULT " ",*pos); fflush(stdout);
+				// TODO: *pos == uint16_t wValue da könnt ma Mxx statt 4 bytes einzeln machen!
+				int result = libusb_control_transfer(usbDigispark->devHandle, (0x01 << 5), 0x09, 0, *pos, 0, 0, 1000);
+				//printf("Writing character \"%c\" to DigiSpark.\n", input[i]);
+				if(result < 0) {
+					printf("X Error %i writing to USB device [%s]\n", result, buffer);
+					throw "error writing to usb device";
+				}
+				pos++;
+			}
+		}
+	}
+	} catch(const char *errormsg) {
+		printf("X exception %s\n", errormsg);
+		abort();
+	}
+}
+
+void sendCmd(const char *cmd) {
+	// printf("S try lock\n");
+	pthread_mutex_lock(&mut);
+	// printf("S locked\n");
+	strcpy(commBuffer,cmd);
+	/* modify x and y */
+	x++;
+	if (x > y) {
+		int rc=pthread_cond_broadcast(&cond);
+		if(rc != 0) {
+			printf("S error cond_broadcast %s\n", strerror(rc));
+			abort();
+		}
+	}
+	pthread_mutex_unlock(&mut);
+	// printf("S unlocked\n");
+}
 
 USBDigispark::USBDigispark(int devnr, bool debug) :
 	USBPlatine(debug), devHandle(NULL), dir(0) {
@@ -126,16 +245,30 @@ void USBDigispark::init(int devnr) {
 	}
 	*/
 
+	if(useCommthread) {
+		usbDigispark=this;
+		void *startupData=NULL;
+		bzero(&commThread,sizeof(commThread));
+		if(int rc=pthread_create(&commThread, NULL, startCommThread, (void *)startupData) != 0) {
+			printf("error creating new thread rc=%d\n",rc);
+			perror("error creating new thread ");
+			abort();
+		}
+		printf("new Thread: %lx\n",commThread);
+		pthread_detach(commThread);
+	}
 	printf("digispark init done\n");
 }
 
 void USBDigispark::setPWM(unsigned char pwm) {
-	int result = 0;
+	// int result = 0;
 	char buffer[100];
 	snprintf(buffer, sizeof(buffer), "M%02x\n", pwm);
+	sendCmd(buffer);
+	/*
 	char *pos=buffer;
 	while(*pos != '\0') {
-		printf("USBDigispark write char %c\n",*pos);
+		printf("W "ANSI_RED1 "%c" ANSI_DEFAULT " ",*pos);
 		// TODO: *pos == uint16_t wValue da könnt ma Mxx statt 4 bytes einzeln machen!
 		result = libusb_control_transfer(this->devHandle, (0x01 << 5), 0x09, 0, *pos, 0, 0, 1000);
 		//printf("Writing character \"%c\" to DigiSpark.\n", input[i]);
@@ -145,16 +278,20 @@ void USBDigispark::setPWM(unsigned char pwm) {
 		}
 		pos++;
     }
+	printf("\n");
+	*/
 	// TODO: return einlesen!
 }
 
 void USBDigispark::setDir(unsigned char dir) {
-	int result = 0;
+	// int result = 0;
 	char buffer[100];
 	snprintf(buffer, sizeof(buffer), "D%d\n", dir);
+	sendCmd(buffer);
+	/*
 	char *pos=buffer;
 	while(*pos != '\0') {
-		printf("USBDigispark write char %c\n",*pos);
+		printf("W "ANSI_RED1 "%c" ANSI_DEFAULT " ",*pos);
 		result = libusb_control_transfer(this->devHandle, (0x01 << 5), 0x09, 0, *pos, 0, 0, 1000);
 		//printf("Writing character \"%c\" to DigiSpark.\n", input[i]);
 		if(result < 0) {
@@ -163,6 +300,8 @@ void USBDigispark::setDir(unsigned char dir) {
 		}
 		pos++;
     }
+	printf("\n");
+	*/
 	// TODO: return einlesen!
 }
 
@@ -173,7 +312,7 @@ void USBDigispark::fullstop() {
 const char *USBDigispark::readLine() {
 	unsigned char thechar=' ';
 	int result;
-	int pos=0;
+	unsigned int pos=0;
 	while(thechar != 4) {
 		result = libusb_control_transfer(this->devHandle, (0x01 << 5) | 0x80, 0x01, 0, 0, &thechar, 1, 1000);
 		if(result <= 0) {
@@ -293,20 +432,60 @@ const char *USBDigispark::readLine() {
 }
 */
 
+char read(libusb_device_handle *devHandle) {
+	// rc=test.readLine();
+	unsigned char thechar='\0';
+	int result = libusb_control_transfer(devHandle, (0x01 << 5) | 0x80, 0x01, 0, 0, &thechar, 1, 1000);
+	if(result < 0) {
+		printf("error reading: %d errno=%s\n", result, strerror(errno));
+	}
+	if(result == 0) { 
+		printf("R");
+	} else if(thechar < ' ') {
+		printf("r:%d ",thechar);
+	} else {
+		printf("r:" ANSI_GREEN1 "%c" ANSI_DEFAULT " ",thechar);
+	}
+	fflush(stdout);
+	return thechar;
+}
+
+
 #ifdef DIGISPARK_TEST
 #include <unistd.h>
 int main(int argc, char* argv[]) {
 	printf("Digispark test mode\n");
 	USBDigispark test(0,true);
+	// const char *rc;
 	while(1) {
-		test.setPWM(99);
-		const char *blah=test.readLine();
-		printf("result: %s\n", blah);
-		sleep(2);
-		test.setPWM(0);
-		const char *blub=test.readLine();
-		printf("result: %s\n", blub);
-		sleep(2);
+		printf("S while 1\n");
+		if(useCommthread) {
+			sendCmd("M65\n");
+			sleep(1);
+			printf("S while 2\n");
+			sendCmd("M00\n");
+			sleep(1);
+		} else {
+			test.setPWM(99);
+			usleep(100000);
+			// rc=test.readLine();
+			// printf("result: %s\n", rc);
+			for(int i=0; i < 10; i++) {
+				read(test.devHandle);
+				usleep(100000);
+			}
+			printf("\n");
+			test.setPWM(0);
+			usleep(100000);
+			// rc=test.readLine();
+			// printf("result: %s\n", rc);
+			for(int i=0; i < 10; i++) {
+				read(test.devHandle);
+				usleep(100000);
+			}
+		}
+		printf("\n");
+		
 	}
 
 }

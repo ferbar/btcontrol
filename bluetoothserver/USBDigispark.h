@@ -14,12 +14,12 @@ public:
 
 	virtual const char *readLine();
 
+	struct libusb_device_handle *devHandle;
 private:
 	void init(int devnr);
 	void release();
 	int takeover_device( int interface );
 
-	struct libusb_device_handle *devHandle;
 
 	int dir;
 	char buffer[1024];
