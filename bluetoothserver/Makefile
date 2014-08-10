@@ -1,7 +1,7 @@
 .SUFFIXES:
 .PHONY: tags clean
 
-CFLAGS=-g -O0 -Wall
+CFLAGS=-g -O0 -Wall -Wformat
 CFLAGS_DEP=-MMD -MF $(dir $@).$(notdir $(basename $@)).d
 
 LDFLAGS=-g -lpthread -lstdc++
@@ -72,7 +72,7 @@ btserver: fbtctl_message.o message_layout.o server.o clientthread.o lokdef.o mai
 	${CPP} ${LDFLAGS} $+ -o btserver
 
 digispark_test: USBDigispark.cpp
-	${CPP} ${LDFLAGS} $+ -DDIGISPARK_TEST -o digispark_test
+	${CPP} ${CFLAGS} ${LDFLAGS} $+ -DDIGISPARK_TEST -o digispark_test
 
 help:
 	@echo -e "all\t alles builden\ntags\t c-tags generieren\ncopy\t auf ibm kiste kopieren\nsearch-ibm-desktop\t ibm kiste suchen\n"
