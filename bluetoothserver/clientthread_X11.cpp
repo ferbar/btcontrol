@@ -311,10 +311,10 @@ void ClientThreadX11::run()
 				int doupdate=cmd["doupdate"].getIntVal();
 				printf("hash=%d (me:%d), doupdate=%d\n",protohash,messageLayouts.protocolHash,doupdate);
 				this->sendClientUpdate();
-
+#ifdef INCL_BT
 			} else if(cmd.isType("BTSCAN")) { // liste mit eingetragenen loks abrufen, format: <name>;<adresse>;...\n
 				FBTCtlMessage reply(messageTypeID("BTSCAN_REPLY"));
-				this->BTScan(reply);
+				BTServer::BTScan(reply);
 				// reply.dump();
 				sendMessage(reply);
 			} else if(cmd.isType("BTPUSH")) { // 
@@ -323,11 +323,12 @@ void ClientThreadX11::run()
 				std::string addr=cmd["addr"].getStringVal();
 				// TODO: ussppush oder gammu push 
 				// int type=cmd["type"].getIntVal();
-				this->BTPush(addr);
+				BTServer::BTPush(addr);
 
 				// reply.dump();
 				reply["rc"]=1;
 				sendMessage(reply);
+#endif
 			} else {
 				printf(ANSI_RED"%d/%d:----------------- invalid/unimplemented command (%d,%s)------------------------\n"ANSI_DEFAULT,
 				this->clientID,this->msgNum,cmd.getType(),messageTypeName(cmd.getType()).c_str());
