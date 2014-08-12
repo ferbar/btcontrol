@@ -1,1 +1,1 @@
-../../../../../control-midp/MobileApplication/src/btcontroll/BTcommThread.java
+../../../../../control-midp/MobileApplication/src/org/ferbar/btcontrol/BTcommThread.java
