@@ -11,6 +11,8 @@ Vermittlungsstelle bluetooth -> srcpd
 cpp-programm, zum kompilieren wird benötigt:
   suse 11.2: libusb-dev bzw libusb-compat-devel, bluez-devel
   auf ubuntu: libbluetooth-dev, libusb-dev
+  k8055 git submodule downloaden:
+  	git submodule update --init
 
   im server.cpp ist die Adresse vom SRCPD hardcoded auf 127.0.0.1
 
