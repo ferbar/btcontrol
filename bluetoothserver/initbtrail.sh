@@ -11,6 +11,13 @@
 # sdptool browse ff:ff:ff:00:00:00 -> port registrierungen anzeigen
 # port 30 als SerialProfile registrieren
 SDPTOOL="sudo sdptool"
+HCICONFIG="sudo hciconfig"
+
+CONFFILE="$(dirname $0)/conf/initbtrail.conf"
+if [ -f $CONFFILE ] ; then
+	. $CONFFILE
+fi
+
 if $SDPTOOL browse ff:ff:ff:00:00:00 | grep -q btrail ; then
 	echo "sdp service schon registriert"
 else
@@ -26,7 +33,7 @@ fi
 # rfcomm -r listen /dev/rfcomm30 30
 
 # wenn pc master kann er bis zu 7 connections machen
-sudo /usr/bin/hciconfig hci0 lm master
+$HCICONFIG hci0 lm master
 
 # verbindungen anzeigen
 # hcitool con
@@ -38,10 +45,13 @@ sudo /usr/bin/hciconfig hci0 lm master
 # in /var/lib/bluetooth/<blue_id>/config eingetragen habe 
 # mode discoverable 
 # discovto 0 
-/usr/bin/hciconfig hci0 | grep ISCAN -q
+sleep 1
+$HCICONFIG | grep ISCAN -q
 rc=$?
 if [ $rc != 0 ]; then
 	echo "bluetooth ISCAN nicht eingeschalten!" > /dev/stderr
-	sudo /usr/bin/hciconfig hci0 piscan
+	$HCICONFIG hci0 piscan
 # dbus-send --system --type=method_call --print-reply --dest=org.bluez /org/bluez/hci0 org.bluez.Adapter.SetMode string:discoverable
+else
+	echo "ISCAN eingeschalten"
 fi
