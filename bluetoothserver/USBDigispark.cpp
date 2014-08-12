@@ -1,5 +1,10 @@
-/*
- * aus digispark.c monitor
+/**
+ * PWM über einen digispark
+ * vorallem die sleeps sind aus digispark.c monitor
+ * hint zum usb sniffen:
+ *   mount -t debugfs none_debugs /sys/kernel/debug
+ *   tail -f /sys/kernel/debug/usbmon/0u
+ * libusb debuggen: libusb_set_debug()
  */
 #include <stdio.h>
 #include <string.h>
@@ -258,6 +263,7 @@ void USBDigispark::init(int devnr) {
 		pthread_detach(commThread);
 	}
 	printf("digispark init done\n");
+	this->setPWM(0);
 }
 
 void USBDigispark::setPWM(unsigned char pwm) {
