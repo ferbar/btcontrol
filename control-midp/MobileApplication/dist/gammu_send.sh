@@ -1,2 +1,3 @@
 #!/bin/sh
-gammu nokiaaddfile Application btcontroll -overwrite
+# sendet das btcontrol.jar ans handy. alternative ist ussp-push
+gammu nokiaaddfile Application btcontrol -overwrite
