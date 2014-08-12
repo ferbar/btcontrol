@@ -534,8 +534,10 @@ continue;
 					f_speed=0;
 				} else {
 					// Umrechnen in PWM einheiten
-					const double motorStart=180; // bei dem Wert fangt der Motor an sich zu drehen
-					f_speed=f_speed*(255.0-motorStart)/255+motorStart;
+					// Velleman: K8055 const double motorStart=180; // bei dem Wert fangt der Motor an sich zu drehen
+					const double motorStart=70; // bei dem Wert fangt der Motor an sich zu drehen
+					const double fullSpeed=128;
+					f_speed=f_speed*(fullSpeed-motorStart)/255+motorStart;
 				}
 
 				platine->setDir(lokdef[addr_index].currdir < 0 ? 1 : 0 );
