@@ -94,7 +94,7 @@ search-ibm-desktop:
 %.o : %.cpp %.h
 	${CPP} ${CFLAGS_DEP} ${CFLAGS} -c -o $@  $<
 main.o : main.cpp main.h
-	${CPP} ${CFLAGS_DEP} ${CFLAGS} -c -o $@  $< -DSVNVERSION=`svnversion`
+	${CPP} ${CFLAGS_DEP} ${CFLAGS} -c -o $@  $< -DSVNVERSION="git$$(git log --oneline | wc -l)"
 
 tags:
 	find . | grep -e '\.h$$' -e '\.c$$' -e '\.cpp$$' | \
