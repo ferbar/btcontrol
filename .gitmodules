@@ -1,0 +1,3 @@
+[submodule "jodersky_k8055"]
+	path = jodersky_k8055
+	url = https://github.com/jodersky/k8055.git

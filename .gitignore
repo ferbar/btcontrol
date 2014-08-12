@@ -1,0 +1,5 @@
+*.o
+.*.d
+bluetoothserver/Makefile.config
+bluetoothserver/btserver
+bluetoothserver/digispark_test
