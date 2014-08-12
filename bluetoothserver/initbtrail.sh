@@ -1,4 +1,13 @@
 #!/bin/sh
+# TODO: seit bluez 5 ist sdptool default mässig abgedreht,
+# https://github.com/pauloborges/bluez/blob/master/doc/profile-api.txt
+# http://docs.huihoo.com/qt/qtextended/4.4/bluetooth-bluetoothservice.html
+# http://www.bluez.org/bluez-5-api-introduction-and-porting-guide/
+#     RegisterProfile on the ProfileManager1 interface
+#
+# hint: kernel bug "Can't init device hci0: Operation not supported (95)" ab 3.10
+# hciconfig sagt "down" hci0 up sagt das oben -> anderen dt dongle nehmen | anderen kernel nehmen
+# 
 # sdptool browse ff:ff:ff:00:00:00 -> port registrierungen anzeigen
 # port 30 als SerialProfile registrieren
 SDPTOOL="sudo sdptool"
