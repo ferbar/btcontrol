@@ -3,3 +3,4 @@
 bluetoothserver/Makefile.config
 bluetoothserver/btserver
 bluetoothserver/digispark_test
+control-android/gen/
