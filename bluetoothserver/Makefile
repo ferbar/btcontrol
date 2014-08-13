@@ -7,7 +7,7 @@ CFLAGS_DEP=-MMD -MF $(dir $@).$(notdir $(basename $@)).d
 LDFLAGS=-g -lpthread -lstdc++
 # LDFLAGS=-g -lbluetooth -lpthread -lusb
 
-CPP=gcc
+CPP=g++
 
 all: btserver
 
@@ -56,14 +56,27 @@ Makefile.config:
 	@echo .
 	
 	@echo -e "checking blueZ:"
-	@bluez=$$(pkg-config --libs bluez) ;\
+	@bluezlibs=$$(pkg-config --libs bluez) ;\
 		if [ $$? = 0 ] ; then \
 			echo "found" ;\
-			echo "LDFLAGS+=$$bluez" >> Makefile.config	;\
+			echo "LDFLAGS+=$$bluezlibs" >> Makefile.config	;\
 			echo "CFLAGS+=-DINCL_BT" >> Makefile.config	;\
 			echo "btserver: btserver.o;" >> Makefile.config   ;\
 		else						\
 			echo "not found - BT disabled"	;\
+		fi
+	@echo .
+	
+	@# -std=c++11 für zsp.cpp
+	@echo -e "checking alsa:"
+	@alsalibs=$$(pkg-config --libs alsa) ;\
+		if [ $$? = 0 ] ; then \
+			echo "found" ;\
+			echo "LDFLAGS+=$$alsalibs" >> Makefile.config	;\
+			echo "CFLAGS+=-DHAVE_ALSA -std=c++11" >> Makefile.config	;\
+			echo "btserver: sound.o zsp.o;" >> Makefile.config   ;\
+		else						\
+			echo "not found - alsa sound disabled"	;\
 		fi
 	@echo .
 	
@@ -73,6 +86,9 @@ btserver: fbtctl_message.o message_layout.o server.o clientthread.o lokdef.o mai
 
 digispark_test: USBDigispark.cpp
 	${CPP} ${CFLAGS} ${LDFLAGS} $+ -DDIGISPARK_TEST -o digispark_test
+
+zsptest: zsptest.cpp sound.cpp
+	${CPP} ${CFLAGS} ${LDFLAGS} -lasound $+ -g 
 
 help:
 	@echo -e "all\t alles builden\ntags\t c-tags generieren\ncopy\t auf ibm kiste kopieren\nsearch-ibm-desktop\t ibm kiste suchen\n"

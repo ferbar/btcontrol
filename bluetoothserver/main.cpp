@@ -44,8 +44,12 @@
 #include <map>
 
 #ifdef HAVE_LIBUSB
-#include "K8055.h"
-#include "USBDigispark.h"
+	#include "K8055.h"
+	#include "USBDigispark.h"
+
+	#ifdef HAVE_ALSA
+		#include "zsp.h"
+	#endif
 #endif
 
 #include "srcp.h"
@@ -151,6 +155,9 @@ void initPlatine()
 		printf("USBDigispark: error: %s\n",errormsg);
 	}
 	printf("... done\n");
+#ifdef HAVE_ALSA
+	loadZSP();
+#endif
 #endif
 }
 

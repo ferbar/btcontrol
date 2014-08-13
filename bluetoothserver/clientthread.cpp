@@ -43,6 +43,9 @@
 #include "utils.h"
 #include "server.h"
 
+#ifdef HAVE_ALSA
+#include "sound.h"
+#endif
 
 extern USBPlatine *platine;
 
@@ -151,6 +154,13 @@ void ClientThread::run()
 	// startupdata_t *startupdata=(startupdata_t *)data;
 
 	try {
+#ifdef HAVE_ALSA
+	Sound sound(cfg_soundFiles);
+	if(platine) {
+		sound.init();
+		sound.run();
+	}
+#endif
 	printf("%d:socket accepted sending welcome msg\n",this->clientID);
 	FBTCtlMessage heloReply(messageTypeID("HELO"));
 	heloReply["name"]="my bt server";
@@ -461,7 +471,7 @@ continue;
 				sendMessage(reply);
 #endif
 			} else {
-				printf(ANSI_RED"%d/%d:----------------- invalid/unimplemented command (%d,%s)------------------------\n"ANSI_DEFAULT,
+				printf(ANSI_RED "%d/%d:----------------- invalid/unimplemented command (%d,%s)------------------------\n" ANSI_DEFAULT,
 				this->clientID,this->msgNum,cmd.getType(),messageTypeName(cmd.getType()).c_str());
 			/*
 			if(memcmp(cmd,"invalid_key",10)==0) {
@@ -522,8 +532,8 @@ continue;
 			// geschwindigkeit 
 			// double f_speed=sqrt(sqrt((double)lokdef[addr_index].currspeed/255.0))*255.0; // für üperhaupt keine elektronik vorm motor gut (schienentraktor)
 			// TODO: wemmas wieder brauchen sollt gucken ob sich wirklich was geändert hat
-			int changedAddr=3; // eine adresse mit der nummer muss in der lokdef eingetragen sein
-			int addr_index=getAddrIndex(changedAddr);
+			// int changedAddr=3; // eine adresse mit der nummer muss in der lokdef eingetragen sein
+			int addr_index=-1; // getAddrIndex(changedAddr);
 			for(int i=0; i <= nLokdef; i++) {
 				if(changedAddrIndex[i]) {
 					changedAddrIndex[i]=false;
@@ -531,8 +541,9 @@ continue;
 					break;
 				}
 			}
+			printf(" --- addr_index=%d\n", addr_index);
 			//	if(changedAddrIndex[i]) { changedAddrIndex[i]=false;
-			if(addr_index) {
+			if(addr_index >= 0) {
 				assert(addr_index >= 0);
 				int a_speed=abs(lokdef[addr_index].currspeed);
 
@@ -557,12 +568,13 @@ continue;
 				*/
 				platine->commit();
 
-
-
+#ifdef HAVE_ALSA
+				sound.setSpeed(a_speed);
 				if(lokdef[addr_index].func[1].ison) {
 					lokdef[addr_index].func[1].ison=false;
 					system("aplay /home/pi/taurus.wav&");
 				}
+#endif
 			}
 		} else
 		if(srcp) { // erddcd/srcpd/dcc:
@@ -607,7 +619,7 @@ void ClientThread::sendLoco(int addr_index, bool emergencyStop) {
 					if(!lokdef[addr_index].initDone) {
 						SRCPReplyPtr replyInit = srcp->sendLocoInit(lokdef[addr_index].addr, nFahrstufen, lokdef[addr_index].nFunc);
 						if(replyInit->type != SRCPReply::OK) {
-							fprintf(stderr,ANSI_RED"%d/%d: error init loco: (%s)\n"ANSI_DEFAULT, this->clientID, this->msgNum, replyInit->message);
+							fprintf(stderr,ANSI_RED "%d/%d: error init loco: (%s)\n" ANSI_DEFAULT, this->clientID, this->msgNum, replyInit->message);
 							if(replyInit->code == 412) {
 								fprintf(stderr,"%d/%d: loopback/ddl|number_gl, max addr < %d?\n", this->clientID, this->msgNum, lokdef[addr_index].addr);
 								lokdef[addr_index].currspeed=-1;
@@ -616,14 +628,14 @@ void ClientThread::sendLoco(int addr_index, bool emergencyStop) {
 							lokdef[addr_index].initDone=true;
 							printf("try to read curr state...\n");
 							if(!srcp->getInfo(lokdef[addr_index].addr,&dir,&dccSpeed,lokdef[addr_index].nFunc, func)) {
-								fprintf(stderr,ANSI_RED"%d/%d: error getting state of loco: (%s)\n"ANSI_DEFAULT, this->clientID, this->msgNum, replyInit->message);
+								fprintf(stderr,ANSI_RED "%d/%d: error getting state of loco: (%s)\n" ANSI_DEFAULT, this->clientID, this->msgNum, replyInit->message);
 							}
 						}
 					}
 					SRCPReplyPtr reply = srcp->sendLocoSpeed(lokdef[addr_index].addr, dir, nFahrstufen, dccSpeed, lokdef[addr_index].nFunc, func);
 
 					if(reply->type != SRCPReply::OK) {
-						fprintf(stderr,ANSI_RED"%d/%d: error sending speed: (%s)\n"ANSI_DEFAULT, this->clientID, this->msgNum, reply->message);
+						fprintf(stderr,ANSI_RED "%d/%d: error sending speed: (%s)\n" ANSI_DEFAULT, this->clientID, this->msgNum, reply->message);
 					}
 }
 
