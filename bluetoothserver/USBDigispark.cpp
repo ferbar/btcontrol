@@ -64,6 +64,7 @@ static void *startCommThread(void *data)
 			retcode = pthread_cond_timedwait(&cond, &mut, &timeout);
 		}
 		*/
+// FIXME: nach string senden IMMER einen leseversuch machen!
 		clock_gettime(CLOCK_REALTIME, &done);
 		// printf("X x:%d, y:%d, retcode=%s waittime=%g\n",x,y,strerror(retcode),timediff(start,done));
 		if(x <= y) {
