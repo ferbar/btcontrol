@@ -32,7 +32,7 @@ lokdef_t *lokdef;
 /**
  * liefert den index
  * @return < 0 wenn lok nicht gefunden
- *
+ * @throws invalid address 
  */
 int getAddrIndex(int addr)
 {
@@ -43,7 +43,7 @@ int getAddrIndex(int addr)
 		}
 		i++;
 	}
-	return -1;
+	throw "invalid address";
 }
 
 #define CHECKVAL(_FMT, ...)	\

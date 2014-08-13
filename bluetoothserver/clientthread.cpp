@@ -523,9 +523,16 @@ continue;
 			// double f_speed=sqrt(sqrt((double)lokdef[addr_index].currspeed/255.0))*255.0; // für üperhaupt keine elektronik vorm motor gut (schienentraktor)
 			// TODO: wemmas wieder brauchen sollt gucken ob sich wirklich was geändert hat
 			int changedAddr=3; // eine adresse mit der nummer muss in der lokdef eingetragen sein
+			int addr_index=getAddrIndex(changedAddr);
+			for(int i=0; i <= nLokdef; i++) {
+				if(changedAddrIndex[i]) {
+					changedAddrIndex[i]=false;
+					addr_index=i;
+					break;
+				}
+			}
 			//	if(changedAddrIndex[i]) { changedAddrIndex[i]=false;
-			if(changedAddr) {
-				int addr_index=getAddrIndex(changedAddr);
+			if(addr_index) {
 				assert(addr_index >= 0);
 				int a_speed=abs(lokdef[addr_index].currspeed);
 
