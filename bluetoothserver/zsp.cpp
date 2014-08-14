@@ -14,11 +14,13 @@
 #include <boost/algorithm/string/replace.hpp>
 
 #include "sound.h"
+#include "utils.h"
 
 SoundType cfg_soundFiles[10];
 
 DataType data;
 
+std::string soundsetPath;
 
 std::string getSampleFilename(std::string number) {
 	// printf(" ---- %s \n",number.c_str());
@@ -39,7 +41,7 @@ std::string getSampleFilename(std::string number) {
 				std::string name=boost::algorithm::unquote(spIt->second,'"','\b');
 				printf(" %s\n", name.c_str());
 				printf(" ----------------- /sample -------------- %s %s\n",pfad.c_str(),name.c_str());
-				return boost::replace_all_copy(pfad, "\\", "/") + name;
+				return soundsetPath+"/"+boost::replace_all_copy(pfad, "\\", "/") + name;
 			}
 		}
 	}
@@ -53,7 +55,15 @@ void loadZSP() {
 	// map_data[7]["hello"] = 3.1415926;
 
 	printf("zimo sound projekt test\n");
-	FILE *f=fopen("sound/DampfDieselZimoSounds/DA_DI_R_EU_Coll1.zpr", "r");
+	const std::string soundsetFile=config.get("soundset");
+	if(soundsetFile == "") {
+		return;
+	}
+	size_t slash=soundsetFile.find_last_of('/');
+	if(slash != std::string::npos) {
+		soundsetPath=soundsetFile.substr(0,slash);
+	}
+	FILE *f=fopen(soundsetFile.c_str(), "r");
 	assert(f);
 	char buffer[1024];
 	std::string section="";

@@ -1,6 +1,7 @@
 #ifndef UTILS_H
 
 #include <string>
+#include <map>
 std::string readFile(std::string filename);
 #define ANSI_RED "\x1b[31m"
 #define ANSI_DEFAULT "\x1b[0m"
@@ -38,4 +39,13 @@ int myRead(int so, void *data, size_t size);
   #define ANSI_GREEN2 "\x1b[32;1m"
 
 
+class Config {
+public:
+	Config(std::string confFilename);
+	std::string get(const std::string key);
+private:
+	std::map<std::string, std::string> data;
+};
+
+extern Config config;
 #endif

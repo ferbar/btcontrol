@@ -84,9 +84,9 @@ Sound::~Sound() {
 void Sound::loadSoundFiles() {
 	// std::string fileName=std::string("sound/DampfDieselZimoSounds/") + this->soundFiles[0].run;
 	for(int i=0; i < 3; i++) {
-		this->loadSoundFile(std::string("sound/DampfDieselZimoSounds/") + this->soundFiles[i].down, this->soundFiles[i].down);
-		this->loadSoundFile(std::string("sound/DampfDieselZimoSounds/") + this->soundFiles[i].up, this->soundFiles[i].up);
-		this->loadSoundFile(std::string("sound/DampfDieselZimoSounds/") + this->soundFiles[i].run, this->soundFiles[i].run);
+		this->loadSoundFile(this->soundFiles[i].down, this->soundFiles[i].down);
+		this->loadSoundFile(this->soundFiles[i].up, this->soundFiles[i].up);
+		this->loadSoundFile(this->soundFiles[i].run, this->soundFiles[i].run);
 	}
 }
 
