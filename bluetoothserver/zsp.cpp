@@ -43,10 +43,11 @@ std::string getSampleFilename(std::string number) {
 			}
 		}
 	}
+	throw "invalid number";
 }
 
 
-int loadZSP() {
+void loadZSP() {
 	// std::multimap< int,std::string > map_data;
 	// map_data.emplace(5,"sdfsdf");
 	// map_data[7]["hello"] = 3.1415926;

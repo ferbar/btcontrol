@@ -36,4 +36,4 @@ typedef std::multimap<std::string, SectionValuesPtr > DataType;
 
 extern SoundType cfg_soundFiles[10];
 
-int loadZSP();
+void loadZSP();
