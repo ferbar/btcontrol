@@ -14,7 +14,8 @@
 #include <string.h>
 
 
-typedef struct WavHeader 
+// typedef
+struct __attribute__((packed)) WavHeader 
 {
 	char chunk_id[4];
 	int chunk_size;
@@ -30,7 +31,8 @@ typedef struct WavHeader
 	short int extra_param_size;
 	char subchunk2_id[4];
 	int subchunk2_size;
-} WavHeader __attribute__((packed));
+};
+// WavHeader __attribute__((packed));
 
 
 const char *device = "default";                        /* playback device */
@@ -104,7 +106,7 @@ void Sound::loadSoundFile(const std::string &fileName, std::string &dst) {
 	}
 	struct stat buf;
 	fstat(fileno(f), &buf);
-	printf("filename: %s, sample_rate: %d num_channels: %d, bits_per_sample:%d len:%d\n", fileName.c_str(),
+	printf("filename: %s, sample_rate: %d num_channels: %d, bits_per_sample:%d len:%lu\n", fileName.c_str(),
 		wavHeader.sample_rate, wavHeader.num_channels, wavHeader.bits_per_sample, buf.st_size-sizeof(wavHeader));
 	int bufferSize=buf.st_size-sizeof(wavHeader);
 	unsigned char *buffer;
