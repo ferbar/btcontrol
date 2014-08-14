@@ -106,7 +106,7 @@ const char *getnext(const char **pos)
  */
 bool readLokdef()
 {
-#define LOKDEF_FILENAME "lokdef.csv"
+#define LOKDEF_FILENAME "conf/lokdef.csv"
 	std::string lokdefCsv = readFile(LOKDEF_FILENAME);
 	std::string line;
 	const char *buffer;
