@@ -36,12 +36,12 @@ typedef struct WavHeader
 const char *device = "default";                        /* playback device */
 snd_output_t *output = NULL;
 Sound::Sound(SoundType *soundFiles)
-	: currFahrstufe(-1), soundFiles(soundFiles)
+	: soundFiles(soundFiles), currFahrstufe(-1)
 {
 }
 
 snd_pcm_t *Sound::handle=NULL;
-pthread_t Sound::thread=NULL;
+pthread_t Sound::thread=0;
 
 void Sound::init()
 {
@@ -50,7 +50,6 @@ void Sound::init()
 		return;
 	}
 	int err;
-	unsigned int i;
 
 	this->loadSoundFiles();
 
@@ -83,10 +82,12 @@ Sound::~Sound() {
 
 void Sound::loadSoundFiles() {
 	// std::string fileName=std::string("sound/DampfDieselZimoSounds/") + this->soundFiles[0].run;
-	for(int i=0; i < 3; i++) {
-		this->loadSoundFile(this->soundFiles[i].down, this->soundFiles[i].down);
-		this->loadSoundFile(this->soundFiles[i].up, this->soundFiles[i].up);
-		this->loadSoundFile(this->soundFiles[i].run, this->soundFiles[i].run);
+	for(int i=0; i < 10; i++) {
+		if(this->soundFiles[i].down != "") {
+			this->loadSoundFile(this->soundFiles[i].down, this->soundFiles[i].down);
+			this->loadSoundFile(this->soundFiles[i].up, this->soundFiles[i].up);
+			this->loadSoundFile(this->soundFiles[i].run, this->soundFiles[i].run);
+		}
 	}
 }
 
@@ -101,16 +102,16 @@ void Sound::loadSoundFile(const std::string &fileName, std::string &dst) {
 		fprintf(stderr, "error fread header '%s' %s\n", fileName.c_str(), strerror(errno));
 		abort();
 	}
-	printf("sample_rate: %d num_channels: %d, bits_per_sample:%d\n", wavHeader.sample_rate, wavHeader.num_channels, wavHeader.bits_per_sample);
 	struct stat buf;
 	fstat(fileno(f), &buf);
+	printf("filename: %s, sample_rate: %d num_channels: %d, bits_per_sample:%d len:%d\n", fileName.c_str(),
+		wavHeader.sample_rate, wavHeader.num_channels, wavHeader.bits_per_sample, buf.st_size-sizeof(wavHeader));
 	int bufferSize=buf.st_size-sizeof(wavHeader);
 	unsigned char *buffer;
 	buffer=(unsigned char *) malloc(bufferSize);
 	fread(buffer,1,buf.st_size,f);
 	dst.assign((char*) buffer,bufferSize);
 	free(buffer);
-	snd_pcm_format_t bits=SND_PCM_FORMAT_S16;
 	if(wavHeader.bits_per_sample == 8) {
 		this->bits=SND_PCM_FORMAT_U8;
 	}
@@ -121,6 +122,7 @@ static void *sound_thread_func(void *startupData)
 {
 	Sound *s=(Sound*) startupData;
 	s->outloop();
+	return NULL;
 }
 
 void Sound::outloop() {
@@ -169,13 +171,11 @@ void Sound::run() {
 		printf("already started\n");
 		return;
 	}
-	void *res;
-	int s;
 	this->doRun=true;
 
 	/* Start a thread and then send it a cancellation request */
 
-	s = pthread_create(&this->thread, NULL, &sound_thread_func, (void *) this);
+	int s = pthread_create(&this->thread, NULL, &sound_thread_func, (void *) this);
 	if (s != 0)
 		perror("pthread_create");
 
@@ -195,7 +195,7 @@ void Sound::kill() {
 
 void Sound::setSpeed(int speed) {
 	for(int i=0; i < 10; i++) {
-		if(speed < this->soundFiles[i].limit) {
+		if(speed <= this->soundFiles[i].limit) {
 			this->currFahrstufe=i;
 			printf("set fahrstufe: %d\n", i);
 			return;
