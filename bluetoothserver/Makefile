@@ -73,7 +73,7 @@ Makefile.config:
 		if [ $$? = 0 ] ; then \
 			echo "found" ;\
 			echo "LDFLAGS+=$$alsalibs" >> Makefile.config	;\
-			echo "CFLAGS+=-DHAVE_ALSA -std=c++11" >> Makefile.config	;\
+			echo "CFLAGS+=-DHAVE_ALSA -std=gnu++11" >> Makefile.config	;\
 			echo "btserver: sound.o zsp.o;" >> Makefile.config   ;\
 		else						\
 			echo "not found - alsa sound disabled"	;\
