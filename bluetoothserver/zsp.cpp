@@ -62,7 +62,7 @@ int loadZSP() {
 		boost::algorithm::trim(line);
 		if(boost::starts_with(line,"\"/")) {
 			// printf("end section\n");
-			data.emplace(section,sp);
+			data.insert(std::pair<std::string, SectionValuesPtr>(section,sp) );
 			section="";
 			continue;
 		}
@@ -92,7 +92,7 @@ int loadZSP() {
 			continue;
 		}
 		printf("add %s=%s\n", subsection.c_str(), value.c_str());
-		sp->data.emplace(subsection, value);
+		sp->data.insert(std::pair<std::string, std::string>(subsection, value) );
 
 		continue;
 		/*
