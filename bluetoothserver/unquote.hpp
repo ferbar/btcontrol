@@ -25,7 +25,7 @@ namespace boost
    namespace algorithm
    {
       template <class OutIt, class Range, class Char>
-      OutIt
+      void
       unquote(OutIt _out, Range & _input, Char _delimiter = '"',
          Char _escape = '\\');
 
@@ -41,7 +41,7 @@ namespace boost
 }
 
 template <class OutIt, class Range, class Char>
-OutIt
+void
 boost::algorithm::unquote(OutIt _out, Range & _input, Char _delimiter, 
    Char _escape)
 {
