@@ -54,6 +54,8 @@ static void *startCommThread(void *data)
 {
 	printf("start comm thread\n");
 
+	bool forceRead=false;
+
 	try {
 	while(true) {
 		struct timespec timeout,start,done;
@@ -76,8 +78,9 @@ static void *startCommThread(void *data)
 // FIXME: nach string senden IMMER einen leseversuch machen!
 		clock_gettime(CLOCK_REALTIME, &done);
 		// printf("X x:%d, y:%d, retcode=%s waittime=%g\n",x,y,strerror(retcode),timediff(start,done));
-		if(x <= y) {
+		if(x <= y || forceRead) {
 			retcode=ETIMEDOUT;
+			forceRead=false;
 		}
 		if (retcode == ETIMEDOUT) {
 			// printf("X timeout\n");
@@ -123,6 +126,7 @@ static void *startCommThread(void *data)
 			pthread_cond_signal(&buffer_empty_cond);
 			pthread_mutex_unlock(&buffer_empty_mut);
 
+			forceRead=true;
 		}
 	}
 	} catch(const char *errormsg) {
