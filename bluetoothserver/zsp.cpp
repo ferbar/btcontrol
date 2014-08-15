@@ -49,7 +49,7 @@ std::string getSampleFilename(std::string number) {
 }
 
 
-void loadZSP() {
+SoundType *loadZSP() {
 	// std::multimap< int,std::string > map_data;
 	// map_data.emplace(5,"sdfsdf");
 	// map_data[7]["hello"] = 3.1415926;
@@ -57,7 +57,7 @@ void loadZSP() {
 	printf("zimo sound projekt test\n");
 	const std::string soundsetFile=config.get("soundset");
 	if(soundsetFile == "") {
-		return;
+		return NULL;
 	}
 	size_t slash=soundsetFile.find_last_of('/');
 	if(slash != std::string::npos) {
@@ -139,6 +139,7 @@ void loadZSP() {
 	s.setFahrstufe(-1);
 	sleep(15);
 	*/
+	return cfg_soundFiles;
 }
 
 void SectionValues::dump() {

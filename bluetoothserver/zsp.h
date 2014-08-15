@@ -1,3 +1,5 @@
+#ifndef ZSP_H
+#define ZSP_H
 #include <map>
 #include <string>
 #include <boost/shared_ptr.hpp>
@@ -36,4 +38,6 @@ typedef std::multimap<std::string, SectionValuesPtr > DataType;
 
 extern SoundType cfg_soundFiles[10];
 
-void loadZSP();
+SoundType *loadZSP();
+
+#endif

@@ -38,12 +38,17 @@ struct __attribute__((packed)) WavHeader
 const char *device = "default";                        /* playback device */
 snd_output_t *output = NULL;
 Sound::Sound(SoundType *soundFiles)
-	: soundFiles(soundFiles), currFahrstufe(-1)
 {
 }
 
+int Sound::currFahrstufe=-1;
+SoundType *Sound::soundFiles=NULL;
+bool Sound::soundFilesLoaded=false;
 snd_pcm_t *Sound::handle=NULL;
 pthread_t Sound::thread=0;
+bool Sound::doRun=false;
+snd_pcm_format_t Sound::bits=SND_PCM_FORMAT_UNKNOWN;
+int Sound::sample_rate=0;
 
 void Sound::init()
 {
@@ -52,8 +57,6 @@ void Sound::init()
 		return;
 	}
 	int err;
-
-	this->loadSoundFiles();
 
 	if ((err = snd_pcm_open(&this->handle, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
 		printf("Playback open error: %s\n", snd_strerror(err));
@@ -77,20 +80,28 @@ Sound::~Sound() {
 	this->doRun=false;
 	void *ret;
 	pthread_join(this->thread,&ret);
+	this->thread=0;
 	if(this->handle) {
 		snd_pcm_close(this->handle);
+		this->handle=NULL;
 	}
+	printf("Sound::~Sound() done\n");
 }
 
-void Sound::loadSoundFiles() {
+void Sound::loadSoundFiles(SoundType *soundFiles) {
+	Sound::soundFiles=soundFiles;
+	if(Sound::soundFilesLoaded) {
+		return;
+	}
 	// std::string fileName=std::string("sound/DampfDieselZimoSounds/") + this->soundFiles[0].run;
 	for(int i=0; i < 10; i++) {
-		if(this->soundFiles[i].down != "") {
-			this->loadSoundFile(this->soundFiles[i].down, this->soundFiles[i].down);
-			this->loadSoundFile(this->soundFiles[i].up, this->soundFiles[i].up);
-			this->loadSoundFile(this->soundFiles[i].run, this->soundFiles[i].run);
+		if(Sound::soundFiles[i].down != "") {
+			Sound::loadSoundFile(Sound::soundFiles[i].down, Sound::soundFiles[i].down);
+			Sound::loadSoundFile(Sound::soundFiles[i].up, Sound::soundFiles[i].up);
+			Sound::loadSoundFile(Sound::soundFiles[i].run, Sound::soundFiles[i].run);
 		}
 	}
+	Sound::soundFilesLoaded=true;
 }
 
 void Sound::loadSoundFile(const std::string &fileName, std::string &dst) {
@@ -115,9 +126,9 @@ void Sound::loadSoundFile(const std::string &fileName, std::string &dst) {
 	dst.assign((char*) buffer,bufferSize);
 	free(buffer);
 	if(wavHeader.bits_per_sample == 8) {
-		this->bits=SND_PCM_FORMAT_U8;
+		Sound::bits=SND_PCM_FORMAT_U8;
 	}
-	this->sample_rate = wavHeader.sample_rate;
+	Sound::sample_rate = wavHeader.sample_rate;
 }
 
 static void *sound_thread_func(void *startupData)
@@ -169,6 +180,7 @@ void Sound::outloop() {
 }
 
 void Sound::run() {
+// FIXME: wenn thread rennt und doRun false is dann warten bis thread tot und neu starten
 	if(this->thread) {
 		printf("already started\n");
 		return;

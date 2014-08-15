@@ -1,5 +1,7 @@
-#include "zsp.h"
+#ifndef SOUND_H
+#define SOUND_H
 #include <alsa/asoundlib.h>
+#include "zsp.h"
 
 class Sound {
 public:
@@ -13,14 +15,17 @@ public:
 	void setFahrstufe(int fahrstufe) { this->currFahrstufe = fahrstufe; } ;
 	void addSound(const char soundfile);
 	void outloop();
-	void loadSoundFiles();
-	void loadSoundFile(const std::string &fileName, std::string &dst);
+	static void loadSoundFiles(SoundType *soundFiles);
+	static void loadSoundFile(const std::string &fileName, std::string &dst);
 private:
 	static pthread_t thread;
-	SoundType *soundFiles;
-	int currFahrstufe; // -1 aus, 0 stop
+	static bool doRun;
+	static SoundType *soundFiles;
+	static bool soundFilesLoaded;
 	static snd_pcm_t *handle;
-	snd_pcm_format_t bits;
-	int sample_rate;
-	bool doRun;
+	static snd_pcm_format_t bits;
+	static int sample_rate;
+	static int currFahrstufe; // -1 aus, 0 stop
 };
+
+#endif

@@ -49,6 +49,7 @@
 
 	#ifdef HAVE_ALSA
 		#include "zsp.h"
+		#include "sound.h"
 	#endif
 #endif
 
@@ -156,7 +157,8 @@ void initPlatine()
 	}
 	printf("... done\n");
 #ifdef HAVE_ALSA
-	loadZSP();
+	SoundType *soundFiles=loadZSP();
+	Sound::loadSoundFiles(soundFiles);
 #endif
 #endif
 }
