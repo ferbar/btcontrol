@@ -136,7 +136,7 @@ void sendCmd(const char *cmd) {
 }
 
 USBDigispark::USBDigispark(int devnr, bool debug) :
-	USBPlatine(debug), devHandle(NULL), dir(0) {
+	USBPlatine(debug), devHandle(NULL), dir(0), pwm(0) {
 
 	// Initialize the USB library
 	if(libusb_init(&context) < 0) {
@@ -269,9 +269,12 @@ void USBDigispark::init(int devnr) {
 
 void USBDigispark::setPWM(unsigned char pwm) {
 	// int result = 0;
-	char buffer[100];
-	snprintf(buffer, sizeof(buffer), "M%02x\n", pwm);
-	sendCmd(buffer);
+	if(this->pwm!=pwm) {
+		char buffer[100];
+		snprintf(buffer, sizeof(buffer), "M%02x\n", pwm);
+		sendCmd(buffer);
+		this->pwm=pwm;
+	}
 	/*
 	char *pos=buffer;
 	while(*pos != '\0') {
@@ -292,9 +295,12 @@ void USBDigispark::setPWM(unsigned char pwm) {
 
 void USBDigispark::setDir(unsigned char dir) {
 	// int result = 0;
-	char buffer[100];
-	snprintf(buffer, sizeof(buffer), "D%d\n", dir);
-	sendCmd(buffer);
+	if(this->dir!=dir) {
+		char buffer[100];
+		snprintf(buffer, sizeof(buffer), "D%d\n", dir);
+		sendCmd(buffer);
+		this->dir=dir;
+	}
 	/*
 	char *pos=buffer;
 	while(*pos != '\0') {

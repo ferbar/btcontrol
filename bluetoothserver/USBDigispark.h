@@ -22,5 +22,6 @@ private:
 
 
 	int dir;
+	int pwm;
 	char buffer[1024];
 };

@@ -554,7 +554,7 @@ continue;
 					// Umrechnen in PWM einheiten
 					// Velleman: K8055 const double motorStart=180; // bei dem Wert fangt der Motor an sich zu drehen
 					const double motorStart=70; // bei dem Wert fangt der Motor an sich zu drehen
-					const double fullSpeed=128;
+					const double fullSpeed=128; // DCC full speed
 					f_speed=f_speed*(fullSpeed-motorStart)/255+motorStart;
 				}
 
