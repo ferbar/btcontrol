@@ -61,7 +61,7 @@ Makefile.config:
 			echo "found" ;\
 			echo "LDFLAGS+=$$bluezlibs" >> Makefile.config	;\
 			echo "CFLAGS+=-DINCL_BT" >> Makefile.config	;\
-			echo "btserver: btserver.o;" >> Makefile.config   ;\
+			echo "btserver: btserver.o" >> Makefile.config   ;\
 		else						\
 			echo "not found - BT disabled"	;\
 		fi
@@ -74,7 +74,7 @@ Makefile.config:
 			echo "found" ;\
 			echo "LDFLAGS+=$$alsalibs" >> Makefile.config	;\
 			echo "CFLAGS+=-DHAVE_ALSA -std=gnu++11" >> Makefile.config	;\
-			echo "btserver: sound.o zsp.o;" >> Makefile.config   ;\
+			echo "btserver: sound.o zsp.o" >> Makefile.config   ;\
 		else						\
 			echo "not found - alsa sound disabled"	;\
 		fi
