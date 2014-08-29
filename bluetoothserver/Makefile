@@ -80,6 +80,14 @@ Makefile.config:
 		fi
 	@echo .
 	
+	@# 
+	@echo -e "checking raspi ACT led:"
+	@if [ -f "/sys/class/leds/led0/brightness" ] ; then \
+		echo "found" ;\
+		echo "CFLAGS+=-DHAVE_RASPI_ACT_LED" >> Makefile.config ; \
+	else						\
+		echo "not found - alsa sound disabled"	;\
+	fi
 
 btserver: fbtctl_message.o message_layout.o server.o clientthread.o lokdef.o main.o srcp.o utils.o
 	${CPP} ${LDFLAGS} $+ -o btserver
