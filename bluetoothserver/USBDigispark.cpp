@@ -27,6 +27,8 @@ int x,y;
 pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 char commBuffer[1024];
+pthread_mutex_t buffer_empty_mut = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t buffer_empty_cond = PTHREAD_COND_INITIALIZER;
 
 USBDigispark *usbDigispark;
 
@@ -36,11 +38,23 @@ float timediff(timespec &start, timespec &done) {
 }
 
 /**
+ * time now + zeit in ms
+ */
+void setMSTimeout(timespec &timeout, int ms) {
+	clock_gettime(CLOCK_REALTIME, &timeout);
+	timeout.tv_nsec += ms * 1000000;
+	timeout.tv_sec += timeout.tv_nsec/1000000000; // macht sonst exception
+	timeout.tv_nsec = timeout.tv_nsec%1000000000;
+}
+
+/**
  * ping thread
  */
 static void *startCommThread(void *data)
 {
 	printf("start comm thread\n");
+
+	bool forceRead=false;
 
 	try {
 	while(true) {
@@ -49,10 +63,7 @@ static void *startCommThread(void *data)
 		// printf("X try lock\n");
 		// pthread_mutex_lock(&mut);
 		// printf("X locked\n");
-		clock_gettime(CLOCK_REALTIME, &timeout);
-		timeout.tv_nsec += 100000000;
-		timeout.tv_sec += timeout.tv_nsec/1000000000; // macht sonst exception
-		timeout.tv_nsec = timeout.tv_nsec%1000000000;
+		setMSTimeout(timeout, 100);
 
 		clock_gettime(CLOCK_REALTIME, &start);
 		retcode = 0;
@@ -64,10 +75,12 @@ static void *startCommThread(void *data)
 			retcode = pthread_cond_timedwait(&cond, &mut, &timeout);
 		}
 		*/
+// FIXME: nach string senden IMMER einen leseversuch machen!
 		clock_gettime(CLOCK_REALTIME, &done);
 		// printf("X x:%d, y:%d, retcode=%s waittime=%g\n",x,y,strerror(retcode),timediff(start,done));
-		if(x <= y) {
+		if(x <= y || forceRead) {
 			retcode=ETIMEDOUT;
+			forceRead=false;
 		}
 		if (retcode == ETIMEDOUT) {
 			// printf("X timeout\n");
@@ -108,6 +121,12 @@ static void *startCommThread(void *data)
 				}
 				pos++;
 			}
+			pthread_mutex_lock(&buffer_empty_mut);
+			printf("X signal buffer_empty_cond\n");
+			pthread_cond_signal(&buffer_empty_cond);
+			pthread_mutex_unlock(&buffer_empty_mut);
+
+			forceRead=true;
 		}
 	}
 	} catch(const char *errormsg) {
@@ -135,7 +154,7 @@ void sendCmd(const char *cmd) {
 }
 
 USBDigispark::USBDigispark(int devnr, bool debug) :
-	USBPlatine(debug), devHandle(NULL), dir(0) {
+	USBPlatine(debug), devHandle(NULL), dir(0), pwm(0) {
 
 	// Initialize the USB library
 	if(libusb_init(&context) < 0) {
@@ -151,6 +170,7 @@ USBDigispark::USBDigispark(int devnr, bool debug) :
 }
 
 USBDigispark::~USBDigispark() {
+	this->fullstop();
 	this->release();
 }
 
@@ -268,9 +288,12 @@ void USBDigispark::init(int devnr) {
 
 void USBDigispark::setPWM(unsigned char pwm) {
 	// int result = 0;
-	char buffer[100];
-	snprintf(buffer, sizeof(buffer), "M%02x\n", pwm);
-	sendCmd(buffer);
+	if(this->pwm!=pwm) {
+		char buffer[100];
+		snprintf(buffer, sizeof(buffer), "M%02x\n", pwm);
+		sendCmd(buffer);
+		this->pwm=pwm;
+	}
 	/*
 	char *pos=buffer;
 	while(*pos != '\0') {
@@ -291,9 +314,12 @@ void USBDigispark::setPWM(unsigned char pwm) {
 
 void USBDigispark::setDir(unsigned char dir) {
 	// int result = 0;
-	char buffer[100];
-	snprintf(buffer, sizeof(buffer), "D%d\n", dir);
-	sendCmd(buffer);
+	if(this->dir!=dir) {
+		char buffer[100];
+		snprintf(buffer, sizeof(buffer), "D%d\n", dir);
+		sendCmd(buffer);
+		this->dir=dir;
+	}
 	/*
 	char *pos=buffer;
 	while(*pos != '\0') {
@@ -312,7 +338,21 @@ void USBDigispark::setDir(unsigned char dir) {
 }
 
 void USBDigispark::fullstop() {
+	printf("USBDigispark::fullstop()\n");
 	setPWM(0);
+	// 1s warten dass das command fertig is:
+	struct timespec timeout;
+	setMSTimeout(timeout, 1000);
+	pthread_mutex_lock(&buffer_empty_mut);
+	int retcode = pthread_cond_timedwait(&buffer_empty_cond, &buffer_empty_mut, &timeout);
+	printf("USBDigispark::fullstop() retcode=%s\n",strerror(retcode));
+	pthread_mutex_unlock(&buffer_empty_mut);
+
+	// nachdem wir nix reinschreiben wollen noch einem anderen eventuell wartenden thread signalisieren dass ma in buffer schreiben kann:
+	pthread_mutex_lock(&buffer_empty_mut);
+	pthread_cond_signal(&buffer_empty_cond);
+	pthread_mutex_unlock(&buffer_empty_mut);
+	printf("USBDigispark::fullstop() done\n");
 }
 
 const char *USBDigispark::readLine() {

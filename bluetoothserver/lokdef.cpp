@@ -32,7 +32,7 @@ lokdef_t *lokdef;
 /**
  * liefert den index
  * @return < 0 wenn lok nicht gefunden
- *
+ * @throws invalid address 
  */
 int getAddrIndex(int addr)
 {
@@ -43,7 +43,7 @@ int getAddrIndex(int addr)
 		}
 		i++;
 	}
-	return -1;
+	throw "invalid address";
 }
 
 #define CHECKVAL(_FMT, ...)	\
@@ -106,7 +106,7 @@ const char *getnext(const char **pos)
  */
 bool readLokdef()
 {
-#define LOKDEF_FILENAME "lokdef.csv"
+#define LOKDEF_FILENAME "conf/lokdef.csv"
 	std::string lokdefCsv = readFile(LOKDEF_FILENAME);
 	std::string line;
 	const char *buffer;
