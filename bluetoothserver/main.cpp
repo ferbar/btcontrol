@@ -158,7 +158,9 @@ void initPlatine()
 	printf("... done\n");
 #ifdef HAVE_ALSA
 	SoundType *soundFiles=loadZSP();
-	Sound::loadSoundFiles(soundFiles);
+	if(soundFiles) {
+		Sound::loadSoundFiles(soundFiles);
+	}
 #endif
 #endif
 }
