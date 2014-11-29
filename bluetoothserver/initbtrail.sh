@@ -18,6 +18,13 @@ if [ -f $CONFFILE ] ; then
 	. $CONFFILE
 fi
 
+if $HCICONFIG hci0 ; then
+	:
+else
+	echo "no hci0 bluetooth stick detected" >&2
+	exit 0
+fi
+
 if $SDPTOOL browse ff:ff:ff:00:00:00 | grep -q btrail ; then
 	echo "sdp service schon registriert"
 else
@@ -28,6 +35,7 @@ else
 		exit 1
 	fi
 fi
+
 
 # port 30 auf /dev... mappen
 # rfcomm -r listen /dev/rfcomm30 30
