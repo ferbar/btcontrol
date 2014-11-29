@@ -56,12 +56,17 @@ void Sound::init()
 		printf("sound already initialized\n");
 		return;
 	}
+	if(Sound::bits==SND_PCM_FORMAT_UNKNOWN) { // setParams crasht sonst
+		printf("Sound::init() sound format not set\n");
+		return;
+	}
 	int err;
 
 	if ((err = snd_pcm_open(&this->handle, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
 		printf("Playback open error: %s\n", snd_strerror(err));
 		exit(EXIT_FAILURE);
 	}
+	printf("Sound::init() handle=%p\n",this->handle);
 	if ((err = snd_pcm_set_params(this->handle,
 					this->bits,
 					SND_PCM_ACCESS_RW_INTERLEAVED,
@@ -89,6 +94,7 @@ Sound::~Sound() {
 }
 
 void Sound::loadSoundFiles(SoundType *soundFiles) {
+	assert(soundFiles);
 	Sound::soundFiles=soundFiles;
 	if(Sound::soundFilesLoaded) {
 		return;
@@ -180,11 +186,16 @@ void Sound::outloop() {
 }
 
 void Sound::run() {
+	if(!Sound::soundFiles) {
+		printf("===== no sound files loaded ====\n");
+		return;
+	}
 // FIXME: wenn thread rennt und doRun false is dann warten bis thread tot und neu starten
 	if(this->thread) {
 		printf("already started\n");
 		return;
 	}
+	printf("Sound::run() starting sound thread\n");
 	this->doRun=true;
 
 	/* Start a thread and then send it a cancellation request */
@@ -208,11 +219,13 @@ void Sound::kill() {
 }
 
 void Sound::setSpeed(int speed) {
-	for(int i=0; i < 10; i++) {
-		if(speed <= this->soundFiles[i].limit) {
-			this->currFahrstufe=i;
-			printf("set fahrstufe: %d\n", i);
-			return;
+	if(this->soundFiles) {
+		for(int i=0; i < 10; i++) {
+			if(speed <= this->soundFiles[i].limit) {
+				this->currFahrstufe=i;
+				printf("set fahrstufe: %d\n", i);
+				return;
+			}
 		}
 	}
 }
