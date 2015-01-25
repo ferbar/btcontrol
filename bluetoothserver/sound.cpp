@@ -87,6 +87,7 @@ Sound::~Sound() {
 	pthread_join(this->thread,&ret);
 	this->thread=0;
 	if(this->handle) {
+		snd_pcm_drain(this->handle); // darauf warten bis alles bis zum ende gespielt wurde
 		snd_pcm_close(this->handle);
 		this->handle=NULL;
 	}
@@ -215,6 +216,7 @@ void Sound::kill() {
 			perror("pthread_cancel");
 		void *ret;
 		pthread_join(this->thread, &ret);
+		this->thread=0;
 	}
 }
 
