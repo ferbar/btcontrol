@@ -74,6 +74,7 @@ bool processCmd() {
     DigiUSB.print("usberrors="); DigiUSB.println(usbError,DEC);
     return true;
   }
+  // invalid command:
   DigiUSB.print("EP="); DigiUSB.println(pos,DEC);
   return false;
 }
@@ -130,7 +131,7 @@ void loop() {
          }
        } else {
          DigiUSB.print("EO");
- 	 DigiUSB.println(pos,DEC);
+         DigiUSB.println(pos,DEC);
          pos=0;
        }
        digitalWrite(0, LOW);

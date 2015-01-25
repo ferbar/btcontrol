@@ -64,7 +64,10 @@ SoundType *loadZSP() {
 		soundsetPath=soundsetFile.substr(0,slash);
 	}
 	FILE *f=fopen(soundsetFile.c_str(), "r");
-	assert(f);
+	if(!f) {
+		fprintf(stderr,"error loading sound fileset [%s]\n", soundsetFile.c_str());
+		abort();
+	}
 	char buffer[1024];
 	std::string section="";
 	SectionValuesPtr sp;

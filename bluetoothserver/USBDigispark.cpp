@@ -24,6 +24,7 @@ static libusb_context* context = NULL;
 
 pthread_t commThread;
 int x,y;
+// statt dem da semaphore mit        semop, semtimedop - System V semaphore operations ??
 pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 char commBuffer[1024];
