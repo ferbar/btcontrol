@@ -2,6 +2,18 @@
 #include <core_timers.h>
 #include <ToneTimer.h>
 
+// 
+
+char line[20];
+unsigned int pos=0;
+// test - start pwm:
+int pwm=0;
+int pwm_hw=0;
+
+extern uchar usbDeviceAddr;
+void(*resetFunc)(void) = 0; // software reset
+int usbError=0;
+
 // the setup routine runs once when you press reset:
 void setup() {
   // 8kHz Prescaler
@@ -18,19 +30,13 @@ void setup() {
   analogWrite(1,10);
   DigiUSB.begin();
   digitalWrite(5, HIGH);
-  for(int i=0; i < 5 ; i++) { DigiUSB.refresh(); delay(100); }
-  digitalWrite(5, LOW);
-  for(int i=0; i < 5 ; i++) { DigiUSB.refresh(); delay(100); }
-  digitalWrite(5, HIGH);
-  for(int i=0; i < 5 ; i++) { DigiUSB.refresh(); delay(100); }
+// weniger delay, das usb macht ja ping  
+  for(int i=0; i < 10 ; i++) { DigiUSB.refresh(); delay(50); }
   digitalWrite(5, LOW);
   analogWrite(1,0);
+  // test:
+  // for(int i=0; i < 10 ; i++) { DigiUSB.refresh(); delay(50); }
 }
-
-char line[20];
-int pos=0;
-int pwm=0;
-int pwm_hw=0;
 
 int hex2val(char c) {
   if(c >= '0' && c <= '9') {
@@ -63,6 +69,10 @@ bool processCmd() {
       DigiUSB.println("d1");
       return true;      
     }
+  } else if(pos==2 && line[0]=='Q') { // query debug info:
+    DigiUSB.print("usb addr="); DigiUSB.println(usbDeviceAddr,DEC);
+    DigiUSB.print("usberrors="); DigiUSB.println(usbError,DEC);
+    return true;
   }
   DigiUSB.print("EP="); DigiUSB.println(pos,DEC);
   return false;
@@ -70,7 +80,21 @@ bool processCmd() {
 
 // the loop routine runs over and over again forever:
 void loop() {
-   DigiUSB.refresh();
+  DigiUSB.refresh();
+
+// usb nicht verbunden ?? -> reset
+  if(usbDeviceAddr==0) {
+    if(usbError>20) {
+      for(int i=0; i < 5 ; i++) { analogWrite(1,i*19); delay(50); }
+      for(int i=5; i > 0 ; i--) { analogWrite(1,i*19); delay(50); }
+      analogWrite(1,1);
+      resetFunc();
+    } else {
+      usbError++;
+      delay(10);
+    }
+  }
+// test:analogWrite(1,20);
    if(pwm_hw<pwm) {
      analogWrite(1,++pwm_hw);
      delay(10);
