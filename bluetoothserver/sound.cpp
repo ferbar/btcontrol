@@ -172,9 +172,10 @@ void Sound::outloop() {
 			printf("^");
 		}
 		frames = snd_pcm_writei(this->handle, wavData, len);
-		if (frames < 0)
+		if (frames < 0) { // 2* probieren:
 			frames = snd_pcm_recover(this->handle, frames, 0);
-		if (frames < 0) {
+		}
+		if (frames < 0) { // noch immer putt
 			printf("snd_pcm_writei failed: %s\n", snd_strerror(err));
 			break;
 		}
