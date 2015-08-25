@@ -6,6 +6,7 @@
 void setup() {
   // 8kHz Prescaler
   ToneTimer_ClockSelect(Timer0_Prescale_Value_8);
+  // auf 16kHz setzen, PWM 128 => immer ein
   // Timer0_SetWaveformGenerationMode(Timer0_Fast_PWM_FF);
   // TOP=>PWM0 value: OCRA=128=> 16kHz
   Timer0_SetWaveformGenerationMode(Timer0_Fast_PWM_OCR);
