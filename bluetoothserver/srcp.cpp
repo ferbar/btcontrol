@@ -35,7 +35,8 @@ bool SRCP::powered=false;
 SRCPReply::SRCPReply(const char *message)
 {
 	// printf("SRCP scan message: %s\n",message);
-	sscanf(message,"%lf %d %a[^\n]", &this->timestamp, &this->code, &this->message); 
+	// %m modifier: 'allocate' (alt %a)
+	sscanf(message,"%lf %d %m[^\n]", &this->timestamp, &this->code, &this->message); 
 	if(this->code >= 500)
 		this->type=SRCPReply::ERROR;
 	else if(this->code >= 400)
