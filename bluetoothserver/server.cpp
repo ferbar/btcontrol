@@ -128,7 +128,7 @@ int Server::accept()
 		int csock = ::accept(this->tcp_so, (struct sockaddr *)&addr2, &siz);
 		if(csock < 0) {
 			perror("so->accept error:");
-			throw std::string("so->accept error");
+			throw std::runtime_error("so->accept error");
 		}
 		printf("socket: %d\n",csock);
 		return csock;

@@ -45,7 +45,7 @@ std::string getSampleFilename(std::string number) {
 			}
 		}
 	}
-	throw "invalid number";
+	throw std::runtime_error("invalid number ("+number+")");
 }
 
 
@@ -55,8 +55,11 @@ SoundType *loadZSP() {
 	// map_data[7]["hello"] = 3.1415926;
 
 	printf("zimo sound projekt test\n");
-	const std::string soundsetFile=config.get("soundset");
-	if(soundsetFile == "") {
+	std::string soundsetFile;
+	try {
+		soundsetFile=config.get("soundset");
+	} catch (...) {
+		printf("no soundset configured ... disabling sound\n");
 		return NULL;
 	}
 	size_t slash=soundsetFile.find_last_of('/');

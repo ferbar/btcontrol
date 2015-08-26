@@ -25,6 +25,7 @@
 #include <pthread.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <stdexcept>
 
 /**
  *
@@ -41,7 +42,7 @@ K8055::K8055(int devnr, bool debug) :
 	int rc=k8055_open_device(devnr-1, &this->dev);
 	if(rc != K8055_SUCCESS) {
 		printf("----rc=%d\n",rc);
-		throw "error open dev";
+		throw std::runtime_error("error open dev (" + std::to_string(rc) + ")");
 	}
 }
 
@@ -50,8 +51,17 @@ K8055::~K8055() {
 	this->dev=NULL;
 }
 
-void K8055::setPWM(unsigned char pwm) {
-	this->pwm=pwm;
+void K8055::setPWM(int f_speed) {
+	// Umrechnen in PWM einheiten
+	// Velleman: K8055 
+	const double motorStart=180;
+	const double fullSpeed=128; // DCC full speed
+	// 255 = pwm max
+	unsigned char pwm = 0;
+	if(f_speed > 0) {
+		pwm = f_speed*(fullSpeed-motorStart)/255+motorStart;
+	}
+	this->pwm = pwm;
 }
 
 void K8055::setDir(unsigned char dir) {

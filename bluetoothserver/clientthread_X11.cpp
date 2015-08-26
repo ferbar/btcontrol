@@ -76,22 +76,22 @@ void ClientThreadX11::run()
 	while(1) {
 		// addr_index sollte immer gültig sin - sonst gibts an segv ....
 	
-		bool emergencyStop=false;
+		// bool emergencyStop=false;
 
 		int msgsize=0;
 		int rc;
 		this->readSelect(); // auf daten warten, macht exception wenn innerhalb vom timeout nix kommt
 		if((rc=read(this->so, &msgsize, 4)) != 4) {
-			throw std::string("error reading cmd: ") += rc; // + ")";
+			throw std::runtime_error("error reading cmd: " + rc);
 		}
 		// printf("%d:reading msg.size: %d bytes\n",this->clientID,msgsize);
 		if(msgsize < 0 || msgsize > 10000) {
-			throw std::string("invalid size msgsize 2big");
+			throw std::runtime_error("invalid size msgsize 2big");
 		}
 		char buffer[msgsize];
 		this->readSelect();
 		if((rc=read(this->so, buffer, msgsize)) != msgsize) {
-			throw std::string("error reading cmd.data: ") += rc; // + ")";
+			throw std::runtime_error("error reading cmd.data: " + rc);
 		}
 		InputReader in(buffer,msgsize);
 		// printf("%d:parsing msg\n",this->clientID);
@@ -103,7 +103,7 @@ void ClientThreadX11::run()
 		} else {
 			printf("%d/%d: msg %d=%s\n", this->clientID, this->msgNum, cmd.getType(), messageTypeName(cmd.getType()).c_str());
 		}
-		int nr=0; // für die conrad platine
+		// int nr=0; // für die conrad platine
 		/*
 		int size;
 		char buffer[256];
@@ -153,10 +153,10 @@ void ClientThreadX11::run()
 				int addr_index=getAddrIndex(addr);
 				int dir=cmd["dir"].getIntVal();
 				if(dir != 1 && dir != -1) {
-					throw "invalid dir";
+					throw std::runtime_error("invalid dir");
 				}
 				if(lokdef[addr_index].currspeed != 0) {
-					throw "speed != 0";
+					throw std::runtime_error("speed != 0");
 				}
 				lokdef[addr_index].currdir=dir;
 				sendStatusReply(lastStatus);
@@ -297,10 +297,12 @@ void ClientThreadX11::run()
 				reply["value"]=value;
 				sendMessage(reply);
 			} else if(cmd.isType("POM")) {
+				/*
 				int addr=cmd["addr"].getIntVal();
 				int addr_index=getAddrIndex(addr);
 				int cv=cmd["cv"].getIntVal();
 				int value=cmd["value"].getIntVal();
+				*/
 				FBTCtlMessage reply(messageTypeID("POM_REPLY"));
 				sendMessage(reply);
 			} else if(cmd.isType("GETIMAGE")) {
@@ -333,8 +335,8 @@ void ClientThreadX11::run()
 				sendMessage(reply);
 #endif
 			} else {
-				printf(ANSI_RED"%d/%d:----------------- invalid/unimplemented command (%d,%s)------------------------\n"ANSI_DEFAULT,
-				this->clientID,this->msgNum,cmd.getType(),messageTypeName(cmd.getType()).c_str());
+				printf(ANSI_RED "%d/%d:----------------- invalid/unimplemented command (%d,%s)------------------------\n" ANSI_DEFAULT,
+					this->clientID, this->msgNum, cmd.getType(), messageTypeName(cmd.getType()).c_str());
 			/*
 			if(memcmp(cmd,"invalid_key",10)==0) {
 				printf("%d:invalid key ! param1: %s\n",startupdata->clientID,param1);

@@ -15,6 +15,8 @@
 #include <errno.h>
 #include "USBDigispark.h"
 #include "utils.h"
+#include <stdexcept>
+#include <exception>
 
 bool useCommthread=true;
 
@@ -118,7 +120,7 @@ static void *startCommThread(void *data)
 				//printf("Writing character \"%c\" to DigiSpark.\n", input[i]);
 				if(result < 0) {
 					printf("X Error %i writing to USB device [%s]\n", result, buffer);
-					throw "error writing to usb device";
+					throw std::runtime_error("error writing to usb device");
 				}
 				pos++;
 			}
@@ -159,14 +161,15 @@ USBDigispark::USBDigispark(int devnr, bool debug) :
 
 	// Initialize the USB library
 	if(libusb_init(&context) < 0) {
-		throw "could not initialize libusb";
+		throw std::runtime_error("could not initialize libusb");
 	}
 
 	try {
 		this->init(devnr);
-	} catch (...) {
+	} catch (std::exception &e) {
+		// printf("USBDigispark::USBDigispark Exception: %s\n", e.what());
 		this->release();
-		throw;
+		throw ; // rethrow
 	}
 }
 
@@ -192,13 +195,15 @@ void USBDigispark::release() {
 
 void USBDigispark::init(int devnr) {
 
+	printf("USBDigispark::init(%d)\n",devnr);
+
 	// Enumerate the USB device tree
 
 	libusb_device **connected_devices = NULL;
 
 	ssize_t size = libusb_get_device_list(context, &connected_devices); /* get all devices on system */
 	if (size <= 0) {
-		throw "no usb devices found on system";
+		throw std::runtime_error("no usb devices found on system");
 	}
 
 	libusb_device *digiSpark = NULL; /* device on port */
@@ -231,26 +236,26 @@ void USBDigispark::init(int devnr) {
 	}
 	*/
 	if(digiSpark == NULL) {
-		throw "No Digispark Found";
+		throw std::runtime_error("No Digispark Found");
 	}
 	int r = libusb_open(digiSpark, &this->devHandle);
 	libusb_free_device_list(connected_devices, 1); /* we got the handle, free references to other devices */
 
 	if (r == LIBUSB_ERROR_ACCESS) {
-		throw "could not open device, you don't have the required permissions";
+		throw std::runtime_error("could not open device, you don't have the required permissions");
 	} else if (r != 0) {
-		throw "could not open device";
+		throw std::runtime_error("could not open device");
 	}
 
 	if (libusb_kernel_driver_active(this->devHandle, 0) == 1) { /* find out if kernel driver is attached */
 		if (libusb_detach_kernel_driver(this->devHandle, 0) != 0) { /* detach it */
-			throw "could not detach kernel driver";
+			throw std::runtime_error("could not detach kernel driver");
 		}
 	}
 
 	r = libusb_claim_interface(this->devHandle, 0); /* claim interface 0 (the first) of device */
 	if (r != 0) {
-		throw "could not claim interface";
+		throw std::runtime_error("could not claim interface");
 	}
 
 /*
@@ -271,6 +276,11 @@ void USBDigispark::init(int devnr) {
 	}
 	*/
 
+	std::string sMotorStart = config.get("digispark.motorStart");
+	printf("USBDigispark::init(%d) ---- motorStart %s\n",devnr,sMotorStart.c_str());
+
+	this->motorStart=std::stoi(sMotorStart);
+
 	if(useCommthread) {
 		usbDigispark=this;
 		void *startupData=NULL;
@@ -287,7 +297,14 @@ void USBDigispark::init(int devnr) {
 	this->setPWM(0);
 }
 
-void USBDigispark::setPWM(unsigned char pwm) {
+void USBDigispark::setPWM(int f_speed) {
+	// Umrechnen in PWM einheiten
+	const double fullSpeed=128; // digispark ist auf 128=max gesetzt, damit hamma 8kHz
+	// 255 = pwm max
+	unsigned char pwm = 0;
+	if(f_speed > 0) {
+		pwm = f_speed*(fullSpeed - this->motorStart)/255 + this->motorStart;
+	}
 	// int result = 0;
 	if(this->pwm!=pwm) {
 		char buffer[100];

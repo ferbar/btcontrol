@@ -43,13 +43,13 @@ int getAddrIndex(int addr)
 		}
 		i++;
 	}
-	throw "invalid address";
+	throw std::runtime_error("invalid address");
 }
 
 #define CHECKVAL(_FMT, ...)	\
 		if(!pos) {	\
 			fprintf(stderr,"%s:%d " _FMT " \n",LOKDEF_FILENAME,n+1, ## __VA_ARGS__);	\
-			throw(_FMT);	\
+			throw std::runtime_error(_FMT);	\
 		}
 
 

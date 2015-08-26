@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <boost/algorithm/string.hpp>
 #include "utils.h"
+#include <stdexcept>
 
 
 Config config("conf/btserver.conf");
@@ -30,5 +31,9 @@ Config::Config(const std::string confFilename) {
 }
 
 std::string Config::get(const std::string key) {
-	return this->data[key];
+	try {
+		return this->data.at(key);
+	} catch(std::out_of_range &e) {
+		throw std::out_of_range("key " + key + " not found");
+	}
 }
