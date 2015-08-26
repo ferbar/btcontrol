@@ -6,7 +6,8 @@ class USBPlatine {
 public:
 	USBPlatine(bool debug) {};
 	virtual ~USBPlatine() {};
-	virtual void setPWM(unsigned char pwm)=0;
+	/// @param f_speed 0...255
+	virtual void setPWM(int f_speed)=0;
 	virtual void setDir(unsigned char dir)=0;
 	virtual void commit()=0;
 	virtual void fullstop()=0;

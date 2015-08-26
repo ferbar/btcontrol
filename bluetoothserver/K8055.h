@@ -6,7 +6,8 @@ public:
 	K8055(int devnr, bool debug);
 	~K8055();
 
-	virtual void setPWM(unsigned char pwm);
+	/// @param f_speed 0...255
+	virtual void setPWM(int f_speed);
 	virtual void setDir(unsigned char dir);
 	virtual void commit();
 	virtual void fullstop();
