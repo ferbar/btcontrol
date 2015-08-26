@@ -21,17 +21,17 @@ fi
 if $HCICONFIG hci0 ; then
 	:
 else
-	echo "no hci0 bluetooth stick detected" >&2
+	echo "[error] no hci0 bluetooth stick detected" >&2
 	exit 0
 fi
 
 if $SDPTOOL browse ff:ff:ff:00:00:00 | grep -q btrail ; then
-	echo "sdp service schon registriert"
+	echo "[ok] sdp service schon registriert"
 else
 	if $SDPTOOL add --channel=30 SP && $SDPTOOL setattr 0x10005 0x100 "btrail" ; then
-		echo "sdp registered"
+		echo "[ok] sdp registered"
 	else
-		echo "error registering SDP" >&2
+		echo "[error] error registering SDP" >&2
 		exit 1
 	fi
 fi
@@ -57,9 +57,13 @@ sleep 1
 $HCICONFIG | grep ISCAN -q
 rc=$?
 if [ $rc != 0 ]; then
-	echo "bluetooth ISCAN nicht eingeschalten!" > /dev/stderr
-	$HCICONFIG hci0 piscan
+	echo "bluetooth ISCAN noch nicht eingeschalten"
+	if $HCICONFIG hci0 piscan ; then
+		echo "[ok] ... eingeschalten"
+	else
+		echo "[error] '$HCICONFIG hci0 piscan'" >&2
+	fi
 # dbus-send --system --type=method_call --print-reply --dest=org.bluez /org/bluez/hci0 org.bluez.Adapter.SetMode string:discoverable
 else
-	echo "ISCAN eingeschalten"
+	echo "[ok] ISCAN eingeschalten"
 fi

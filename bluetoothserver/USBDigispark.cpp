@@ -59,6 +59,16 @@ static void *startCommThread(void *data)
 
 	bool forceRead=false;
 
+	// raspi - ping:
+	FILE *fRaspiLed = fopen("/sys/class/leds/led0/brightness", "w");
+	if(fRaspiLed) {
+		printf("can write to Raspberry ACT led1\n");
+	} else {
+		printf("error opening raspi ACT led (%s)\n",strerror(errno));
+	}
+	unsigned char raspiLedToggle=0;
+
+
 	try {
 	while(true) {
 		struct timespec timeout,start,done;
@@ -72,6 +82,11 @@ static void *startCommThread(void *data)
 		retcode = 0;
 		usleep(100000);
 		printf("S "); fflush(stdout);
+		if(fRaspiLed) {
+			if(raspiLedToggle & 0x10)
+				fwrite(raspiLedToggle & 0x20 ? "1\n" : "0\n", 1, 2, fRaspiLed); fflush(fRaspiLed);
+			raspiLedToggle++;
+		}
 		/*
 		while (x <= y && retcode == 0) {
 			// printf("X cond_timedwait %d %d timeout:%ld\n", x, y, timeout.tv_nsec);
@@ -123,6 +138,12 @@ static void *startCommThread(void *data)
 					throw std::runtime_error("error writing to usb device");
 				}
 				pos++;
+
+				if(fRaspiLed) {
+					if(raspiLedToggle & 0x1)
+						fwrite(raspiLedToggle & 0x2 ? "1\n" : "0\n", 1, 2, fRaspiLed); fflush(fRaspiLed);
+					raspiLedToggle++;
+				}
 			}
 			pthread_mutex_lock(&buffer_empty_mut);
 			printf("X signal buffer_empty_cond\n");
