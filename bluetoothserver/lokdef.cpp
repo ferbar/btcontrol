@@ -26,6 +26,7 @@
 #include <ctype.h>
 #include "lokdef.h"
 #include "utils.h"
+#include <stdexcept>
 
 lokdef_t *lokdef; 
 

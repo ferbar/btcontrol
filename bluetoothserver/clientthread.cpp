@@ -29,6 +29,7 @@
 #include "lokdef.h"
 #include "srcp.h"
 #include "USBPlatine.h"
+#include <stdexcept>
 
 // für setsockopt
 #include <sys/types.h>

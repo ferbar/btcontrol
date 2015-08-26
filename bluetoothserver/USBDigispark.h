@@ -26,5 +26,5 @@ private:
 	int pwm;
 	char buffer[1024];
 
-	int motorStart=70;
+	int motorStart;
 };

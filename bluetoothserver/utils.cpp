@@ -37,3 +37,12 @@ std::string Config::get(const std::string key) {
 		throw std::out_of_range("key " + key + " not found");
 	}
 }
+
+int utils::stoi(const std::string &in)	{
+	char *endptr;
+	int ret=strtol(in.c_str(), &endptr, 0);
+	if(endptr != in.c_str() + in.length()) {
+		throw std::runtime_error("error converting number");
+	}
+	return ret;
+}

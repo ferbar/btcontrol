@@ -26,6 +26,8 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <stdexcept>
+#include <string>
+#include "utils.h"
 
 /**
  *
@@ -42,7 +44,7 @@ K8055::K8055(int devnr, bool debug) :
 	int rc=k8055_open_device(devnr-1, &this->dev);
 	if(rc != K8055_SUCCESS) {
 		printf("----rc=%d\n",rc);
-		throw std::runtime_error("error open dev (" + std::to_string(rc) + ")");
+		throw std::runtime_error("error open dev (" + utils::to_string(rc) + ")");
 	}
 }
 

@@ -178,7 +178,7 @@ void sendCmd(const char *cmd) {
 }
 
 USBDigispark::USBDigispark(int devnr, bool debug) :
-	USBPlatine(debug), devHandle(NULL), dir(0), pwm(0) {
+	USBPlatine(debug), devHandle(NULL), dir(0), pwm(0), motorStart(70) {
 
 	// Initialize the USB library
 	if(libusb_init(&context) < 0) {
@@ -300,7 +300,7 @@ void USBDigispark::init(int devnr) {
 	std::string sMotorStart = config.get("digispark.motorStart");
 	printf("USBDigispark::init(%d) ---- motorStart %s\n",devnr,sMotorStart.c_str());
 
-	this->motorStart=std::stoi(sMotorStart);
+	this->motorStart=utils::stoi(sMotorStart);
 
 	if(useCommthread) {
 		usbDigispark=this;

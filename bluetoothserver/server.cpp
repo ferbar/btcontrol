@@ -45,6 +45,8 @@
 #include "clientthread_X11.h"
 #endif
 
+#include <stdexcept>
+
 bool Server::isrunning=false;
 bool Server::exit=false;
 std::map <int,pthread_t> Server::clients;
