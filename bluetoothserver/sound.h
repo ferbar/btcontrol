@@ -17,15 +17,19 @@ public:
 	void outloop();
 	static void loadSoundFiles(SoundType *soundFiles);
 	static void loadSoundFile(const std::string &fileName, std::string &dst);
+	static void loadWavFile(std::string filename, std::string &out);
+
 private:
 	static pthread_t thread;
 	static bool doRun;
 	static SoundType *soundFiles;
 	static bool soundFilesLoaded;
 	static snd_pcm_t *handle;
+	static int currFahrstufe; // -1 aus, 0 stop
+
+	// die wav files solten alle im selben format sein ...
 	static snd_pcm_format_t bits;
 	static int sample_rate;
-	static int currFahrstufe; // -1 aus, 0 stop
 };
 
 #endif

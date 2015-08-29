@@ -112,6 +112,8 @@ void Sound::loadSoundFiles(SoundType *soundFiles) {
 }
 
 void Sound::loadSoundFile(const std::string &fileName, std::string &dst) {
+	Sound::loadWavFile(fileName, dst);
+	return; /*
 	WavHeader wavHeader;
 	FILE *f=fopen(fileName.c_str(),"r");
 	if(!f) {
@@ -136,6 +138,127 @@ void Sound::loadSoundFile(const std::string &fileName, std::string &dst) {
 		Sound::bits=SND_PCM_FORMAT_U8;
 	}
 	Sound::sample_rate = wavHeader.sample_rate;
+	*/
+}
+enum class WavChunks {
+	RiffHeader = 0x46464952, // RIFF
+	WavRiff = 0x54651475,    // WAVE
+	Format = 0x020746d66,    // fmt%10
+	LabeledText = 0x478747C6,
+	Instrumentation = 0x478747C6,
+	Sample = 0x6C706D73,
+	Fact = 0x47361666,
+	Data = 0x61746164,
+	Junk = 0x4b4e554a,
+};
+
+enum class WavFormat {
+	PulseCodeModulation = 0x01,
+	IEEEFloatingPoint = 0x03,
+	ALaw = 0x06,
+	MuLaw = 0x07,
+	IMAADPCM = 0x11,
+	YamahaITUG723ADPCM = 0x16,
+	GSM610 = 0x31,
+	ITUG721ADPCM = 0x40,
+	MPEG = 0x50,
+	Extensible = 0xFFFE
+};
+
+class Reader {
+public:
+	Reader(const std::string fileName) {
+		this->f=fopen(fileName.c_str(),"r");
+		if(!this->f) {
+			throw std::runtime_error("error opening " + fileName);
+		}
+		
+	};
+	~Reader() {
+		fclose(this->f);
+	}
+	int32_t ReadInt32() {
+		int32_t ret;
+		fread(&ret,1,sizeof(ret),this->f);
+		return ret;
+	}
+	int16_t ReadInt16( ) {
+		int16_t ret;
+		fread(&ret,1,sizeof(ret),this->f);
+		return ret;
+	}
+
+	int ReadData(int len, std::string &dst) {
+		unsigned char *buffer;
+		buffer=(unsigned char *) malloc(len);
+		if(fread(buffer,1,len,f) != len) {
+			throw std::runtime_error("error reading file data");
+		}
+		dst.assign((char*) buffer, len);
+		free(buffer);
+		return len;
+	}
+
+	// void Seek(int skipsize, SeekOrigin::Current ) {
+	//  SEEK_SET, SEEK_CUR, or SEEK_END
+	void Seek(int skipsize, int a ) {
+		abort(); // not yet implemented
+	}
+private:
+	FILE *f;
+};
+
+void Sound::loadWavFile(std::string filename, std::string &out) {
+	printf("read file: %s\n", filename.c_str());
+	Reader reader(filename);
+	int channels=-1;
+	int32_t samplerate=-1;
+	int bytespersecond=-1;
+	int32_t memsize = -1;
+	int32_t riffstyle = -1;
+	int32_t datasize = -1;
+	int16_t bitdepth = -1;
+	WavFormat wavFormat = (WavFormat) -1;
+	while ( datasize < 0 ) {
+		int32_t chunkid = reader.ReadInt32( );
+		switch ( (WavChunks)chunkid ) {
+			case WavChunks::Format: {
+				int32_t formatsize = reader.ReadInt32( );
+				wavFormat = (WavFormat)reader.ReadInt16( );
+				// int16_t channels = (Channels)reader.ReadInt16( );
+				channels = reader.ReadInt16( );
+				samplerate = reader.ReadInt32( );
+				bytespersecond = reader.ReadInt32( );
+				int16_t formatblockalign = reader.ReadInt16( );
+				bitdepth = reader.ReadInt16( );
+				printf("formatsize=%d\n",formatsize);
+				if ( formatsize == 18 ) {
+					int32_t extradata = reader.ReadInt16( );
+					printf("seek skipsize=%d\n",extradata);
+					reader.Seek( extradata, SEEK_CUR );
+				}
+				break; }
+			case WavChunks::RiffHeader: {
+				// headerid = chunkid;
+				memsize = reader.ReadInt32( );
+				riffstyle = reader.ReadInt32( );
+				break; }
+			case WavChunks::Data: {
+				datasize = reader.ReadInt32( );
+				break; }
+			default: {
+				int32_t skipsize = reader.ReadInt32( );
+				printf("seek skipsize=%d\n",skipsize);
+				reader.Seek( skipsize, SEEK_CUR );
+				break; }
+		}
+	}
+	printf("wav file: size=%d, bitdepth=%d, bytespersecond=%d, samplerate=%d channels=%d wavFormat=%d\n", datasize, bitdepth, bytespersecond, samplerate, channels, wavFormat);
+	if(bitdepth == 8) {
+		Sound::bits=SND_PCM_FORMAT_U8;
+	}
+	Sound::sample_rate = samplerate;
+	reader.ReadData(datasize, out);
 }
 
 static void *sound_thread_func(void *startupData)
