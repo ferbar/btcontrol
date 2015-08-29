@@ -67,7 +67,7 @@ Makefile.config:
 		fi
 	@echo .
 	
-	@# -std=c++11 für zsp.cpp
+	@# -std=c++11 für zsp.cpp,  -std=gnu++0x für gcc <= 6.3
 	@echo -e "checking alsa:"
 	@alsalibs=$$(pkg-config --libs alsa) ;\
 		if [ $$? = 0 ] ; then \
