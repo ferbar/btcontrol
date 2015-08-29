@@ -110,7 +110,7 @@ int Server::accept()
 #endif
 	FD_SET(this->tcp_so,&fd);
 	int rc=select(FD_SETSIZE, &fd, NULL, NULL, NULL);
-	printf("-----select rc=%d errno:%s\n",rc,strerror(errno));
+	printf("Server::accept - select rc=%d errno:%s\n",rc,strerror(errno));
 	if( rc == -1 ) {
 		perror("select/accept error");
 		return -1;
@@ -181,7 +181,7 @@ static void *phoneClient(void *data)
 		}
 	} catch(const char *e) {
 		printf("%d:exception %s\n",startupData->clientID,e);
-	} catch(std::runtime_error &e) {
+	} catch(std::exception &e) {
 		printf("%d:exception %s\n",startupData->clientID,e.what());
 	} catch (abi::__forced_unwind&) { // http://gcc.gnu.org/bugzilla/show_bug.cgi?id=28145
 		printf("%d: forced unwind exception\n",startupData->clientID);
