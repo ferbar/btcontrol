@@ -589,8 +589,8 @@ continue;
 	printf("%d:client exit\n",this->clientID);
 	} catch(const char *e) {
 		printf(ANSI_RED "%d:exception %s\n" ANSI_DEFAULT, this->clientID,e);
-	} catch(std::string &s) {
-		printf(ANSI_RED "%d:exception %s\n" ANSI_DEFAULT, this->clientID,s.c_str());
+	} catch(std::runtime_error &e) {
+		printf(ANSI_RED "%d:exception %s\n" ANSI_DEFAULT, this->clientID,e.what());
 	}
 }
 

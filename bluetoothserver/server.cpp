@@ -181,8 +181,8 @@ static void *phoneClient(void *data)
 		}
 	} catch(const char *e) {
 		printf("%d:exception %s\n",startupData->clientID,e);
-	} catch(std::string &s) {
-		printf("%d:exception %s\n",startupData->clientID,s.c_str());
+	} catch(std::runtime_error &e) {
+		printf("%d:exception %s\n",startupData->clientID,e.what());
 	} catch (abi::__forced_unwind&) { // http://gcc.gnu.org/bugzilla/show_bug.cgi?id=28145
 		printf("%d: forced unwind exception\n",startupData->clientID);
 		// copy &paste:

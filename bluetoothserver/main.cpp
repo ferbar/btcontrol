@@ -289,8 +289,8 @@ int main(int argc, char *argv[])
 	} catch(const char *e) {
 		printf("exception %s\n",e);
 		exit(1);
-	} catch(std::string &s) {
-		printf("exception %s\n",s.c_str());
+	} catch(std::runtime_error &e) {
+		printf("exception %s\n",e.what());
 	}
 
 	if( ! readLokdef() ) {
@@ -337,8 +337,8 @@ int main(int argc, char *argv[])
 	Server server;
 	try {
 		server.run();
-	} catch(std::string &s) {
-		printf("exception: %s\n", s.c_str());
+	} catch(std::runtime_error &e) {
+		printf("exception: %s\n", e.what());
 	}
 
 	server.waitExit();

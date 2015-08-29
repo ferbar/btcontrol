@@ -153,8 +153,8 @@ static void *startCommThread(void *data)
 			forceRead=true;
 		}
 	}
-	} catch(const char *errormsg) {
-		printf("X exception %s\n", errormsg);
+	} catch(std::runtime_error &e) {
+		printf("X exception %s\n", e.what());
 		abort();
 	}
 }
