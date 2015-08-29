@@ -12,6 +12,7 @@
 #include "sound.h"
 #include <errno.h>
 #include <string.h>
+#include <stdexcept>
 
 
 // typedef
