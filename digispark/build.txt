@@ -7,3 +7,11 @@ vorsicht: in irgendeinem debian paket [war nach bluetooth setup da] ist ein modu
 radio-ma901
 
 
+damit der digispark schneller bootet:
+https://github.com/micronucleus/micronucleus/tree/v1.11
+micronucleus-1.11-entry-jumper-pb0-upgrade.hex
+
+wenn neu programmiert werden soll dann ein R zwischen P0 und masse, prog starten, und digispark anstecken
+
+wemma den bootloader hin macht dürfst auch kein drama sein über ISP einen neuen raufladen: (sofern ein arduino vorhanden ist)
+http://www.frag-duino.de/index.php/maker-faq/37-atmel-attiny-85-mit-arduino-arduinoisp-flashen-und-programmieren
