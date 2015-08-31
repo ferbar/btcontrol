@@ -1,5 +1,8 @@
 
 soundset=sound/DampfDieselZimoSounds/DA_DI_R_EU_Coll1.zpr
+# soundset=sound/oebb1099/oebb1099.zpr
+# sound.horn=sound/oebb1099/Hupe_kurz.wav
+# sound.abfahrt=sound/oebb1099/ansprache.wav
 
 #lautstärke
 cvxy=xy
