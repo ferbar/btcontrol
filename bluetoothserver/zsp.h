@@ -38,6 +38,11 @@ typedef std::multimap<std::string, SectionValuesPtr > DataType;
 
 extern SoundType cfg_soundFiles[10];
 
+#define CFG_FUNC_SOUND_ABFAHRT 0
+#define CFG_FUNC_SOUND_HORN 1
+
+extern std::string cfg_funcSound[2];
+
 SoundType *loadZSP();
 
 #endif

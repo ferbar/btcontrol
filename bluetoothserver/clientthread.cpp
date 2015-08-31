@@ -156,7 +156,7 @@ void ClientThread::run()
 
 	try {
 #ifdef HAVE_ALSA
-	Sound sound(cfg_soundFiles);
+	FahrSound sound(cfg_soundFiles);
 	if(platine) {
 		sound.init();
 		sound.run();
@@ -568,7 +568,17 @@ continue;
 				sound.setSpeed(a_speed);
 				if(lokdef[addr_index].func[1].ison) {
 					lokdef[addr_index].func[1].ison=false;
-					system("aplay /home/pi/taurus.wav&");
+					Sound horn;
+					horn.init();
+					horn.setBlocking(false);
+					horn.playSingleSound(CFG_FUNC_SOUND_HORN);
+				}
+				if(lokdef[addr_index].func[2].ison) {
+					lokdef[addr_index].func[2].ison=false;
+					Sound horn;
+					horn.init();
+					horn.setBlocking(false);
+					horn.playSingleSound(CFG_FUNC_SOUND_ABFAHRT);
 				}
 #endif
 			}

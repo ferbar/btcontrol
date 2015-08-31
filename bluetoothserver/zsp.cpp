@@ -17,11 +17,17 @@
 #include "utils.h"
 
 SoundType cfg_soundFiles[10];
+std::string cfg_funcSound[2];
 
 DataType data;
 
 std::string soundsetPath;
 
+/**
+ * sucht nach dem dateinamen für sample NUMBER=1234
+ * @param number
+ * @return filename
+ */
 std::string getSampleFilename(std::string number) {
 	// printf(" ---- %s \n",number.c_str());
 	for(DataType::iterator it = data.find("Sample"); it!=data.end(); it++) {
@@ -36,11 +42,11 @@ std::string getSampleFilename(std::string number) {
 				// sp->dump();
 				spIt = sp->data.find("PFAD");
 				std::string pfad=boost::algorithm::unquote(spIt->second,'"','\b');
-				printf(" %s/", pfad.c_str());
+				// printf(" %s/", pfad.c_str());
 				spIt = sp->data.find("NAME");
 				std::string name=boost::algorithm::unquote(spIt->second,'"','\b');
-				printf(" %s\n", name.c_str());
-				printf(" ----------------- /sample -------------- %s %s\n",pfad.c_str(),name.c_str());
+				// printf(" %s\n", name.c_str());
+				printf("getSampleFilename(%s) = '%s/%s'\n",number.c_str(), pfad.c_str(),name.c_str());
 				return soundsetPath+"/"+boost::replace_all_copy(pfad, "\\", "/") + name;
 			}
 		}
@@ -123,12 +129,25 @@ SoundType *loadZSP() {
 	}
 	DataType::iterator it = data.find("DiSet");
 	if(it!=data.end()) {
+		printf("searching SCHWELLE, SAMPLE @ DiSet\n");
 		it->second->dump();
 	}
 	for(int i=0; i < 10; i++) {
-		printf("%d ",i);
+		printf("searching Sounds Fahrstufe %d ",i);
 		cfg_soundFiles[i].dump();
 	}
+
+	printf("searching Function sounds\n");
+	std::pair <DataType::iterator , DataType::iterator > range = data.equal_range("Func");
+	for(DataType::iterator it = range.first; it!=range.second; ++it) {
+		printf("############### [%s]\n",it->first.c_str());
+		it->second->dump();
+		SectionType::iterator secIt = it->second->data.find("SAMPLE");
+		printf("  SAMPLE=%s\n",secIt->second.c_str());
+		std::string fileName=getSampleFilename(secIt->second);
+		printf("  filename=%s\n", fileName.c_str());
+	}
+
 	/*
 	Sound s(cfg_soundFiles);
 	s.init();
@@ -145,9 +164,48 @@ SoundType *loadZSP() {
 	s.setFahrstufe(-1);
 	sleep(15);
 	*/
+
+	/*
+	die Func sounds sind bei jedem Soundset bei einer anderen Fx Taste, daher verwenden wirs nicht
+	"Func"
+		"LOK",32
+		"NUMMER",2
+		"SAMPLE",16
+		"LAUTST",0
+		"LOOP",0
+		"SHORT",0
+	"/Func"
+	"Sample"
+		"NUMMER",16
+		"PFAD",""
+		"NAME","Hupe_kurz.wav"
+		"ART",12
+		"SIZE",18128
+		"L1",0
+		"L2",18127
+		"SR",2
+		"INFO","Pfeife kurz"
+		"LOOP",0
+		"SHORT",0
+		"FNR",34
+	"/Sample"
+	*/
+	try {
+		cfg_funcSound[CFG_FUNC_SOUND_HORN] = config.get("sound.horn");
+	} catch(std::exception &e) {
+		printf("unable to get config/sound.horn\n");
+	}
+	try {
+		cfg_funcSound[CFG_FUNC_SOUND_ABFAHRT] = config.get("sound.abfahrt");
+	} catch(std::exception &e) {
+		printf("unable to get config/sound.abfahrt\n");
+	}
 	return cfg_soundFiles;
 }
 
+/**
+ * FIXME: das tut globale variablen setzen!!!!!!
+ */
 void SectionValues::dump() {
 		for(SectionType::const_iterator it=data.begin(); it!=data.end(); it++) {
 			printf(" -- '%s' '%s'\n", it->first.c_str(), it->second.c_str());
@@ -170,7 +228,7 @@ void SectionValues::dump() {
 				int fahrstufe=atol(it->second.substr(0,komma).c_str());
 				size_t komma2=it->second.find_first_of(',',komma+1);
 				cfg_soundFiles[fahrstufe].limit=atol(it->second.substr(komma+1,komma2).c_str());
-				printf("schwelle: %d\n", cfg_soundFiles[fahrstufe].limit);
+				printf("SCHWELLE: %d\n", cfg_soundFiles[fahrstufe].limit);
 			}
 		}
 	}
