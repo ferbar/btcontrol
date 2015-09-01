@@ -180,11 +180,13 @@ static void *phoneClient(void *data)
 			client.run();
 		}
 	} catch(const char *e) {
-		printf("%d:exception %s\n",startupData->clientID,e);
+		printf(ANSI_RED "%d: exception %s - client thread killed\n" ANSI_DEFAULT, startupData->clientID,e);
+	} catch(std::RuntimeExceptionWithBacktrace &e) {
+		printf(ANSI_RED "%d: Runtime Exception %s - client thread killed\n" ANSI_DEFAULT, startupData->clientID,e.what());
 	} catch(std::exception &e) {
-		printf("%d:exception %s\n",startupData->clientID,e.what());
+		printf(ANSI_RED "%d: exception %s - client thread killed\n" ANSI_DEFAULT, startupData->clientID,e.what());
 	} catch (abi::__forced_unwind&) { // http://gcc.gnu.org/bugzilla/show_bug.cgi?id=28145
-		printf("%d: forced unwind exception\n",startupData->clientID);
+		printf(ANSI_RED "%d: forced unwind exception - client thread killed\n" ANSI_DEFAULT, startupData->clientID);
 		// copy &paste:
 		// printf("%d:client exit\n",startupData->clientID);
 		// pthread_cleanup_pop(true);

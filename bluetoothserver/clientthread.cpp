@@ -154,7 +154,6 @@ void ClientThread::run()
 {
 	// startupdata_t *startupdata=(startupdata_t *)data;
 
-	try {
 #ifdef HAVE_ALSA
 	FahrSound sound(cfg_soundFiles);
 	if(platine) {
@@ -597,11 +596,6 @@ continue;
 		msgNum++;
 	}
 	printf("%d:client exit\n",this->clientID);
-	} catch(const char *e) {
-		printf(ANSI_RED "%d:exception %s\n" ANSI_DEFAULT, this->clientID,e);
-	} catch(std::exception &e) {
-		printf(ANSI_RED "%d:exception %s\n" ANSI_DEFAULT, this->clientID,e.what());
-	}
 }
 
 

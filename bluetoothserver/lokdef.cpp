@@ -44,7 +44,7 @@ int getAddrIndex(int addr)
 		}
 		i++;
 	}
-	throw std::runtime_error("invalid address");
+	throw std::runtime_error("getAddrIndex: invalid address " + utils::to_string(addr));
 }
 
 #define CHECKVAL(_FMT, ...)	\

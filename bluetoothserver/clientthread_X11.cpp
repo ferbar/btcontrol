@@ -52,7 +52,6 @@ void ClientThreadX11::run()
 {
 	// startupdata_t *startupdata=(startupdata_t *)data;
 
-	try {
 	printf("%d:socket accepted sending welcome msg\n",this->clientID);
 	FBTCtlMessage heloReply(messageTypeID("HELO"));
 	heloReply["name"]="my bt server";
@@ -393,11 +392,6 @@ void ClientThreadX11::run()
 
 	}
 	printf("%d:client exit\n",this->clientID);
-	} catch(const char *e) {
-		printf(ANSI_RED "%d:exception %s\n" ANSI_DEFAULT, this->clientID,e);
-	} catch(std::runtime_error &e) {
-		printf(ANSI_RED "%d:exception %s\n" ANSI_DEFAULT, this->clientID,e.what());
-	}
 }
 
 /**

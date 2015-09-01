@@ -6,7 +6,7 @@
 class Sound {
 public:
 	Sound() : handle(NULL) {} ;
-	~Sound();
+	virtual ~Sound();
 	void init();
 	void close();
 
@@ -32,7 +32,7 @@ class FahrSound : public Sound {
 public:
 	// Sound(SoundSet soundSet);
 	FahrSound(SoundType *soundFiles) { };
-	~FahrSound();
+	virtual ~FahrSound();
 	void run();
 	void kill();
 	void setSpeed(int speed);

@@ -84,6 +84,7 @@ Sound::~Sound() {
 }
 
 void Sound::close() {
+	printf("Sound::close()\n");
 	if(this->handle) {
 		snd_pcm_drain(this->handle); // darauf warten bis alles bis zum ende gespielt wurde
 		snd_pcm_close(this->handle);
@@ -98,7 +99,6 @@ FahrSound::~FahrSound() {
 	void *ret;
 	pthread_join(this->thread,&ret);
 	this->thread=0;
-	this->close();
 	printf("FahrSound::~FahrSound() done\n");
 }
 
