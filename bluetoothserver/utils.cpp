@@ -85,9 +85,15 @@ int utils::stoi(const std::string &in)	{
 	if(in == NOT_SET) {
 		throw std::runtime_error("NOT SET");
 	}
+#if __cplusplus > 199711L
 	size_t end=0;
 	int ret=std::stoi(in, &end, 0);
 	if(end != in.length()) {
+#else
+	char *endp=NULL;
+	int ret=::strtol(in.c_str(), &endp, 0);
+	if(endp != NULL) {
+#endif
 		throw std::runtime_error("error converting number");
 	}
 	return ret;
@@ -299,9 +305,21 @@ int utils::getThreadMessageID() {
 // c++11 magick
 std::string utils::trim(const std::string &s)
 {
-   auto wsfront=std::find_if_not(s.begin(),s.end(),[](int c){return std::isspace(c);});
-   auto wsback=std::find_if_not(s.rbegin(),s.rend(),[](int c){return std::isspace(c);}).base();
-   return (wsback<=wsfront ? std::string() : std::string(wsfront,wsback));
+// BOOST_NO_CXX11_AUTO_DECLARATIONS
+#if __cplusplus > 199711L
+	auto wsfront=std::find_if_not(s.begin(),s.end(),[](int c){return std::isspace(c);});
+	auto wsback=std::find_if_not(s.rbegin(),s.rend(),[](int c){return std::isspace(c);}).base();
+	return (wsback<=wsfront ? std::string() : std::string(wsfront,wsback));
+#else
+	size_t endpos = s.find_last_not_of(" \t");
+	size_t startpos = s.find_first_not_of(" \t");
+	std::string ret=s;
+	if( std::string::npos != endpos ) {
+		ret = s.substr( 0, endpos+1 );
+		ret = ret.substr( startpos );
+	}
+	return ret;
+#endif
 }
 
 void utils::Log::printf(const char *tag, int level, const char *file, int line, const char *fmt, ...) {
