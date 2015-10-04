@@ -92,7 +92,7 @@ Makefile.config:
 btserver: fbtctl_message.o message_layout.o server.o clientthread.o lokdef.o main.o srcp.o utils.o
 	${CPP} ${LDFLAGS} $+ -o btserver
 
-digispark_test: USBDigispark.cpp
+digispark_test: USBDigispark.cpp utils.o
 	${CPP} ${CFLAGS} ${LDFLAGS} $+ -DDIGISPARK_TEST -o digispark_test
 
 zsptest: zsptest.cpp sound.cpp
