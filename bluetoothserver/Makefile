@@ -86,7 +86,7 @@ Makefile.config:
 		echo "found" ;\
 		echo "CFLAGS+=-DHAVE_RASPI_ACT_LED" >> Makefile.config ; \
 	else						\
-		echo "not found - alsa sound disabled"	;\
+		echo "not found - raspi ACT led disabled"	;\
 	fi
 
 btserver: fbtctl_message.o message_layout.o server.o clientthread.o lokdef.o main.o srcp.o utils.o
