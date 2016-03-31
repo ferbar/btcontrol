@@ -156,7 +156,7 @@ void ClientThread::run()
 
 #ifdef HAVE_ALSA
 	FahrSound sound(cfg_soundFiles);
-	if(platine) {
+	if(platine && FahrSound::soundFiles != NULL) { // nur wenn eine platine angeschlossen und sound files geladen
 		sound.init();
 		sound.run();
 	}
