@@ -97,7 +97,9 @@ FahrSound::~FahrSound() {
 	this->currFahrstufe=-1;
 	this->doRun=false;
 	void *ret;
-	pthread_join(this->thread,&ret);
+	if(this->thread) {
+		pthread_join(this->thread,&ret);
+	}
 	this->thread=0;
 	printf("FahrSound::~FahrSound() done\n");
 }
