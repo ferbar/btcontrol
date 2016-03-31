@@ -315,6 +315,7 @@ void USBDigispark::init(int devnr) {
 		pthread_detach(commThread);
 	}
 	printf("digispark init done\n");
+	sendCmd("V\n");
 	this->setPWM(0);
 }
 
@@ -378,7 +379,7 @@ void USBDigispark::setDir(unsigned char dir) {
 
 void USBDigispark::fullstop() {
 	printf("USBDigispark::fullstop()\n");
-	setPWM(0);
+	this->setPWM(0);
 	// 1s warten dass das command fertig is:
 	struct timespec timeout;
 	setMSTimeout(timeout, 1000);
@@ -550,6 +551,8 @@ int main(int argc, char* argv[]) {
 			printf("S while 2\n");
 			sendCmd("M00\n");
 			sleep(1);
+			// sendCmd("Q\n");
+			// sleep(1);
 		} else {
 			test.setPWM(99);
 			usleep(100000);
