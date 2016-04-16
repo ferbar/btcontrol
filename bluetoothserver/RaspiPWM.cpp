@@ -60,6 +60,9 @@ void RaspiPWM::init() {
 	pwmSetClock(4);
 	pwmSetRange(256);
 	this->setPWM(0);
+	pinMode(PIN_DIR1, OUTPUT);
+	pinMode(PIN_DIR2, OUTPUT);
+	this->setDir(1);
 }
 
 void RaspiPWM::setPWM(int f_speed) {
@@ -87,8 +90,10 @@ void RaspiPWM::setPWM(int f_speed) {
 void RaspiPWM::setDir(unsigned char dir) {
 	// int result = 0;
 	if(this->dir!=dir) {
+		printf("setting dir: %d\n", dir);
 		digitalWrite(PIN_DIR1, dir==1 ? 0 : 1);
 		digitalWrite(PIN_DIR2, dir==1 ? 1 : 0);
+		this->dir=dir;
 	}
 }
 
