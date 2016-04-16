@@ -472,7 +472,7 @@ continue;
 #endif
 			} else {
 				printf(ANSI_RED "%d/%d:----------------- invalid/unimplemented command (%d,%s)------------------------\n" ANSI_DEFAULT,
-				this->clientID,this->msgNum,cmd.getType(),messageTypeName(cmd.getType()).c_str());
+					this->clientID,this->msgNum,cmd.getType(),messageTypeName(cmd.getType()).c_str());
 			/*
 			if(memcmp(cmd,"invalid_key",10)==0) {
 				printf("%d:invalid key ! param1: %s\n",startupdata->clientID,param1);
