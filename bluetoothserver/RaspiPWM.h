@@ -20,4 +20,7 @@ private:
 	int pwm;
 
 	int motorStart;
+
+	FILE *fRaspiLed;
+	int raspiLedToggle;
 };

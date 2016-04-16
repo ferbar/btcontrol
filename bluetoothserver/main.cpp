@@ -173,6 +173,7 @@ void initPlatine()
 	if(!platine) {
 		try {
 			platine=new RaspiPWM(cfg_debug);
+			strncpy(lokdef[0].name,"RaspiPWM", sizeof(lokdef[0].name));
 		} catch(std::exception &errormsg) {
 			printf("RaspiPWM: error: %s\n",errormsg.what());
 		}

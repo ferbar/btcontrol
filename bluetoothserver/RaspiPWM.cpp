@@ -17,7 +17,8 @@
 #define PIN_DIR2	3
 
 RaspiPWM::RaspiPWM(bool debug) :
-	USBPlatine(debug), dir(-1), pwm(-1), motorStart(70) {
+	USBPlatine(debug), dir(-1), pwm(-1), motorStart(70),
+		fRaspiLed(NULL), raspiLedToggle(0){
 
 	try {
 		this->init();
@@ -47,6 +48,13 @@ void RaspiPWM::init() {
 
 	this->motorStart=utils::stoi(sMotorStart);
 
+	this->fRaspiLed = fopen("/sys/class/leds/led0/brightness", "w");
+	if(this->fRaspiLed) {
+		printf("can write to Raspberry ACT led1\n");
+	} else {
+		printf("error opening raspi ACT led (%s)\n",strerror(errno));
+	}
+
 	pinMode(PIN_PWM, PWM_OUTPUT);
 	pwmSetMode(PWM_MODE_MS);
 	pwmSetClock(4);
@@ -67,6 +75,12 @@ void RaspiPWM::setPWM(int f_speed) {
 		printf("setting pwm: %d\n", pwm);
 		pwmWrite(PIN_PWM, pwm);
 		this->pwm=pwm;
+	}
+
+	if(this->fRaspiLed) {
+		if(this->raspiLedToggle & 0x1)
+			fwrite(this->raspiLedToggle & 0x2 ? "1\n" : "0\n", 1, 2, this->fRaspiLed); fflush(this->fRaspiLed);
+		this->raspiLedToggle++;
 	}
 }
 
