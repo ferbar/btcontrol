@@ -4,8 +4,8 @@
 CFLAGS=-g -O0 -Wall -Wformat
 CFLAGS_DEP=-MMD -MF $(dir $@).$(notdir $(basename $@)).d
 
-LDFLAGS=-g -lpthread -lstdc++
-# LDFLAGS=-g -lbluetooth -lpthread -lusb
+# clock_gettime will -lrt
+LDFLAGS=-g -lpthread -lstdc++ -lrt
 
 CPP=g++
 
@@ -80,11 +80,18 @@ Makefile.config:
 		fi
 	@echo .
 	
-	@# 
+	@# -lwiringPi HAVE_RASPI_ACT_LED | HAVE_RASPI_WIRINGPI
 	@echo -e "checking raspi ACT led:"
 	@if [ -f "/sys/class/leds/led0/brightness" ] ; then \
 		echo "found" ;\
 		echo "CFLAGS+=-DHAVE_RASPI_ACT_LED" >> Makefile.config ; \
+		echo -e "checking for wiringPI:" ; \
+		if [ -f "/usr/local/lib/libwiringPi.so" ] ; then \
+			echo "found" ;		\
+			echo "CFLAGS+=-DHAVE_RASPI_WIRINGPI" >> Makefile.config ; \
+			echo "LDFLAGS+=-lwiringPi" >> Makefile.config;			\
+			echo "btserver: RaspiPWM.o" >> Makefile.config;			\
+		fi ; 					\
 	else						\
 		echo "not found - raspi ACT led disabled"	;\
 	fi

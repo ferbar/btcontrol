@@ -44,7 +44,7 @@
 
 #include <map>
 
-#ifdef HAVE_LIBUSB
+#ifdef HAVE_LIBUSB 
 	#include "K8055.h"
 	#include "USBDigispark.h"
 
@@ -52,6 +52,9 @@
 		#include "zsp.h"
 		#include "sound.h"
 	#endif
+#endif
+#ifdef HAVE_RASPI_WIRINGPI
+	#include "RaspiPWM.h"
 #endif
 
 #include "srcp.h"
@@ -81,7 +84,7 @@ bool cfg_X11=false;
 #endif
 
 int cfg_tcpTimeout=10; // TCP RX Timeout in sekunden
-#ifdef HAVE_LIBUSB
+#if defined HAVE_LIBUSB || defined HAVE_RASPI_WIRINGPI
 USBPlatine *platine=NULL;
 #else
 void *platine=NULL;
@@ -157,18 +160,30 @@ void initPlatine()
 		printf("USBDigispark init: error: %s\n",errormsg.what());
 	}
 	printf("... done\n");
-#ifdef HAVE_ALSA
-	SoundType *soundFiles=loadZSP();
-	if(soundFiles) {
-		Sound::loadSoundFiles(soundFiles);
+#if defined HAVE_ALSA
+	if(platine) {
+		SoundType *soundFiles=loadZSP();
+		if(soundFiles) {
+			Sound::loadSoundFiles(soundFiles);
+		}
 	}
 #endif
+#endif
+#ifdef HAVE_RASPI_WIRINGPI
+	if(!platine) {
+		try {
+			platine=new RaspiPWM(cfg_debug);
+			strncpy(lokdef[0].name,"RaspiPWM", sizeof(lokdef[0].name));
+		} catch(std::exception &errormsg) {
+			printf("RaspiPWM: error: %s\n",errormsg.what());
+		}
+	}
 #endif
 }
 
 void deletePlatine()
 {
-#ifdef HAVE_LIBUSB
+#if defined HAVE_LIBUSB || defined HAVE_RASPI_WIRINGPI
 	printf("delete Platine\n");
 	delete platine;
 #endif
