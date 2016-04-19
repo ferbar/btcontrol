@@ -1,48 +1,92 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    >
-<TextView  
-    android:layout_width="fill_parent" 
-    android:layout_height="wrap_content" 
-    android:id="@+id/hello"
-	android:text="@string/server_name"
-    />
-<EditText android:id="@+id/editText1" 
-	android:layout_width="match_parent"
-	android:layout_height="wrap_content"
-	android:text="chris-pc"
-	android:singleLine="true"/>
-<LinearLayout 
-	android:layout_width="match_parent" android:layout_height="wrap_content"
-	android:orientation="vertical" >
-    <TableRow android:id="@+id/tableRow1" android:layout_height="wrap_content" android:layout_width="match_parent">
-<Button android:layout_width="wrap_content" android:layout_height="wrap_content"
-	android:text="@string/connect"
-	android:id="@+id/button1"
-	android:onClick="onButtonConnect" />
-<Button android:text="@string/disconnect"
-	android:id="@+id/buttonDisconnect"
+    android:orientation="vertical" >
+
+    <TextView
+        android:id="@+id/hello"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/server_name" />
+
+    <EditText
+        android:id="@+id/editText1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:singleLine="true"
+        android:text="chris-pc" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" >
+
+        <TableRow
+            android:id="@+id/tableRow1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" >
+
+            <Button
+                android:id="@+id/button1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="onButtonConnect"
+                android:text="@string/connect" />
+
+            <Button
+                android:id="@+id/buttonDisconnect"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="onButtonDisconnect"
+                android:text="@string/disconnect" />
+        </TableRow>
+    </LinearLayout>
+    
+    <TextView
+        android:id="@+id/textViewIP"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="IP Adressen:" />
+    
+    <RadioGroup
+        android:id="@+id/radioGroupIPs"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" >
+    </RadioGroup>
+
+    <TextView
+        android:id="@+id/textViewStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:shadowDx="2"
+        android:shadowDy="2"
+        android:shadowRadius="2"
+        android:text="status" />
+
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="wrap_content"
+        android:layout_height="2px"
+        android:background="#505050"
+        android:text="---------------------------------" />
+
+    <TextView
+        android:id="@+id/textViewInfo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/main_found_serives" >
+    </TextView>
+
+    <LinearLayout
+        android:id="@+id/linearLayoutBonjourServer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+    <!--
+     ListView android:id="@+id/linearLayoutBonjourServer"
 	android:layout_width="wrap_content"
 	android:layout_height="wrap_content"
-	android:onClick="onButtonDisconnect" />
-    </TableRow>
-</LinearLayout>
-<TextView android:text="status" android:id="@+id/textViewStatus"
-	android:layout_width="wrap_content" android:layout_height="wrap_content"
-	android:shadowDx="2"
-	android:shadowDy="2"
-	android:shadowRadius="2"
-	/>
-<TextView android:text="---------------------------------" android:id="@+id/textView2" android:layout_height="2px" android:layout_width="wrap_content"
-	android:background="#505050" />
-<TextView android:text="gefundene Bonjour Dienste:" android:id="@+id/textView1" android:layout_width="wrap_content" android:layout_height="wrap_content"></TextView>
-<LinearLayout android:id="@+id/linearLayoutBonjourServer" 
-	android:layout_width="match_parent" android:layout_height="wrap_content"
-	android:orientation="vertical" />
-<!-- ListView android:id="@+id/linearLayoutBonjourServer"
-	android:layout_width="wrap_content"
-	android:layout_height="wrap_content" -->
+    -->
+
 </LinearLayout>

@@ -23,6 +23,7 @@
 
 package org.ferbar.btcontrol;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.Hashtable;
 
 import android.app.Activity;
@@ -41,13 +42,18 @@ import android.os.Handler;
 import android.view.View;
 // import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 import protocol.MessageLayouts;
 
 import javax.jmdns.JmDNS;
+import javax.jmdns.NetworkTopologyDiscovery;
 import javax.jmdns.ServiceEvent;
 // import javax.jmdns.ServiceInfo;
 import javax.jmdns.ServiceListener;
@@ -69,7 +75,7 @@ public class AndroidMain extends Activity {
 	static String sserver; // server name
 	
 	android.net.wifi.WifiManager wifiManager;
-	android.net.wifi.WifiManager.MulticastLock lock;
+	android.net.wifi.WifiManager.MulticastLock lock=null;
 	private String bonjourType = "_btcontrol._tcp.local.";
 	// TODO: das auf liste umbaun ArrayAdapter<AvailBonjourServiceItem> listAdapter=null;
 	
@@ -124,19 +130,73 @@ public class AndroidMain extends Activity {
 
 		BroadcastReceiver myWifiReceiver = new BroadcastReceiver() {
 			@Override
+			// Hint: das wird beim App Start gleich aufgerufen, auch wenn sich nix ändert!
 			public void onReceive(Context arg0, Intent arg1) {
 				// TODO Auto-generated method stub
 				NetworkInfo networkInfo = (NetworkInfo) arg1.getParcelableExtra(ConnectivityManager.EXTRA_NETWORK_INFO);
 				if(networkInfo.getType() == ConnectivityManager.TYPE_WIFI){
 					// DisplayWifiState();
-					Toast.makeText(AndroidMain.this, networkInfo.toString(), Toast.LENGTH_SHORT).show();
+					Toast.makeText(AndroidMain.this, networkInfo.toString(), Toast.LENGTH_LONG).show();
 				}
+				AndroidMain.this.setIPInterfaces();
 			}
 		};
 
 		// FIXME: da hats was !!!!!
     	this.registerReceiver(myWifiReceiver,
 		         new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+    	
+    }
+    
+    /**
+     * wird beim app start 2* aufgerufen - vom wifi broadcast receiver und vom onResume
+     */
+    public synchronized void setIPInterfaces() {
+    	InetAddress[] addresses = NetworkTopologyDiscovery.Factory.getInstance().getInetAddresses();
+    	RadioGroup rg = (RadioGroup) this.findViewById(R.id.radioGroupIPs);
+    	rg.removeAllViews();
+    	rg.clearCheck();
+    	final SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+    	String bonjourIPAddress=settings.getString("bonjourIPAddress", "");
+
+    	int n=0;
+    	for(InetAddress a : addresses) {
+    		n++;
+    		RadioButton b = new RadioButton(this);
+    		String ip=a.getHostAddress();
+    		b.setText(ip);
+    		b.setId(n);
+    		/*
+    		b.setOnCheckedChangeListener(new OnCheckedChangeListener (){
+				@Override
+				public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+					if(isChecked) {
+						SharedPreferences.Editor editor = settings.edit();
+						editor.putString("bonjourIPAddress", buttonView.getText().toString());
+						editor.commit();
+						AndroidMain.this.initBonjour();
+					}
+				}
+			});
+			*/
+    		rg.addView(b);
+    		// If the view is checked before adding it to the parent, it will be impossible to uncheck it.
+    		b.setChecked(ip.equals(bonjourIPAddress));
+    	}
+    	// System.out.println("****************** checked radio button id: "+rg.getCheckedRadioButtonId());
+    	
+        rg.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+             @Override
+             public void onCheckedChanged(RadioGroup radioGroup, int checkedId) {
+                 RadioButton rb = (RadioButton) radioGroup.findViewById(checkedId);
+                 if(rb != null) {
+					SharedPreferences.Editor editor = settings.edit();
+					editor.putString("bonjourIPAddress", rb.getText().toString());
+					editor.commit();
+					AndroidMain.this.initBonjour();
+                 }
+             }
+         });
     }
     
   
@@ -163,11 +223,25 @@ public class AndroidMain extends Activity {
     public void onResume() {
     	super.onResume();
     	
+    	this.setIPInterfaces();
+    	
     	this.lock = this.wifiManager.createMulticastLock("btcontrol.jmDNS.lock");
         this.lock.setReferenceCounted(true);
         this.lock.acquire();
-        
+       
+        initBonjour();
+    }
+    
+    public void initBonjour() {
+    	// ned schön aber beim app start wird das von den callback dingsen aufgerufen.
+    	if(this.lock == null) return;
+    	
         try {
+        	final SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+        	String bonjourIPAddress=settings.getString("bonjourIPAddress", null);
+        	if(bonjourIPAddress != null) {
+        		System.setProperty("net.mdns.interface", bonjourIPAddress);
+        	}
 			this.jmdns = JmDNS.create();  // Achtung !!! im strict mode macht das eine Network Exception!!!
 	        this.jmdns.addServiceListener(bonjourType, listener = new ServiceListener() {
 	            public void serviceResolved(final ServiceEvent ev) {
@@ -207,11 +281,14 @@ public class AndroidMain extends Activity {
 	                jmdns.requestServiceInfo(event.getType(), event.getName(), 1);
 	            }
 	        });
+	        TextView t=(TextView) this.findViewById(R.id.textViewInfo);
+	        t.setText(this.getText(R.string.main_found_serives) + "(" + this.jmdns.getInetAddress().getHostAddress() + ")");
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
     }
+    
     @Override
     public void onPause() {
     	super.onPause();
