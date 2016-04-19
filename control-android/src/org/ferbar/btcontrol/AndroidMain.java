@@ -27,6 +27,7 @@ import java.net.InetAddress;
 import java.util.Hashtable;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -104,9 +105,37 @@ public class AndroidMain extends Activity {
     	String ip;
     }*/
 	
+    public void setGlobalUncaughtExceptionHandler() {
+		final Thread.UncaughtExceptionHandler oldHandler = Thread.getDefaultUncaughtExceptionHandler();
+		Thread.setDefaultUncaughtExceptionHandler(
+            new Thread.UncaughtExceptionHandler() {
+                @Override
+                public void uncaughtException(Thread thread, final Throwable ex) {
+                	runOnUiThread(new Runnable() {
+						@Override
+						public void run() {
+		                    AlertDialog.Builder builder = new AlertDialog.Builder(getApplicationContext());
+		                    builder.setTitle("There is something wrong")
+		                            .setMessage("Application will exit：" + ex.toString())
+		                            .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+		
+		                                @Override
+		                                public void onClick(DialogInterface dialog, int which) {
+		                                    // throw it again
+		                                    throw (RuntimeException) ex;
+		                                }
+		                            })
+		                            .show();
+						}
+                	});
+                }
+            });
+    }
+    
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        setGlobalUncaughtExceptionHandler();
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 		MessageLayouts messageLayouts = new MessageLayouts();
