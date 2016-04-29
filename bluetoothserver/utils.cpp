@@ -63,7 +63,7 @@ std::RuntimeExceptionWithBacktrace::RuntimeExceptionWithBacktrace(const std::str
 	size = backtrace(array, 10);
 
 	// print out all the frames to stderr das kamma mit addr2line noch anschaun dann:
-	fprintf(stderr, "Error: %s size=%d\n", what.c_str(),size);
+	fprintf(stderr, "Error: %s size=%zd\n", what.c_str(), size);
 	backtrace_symbols_fd(array, size, STDERR_FILENO);
 	/*
 	messages = backtrace_symbols(array, size);
