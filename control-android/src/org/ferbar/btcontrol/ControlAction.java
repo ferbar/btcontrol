@@ -39,6 +39,7 @@ import java.util.TimerTask;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.ProgressDialog;
 //import android.content.Context;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -87,6 +88,7 @@ import android.graphics.PorterDuff;
 // import android.widget.ToggleButton;
 import protocol.FBTCtlMessage;
 import protocol.MessageLayouts;
+
 import org.ferbar.btcontrol.AndroidStream;
 import org.ferbar.btcontrol.BTcommThread;
 import org.ferbar.btcontrol.Debuglog;
@@ -237,6 +239,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 	@Override
 	public void onPause() {
 		super.onPause();
+		this.fullStop();
 		System.out.println("ControlAction::onPause isFinishing:"+this.isFinishing());
 		AndroidMain.minusActivity();
 		powerManager_wl.release();
@@ -301,18 +304,15 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
     
     @Override
 	public boolean onPrepareOptionsMenu(Menu menu) {
-    	FBTCtlMessage msg = new FBTCtlMessage();
     	try {
     		// aktuelle lok stoppen:
     		AvailLocosListItem lok=ControlAction.availLocos.get(ControlAction.currSelectedAddr.get(0));
         	if((lok != null) && (lok.speed != 0)) {
-    			this.setMessageAddrField(msg, "STOP");
-    			AndroidMain.btcomm.addCmdToQueue(msg,this);
-    			this.updateSpeedSlider(0,0);
+    			this.fullStop();
     		}
         	// power status abfragen + icon setzen:
     		powerMenuItem = (MenuItem) menu.findItem(R.id.menu_Power);
-    		msg = new FBTCtlMessage();
+    		FBTCtlMessage msg = new FBTCtlMessage();
 			msg.setType(MessageLayouts.messageTypeID("POWER"));
 	    	msg.get("value").set(-1);
 			AndroidMain.btcomm.addCmdToQueue(msg,this);
@@ -701,8 +701,9 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 
 			AndroidMain.btcomm.addCmdToQueue(msg,this);
 		} catch (Exception e) {
-			Toast.makeText(this, "error sending cmd:" + e.toString(), Toast.LENGTH_LONG).show();
+			// Toast.makeText(this, "error sending cmd:" + e.toString(), Toast.LENGTH_LONG).show();
 			e.printStackTrace();
+			this.handleBtCommException(e);
 		}
 	}
 
@@ -745,6 +746,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 		    		} catch (Exception e) {
 		    			// TODO Auto-generated catch block
 		    			e.printStackTrace();
+		    			this.handleBtCommException(e);
 		    		}
 		    		this.updateSpeedSlider(0,msg.isType("ACC") ? 1 : -1);
 		
@@ -760,6 +762,10 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 	        	}
 	            return true;
         	}
+        case KeyEvent.KEYCODE_POWER: { // das funktioniert da nicht !! siehe onPause
+        	this.fullStop();
+        	break;  // unten dann normales KEYCODE_POWER aufrufen
+        }
         // das geht nur mit der onAttachedToWindow-anomalie:
         case KeyEvent.KEYCODE_HOME: {
 	        	FBTCtlMessage msg = new FBTCtlMessage();
@@ -778,7 +784,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
         return super.onKeyDown(keyCode, event);
     }
     
-    @Override
+	@Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
         if((keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP)) {
             // to your stuff here
@@ -1305,4 +1311,36 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 			msg.get("addr").set(ControlAction.currSelectedAddr.get(0));
 		}
 	}
+	
+	/**
+	 * notaus
+	 */
+	public void fullStop() {
+    	FBTCtlMessage msg = new FBTCtlMessage();
+    	try {
+    		this.setMessageAddrField(msg, "STOP");
+    		AndroidMain.btcomm.addCmdToQueue(msg,this);
+    	} catch (Exception e) {
+			e.printStackTrace();
+			this.handleBtCommException(e);
+		}
+		this.updateSpeedSlider(0,0);
+	}
+
+	private void handleBtCommException(Exception e) {
+		Toast.makeText(this, "error sending command", Toast.LENGTH_LONG).show();
+		if(AndroidMain.btcomm == null) {
+			final ProgressDialog loadProgressDialog=AndroidMain.createConnectingProgressDialog(this);
+	        
+	    	// Create runnable for posting
+	        Runnable mUpdateProgressDialog = new Runnable() {
+	            public void run() {
+	                AndroidMain.repaint(loadProgressDialog, null);
+	            }
+	        };
+			AndroidMain.restartConnection(loadProgressDialog, mUpdateProgressDialog);
+		}
+	}
+
+
 }

@@ -87,13 +87,8 @@ public class AndroidMain extends Activity {
 	// private ServiceInfo serviceInfo;
 	
 	// Need handler for callbacks to the UI thread
-    final Handler mHandler = new Handler();
-	// Create runnable for posting
-    final Runnable mUpdateResults = new Runnable() {
-        public void run() {
-            repaint();
-        }
-    };
+    final static Handler mHandler = new Handler();
+
     
     /*
     class AvailBonjourServiceItem {
@@ -339,11 +334,11 @@ public class AndroidMain extends Activity {
     	}
     }
     
-	class ConnectThread extends Thread {
-		Context c;
+	static class ConnectThread extends Thread {
+		ProgressDialog loadProgressDialog;
 		// AndroidStream androidStream;
-		ConnectThread(Context c) {
-			this.c=c;
+		ConnectThread(ProgressDialog loadProgressDialog) {
+			this.loadProgressDialog=loadProgressDialog;
 			// this.androidStream = androidStream;
 		}
 		public void run() {
@@ -362,11 +357,11 @@ public class AndroidMain extends Activity {
 					}
 				}
 				if(!btcomm.connError()) {
-					Intent i = new Intent(this.c, ControlAction.class);
-					startActivity(i);
-					synchronized(AndroidMain.this.loadProgressDialog) {
-						AndroidMain.this.loadProgressDialog.dismiss();
-						AndroidMain.this.loadProgressDialog=null;
+					Intent i = new Intent(this.loadProgressDialog.getContext(), ControlAction.class);
+					this.loadProgressDialog.getContext().startActivity(i);
+					synchronized(this.loadProgressDialog) {
+						this.loadProgressDialog.dismiss();
+						this.loadProgressDialog=null;
 					}
 					// debugForm.setTitle("connected");
 				} else {
@@ -380,6 +375,10 @@ public class AndroidMain extends Activity {
 				AndroidMain.btcommMessage=e.getMessage();
 				AndroidMain.stopConnection();
 			}
+			if(AndroidMain.notifyStatusChange != null) {
+				AndroidMain.notifyStatusChange.interrupt();
+				AndroidMain.notifyStatusChange=null;
+			}
 		}
 	}
 	
@@ -387,7 +386,11 @@ public class AndroidMain extends Activity {
 	 * wenn BTcomm connected ist oder so dann repaint
 	 */
 	static NotifyStatusChange notifyStatusChange = null;
-	class NotifyStatusChange extends Thread {
+	static class NotifyStatusChange extends Thread {
+		Runnable repaint=null;
+		NotifyStatusChange(Runnable repaint) {
+			this.repaint=repaint;
+		}
 		public void run() {
 			// Debuglog.debugln("starting NotifyStatusChange");
 			while(true && AndroidMain.btcomm != null) {
@@ -396,7 +399,7 @@ public class AndroidMain extends Activity {
 						// Debuglog.debugln("starting NotifyStatusChange locked");
 						AndroidMain.btcomm.statusChange.wait();
 					}
-					mHandler.post(mUpdateResults);
+					mHandler.post(this.repaint);
 				} catch (InterruptedException ex) {
 					break;
 				}
@@ -406,9 +409,28 @@ public class AndroidMain extends Activity {
 			}
 		}
 	}
+
+	public static ProgressDialog createConnectingProgressDialog(Context c) {
+		// warte dialog auf:
+		final ProgressDialog loadProgressDialog = new ProgressDialog(c);
+	    loadProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+	    loadProgressDialog.setMessage("Connecting...");
+	    loadProgressDialog.setCancelable(false);
+	    loadProgressDialog.setProgress(0);
+	    loadProgressDialog.setMax(10);
+	    loadProgressDialog.setButton("Abbrechen", new DialogInterface.OnClickListener() {
+	    	public void onClick(DialogInterface dialog, int which) {
+	    		AndroidMain.stopConnection();
+	    		synchronized(loadProgressDialog) {
+	    			loadProgressDialog.dismiss();
+	    			// loadProgressDialog=null;
+	    		}
+	    	}
 	
-	// Progress Dialog anlegen:
-	ProgressDialog loadProgressDialog;
+	    });
+	    loadProgressDialog.show();
+	    return loadProgressDialog;
+	}
     
 	public void onButtonConnect(View view) {
 		if(AndroidMain.btcomm != null) {
@@ -422,26 +444,15 @@ public class AndroidMain extends Activity {
 		System.out.println("server:"+AndroidMain.sserver);
 		//startActivityForResult(i, ACTIVITY_CREATE);
 		
-		// warte dialog auf:
-		loadProgressDialog = new ProgressDialog(this);
-        loadProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-        loadProgressDialog.setMessage("Connecting...");
-        loadProgressDialog.setCancelable(false);
-        loadProgressDialog.setProgress(0);
-        loadProgressDialog.setMax(10);
-        loadProgressDialog.setButton("Abbrechen", new DialogInterface.OnClickListener() {
-        	public void onClick(DialogInterface dialog, int which) {
-        		onButtonDisconnect(null);
-        		synchronized(loadProgressDialog) {
-        			loadProgressDialog.dismiss();
-        			loadProgressDialog=null;
-        		}
-        	}
-
-        });
-        loadProgressDialog.show();
-		
-		this.restartConnection();
+		final ProgressDialog loadProgressDialog=AndroidMain.createConnectingProgressDialog(this);
+        
+    	// Create runnable for posting
+        Runnable mUpdateProgressDialog = new Runnable() {
+            public void run() {
+                AndroidMain.repaint(loadProgressDialog, (TextView)AndroidMain.this.findViewById(R.id.textViewStatus));
+            }
+        };
+		AndroidMain.restartConnection(loadProgressDialog, mUpdateProgressDialog);
 	}
 	
     public void onButtonDisconnect(View view) {
@@ -464,20 +475,20 @@ public class AndroidMain extends Activity {
     }
     
 
-    public void restartConnection() {
+    public static void restartConnection(ProgressDialog loadProgressDialog, Runnable repaint) {
 		if(AndroidMain.btcomm == null) {
 			AndroidMain.btcomm = new BTcommThread(new AndroidStream(AndroidMain.sserver,3030));
 			Debuglog.debugln("reconnecting to server");
-			AndroidMain.notifyStatusChange=new NotifyStatusChange();
+			AndroidMain.notifyStatusChange=new NotifyStatusChange(repaint);
 			AndroidMain.notifyStatusChange.start();
-			AndroidMain.connectThread = new ConnectThread(this);
-			connectThread.start();
+			AndroidMain.connectThread = new ConnectThread(loadProgressDialog);
+			AndroidMain.connectThread.start();
 		} else {
 			Debuglog.debugln("restart conn - still connected");
 		}
 	}
     
-    public void repaint() {
+    public static void repaint(ProgressDialog loadProgressDialog, TextView tvInfo) {
     	String text=BTcommThread.statusText[BTcommThread.STATE_DISCONNECTED];
     	if(AndroidMain.btcomm != null) {
     		text=BTcommThread.statusText[btcomm.connState];
@@ -487,16 +498,17 @@ public class AndroidMain extends Activity {
     	if(AndroidMain.btcommMessage != null) {
     		text+=" ("+AndroidMain.btcommMessage+")";
     	}
-		TextView tv=(TextView)this.findViewById(R.id.textViewStatus);
-		tv.setText(text);
-		if(this.loadProgressDialog != null) {
-			synchronized(this.loadProgressDialog) {
+		if(tvInfo != null) {
+			tvInfo.setText(text);
+		}
+		if(loadProgressDialog != null) {
+			synchronized(loadProgressDialog) {
 				if(AndroidMain.btcomm != null) {
-					this.loadProgressDialog.setProgress(btcomm.connState);
-					this.loadProgressDialog.setMessage(text);
+					loadProgressDialog.setProgress(btcomm.connState);
+					loadProgressDialog.setMessage(text);
 				} else {
-					this.loadProgressDialog.setProgress(0);
-					this.loadProgressDialog.setMessage("no connection");
+					loadProgressDialog.setProgress(0);
+					loadProgressDialog.setMessage("no connection");
 				}
 			}
 		}
