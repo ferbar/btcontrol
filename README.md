@@ -1,4 +1,4 @@
-~~~~ btcontroll ~~~~~
+# btcontroll 
 
 SRCPD über bluetooth mit einem MIDP handy steuern
 
@@ -6,7 +6,7 @@ Diese Software ist meine private Spielerei, es sind jedoch alle herzlich willkom
 Sollte allerdings irgendwas beschädigt werden ist jeder selbst schuld und ich lehne jegliche Verantwortung ab.
 
 
-* bluetoothserver
+## bluetoothserver
 Vermittlungsstelle bluetooth -> srcpd
 cpp-programm, zum kompilieren wird benötigt:
   suse 11.2: libusb-dev bzw libusb-compat-devel, bluez-devel
@@ -17,12 +17,12 @@ cpp-programm, zum kompilieren wird benötigt:
 
   im server.cpp ist die Adresse vom SRCPD hardcoded auf 127.0.0.1
 
-* bluetoothserver/initbtrail.sh
+### bluetoothserver/initbtrail.sh
 registriert das serial-profile service damit das handy weiss dass auf channel 30 der btserver rennt
 kurze bluetooth einführung: damit ein service gefunden wird muss es zuerst mit sdptool registriert werden,
   damit der PC überhaupt gefunden wird muss PISCAN eingeschalten sein
 
-* bluetoothserver/lokdef.csv
+### bluetoothserver/lokdef.csv
 cvs datei mit:
 1. spalte: adresse
 2. decoder typ
@@ -31,30 +31,34 @@ cvs datei mit:
 5. anzahl funktionen
 rest: funktionsnamen
 
-* bluetoothserver starten:
+### bluetoothserver starten:
 ./btserver --help liefert eine mini-hilfe
 
-* MidpBluetoothExample2
+## control-android
+
+Android App
+
+## control-midp
 das MIDP - java Programm welches aufs Handy gehört
 MIDP client
 btcontroll.jar -> MidpBluetoothExample2/MobileApplication/dist/btcontroll.jar
 
 
-* midptestenv
+### midptestenv
 emulator um MIDP programme am PC rennen zu lassen (zum testen ganz nett, hat aber bugs)
 
-* NB1A_partlist.txt
+## NB1A_partlist.txt
 partlist für den merg.co.uk - booster
 
-* usb k8055
+## usb k8055
 lib um eine Viessman - platine anzusteuern, früher für PWM verwendet (ohne DCC)
 
-* ussp-push-0.11
+## ussp-push-0.11
 ussp-push -> ussp-push-0.11/src/ussp-push
 obex - push programm, programm um dateien über bluetooth an ein handy zu senden
 ussp-push 00:11:22:33:44:55@ btcontrol.jar btcontrol.jar
 
-* Raspberry PI Dateisystem readonly
+## Raspberry PI Dateisystem readonly
 warum? damit man ohne schlechtes Gewissen den Stecker ziehen kann. Vorallem die boot Partition (FAT) kann leicht beleidigt werden. (dass man dann erst nach mount -o remount,rw / und /boot was änern kann versteht sich von selbst)
 
  update-rc.d rsyslog disable
