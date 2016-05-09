@@ -1,9 +1,9 @@
 # btcontroll 
 
-SRCPD über bluetooth mit einem MIDP handy steuern
+Modelleisenbahn übers Handy/Smartphone drahtlos steuern!
+Entweder mit einem Raspberry Pi in der Lok selbst (das ist nur für die Gartenbahn interessant) oder über SRCPD und einen Booster eine DCC Lok ansterern. Bei Midp (die alten Nokias) verwende ich Bluetooth, für Android ist derzeit nur Wlan als Kommunikationsmedium eingebaut.
 
-Diese Software ist meine private Spielerei, es sind jedoch alle herzlich willkommen den code zu begutachteni, auszuprobieren und Ideen beizutragen.
-Sollte allerdings irgendwas beschädigt werden ist jeder selbst schuld und ich lehne jegliche Verantwortung ab.
+Diese Software ist meine private Spielerei, es sind jedoch alle herzlich willkommen den Code zu begutachten, auszuprobieren und Ideen beizutragen. Sollte allerdings irgendwas beschädigt werden ist jeder selbst schuld und ich lehne jegliche Verantwortung ab.
 
 
 ## bluetoothserver
@@ -33,6 +33,13 @@ rest: funktionsnamen
 
 ### bluetoothserver starten:
 ./btserver --help liefert eine mini-hilfe
+
+### Schnittstellen zum Motor:
+
+* Velleman k8055: uralt Variante um PWM direkt auf die Schienen zu legen
+* SRCPD: eine Software die über den Com Port DCC Commands an einen Booster schicken kann. Kann viele Loks auf einmal steuern.
+* Raspberry Pi + Digispark: kleine Attiny85 Platine und eine H - Brücke
+* Raspberry Pi ohne extra MC: H-Brücke hängt direkt am Raspberry Pi / PWM0 (hier ist leider kein Sound möglich da PWM + Sound die selbe Hardware verwenden)
 
 ## control-android
 
