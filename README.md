@@ -20,10 +20,9 @@ git submodule update --init
   im server.cpp ist die Adresse vom SRCPD hardcoded auf 127.0.0.1
 
 ### bluetoothserver/initbtrail.sh
-registriert das serial-profile service damit das handy weiss dass auf channel 30 der btserver rennt
-kurze bluetooth einführung: damit ein service gefunden wird muss es zuerst mit sdptool registriert werden,
+registriert das serial-profile Service damit das Handy weiss dass auf channel 30 der btserver rennt
 
-damit der PC überhaupt gefunden wird muss PISCAN eingeschalten sein
+kurze Bluetooth Einführung: damit ein Service gefunden wird muss es zuerst mit sdptool registriert werden,damit der PC überhaupt gefunden wird muss PISCAN eingeschalten sein
 
 ### bluetoothserver/lokdef.csv
 cvs datei mit:
@@ -39,6 +38,10 @@ rest: funktionsnamen
 ### bluetoothserver starten:
 ```
 ./btserver --help liefert eine mini-hilfe
+```
+oder das init-script nach /etc/init.d kopieren und einschalten. **hint** möchte man bluetooth zum steuern verwenden dann bei Required-Start: bluetooth: hinzufügen!
+```
+update-rc.d btcontrol enable
 ```
 
 ### Schnittstellen zum Motor:
