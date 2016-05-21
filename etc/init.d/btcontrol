@@ -48,7 +48,7 @@ case $1 in
 		else
 			log_end_msg 1
 		fi
-		$(dirname $DAEMON)/initbtrail.sh
+		$(dirname $DAEMON)/initbtrail.sh --wait-for-device
 		;;
 	stop)
 		# Stop the daemon.
