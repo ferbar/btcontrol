@@ -74,7 +74,9 @@ ussp-push -> ussp-push-0.11/src/ussp-push
 obex - push programm, programm um dateien über bluetooth an ein handy zu senden
 ussp-push 00:11:22:33:44:55@ btcontrol.jar btcontrol.jar
 
-## Raspberry PI Dateisystem readonly
+## Raspberry PI
+
+### Dateisystem readonly
 warum? damit man ohne schlechtes Gewissen den Stecker ziehen kann. Vorallem die boot Partition (FAT) kann leicht beleidigt werden. (dass man dann erst nach mount -o remount,rw / und /boot was änern kann versteht sich von selbst)
 
 ```
@@ -85,3 +87,12 @@ warum? damit man ohne schlechtes Gewissen den Stecker ziehen kann. Vorallem die 
 
 wenn man das nicht machen will und es reicht einem nach dem ersten superblock time is in future: /etc/e2fsck.conf und broken_system_clock reinschreiben. Siehe:
 http://unix.stackexchange.com/questions/8409/how-can-i-avoid-run-fsck-manually-messages-while-allowing-experimenting-with-s
+
+### Hostname ändern
+/etc/hosts und /ets/hostname anpassen
+
+dhcp & avahi übernimmt den hostname
+
+bluetooth [4.99] speichert unter /var/lib/bluetooth/<mac>/config den hostname. Kann dort und per 
+ dbus-send --print-reply --system --dest=org.bluez /org/bluez/$(pidof bluetoothd)/hci0 org.bluez.Adapter.SetProperty string:'Name' variant:string:'<neuer name>'
+geändert werden
