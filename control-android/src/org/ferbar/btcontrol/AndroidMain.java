@@ -40,11 +40,11 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.StrictMode;
+import android.util.Log;
 import android.view.View;
 // import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CompoundButton;
-import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
@@ -60,12 +60,17 @@ import javax.jmdns.ServiceEvent;
 import javax.jmdns.ServiceListener;
 
 import org.ferbar.btcontrol.R;
-import org.ferbar.btcontrol.R.id;
-import org.ferbar.btcontrol.R.layout;
 
 
-
+/**
+ * Main Activity:
+ * mDNS scanner + connect dialog
+ * 
+ * @author chris
+ *
+ */
 public class AndroidMain extends Activity {
+	public final String TAG = "btcontrol";
 	public static final String PREFS_NAME = "btcontrol";
 	
 	static BTcommThread btcomm = null;
@@ -89,6 +94,19 @@ public class AndroidMain extends Activity {
 	// Need handler for callbacks to the UI thread
     final static Handler mHandler = new Handler();
 
+	BroadcastReceiver myWifiReceiver = new BroadcastReceiver() {
+		@Override
+		// Hint: das wird beim App Start gleich aufgerufen, auch wenn sich nix ändert!
+		public void onReceive(Context arg0, Intent arg1) {
+			// TODO Auto-generated method stub
+			NetworkInfo networkInfo = (NetworkInfo) arg1.getParcelableExtra(ConnectivityManager.EXTRA_NETWORK_INFO);
+			if(networkInfo.getType() == ConnectivityManager.TYPE_WIFI){
+				// DisplayWifiState();
+				AndroidMain.this.notifyUser(networkInfo.toString());
+			}
+			AndroidMain.this.setIPInterfaces();
+		}
+	};
     
     /*
     class AvailBonjourServiceItem {
@@ -100,12 +118,16 @@ public class AndroidMain extends Activity {
     	String ip;
     }*/
 	
+  
     public void setGlobalUncaughtExceptionHandler() {
 		final Thread.UncaughtExceptionHandler oldHandler = Thread.getDefaultUncaughtExceptionHandler();
 		Thread.setDefaultUncaughtExceptionHandler(
             new Thread.UncaughtExceptionHandler() {
                 @Override
                 public void uncaughtException(Thread thread, final Throwable ex) {
+                	Log.e(TAG, "exception:"+ex.getMessage());
+                	ex.printStackTrace();
+           
                 	runOnUiThread(new Runnable() {
 						@Override
 						public void run() {
@@ -123,13 +145,27 @@ public class AndroidMain extends Activity {
 		                            .show();
 						}
                 	});
+                	oldHandler.uncaughtException(thread, ex);
                 }
             });
     }
     
+    /**
+     * mit dem wird netzwerk io im ui thread erlaubt. ist gefixt jetzt, brauch ma nimma
+    public void disableNetworkOnMainThreadException() {
+	    if (android.os.Build.VERSION.SDK_INT > 9) {
+	        StrictMode.ThreadPolicy policy = 
+	            new StrictMode.ThreadPolicy.Builder().permitAll().build();
+	        StrictMode.setThreadPolicy(policy);
+	    }
+    }
+    */
+    
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
+    	// this.disableNetworkOnMainThreadException();
+    	
         setGlobalUncaughtExceptionHandler();
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
@@ -138,8 +174,10 @@ public class AndroidMain extends Activity {
 			messageLayouts.load();
 			// MessageLayouts.dump();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			Toast.makeText(this, "error loading protocol", Toast.LENGTH_LONG).show();
 			e.printStackTrace();
+			this.finish();
+			return;
 		}
 		SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
 		EditText server = (EditText) findViewById(R.id.editText1);
@@ -152,19 +190,6 @@ public class AndroidMain extends Activity {
 // FIXME: E/ActivityThread(29021): Activity com.example.helloandroid.AndroidMain has leaked IntentReceiver com.example.helloandroid.AndroidMain$3@40555948 that was originally registered here. Are you missing a call to unregisterReceiver()?
 // FIXME:		E/ActivityThread(29021): android.app.IntentReceiverLeaked: Activity com.example.helloandroid.AndroidMain has leaked IntentReceiver com.example.helloandroid.AndroidMain$3@40555948 that was originally registered here. Are you missing a call to unregisterReceiver()?
 
-		BroadcastReceiver myWifiReceiver = new BroadcastReceiver() {
-			@Override
-			// Hint: das wird beim App Start gleich aufgerufen, auch wenn sich nix ändert!
-			public void onReceive(Context arg0, Intent arg1) {
-				// TODO Auto-generated method stub
-				NetworkInfo networkInfo = (NetworkInfo) arg1.getParcelableExtra(ConnectivityManager.EXTRA_NETWORK_INFO);
-				if(networkInfo.getType() == ConnectivityManager.TYPE_WIFI){
-					// DisplayWifiState();
-					Toast.makeText(AndroidMain.this, networkInfo.toString(), Toast.LENGTH_LONG).show();
-				}
-				AndroidMain.this.setIPInterfaces();
-			}
-		};
 
 		// FIXME: da hats was !!!!!
     	this.registerReceiver(myWifiReceiver,
@@ -239,6 +264,8 @@ public class AndroidMain extends Activity {
 
         // Commit the edits!
         editor.commit();
+        
+        this.unregisterReceiver(this.myWifiReceiver);
     }
     
     Hashtable<String, String> mDNSHosts=new Hashtable<String,String>();
@@ -256,61 +283,81 @@ public class AndroidMain extends Activity {
         initBonjour();
     }
     
+    /**
+     * wird von onResume und radio button changed aufgerufen (=beim app start 2*)
+     */
     public void initBonjour() {
     	// ned schön aber beim app start wird das von den callback dingsen aufgerufen.
     	if(this.lock == null) return;
     	
-        try {
-        	final SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-        	String bonjourIPAddress=settings.getString("bonjourIPAddress", null);
-        	if(bonjourIPAddress != null) {
-        		System.setProperty("net.mdns.interface", bonjourIPAddress);
-        	}
-			this.jmdns = JmDNS.create();  // Achtung !!! im strict mode macht das eine Network Exception!!!
-	        this.jmdns.addServiceListener(bonjourType, listener = new ServiceListener() {
-	            public void serviceResolved(final ServiceEvent ev) {
-	                notifyUser("Service resolved: "
-	                         + ev.getInfo().getQualifiedName()
-	                         + " port:" + ev.getInfo().getPort());
-	                final EditText eHost=(EditText) findViewById(R.id.editText1);
-	                final LinearLayout list=(LinearLayout) findViewById(R.id.linearLayoutBonjourServer);
-	                runOnUiThread(new Runnable() {
-	                	public void run() {
-	                		String ip=ev.getInfo().getHostAddresses()[0];
-	                		String hostname=ev.getInfo().getServer();
-	                		if(mDNSHosts.containsKey(hostname)) { // hoffentlich macht der da ein compare.to ...
-	                			return;
-	                		}
-	                		mDNSHosts.put(hostname, ip);
-	    	                final TextView tvHost=new TextView(list.getContext());
-	    	                tvHost.setText(ip);
-	                		list.addView(tvHost);
-	                		final Button bHost=new Button(list.getContext());
-	                		bHost.setText(hostname);
-	                		bHost.setOnClickListener(new View.OnClickListener() {
-	                			public void onClick(View v) {
-	                				eHost.setText(mDNSHosts.get(bHost.getText()));
-	                			}
-	                		});
-	                		list.addView(bHost);
-	                	}
-	                });
-	            }
-	            public void serviceRemoved(ServiceEvent ev) {
-	                notifyUser("Service removed: " + ev.getInfo().getQualifiedName()+ " port:" + ev.getInfo().getPort());
-	            }
-	            public void serviceAdded(ServiceEvent event) {
-	                // Required to force serviceResolved to be called again
-	                // (after the first search)
-	                jmdns.requestServiceInfo(event.getType(), event.getName(), 1);
-	            }
-	        });
-	        TextView t=(TextView) this.findViewById(R.id.textViewInfo);
-	        t.setText(this.getText(R.string.main_found_serives) + "(" + this.jmdns.getInetAddress().getHostAddress() + ")");
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+    	Thread initBonjourThread = new Thread() {
+    	    @Override
+    	    public void run() {
+		        try {
+		        	final SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+		        	String bonjourIPAddress=settings.getString("bonjourIPAddress", null);
+		        	if(bonjourIPAddress != null) {
+		        		System.setProperty("net.mdns.interface", bonjourIPAddress);
+		        	}
+					AndroidMain.this.jmdns = JmDNS.create();  // Achtung !!! im strict mode macht das eine Network Exception!!!
+					synchronized(AndroidMain.this.jmdns) {
+						AndroidMain.this.jmdns.addServiceListener(bonjourType, listener = new ServiceListener() {
+				            public void serviceResolved(final ServiceEvent ev) {
+				                notifyUser("Service resolved: "
+				                         + ev.getInfo().getQualifiedName()
+				                         + " port:" + ev.getInfo().getPort());
+				                final EditText eHost=(EditText) findViewById(R.id.editText1);
+				                final LinearLayout list=(LinearLayout) findViewById(R.id.linearLayoutBonjourServer);
+				                runOnUiThread(new Runnable() {
+				                	public void run() {
+				                		String ip=ev.getInfo().getHostAddresses()[0];
+				                		String hostname=ev.getInfo().getServer();
+				                		if(mDNSHosts.containsKey(hostname)) { // hoffentlich macht der da ein compare.to ...
+				                			return;
+				                		}
+				                		mDNSHosts.put(hostname, ip);
+				    	                final TextView tvHost=new TextView(list.getContext());
+				    	                tvHost.setText(ip);
+				                		list.addView(tvHost);
+				                		final Button bHost=new Button(list.getContext());
+				                		bHost.setText(hostname);
+				                		bHost.setOnClickListener(new View.OnClickListener() {
+				                			public void onClick(View v) {
+				                				eHost.setText(mDNSHosts.get(bHost.getText()));
+				                			}
+				                		});
+				                		list.addView(bHost);
+				                	}
+				                });
+				            }
+				            public void serviceRemoved(ServiceEvent ev) {
+				                notifyUser("Service removed: " + ev.getInfo().getQualifiedName()+ " port:" + ev.getInfo().getPort());
+				            }
+				            public void serviceAdded(ServiceEvent event) {
+				                // Required to force serviceResolved to be called again
+				                // (after the first search)
+				            	AndroidMain.this.jmdns.requestServiceInfo(event.getType(), event.getName(), 1);
+				            }
+				        });
+						AndroidMain.this.runOnUiThread(new Runnable() {
+				    		public void run() {
+				    			TextView t=(TextView) AndroidMain.this.findViewById(R.id.textViewInfo);
+				    			try {
+									t.setText(AndroidMain.this.getText(R.string.main_found_serives) + "(" + AndroidMain.this.jmdns.getInetAddress().getHostAddress() + ")");
+								} catch (IOException e) {
+									// lmaa
+									e.printStackTrace();
+								}
+				    		}
+						});
+					} // synchronized
+				} catch (IOException e) {
+					e.printStackTrace();
+					AndroidMain.this.notifyUser("exception:" + e.getMessage());
+				}
+    	    }
+    	};
+    	initBonjourThread.start();
     }
     
     @Override
@@ -323,14 +370,16 @@ public class AndroidMain extends Activity {
     	}
     	
     	if(this.jmdns != null) {
-    		jmdns.removeServiceListener(bonjourType, listener);
-    		try {
-				jmdns.close();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-    		jmdns=null;
+    		synchronized(this.jmdns) {
+	    		this.jmdns.removeServiceListener(bonjourType, listener);
+	    		try {
+					this.jmdns.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+	    		this.jmdns=null;
+	    	}
     	}
     }
     
@@ -541,7 +590,7 @@ public class AndroidMain extends Activity {
     };
     
     public void notifyUser(final String text) {
-    	System.out.println("NotifyUser:" + text);
+    	Log.i(TAG,"NotifyUser:" + text);
     	this.runOnUiThread(new Runnable() {
     		public void run() {
     	    	makeToast(text);

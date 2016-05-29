@@ -54,6 +54,7 @@ update-rc.d btcontrol enable
 ## control-android
 
 Android App
+siehe control-android/README.txt
 
 ## control-midp
 das MIDP - java Programm welches aufs Handy gehört
