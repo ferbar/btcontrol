@@ -1,3 +1,6 @@
 [submodule "jodersky_k8055"]
 	path = jodersky_k8055
 	url = https://github.com/jodersky/k8055.git
+[submodule "control-android/extern/jmdns"]
+	path = control-android/extern/jmdns
+	url = https://github.com/jmdns/jmdns.git
