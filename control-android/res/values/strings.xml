@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
     <string name="hello">Hello World, HelloAndroid!</string>
     <string name="app_name">BTControl</string>
     <string name="server_name">Server Name/IP</string>
@@ -9,4 +10,6 @@
     <string name="disconnect">Verbindung trennen</string>
     <string name="help">Hilfe</string>
     <string name="main_found_serives">gefundene Bonjour Dienste:</string>
+    <string name="title_activity_uncaught_exception">UncaughtException</string>
+
 </resources>

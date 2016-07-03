@@ -24,7 +24,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:src="@drawable/ic_lok"
-                android:width="100px" />
+                android:width="20dip" />
 
             <TextView
                 android:id="@+id/textView1"
@@ -395,7 +395,7 @@
                     android:paddingBottom="20dip"
                     android:paddingLeft="00dip"
                     android:paddingTop="20dip"
-                    android:progress="0" />
+                    />
 
                 <!--
                       SeekBar
