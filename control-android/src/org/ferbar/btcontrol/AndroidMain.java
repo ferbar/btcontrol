@@ -118,37 +118,7 @@ public class AndroidMain extends Activity {
     	String ip;
     }*/
 	
-  
-    public void setGlobalUncaughtExceptionHandler() {
-		final Thread.UncaughtExceptionHandler oldHandler = Thread.getDefaultUncaughtExceptionHandler();
-		Thread.setDefaultUncaughtExceptionHandler(
-            new Thread.UncaughtExceptionHandler() {
-                @Override
-                public void uncaughtException(Thread thread, final Throwable ex) {
-                	Log.e(TAG, "exception:"+ex.getMessage());
-                	ex.printStackTrace();
-           
-                	runOnUiThread(new Runnable() {
-						@Override
-						public void run() {
-		                    AlertDialog.Builder builder = new AlertDialog.Builder(getApplicationContext());
-		                    builder.setTitle("There is something wrong")
-		                            .setMessage("Application will exit：" + ex.toString())
-		                            .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-		
-		                                @Override
-		                                public void onClick(DialogInterface dialog, int which) {
-		                                    // throw it again
-		                                    throw (RuntimeException) ex;
-		                                }
-		                            })
-		                            .show();
-						}
-                	});
-                	oldHandler.uncaughtException(thread, ex);
-                }
-            });
-    }
+
     
     /**
      * mit dem wird netzwerk io im ui thread erlaubt. ist gefixt jetzt, brauch ma nimma
@@ -166,7 +136,7 @@ public class AndroidMain extends Activity {
     public void onCreate(Bundle savedInstanceState) {
     	// this.disableNetworkOnMainThreadException();
     	
-        setGlobalUncaughtExceptionHandler();
+        UncaughtException.setGlobalUncaughtExceptionHandler(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 		MessageLayouts messageLayouts = new MessageLayouts();
