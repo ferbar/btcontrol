@@ -198,7 +198,7 @@ public class UncaughtException extends Activity {
 		Intent i = new Intent(Intent.ACTION_SEND);
 		i.setType("message/rfc822");
 		i.putExtra(Intent.EXTRA_EMAIL  , new String[]{"chris@qnipp.com"});
-		i.putExtra(Intent.EXTRA_SUBJECT, "crash report for ");
+		i.putExtra(Intent.EXTRA_SUBJECT, "crash report for " + this.getPackageName());
 		String report = (String) ((TextView) this.findViewById(R.id.textViewReport)).getText();
 		i.putExtra(Intent.EXTRA_TEXT, report);
 		try {
