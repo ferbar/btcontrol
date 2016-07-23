@@ -8,6 +8,8 @@ package org.ferbar.btcontrol;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -126,6 +128,22 @@ public class UncaughtException extends Activity {
 			                report.append(SINGLE_LINE_SEP);
 			            }
 			        }
+			        // get app version code / name
+			        try {
+			        	String packageName= context.getPackageName();
+						PackageInfo pInfo = context.getPackageManager().getPackageInfo(packageName, 0);
+						report.append(lineSeperator);
+				        report.append("--------- App ---------\n\n");
+				        report.append("Name: ");
+				        report.append(packageName);
+				        report.append(SINGLE_LINE_SEP);
+				        report.append("Version: ");
+				        report.append(pInfo.versionName + " - " + pInfo.versionCode);
+				        report.append(SINGLE_LINE_SEP);
+					} catch (NameNotFoundException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
 			        // Getting the Device brand,model and sdk verion details.
 			        report.append(lineSeperator);
 			        report.append("--------- Device ---------\n\n");
@@ -180,7 +198,7 @@ public class UncaughtException extends Activity {
 		Intent i = new Intent(Intent.ACTION_SEND);
 		i.setType("message/rfc822");
 		i.putExtra(Intent.EXTRA_EMAIL  , new String[]{"chris@qnipp.com"});
-		i.putExtra(Intent.EXTRA_SUBJECT, "report");
+		i.putExtra(Intent.EXTRA_SUBJECT, "crash report for ");
 		String report = (String) ((TextView) this.findViewById(R.id.textViewReport)).getText();
 		i.putExtra(Intent.EXTRA_TEXT, report);
 		try {
