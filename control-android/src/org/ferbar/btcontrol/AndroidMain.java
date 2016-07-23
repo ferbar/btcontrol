@@ -235,7 +235,12 @@ public class AndroidMain extends Activity {
         // Commit the edits!
         editor.commit();
         
-        this.unregisterReceiver(this.myWifiReceiver);
+        // unregister wifi broadcast receiver
+        try {
+        	this.unregisterReceiver(this.myWifiReceiver);
+        } catch(IllegalArgumentException e) { // kA wie das geht dass das hin und wieder nicht registriert ist ....
+        	Log.d(TAG, "unregisterReceiver failed: "+e.getMessage());
+        }
     }
     
     Hashtable<String, String> mDNSHosts=new Hashtable<String,String>();
