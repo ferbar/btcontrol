@@ -18,6 +18,13 @@ if [ -f $CONFFILE ] ; then
 	. $CONFFILE
 fi
 
+if [ "$1" = "--wait-for-device" ] ; then
+	while ! $HCICONFIG | grep -q "UP RUNNING" ; do
+		echo "waiting for bluetooth dongle";
+		sleep 1;
+	done
+fi
+
 if $HCICONFIG hci0 ; then
 	:
 else

@@ -16,7 +16,7 @@
 	android:id="@+id/list_item_addr"
 	android:layout_width="wrap_content"
 	android:layout_height="wrap_content"
-	android:textSize="12px"
+	android:textSize="14dip"
 	android:text="[addr]"
 	/>
 
@@ -43,7 +43,7 @@
 	    android:shadowDy="2"
 	    android:shadowRadius="2"
 	    android:text="[name]"
-	    android:textSize="30px" />
+	    android:textSize="30dip" />
 
 
 </RelativeLayout>

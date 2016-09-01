@@ -6,17 +6,28 @@
  *   siehe: http://playground.arduino.cc/Learning/Memory
  *   
  * defines:
+ *  CABLIGHT
+ *    für 2 leds an P0 und P3
  *  PUTZLOK
- *    wenn man ein 2. dir bit braucht
+ *    wenn man ein 2. dir bit braucht !!!broken mit Timer0_Fast_PWM_OCR!!!
  *  
  *  DEBUG_FLICKER
  *    das ist nur zum debuggen!!!
  *    
  *  DEBUG_FLICKER_IN_STOP
  *    flackert zwischen 0 und 1/255 im stillstand
+ *
+ * test für einen 2. PWM Ausgang
+ * http://www.technoblogy.com/show?LE0
+ * internet sagt dann mit interrupt machen
+ *
  */
-// 
-#define PUTZLOK
+
+// #define USB_DEBUG_CABLIGHT
+
+#define CABLIGHT
+// scheint mir als könnte man nicht 2 PWM mit 20kHz rennen lassen - timer0 geht mit 16kHz nur auf PB1 und timer1 geht nur auf PB1 oder PB3
+//#define PUTZLOK
 // pwm led flackert bei jedem loop durchgang
 //#define DEBUG_FLICKER
 // pwm led flackert wenn speed==0
@@ -26,6 +37,7 @@
 #include <DigiUSB.h>
 #include <core_timers.h>
 #include <ToneTimer.h>
+
 
 char line[20];
 unsigned int pos=0;
@@ -42,6 +54,11 @@ int debugloop=0;
 char putz=0;     // ein oder aus
 int putz_pwm_hw=0; // aktueller pwm wert (+/-)
 int putz_target_pwm;
+#endif
+
+#ifdef CABLIGHT
+#define CABLIGHT_FRONT 0
+#define CABLIGHT_REAR  2
 #endif
 
 extern uchar usbDeviceAddr;
@@ -64,6 +81,11 @@ void setup() {
 #ifdef PUTZLOK
   pinMode(PWM_PUTZ_PIN, OUTPUT); //LED on Model B // PWM putzmotor
   pinMode(DIR_PUTZ_PIN, OUTPUT); //LED on Model A // dir putzmotor
+  // for(int i=0; i < 22; i++) { analogWrite(0,i*10); delay(1000); }
+#endif
+#ifdef CABLIGHT
+  pinMode(CABLIGHT_FRONT, OUTPUT);
+  pinMode(CABLIGHT_REAR,  OUTPUT);
 #endif
   analogWrite(1,10);
   DigiUSB.begin();
@@ -107,7 +129,7 @@ bool processCmd() {
       digitalWrite(5, HIGH);
       DigiUSB.println("d1");
       dir=1;
-      return true;      
+      return true;
     }
 #ifdef PUTZLOK
   } else if(pos==3 && line[0]=='P') { // query putzlok debug info:
@@ -118,13 +140,15 @@ bool processCmd() {
   } else if(pos==2 && line[0]=='Q') { // query debug info:
     DigiUSB.print(F("usb addr=")); DigiUSB.println(usbDeviceAddr,DEC);
     DigiUSB.print(F("usberrors=")); DigiUSB.println(usbError,DEC);
+    DigiUSB.print(F("speed=")); DigiUSB.println(pwm_hw,DEC);
+    DigiUSB.print(F("dir=")); DigiUSB.println(dir,DEC);
 #ifdef PUTZLOK
     DigiUSB.print(F("putz=")); DigiUSB.println(putz, DEC);
     DigiUSB.print(F("putztarget=")); DigiUSB.println(putz_target_pwm, DEC);
 #endif
     return true;
   } else if(pos==2 && line[0]=='V') { // version ausgeben:
-    DigiUSB.println(F("Version 1.0"));
+    DigiUSB.println(F("Version 1.1"));
 #ifdef PUTZLOK
     DigiUSB.println(F("PUTZLOK"));
 #endif
@@ -134,12 +158,30 @@ bool processCmd() {
 #ifdef DEBUG_FLICKER_IN_STOP
     DigiUSB.println(F("DEBUG_FLICKER_IN_STOP"));
 #endif
+#ifdef CABLIGHT
+    DigiUSB.println(F("CABLIGHT"));
+#endif
     return true;
   }
   // invalid command:
   DigiUSB.print(F("EP=")); DigiUSB.println(pos,DEC);
   return false;
 }
+
+#ifdef CABLIGHT
+void setCablight() {
+   if(pwm_hw == 0) {
+     if(dir==0) {
+       digitalWrite(CABLIGHT_FRONT,0);
+     } else {
+       digitalWrite(CABLIGHT_REAR,0);
+     }
+   } else {
+     digitalWrite(CABLIGHT_FRONT,1);
+     digitalWrite(CABLIGHT_REAR,1);
+   }
+}
+#endif
 
 // the loop routine runs over and over again forever:
 void loop() {
@@ -189,10 +231,17 @@ void loop() {
    if(pwm_hw<pwm) {
      analogWrite(1,++pwm_hw);
      DigiUSB.delay(10);
+     #ifdef CABLIGHT
+       setCablight();
+     #endif
    } else if(pwm_hw>pwm) {
      analogWrite(1,--pwm_hw);
      DigiUSB.delay(10);
+     #ifdef CABLIGHT
+       setCablight();
+     #endif
    }
+
 
 #ifdef PUTZLOK
    if(putz) {
@@ -215,7 +264,7 @@ void loop() {
    if(putz_changed) {
      //  DigiUSB.print("p"); // DigiUSB.println(putz_pwm_hw, DEC);
      // digitalWrite(DIR_PUTZ_PIN, (putz_pwm_hw > 0) ? 1 : 0);
-     // analogWrite(PWM_PUTZ_PIN,abs(putz_pwm_hw));
+     analogWrite(PWM_PUTZ_PIN,abs(putz_pwm_hw));
    }
   
 #endif
@@ -231,7 +280,9 @@ void loop() {
 //  for(int i=0; i < 10 ; i++) { DigiUSB.refresh(); delay(100); }
 // delay(1000);               // wait for a second
   while(DigiUSB.available() > 0) {
-       digitalWrite(0, HIGH);
+#ifdef USB_DEBUG_CABLIGHT
+       digitalWrite(CABLIGHT_FRONT, HIGH);
+#endif
        char c = DigiUSB.read();
        if(pos < sizeof(line)) {
          line[pos]=c;
@@ -251,6 +302,8 @@ void loop() {
          DigiUSB.println(pos,DEC);
          pos=0;
        }
-       digitalWrite(0, LOW);
+#ifdef USB_DEBUG_CABLIGHT
+       digitalWrite(CABLIGHT_FRONT, LOW);
+#endif
   }
 }

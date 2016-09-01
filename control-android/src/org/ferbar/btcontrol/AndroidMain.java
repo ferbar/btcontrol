@@ -23,9 +23,11 @@
 
 package org.ferbar.btcontrol;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.Hashtable;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -38,27 +40,37 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.StrictMode;
+import android.util.Log;
 import android.view.View;
 // import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 import protocol.MessageLayouts;
 
 import javax.jmdns.JmDNS;
+import javax.jmdns.NetworkTopologyDiscovery;
 import javax.jmdns.ServiceEvent;
 // import javax.jmdns.ServiceInfo;
 import javax.jmdns.ServiceListener;
 
 import org.ferbar.btcontrol.R;
-import org.ferbar.btcontrol.R.id;
-import org.ferbar.btcontrol.R.layout;
 
 
-
+/**
+ * Main Activity:
+ * mDNS scanner + connect dialog
+ * 
+ * @author chris
+ *
+ */
 public class AndroidMain extends Activity {
+	public final String TAG = "btcontrol";
 	public static final String PREFS_NAME = "btcontrol";
 	
 	static BTcommThread btcomm = null;
@@ -69,7 +81,7 @@ public class AndroidMain extends Activity {
 	static String sserver; // server name
 	
 	android.net.wifi.WifiManager wifiManager;
-	android.net.wifi.WifiManager.MulticastLock lock;
+	android.net.wifi.WifiManager.MulticastLock lock=null;
 	private String bonjourType = "_btcontrol._tcp.local.";
 	// TODO: das auf liste umbaun ArrayAdapter<AvailBonjourServiceItem> listAdapter=null;
 	
@@ -80,13 +92,21 @@ public class AndroidMain extends Activity {
 	// private ServiceInfo serviceInfo;
 	
 	// Need handler for callbacks to the UI thread
-    final Handler mHandler = new Handler();
-	// Create runnable for posting
-    final Runnable mUpdateResults = new Runnable() {
-        public void run() {
-            repaint();
-        }
-    };
+    final static Handler mHandler = new Handler();
+
+	BroadcastReceiver myWifiReceiver = new BroadcastReceiver() {
+		@Override
+		// Hint: das wird beim App Start gleich aufgerufen, auch wenn sich nix ändert!
+		public void onReceive(Context arg0, Intent arg1) {
+			// TODO Auto-generated method stub
+			NetworkInfo networkInfo = (NetworkInfo) arg1.getParcelableExtra(ConnectivityManager.EXTRA_NETWORK_INFO);
+			if(networkInfo.getType() == ConnectivityManager.TYPE_WIFI){
+				// DisplayWifiState();
+				AndroidMain.this.notifyUser(networkInfo.toString());
+			}
+			AndroidMain.this.setIPInterfaces();
+		}
+	};
     
     /*
     class AvailBonjourServiceItem {
@@ -98,9 +118,25 @@ public class AndroidMain extends Activity {
     	String ip;
     }*/
 	
+
+    
+    /**
+     * mit dem wird netzwerk io im ui thread erlaubt. ist gefixt jetzt, brauch ma nimma
+    public void disableNetworkOnMainThreadException() {
+	    if (android.os.Build.VERSION.SDK_INT > 9) {
+	        StrictMode.ThreadPolicy policy = 
+	            new StrictMode.ThreadPolicy.Builder().permitAll().build();
+	        StrictMode.setThreadPolicy(policy);
+	    }
+    }
+    */
+    
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
+    	// this.disableNetworkOnMainThreadException();
+    	
+        UncaughtException.setGlobalUncaughtExceptionHandler(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 		MessageLayouts messageLayouts = new MessageLayouts();
@@ -108,8 +144,10 @@ public class AndroidMain extends Activity {
 			messageLayouts.load();
 			// MessageLayouts.dump();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			Toast.makeText(this, "error loading protocol", Toast.LENGTH_LONG).show();
 			e.printStackTrace();
+			this.finish();
+			return;
 		}
 		SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
 		EditText server = (EditText) findViewById(R.id.editText1);
@@ -122,21 +160,62 @@ public class AndroidMain extends Activity {
 // FIXME: E/ActivityThread(29021): Activity com.example.helloandroid.AndroidMain has leaked IntentReceiver com.example.helloandroid.AndroidMain$3@40555948 that was originally registered here. Are you missing a call to unregisterReceiver()?
 // FIXME:		E/ActivityThread(29021): android.app.IntentReceiverLeaked: Activity com.example.helloandroid.AndroidMain has leaked IntentReceiver com.example.helloandroid.AndroidMain$3@40555948 that was originally registered here. Are you missing a call to unregisterReceiver()?
 
-		BroadcastReceiver myWifiReceiver = new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context arg0, Intent arg1) {
-				// TODO Auto-generated method stub
-				NetworkInfo networkInfo = (NetworkInfo) arg1.getParcelableExtra(ConnectivityManager.EXTRA_NETWORK_INFO);
-				if(networkInfo.getType() == ConnectivityManager.TYPE_WIFI){
-					// DisplayWifiState();
-					Toast.makeText(AndroidMain.this, networkInfo.toString(), Toast.LENGTH_SHORT).show();
-				}
-			}
-		};
 
 		// FIXME: da hats was !!!!!
     	this.registerReceiver(myWifiReceiver,
 		         new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+    	
+    }
+    
+    /**
+     * wird beim app start 2* aufgerufen - vom wifi broadcast receiver und vom onResume
+     */
+    public synchronized void setIPInterfaces() {
+    	InetAddress[] addresses = NetworkTopologyDiscovery.Factory.getInstance().getInetAddresses();
+    	RadioGroup rg = (RadioGroup) this.findViewById(R.id.radioGroupIPs);
+    	rg.removeAllViews();
+    	rg.clearCheck();
+    	final SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+    	String bonjourIPAddress=settings.getString("bonjourIPAddress", "");
+
+    	int n=0;
+    	for(InetAddress a : addresses) {
+    		n++;
+    		RadioButton b = new RadioButton(this);
+    		String ip=a.getHostAddress();
+    		b.setText(ip);
+    		b.setId(n);
+    		/*
+    		b.setOnCheckedChangeListener(new OnCheckedChangeListener (){
+				@Override
+				public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+					if(isChecked) {
+						SharedPreferences.Editor editor = settings.edit();
+						editor.putString("bonjourIPAddress", buttonView.getText().toString());
+						editor.commit();
+						AndroidMain.this.initBonjour();
+					}
+				}
+			});
+			*/
+    		rg.addView(b);
+    		// If the view is checked before adding it to the parent, it will be impossible to uncheck it.
+    		b.setChecked(ip.equals(bonjourIPAddress));
+    	}
+    	// System.out.println("****************** checked radio button id: "+rg.getCheckedRadioButtonId());
+    	
+        rg.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+             @Override
+             public void onCheckedChanged(RadioGroup radioGroup, int checkedId) {
+                 RadioButton rb = (RadioButton) radioGroup.findViewById(checkedId);
+                 if(rb != null) {
+					SharedPreferences.Editor editor = settings.edit();
+					editor.putString("bonjourIPAddress", rb.getText().toString());
+					editor.commit();
+					AndroidMain.this.initBonjour();
+                 }
+             }
+         });
     }
     
   
@@ -155,6 +234,13 @@ public class AndroidMain extends Activity {
 
         // Commit the edits!
         editor.commit();
+        
+        // unregister wifi broadcast receiver
+        try {
+        	this.unregisterReceiver(this.myWifiReceiver);
+        } catch(IllegalArgumentException e) { // kA wie das geht dass das hin und wieder nicht registriert ist ....
+        	Log.d(TAG, "unregisterReceiver failed: "+e.getMessage());
+        }
     }
     
     Hashtable<String, String> mDNSHosts=new Hashtable<String,String>();
@@ -163,55 +249,92 @@ public class AndroidMain extends Activity {
     public void onResume() {
     	super.onResume();
     	
+    	this.setIPInterfaces();
+    	
     	this.lock = this.wifiManager.createMulticastLock("btcontrol.jmDNS.lock");
         this.lock.setReferenceCounted(true);
         this.lock.acquire();
-        
-        try {
-			this.jmdns = JmDNS.create();  // Achtung !!! im strict mode macht das eine Network Exception!!!
-	        this.jmdns.addServiceListener(bonjourType, listener = new ServiceListener() {
-	            public void serviceResolved(final ServiceEvent ev) {
-	                notifyUser("Service resolved: "
-	                         + ev.getInfo().getQualifiedName()
-	                         + " port:" + ev.getInfo().getPort());
-	                final EditText eHost=(EditText) findViewById(R.id.editText1);
-	                final LinearLayout list=(LinearLayout) findViewById(R.id.linearLayoutBonjourServer);
-	                runOnUiThread(new Runnable() {
-	                	public void run() {
-	                		String ip=ev.getInfo().getHostAddresses()[0];
-	                		String hostname=ev.getInfo().getServer();
-	                		if(mDNSHosts.containsKey(hostname)) { // hoffentlich macht der da ein compare.to ...
-	                			return;
-	                		}
-	                		mDNSHosts.put(hostname, ip);
-	    	                final TextView tvHost=new TextView(list.getContext());
-	    	                tvHost.setText(ip);
-	                		list.addView(tvHost);
-	                		final Button bHost=new Button(list.getContext());
-	                		bHost.setText(hostname);
-	                		bHost.setOnClickListener(new View.OnClickListener() {
-	                			public void onClick(View v) {
-	                				eHost.setText(mDNSHosts.get(bHost.getText()));
-	                			}
-	                		});
-	                		list.addView(bHost);
-	                	}
-	                });
-	            }
-	            public void serviceRemoved(ServiceEvent ev) {
-	                notifyUser("Service removed: " + ev.getInfo().getQualifiedName()+ " port:" + ev.getInfo().getPort());
-	            }
-	            public void serviceAdded(ServiceEvent event) {
-	                // Required to force serviceResolved to be called again
-	                // (after the first search)
-	                jmdns.requestServiceInfo(event.getType(), event.getName(), 1);
-	            }
-	        });
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+       
+        initBonjour();
     }
+    
+    /**
+     * wird von onResume und radio button changed aufgerufen (=beim app start 2*)
+     */
+    public void initBonjour() {
+    	// ned schön aber beim app start wird das von den callback dingsen aufgerufen.
+    	if(this.lock == null) return;
+    	
+    	Thread initBonjourThread = new Thread() {
+    	    @Override
+    	    public void run() {
+		        try {
+		        	final SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+		        	String bonjourIPAddress=settings.getString("bonjourIPAddress", null);
+		        	if(bonjourIPAddress != null) {
+		        		System.setProperty("net.mdns.interface", bonjourIPAddress);
+		        	}
+					AndroidMain.this.jmdns = JmDNS.create();  // Achtung !!! im strict mode macht das eine Network Exception!!!
+					synchronized(AndroidMain.this.jmdns) {
+						AndroidMain.this.jmdns.addServiceListener(bonjourType, listener = new ServiceListener() {
+				            public void serviceResolved(final ServiceEvent ev) {
+				                notifyUser("Service resolved: "
+				                         + ev.getInfo().getQualifiedName()
+				                         + " port:" + ev.getInfo().getPort());
+				                final EditText eHost=(EditText) findViewById(R.id.editText1);
+				                final LinearLayout list=(LinearLayout) findViewById(R.id.linearLayoutBonjourServer);
+				                runOnUiThread(new Runnable() {
+				                	public void run() {
+				                		String ip=ev.getInfo().getHostAddresses()[0];
+				                		String hostname=ev.getInfo().getServer();
+				                		if(mDNSHosts.containsKey(hostname)) { // hoffentlich macht der da ein compare.to ...
+				                			return;
+				                		}
+				                		mDNSHosts.put(hostname, ip);
+				    	                final TextView tvHost=new TextView(list.getContext());
+				    	                tvHost.setText(ip);
+				                		list.addView(tvHost);
+				                		final Button bHost=new Button(list.getContext());
+				                		bHost.setText(hostname);
+				                		bHost.setOnClickListener(new View.OnClickListener() {
+				                			public void onClick(View v) {
+				                				eHost.setText(mDNSHosts.get(bHost.getText()));
+				                			}
+				                		});
+				                		list.addView(bHost);
+				                	}
+				                });
+				            }
+				            public void serviceRemoved(ServiceEvent ev) {
+				                notifyUser("Service removed: " + ev.getInfo().getQualifiedName()+ " port:" + ev.getInfo().getPort());
+				            }
+				            public void serviceAdded(ServiceEvent event) {
+				                // Required to force serviceResolved to be called again
+				                // (after the first search)
+				            	AndroidMain.this.jmdns.requestServiceInfo(event.getType(), event.getName(), 1);
+				            }
+				        });
+						AndroidMain.this.runOnUiThread(new Runnable() {
+				    		public void run() {
+				    			TextView t=(TextView) AndroidMain.this.findViewById(R.id.textViewInfo);
+				    			try {
+									t.setText(AndroidMain.this.getText(R.string.main_found_serives) + "(" + AndroidMain.this.jmdns.getInetAddress().getHostAddress() + ")");
+								} catch (IOException e) {
+									// lmaa
+									e.printStackTrace();
+								}
+				    		}
+						});
+					} // synchronized
+				} catch (IOException e) {
+					e.printStackTrace();
+					AndroidMain.this.notifyUser("exception:" + e.getMessage());
+				}
+    	    }
+    	};
+    	initBonjourThread.start();
+    }
+    
     @Override
     public void onPause() {
     	super.onPause();
@@ -222,22 +345,24 @@ public class AndroidMain extends Activity {
     	}
     	
     	if(this.jmdns != null) {
-    		jmdns.removeServiceListener(bonjourType, listener);
-    		try {
-				jmdns.close();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-    		jmdns=null;
+    		synchronized(this.jmdns) {
+	    		this.jmdns.removeServiceListener(bonjourType, listener);
+	    		try {
+					this.jmdns.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+	    		this.jmdns=null;
+	    	}
     	}
     }
     
-	class ConnectThread extends Thread {
-		Context c;
+	static class ConnectThread extends Thread {
+		ProgressDialog loadProgressDialog;
 		// AndroidStream androidStream;
-		ConnectThread(Context c) {
-			this.c=c;
+		ConnectThread(ProgressDialog loadProgressDialog) {
+			this.loadProgressDialog=loadProgressDialog;
 			// this.androidStream = androidStream;
 		}
 		public void run() {
@@ -256,11 +381,11 @@ public class AndroidMain extends Activity {
 					}
 				}
 				if(!btcomm.connError()) {
-					Intent i = new Intent(this.c, ControlAction.class);
-					startActivity(i);
-					synchronized(AndroidMain.this.loadProgressDialog) {
-						AndroidMain.this.loadProgressDialog.dismiss();
-						AndroidMain.this.loadProgressDialog=null;
+					Intent i = new Intent(this.loadProgressDialog.getContext(), ControlAction.class);
+					this.loadProgressDialog.getContext().startActivity(i);
+					synchronized(this.loadProgressDialog) {
+						this.loadProgressDialog.dismiss();
+						this.loadProgressDialog=null;
 					}
 					// debugForm.setTitle("connected");
 				} else {
@@ -274,6 +399,10 @@ public class AndroidMain extends Activity {
 				AndroidMain.btcommMessage=e.getMessage();
 				AndroidMain.stopConnection();
 			}
+			if(AndroidMain.notifyStatusChange != null) {
+				AndroidMain.notifyStatusChange.interrupt();
+				AndroidMain.notifyStatusChange=null;
+			}
 		}
 	}
 	
@@ -281,7 +410,11 @@ public class AndroidMain extends Activity {
 	 * wenn BTcomm connected ist oder so dann repaint
 	 */
 	static NotifyStatusChange notifyStatusChange = null;
-	class NotifyStatusChange extends Thread {
+	static class NotifyStatusChange extends Thread {
+		Runnable repaint=null;
+		NotifyStatusChange(Runnable repaint) {
+			this.repaint=repaint;
+		}
 		public void run() {
 			// Debuglog.debugln("starting NotifyStatusChange");
 			while(true && AndroidMain.btcomm != null) {
@@ -290,7 +423,7 @@ public class AndroidMain extends Activity {
 						// Debuglog.debugln("starting NotifyStatusChange locked");
 						AndroidMain.btcomm.statusChange.wait();
 					}
-					mHandler.post(mUpdateResults);
+					mHandler.post(this.repaint);
 				} catch (InterruptedException ex) {
 					break;
 				}
@@ -300,9 +433,28 @@ public class AndroidMain extends Activity {
 			}
 		}
 	}
+
+	public static ProgressDialog createConnectingProgressDialog(Context c) {
+		// warte dialog auf:
+		final ProgressDialog loadProgressDialog = new ProgressDialog(c);
+	    loadProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+	    loadProgressDialog.setMessage("Connecting...");
+	    loadProgressDialog.setCancelable(false);
+	    loadProgressDialog.setProgress(0);
+	    loadProgressDialog.setMax(10);
+	    loadProgressDialog.setButton("Abbrechen", new DialogInterface.OnClickListener() {
+	    	public void onClick(DialogInterface dialog, int which) {
+	    		AndroidMain.stopConnection();
+	    		synchronized(loadProgressDialog) {
+	    			loadProgressDialog.dismiss();
+	    			// loadProgressDialog=null;
+	    		}
+	    	}
 	
-	// Progress Dialog anlegen:
-	ProgressDialog loadProgressDialog;
+	    });
+	    loadProgressDialog.show();
+	    return loadProgressDialog;
+	}
     
 	public void onButtonConnect(View view) {
 		if(AndroidMain.btcomm != null) {
@@ -316,26 +468,15 @@ public class AndroidMain extends Activity {
 		System.out.println("server:"+AndroidMain.sserver);
 		//startActivityForResult(i, ACTIVITY_CREATE);
 		
-		// warte dialog auf:
-		loadProgressDialog = new ProgressDialog(this);
-        loadProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-        loadProgressDialog.setMessage("Connecting...");
-        loadProgressDialog.setCancelable(false);
-        loadProgressDialog.setProgress(0);
-        loadProgressDialog.setMax(10);
-        loadProgressDialog.setButton("Abbrechen", new DialogInterface.OnClickListener() {
-        	public void onClick(DialogInterface dialog, int which) {
-        		onButtonDisconnect(null);
-        		synchronized(loadProgressDialog) {
-        			loadProgressDialog.dismiss();
-        			loadProgressDialog=null;
-        		}
-        	}
-
-        });
-        loadProgressDialog.show();
-		
-		this.restartConnection();
+		final ProgressDialog loadProgressDialog=AndroidMain.createConnectingProgressDialog(this);
+        
+    	// Create runnable for posting
+        Runnable mUpdateProgressDialog = new Runnable() {
+            public void run() {
+                AndroidMain.repaint(loadProgressDialog, (TextView)AndroidMain.this.findViewById(R.id.textViewStatus));
+            }
+        };
+		AndroidMain.restartConnection(loadProgressDialog, mUpdateProgressDialog);
 	}
 	
     public void onButtonDisconnect(View view) {
@@ -358,20 +499,20 @@ public class AndroidMain extends Activity {
     }
     
 
-    public void restartConnection() {
+    public static void restartConnection(ProgressDialog loadProgressDialog, Runnable repaint) {
 		if(AndroidMain.btcomm == null) {
 			AndroidMain.btcomm = new BTcommThread(new AndroidStream(AndroidMain.sserver,3030));
 			Debuglog.debugln("reconnecting to server");
-			AndroidMain.notifyStatusChange=new NotifyStatusChange();
+			AndroidMain.notifyStatusChange=new NotifyStatusChange(repaint);
 			AndroidMain.notifyStatusChange.start();
-			AndroidMain.connectThread = new ConnectThread(this);
-			connectThread.start();
+			AndroidMain.connectThread = new ConnectThread(loadProgressDialog);
+			AndroidMain.connectThread.start();
 		} else {
 			Debuglog.debugln("restart conn - still connected");
 		}
 	}
     
-    public void repaint() {
+    public static void repaint(ProgressDialog loadProgressDialog, TextView tvInfo) {
     	String text=BTcommThread.statusText[BTcommThread.STATE_DISCONNECTED];
     	if(AndroidMain.btcomm != null) {
     		text=BTcommThread.statusText[btcomm.connState];
@@ -381,16 +522,17 @@ public class AndroidMain extends Activity {
     	if(AndroidMain.btcommMessage != null) {
     		text+=" ("+AndroidMain.btcommMessage+")";
     	}
-		TextView tv=(TextView)this.findViewById(R.id.textViewStatus);
-		tv.setText(text);
-		if(this.loadProgressDialog != null) {
-			synchronized(this.loadProgressDialog) {
+		if(tvInfo != null) {
+			tvInfo.setText(text);
+		}
+		if(loadProgressDialog != null) {
+			synchronized(loadProgressDialog) {
 				if(AndroidMain.btcomm != null) {
-					this.loadProgressDialog.setProgress(btcomm.connState);
-					this.loadProgressDialog.setMessage(text);
+					loadProgressDialog.setProgress(btcomm.connState);
+					loadProgressDialog.setMessage(text);
 				} else {
-					this.loadProgressDialog.setProgress(0);
-					this.loadProgressDialog.setMessage("no connection");
+					loadProgressDialog.setProgress(0);
+					loadProgressDialog.setMessage("no connection");
 				}
 			}
 		}
@@ -423,7 +565,7 @@ public class AndroidMain extends Activity {
     };
     
     public void notifyUser(final String text) {
-    	System.out.println("NotifyUser:" + text);
+    	Log.i(TAG,"NotifyUser:" + text);
     	this.runOnUiThread(new Runnable() {
     		public void run() {
     	    	makeToast(text);

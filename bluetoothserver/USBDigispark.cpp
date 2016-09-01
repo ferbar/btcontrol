@@ -19,6 +19,7 @@
 #include <exception>
 
 bool useCommthread=true;
+bool cfg_noInitCommand=false;
 
 char read(libusb_device_handle *devHandle);
 
@@ -128,6 +129,7 @@ static void *startCommThread(void *data)
 			pthread_mutex_unlock(&mut);
 			// printf("X unlocked\n");
 			char *pos=buffer;
+			// FIXME: bis \n hinausschreiben und dann rest buffer nach vorne schieben und antwort einlesen
 			while(*pos != '\0') {
 				printf("W " ANSI_RED1 "%c" ANSI_DEFAULT " ",*pos); fflush(stdout);
 				// TODO: *pos == uint16_t wValue da könnt ma Mxx statt 4 bytes einzeln machen!
@@ -163,6 +165,7 @@ void sendCmd(const char *cmd) {
 	// printf("S try lock\n");
 	pthread_mutex_lock(&mut);
 	// printf("S locked\n");
+// FIXME: command hinten anhängen, nicht vorhandenes überschreiben!
 	strcpy(commBuffer,cmd);
 	/* modify x and y */
 	x++;
@@ -315,8 +318,11 @@ void USBDigispark::init(int devnr) {
 		pthread_detach(commThread);
 	}
 	printf("digispark init done\n");
-	sendCmd("V\n");
-	this->setPWM(0);
+	// Version abfragen:
+	if(!cfg_noInitCommand) {
+		sendCmd("V\n");
+		this->setPWM(0);
+	}
 }
 
 void USBDigispark::setPWM(int f_speed) {
@@ -541,16 +547,27 @@ char read(libusb_device_handle *devHandle) {
 #include <unistd.h>
 int main(int argc, char* argv[]) {
 	printf("Digispark test mode\n");
+	cfg_noInitCommand=true;
 	USBDigispark test(0,true);
+	sleep(1);
+	sendCmd("Q\n");
+	sleep(10);
+	sendCmd("D0\n"); //  test.setDir(0); <- das sendet nur bei änderung
+	sleep(10);
 	// const char *rc;
+	int n=0;
 	while(1) {
 		printf("S while 1\n");
 		if(useCommthread) {
 			sendCmd("M65\n");
-			sleep(1);
+			sleep(4);
+			if(n++ % 10) {	
+				sendCmd("Q\n");
+				sleep(1);
+			}
 			printf("S while 2\n");
 			sendCmd("M00\n");
-			sleep(1);
+			sleep(4);
 			// sendCmd("Q\n");
 			// sleep(1);
 		} else {
@@ -573,7 +590,6 @@ int main(int argc, char* argv[]) {
 			}
 		}
 		printf("\n");
-		
 	}
 
 }

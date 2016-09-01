@@ -151,11 +151,17 @@ void initPlatine()
 	printf("init platine\n");
 	try {
 		platine=new K8055(1,cfg_debug);
+		// FIXME:
+		strncpy(lokdef[0].name,"K8055", sizeof(lokdef[0].name));
+		lokdef[1].addr=0;
 	} catch(std::exception &errormsg) {
 		printf("K8055: error: %s\n",errormsg.what());
 	}
 	try {
 		platine=new USBDigispark(1,cfg_debug);
+		// FIXME:
+		strncpy(lokdef[0].name,"USBDigispark", sizeof(lokdef[0].name));
+		lokdef[1].addr=0;
 	} catch(std::exception &errormsg) {
 		printf("USBDigispark init: error: %s\n",errormsg.what());
 	}
@@ -173,7 +179,9 @@ void initPlatine()
 	if(!platine) {
 		try {
 			platine=new RaspiPWM(cfg_debug);
+			// FIXME:
 			strncpy(lokdef[0].name,"RaspiPWM", sizeof(lokdef[0].name));
+			lokdef[1].addr=0;
 		} catch(std::exception &errormsg) {
 			printf("RaspiPWM: error: %s\n",errormsg.what());
 		}
