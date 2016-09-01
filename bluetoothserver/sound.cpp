@@ -6,6 +6,9 @@
  *
  *  http://users.suse.com/~mana/alsa090_howto.html
  *  http://www.linuxjournal.com/article/6735?page=0,1
+ *
+ *  async alsa:
+ *  http://alsa.opensrc.org/HowTo_Asynchronous_Playback
  */
 #include <alsa/asoundlib.h>
 #include <stdio.h>
