@@ -424,7 +424,16 @@ continue;
 					reply["value"]=1;
 					srcp->sendPOM(lokdef[addr_index].addr, cv, value);
 				} else {
-					reply["value"]=0;
+				#ifdef HAVE_ALSA
+					if(cv==266) {
+					    sound.setMasterVolume(value);
+						reply["value"]=1;
+					} else {
+				#endif
+						reply["value"]=0;
+				#ifdef HAVE_ALSA
+					}
+				#endif
 				}
 				sendMessage(reply);
 			} else if(cmd.isType("POMBIT")) {
@@ -567,17 +576,25 @@ continue;
 				sound.setSpeed(a_speed);
 				if(lokdef[addr_index].func[1].ison) {
 					lokdef[addr_index].func[1].ison=false;
+					PlayAsync horn(CFG_FUNC_SOUND_HORN);
+					/*
 					Sound horn;
-					horn.init();
-					horn.setBlocking(false);
+					horn.init(SND_PCM_NONBLOCK);
+					// horn.setBlocking(false);
 					horn.playSingleSound(CFG_FUNC_SOUND_HORN);
+					// horn.close(false);
+					*/
 				}
 				if(lokdef[addr_index].func[2].ison) {
 					lokdef[addr_index].func[2].ison=false;
+					PlayAsync horn(CFG_FUNC_SOUND_ABFAHRT);
+					/*
 					Sound horn;
-					horn.init();
-					horn.setBlocking(false);
+					horn.init(SND_PCM_NONBLOCK);
+					// horn.setBlocking(false);
 					horn.playSingleSound(CFG_FUNC_SOUND_ABFAHRT);
+					// horn.close(false);
+					*/
 				}
 #endif
 			}

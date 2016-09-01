@@ -3,22 +3,26 @@
 #include <alsa/asoundlib.h>
 #include "zsp.h"
 
+class PlayAsync;
+
 class Sound {
 public:
 	Sound() : handle(NULL) {} ;
 	virtual ~Sound();
-	void init();
-	void close();
+	void init(int mode=0);
+	void close(bool waitDone=true);
 
+	void setBufferSize(int frames);
 	void setBlocking(bool blocking);
 	void playSingleSound(int index);
 
-	void writeSound(const std::string &data);
+	int writeSound(const std::string &data, int startpos=0);
 
 	static void loadSoundFiles(SoundType *soundFiles);
 	static void loadSoundFile(const std::string &fileName, std::string &dst);
 	static void loadWavFile(std::string filename, std::string &out);
 
+	static void setMasterVolume(int volume);
 private:
 	// jedes Sound objekt hat eigenes Handle 20150831: am raspi kamma das default device ohne probleme öfters aufmachen
 	snd_pcm_t *handle;
@@ -26,6 +30,23 @@ private:
 	// die wav files solten alle im selben format sein ...
 	static snd_pcm_format_t bits;
 	static int sample_rate;
+
+	friend class PlayAsync;
+};
+
+class PlayAsyncData {
+public:
+	PlayAsyncData(const std::string &data, Sound *sound, int position) : data(data), position(position), sound(sound) {};
+	const std::string &data;
+	int position;
+	Sound *sound;
+};
+
+class PlayAsync {
+public:
+	PlayAsync(int soundIndex);
+private:
+	Sound *sound;
 };
 
 class FahrSound : public Sound {
