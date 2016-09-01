@@ -204,11 +204,12 @@ void Server::run()
 	Server::isrunning=true;
 	while(1) {
 		int nsk = this->accept();
-		if(nsk < 0) {
+		if(nsk < 0) { // fehler, kann auch z.b. interrupted system call sein
 			if(this->exit) {
 				Server::isrunning=false;
 				break;
 			}
+			continue;
 		}
 	// client thread vorbereiten + starten
 		startupdata_t *startupData=(startupdata_t*) calloc(sizeof(startupdata_t),1);
