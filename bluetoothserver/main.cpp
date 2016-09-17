@@ -39,8 +39,6 @@
 
 #include <pthread.h>
 
-// dirname
-#include <libgen.h>
 
 #include <map>
 
@@ -90,56 +88,6 @@ USBPlatine *platine=NULL;
 void *platine=NULL;
 #endif
 SRCP *srcp=NULL;
-
-#undef read
-int myRead(int so, void *data, size_t size) {
-	int read=0;
-	// printf("myRead: %zd\n",size);
-	while(read < (int) size) {
-		// printf("read: %zd\n",size-read);
-		int rc=::read(so,((char *) data)+read,size-read);
-		// printf("rc: %d\n",rc);
-		if(rc < 0) {
-			throw std::runtime_error("error reading data");
-		} else if(rc == 0) { // stream is blocking -> sollt nie vorkommen
-			throw std::runtime_error("nothing to read");
-		}
-		read+=rc;
-	}
-	return read;
-}
-
-// FIXME: das ins utils.cpp ?
-std::string readFile(std::string filename)
-{
-	std::string ret;
-	struct stat buf;
-	if(stat(filename.c_str(), &buf) != 0) {
-		char execpath[MAXPATHLEN];
-		if(readlink("/proc/self/exe", execpath, sizeof(execpath)) <= 0) {
-			printf("error reading /proc/self/exe\n");
-			abort();
-		}
-		char *linkpath=dirname(execpath);
-		filename.insert(0,std::string(linkpath) + '/');
-		if(stat(filename.c_str(), &buf) != 0) {
-			fprintf(stderr,"error stat file %s\n",filename.c_str());
-			throw std::runtime_error("error stat file");
-		}
-	}
-	ret.resize(buf.st_size,'\0');
-	FILE *f=fopen(filename.c_str(),"r");
-	if(!f) {
-		fprintf(stderr,"error reading file %s\n",filename.c_str());
-		throw std::runtime_error("error reading file");
-	} else {
-		const char *data=ret.data(); // mutig ...
-		fread((void*)data,1,buf.st_size,f);
-		fclose(f);
-		printf("%s:%lu bytes\n",filename.c_str(),buf.st_size);
-	}
-	return ret;
-}
 
 /**
  * Velleman k8055 init
