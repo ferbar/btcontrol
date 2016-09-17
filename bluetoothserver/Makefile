@@ -86,11 +86,13 @@ Makefile.config:
 		echo "found" ;\
 		echo "CFLAGS+=-DHAVE_RASPI_ACT_LED" >> Makefile.config ; \
 		echo -e "checking for wiringPI:" ; \
-		if [ -f "/usr/local/lib/libwiringPi.so" ] ; then \
+		if [ -f "/usr/local/lib/libwiringPi.so" -o -f "/usr/lib/libwiringPi.so" ] ; then \
 			echo "found" ;		\
 			echo "CFLAGS+=-DHAVE_RASPI_WIRINGPI" >> Makefile.config ; \
 			echo "LDFLAGS+=-lwiringPi" >> Makefile.config;			\
 			echo "btserver: RaspiPWM.o" >> Makefile.config;			\
+		else					\
+			echo "not found - RaspiPWM disabled"	;\
 		fi ; 					\
 	else						\
 		echo "not found - raspi ACT led disabled"	;\
