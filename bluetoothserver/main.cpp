@@ -166,7 +166,7 @@ void initPlatine()
 		printf("USBDigispark init: error: %s\n",errormsg.what());
 	}
 	printf("... done\n");
-#if defined HAVE_ALSA
+#ifdef HAVE_ALSA
 	if(platine) {
 		SoundType *soundFiles=loadZSP();
 		if(soundFiles) {
@@ -243,6 +243,28 @@ int main(int argc, char *argv[])
 				break;
 			case 'v':
 				printf("btserver version %s\n", _STR(SVNVERSION));
+#ifdef HAVE_RASPI_WIRINGPI
+				printf("+RASPI_WIRINGPI ");
+#endif
+#ifdef HAVE_ALSA
+				printf("+alsa ");
+#endif
+#ifdef HAVE_LIBUSB
+				printf("+libusb ");
+#endif
+#ifdef INCL_QRCODE
+				printf("+INCL_QRCODE ");
+#endif
+#ifdef INCL_BT
+				printf("+INCL_BT ");
+#endif
+#ifdef HAVE_RASPI_ACT_LED
+				printf("+HAVE_RASPI_ACT_LED ");
+#endif
+#ifdef INCL_X11
+				printf("+X11 ");
+#endif
+				printf("\n");
 				exit(0);
 			case 's':
 				cfg_hostname=optarg;
@@ -283,6 +305,7 @@ int main(int argc, char *argv[])
 
 	// FBTCtlMessage test(FBTCtlMessage::STRUCT)
 	try {
+		config.init("conf/btserver.conf");
 		messageLayouts.load();
 		printf("---------------protohash = %d\n",messageLayouts.protocolHash);
 		printf("TCP RX Timeout = %d\n",cfg_tcpTimeout);

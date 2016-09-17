@@ -42,7 +42,8 @@ int myRead(int so, void *data, size_t size);
 
 class Config {
 public:
-	Config(std::string confFilename);
+	Config();
+	void init(const std::string &confFilename);
 	std::string get(const std::string key);
 private:
 	std::map<std::string, std::string> data;

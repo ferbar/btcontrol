@@ -9,9 +9,13 @@
 
 
 
-Config config("conf/btserver.conf");
+Config config;
 
-Config::Config(const std::string confFilename) {
+Config::Config() {
+
+}
+
+void Config::init(const std::string &confFilename) {
 	FILE *f=fopen(confFilename.c_str(),"r");
 	if(!f) {
 		fprintf(stderr,"no config file ... skipping\n");
