@@ -1,3 +1,5 @@
+#!/bin/sh
+
 ### BEGIN INIT INFO
 # Provides:          btcontrol
 # Required-Start:    avahi networking $remote_fs $syslog
