@@ -13,14 +13,16 @@
 
 # Using the lsb functions to perform the operations.
 . /lib/lsb/init-functions
+# wenn raspiPWM verwendet wird muss als root gestartet werden
 USER=pi
+#CHUSER=$USER
 # Process name ( For display )
 NAME=btcontrol
 # Daemon name, where is the actual executable
 DAEMON=/home/$USER/dev/btcontrol/bluetoothserver/btserver
 # pid file for the daemon
 PIDFILE=/var/run/btserver.pid
-
+DEBUG=""
 
 # If the daemon is not there, then exit.
 test -x $DAEMON || exit 5
@@ -45,12 +47,22 @@ case $1 in
 		log_daemon_msg "Starting the process" "$NAME"
 		# Start the daemon with the help of start-stop-daemon
 		# Log the message appropriately
-		if start-stop-daemon --start --quiet --oknodo --chuid $USER --make-pidfile --pidfile $PIDFILE --background --chdir $DIR --exec $DAEMON ; then
+		if [ "$CHUSER" ] ; then
+			args="--chuid $CHUSER "
+		fi
+		if [ "$DEBUG" ] ; then
+			args+="--no-close "
+		fi
+		if start-stop-daemon --start --quiet --oknodo $args --make-pidfile --pidfile $PIDFILE --background --chdir $DIR --exec $DAEMON ; then
 			log_end_msg 0
 		else
 			log_end_msg 1
 		fi
-		$(dirname $DAEMON)/initbtrail.sh --wait-for-device
+		if pgrep initbtrail.sh >/dev/null ; then
+			echo "initbtrail already up";
+		else
+			$(dirname $DAEMON)/initbtrail.sh --wait-for-device &
+		fi
 		;;
 	stop)
 		# Stop the daemon.
@@ -64,6 +76,7 @@ case $1 in
 			log_daemon_msg "$NAME process is not running"
 			log_end_msg 0
 		fi
+		killall initbtrail.sh
 		;;
 	restart)
 		# Restart the daemon.
