@@ -4,6 +4,8 @@ gen/
 
 !bin/btcontrol.apk
 
+lint.xml
+
 # Eclipse project files
 .classpath
 .project
@@ -13,4 +15,4 @@ proguard/
 
 # Local configuration file (sdk path, etc)
 local.properties
-/bin/
+
