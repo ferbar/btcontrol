@@ -1,6 +1,8 @@
 # generated files
-bin/
+bin/*
 gen/
+
+!bin/btcontrol.apk
 
 # Eclipse project files
 .classpath
