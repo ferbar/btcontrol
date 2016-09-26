@@ -11,7 +11,7 @@ Vermittlungsstelle bluetooth -> srcpd
 cpp-programm, zum kompilieren wird benötigt:
 * suse 11.2: libusb-dev bzw libusb-compat-devel, bluez-devel
 * auf ubuntu: libbluetooth-dev, libusb-dev, libasound-dev, libboost-dev
-* am raspi: (für raspi pwm): wiringPi git clone git://git.drogon.net/wiringPi
+* am raspi: libusb-1.0-0-dev libbluetooth-dev libasound2-dev libboost-serialization-dev | für raspi pwm: wiringpi (seit jessie als paket, davor: git clone git://git.drogon.net/wiringPi)
 * k8055 git submodule downloaden:
 ```
 git submodule update --init
@@ -41,7 +41,7 @@ rest: funktionsnamen
 ```
 oder das init-script nach /etc/init.d kopieren und einschalten. **hint** möchte man bluetooth zum steuern verwenden dann bei Required-Start: bluetooth: hinzufügen!
 ```
-update-rc.d btcontrol enable
+update-rc.d btcontrol defaults
 ```
 
 ### Schnittstellen zum Motor:
@@ -77,13 +77,46 @@ ussp-push 00:11:22:33:44:55@ btcontrol.jar btcontrol.jar
 
 ## Raspberry PI
 
+allgemeine Probleme:
+
+Uhrzeit falsch:
+```
+ntpd -gq
+
+```
+
+### raspbian aufräumen:
+ 
+```
+ apt-get remove --purge wolfram-engine triggerhappy anacron logrotate dphys-swapfile xserver-common lightdm x11-utils xinit x11-xkb-utils xdg-utils x11-common \
+ libreoffice libreoffice-core libreoffice-common \
+ nodered supercollider freepats omxplayer scratch \
+ oracle-java8-jdk bluej greenfoot \
+ lxde-common lxde-icon-theme lxterminal lxpanel-data \
+ libx11-6 libgtk-3-0 libgtk2.0-0 gtk2-engines leafpad gpicview galculator xarchiver alacarte \
+ fonts-dejavu-extra fonts-sil-gentium-basic
+ liblapack3 libv8-3.14.5 nodejs python3.4-minimal libpython3.4-stdlib pypy
+ libgstreamer1.0-0 libgl1-mesa-glx libgles1-mesa libgles2-mesa libglapi-mesa
+ plymouth
+
+ apt-get autoremove --purge
+
+ apt-get install vim
+ update-alternatives --config editor
+```
+
+die sdkarte kann mit dd_rescue kopiert werden und mit parted <loopdevice> bearbeitet werden. mit kpartx müssen die partitionen vorher angelegt werden.
+
 ### Dateisystem readonly
+UPDATE: https://hallard.me/raspberry-pi-read-only/
+
 warum? damit man ohne schlechtes Gewissen den Stecker ziehen kann. Vorallem die boot Partition (FAT) kann leicht beleidigt werden. (dass man dann erst nach mount -o remount,rw / und /boot was änern kann versteht sich von selbst)
 
 ```
  update-rc.d rsyslog disable
  sudo vi /etc/fstab
    options: defaults,ro
+   tmpfs nach /tmp mounten
 ```
 
 wenn man das nicht machen will und es reicht einem nach dem ersten superblock time is in future: /etc/e2fsck.conf und broken_system_clock reinschreiben. Siehe:
