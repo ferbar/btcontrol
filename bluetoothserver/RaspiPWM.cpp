@@ -13,11 +13,11 @@
 #include <wiringPi.h>
 
 #define PIN_PWM		1
-#define PIN_DIR1	2
-#define PIN_DIR2	3
 
 RaspiPWM::RaspiPWM(bool debug) :
-	USBPlatine(debug), dir(-1), pwm(-1), motorStart(70),
+	USBPlatine(debug),
+	PIN_DIR1(0), PIN_DIR2(7),
+	 dir(-1), pwm(-1), motorStart(70),
 		fRaspiLed(NULL), raspiLedToggle(0){
 
 	try {
@@ -43,10 +43,15 @@ void RaspiPWM::init() {
 	wiringPiSetup();
 
 
-	std::string sMotorStart = config.get("digispark.motorStart");
-	printf("RaspiPWM::init() ---- motorStart %s\n",sMotorStart.c_str());
+	std::string tmp = config.get("digispark.motorStart");
+	printf("RaspiPWM::init() ---- motorStart %s\n", tmp.c_str());
 
-	this->motorStart=utils::stoi(sMotorStart);
+	this->motorStart=utils::stoi(tmp);
+
+	tmp = config.get("wiringpi.dir1.pin");
+	this->PIN_DIR1 = this->motorStart=utils::stoi(tmp);
+	tmp = config.get("wiringpi.dir2.pin");
+	this->PIN_DIR2 = this->motorStart=utils::stoi(tmp);
 
 	this->fRaspiLed = fopen("/sys/class/leds/led0/brightness", "w");
 	if(this->fRaspiLed) {
@@ -61,7 +66,7 @@ void RaspiPWM::init() {
 	pwmSetRange(256);
 	this->setPWM(0);
 	pinMode(PIN_DIR1, OUTPUT);
-	pinMode(PIN_DIR2, OUTPUT);
+	pinMode(this->PIN_DIR2, OUTPUT);
 	this->setDir(1);
 }
 
@@ -91,8 +96,8 @@ void RaspiPWM::setDir(unsigned char dir) {
 	// int result = 0;
 	if(this->dir!=dir) {
 		printf("setting dir: %d\n", dir);
-		digitalWrite(PIN_DIR1, dir==1 ? 0 : 1);
-		digitalWrite(PIN_DIR2, dir==1 ? 1 : 0);
+		digitalWrite(this->PIN_DIR1, dir==1 ? 0 : 1);
+		digitalWrite(this->PIN_DIR2, dir==1 ? 1 : 0);
 		this->dir=dir;
 	}
 }

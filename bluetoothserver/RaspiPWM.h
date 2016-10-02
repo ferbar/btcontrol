@@ -13,6 +13,8 @@ public:
 
 
 private:
+	int PIN_DIR1;
+	int PIN_DIR2;
 	void init();
 	void release();
 

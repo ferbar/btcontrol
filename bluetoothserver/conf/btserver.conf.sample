@@ -11,3 +11,6 @@ cvxy=xy
 
 # bei dem Wert fangt der motor in der lok sich an zu drehen
 digispark.motorStart=70
+
+wiringpi.dir1.pin=0
+wiringpi.dir2.pin=7
