@@ -12,5 +12,11 @@ cvxy=xy
 # bei dem Wert fangt der motor in der lok sich an zu drehen
 digispark.motorStart=70
 
-wiringpi.dir1.pin=0
-wiringpi.dir2.pin=7
+# richtungs pin für die brücke
+wiringpi.dir1.pin=2
+# led
+wiringpi.dir1.pin=7
+# richtungs pin für die brücke
+wiringpi.dir2.pin=3
+# led
+wiringpi.dir2.pin=0

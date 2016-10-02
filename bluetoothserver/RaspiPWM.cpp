@@ -16,9 +16,13 @@
 
 RaspiPWM::RaspiPWM(bool debug) :
 	USBPlatine(debug),
-	PIN_DIR1(0), PIN_DIR2(7),
 	 dir(-1), pwm(-1), motorStart(70),
 		fRaspiLed(NULL), raspiLedToggle(0){
+
+	for(int i=0; i < maxPins; i++) {
+		this->pinsDir1[i]=-1;
+		this->pinsDir2[i]=-1;
+	}
 
 	try {
 		this->init();
@@ -47,12 +51,21 @@ void RaspiPWM::init() {
 	this->motorStart=utils::stoi(tmp);
 	printf("RaspiPWM::init() ---- motorStart %d\n", this->motorStart);
 
-	tmp = config.get("wiringpi.dir1.pin");
-	this->PIN_DIR1 = utils::stoi(tmp);
-	printf("RaspiPWM::init() ---- motorStart %d\n", this->PIN_DIR1);
-	tmp = config.get("wiringpi.dir2.pin");
-	this->PIN_DIR2 = utils::stoi(tmp);
-	printf("RaspiPWM::init() ---- motorStart %d\n", this->PIN_DIR2);
+	int n1=0;
+	int n2=0;
+	for (auto it=config.begin(); it!=config.end(); ++it) {
+		if(it->first == "wiringpi.dir1.pin") {
+			printf("setting wiringpi.dir1.pin[%d]=%s\n", n1, it->second.c_str());
+			this->pinsDir1[n1++]=utils::stoi(it->second);
+		}
+		if(it->first == "wiringpi.dir2.pin") {
+			printf("setting wiringpi.dir2.pin[%d]=%s\n", n2, it->second.c_str());
+			this->pinsDir2[n2++]=utils::stoi(it->second);
+		}
+		if(n1 >= this->maxPins || n2 >= this->maxPins){
+			throw std::runtime_error("error reading maxPins");
+		}
+	}
 
 	this->fRaspiLed = fopen("/sys/class/leds/led0/brightness", "w");
 	if(this->fRaspiLed) {
@@ -66,8 +79,16 @@ void RaspiPWM::init() {
 	pwmSetClock(4);
 	pwmSetRange(256);
 	this->setPWM(0);
-	pinMode(PIN_DIR1, OUTPUT);
-	pinMode(this->PIN_DIR2, OUTPUT);
+	for(int i=0; i<this->maxPins ; i++) {
+		if(this->pinsDir1[i] >= 0) {
+			pinMode(this->pinsDir1[i], OUTPUT);
+			printf("setting OUT for pin %d\n", this->pinsDir1[i]);
+		}
+		if(this->pinsDir2[i] >= 0) {
+			pinMode(this->pinsDir2[i], OUTPUT);
+			printf("setting OUT for pin %d\n", this->pinsDir2[i]);
+		}
+	}
 	this->setDir(1);
 }
 
@@ -97,8 +118,12 @@ void RaspiPWM::setDir(unsigned char dir) {
 	// int result = 0;
 	if(this->dir!=dir) {
 		printf("setting dir: %d\n", dir);
-		digitalWrite(this->PIN_DIR1, dir==1 ? 0 : 1);
-		digitalWrite(this->PIN_DIR2, dir==1 ? 1 : 0);
+		for(int i=0; i<this->maxPins ; i++) {
+			if(this->pinsDir1[i] >= 0)
+				digitalWrite(this->pinsDir1[i], dir==1 ? 0 : 1);
+			if(this->pinsDir2[i] >= 0)
+				digitalWrite(this->pinsDir2[i], dir==1 ? 1 : 0);
+		}
 		this->dir=dir;
 	}
 }

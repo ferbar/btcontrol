@@ -13,8 +13,9 @@ public:
 
 
 private:
-	int PIN_DIR1;
-	int PIN_DIR2;
+	static const int maxPins=10;
+	int pinsDir1[maxPins];
+	int pinsDir2[maxPins];
 	void init();
 	void release();
 

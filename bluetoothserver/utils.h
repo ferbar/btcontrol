@@ -45,8 +45,10 @@ public:
 	Config();
 	void init(const std::string &confFilename);
 	std::string get(const std::string key);
+	std::multimap<std::string, std::string>::iterator begin() { return data.begin(); }
+	std::multimap<std::string, std::string>::iterator end() { return data.end(); }
 private:
-	std::map<std::string, std::string> data;
+	std::multimap<std::string, std::string> data;
 };
 
 extern Config config;

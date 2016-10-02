@@ -40,13 +40,14 @@ void Config::init(const std::string &confFilename) {
 			key=line;
 			value="";
 		}
-		this->data[key] = value;
+		this->data.insert( std::pair<std::string, std::string>(key, value) );
 	}
 }
 
 std::string Config::get(const std::string key) {
 	try {
-		return this->data.at(key);
+		std::multimap<std::string, std::string>::iterator it = this->data.find(key);
+		return it->second;
 	} catch(std::out_of_range &e) {
 		throw std::out_of_range("key " + key + " not found");
 	}
