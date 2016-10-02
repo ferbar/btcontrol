@@ -44,14 +44,15 @@ void RaspiPWM::init() {
 
 
 	std::string tmp = config.get("digispark.motorStart");
-	printf("RaspiPWM::init() ---- motorStart %s\n", tmp.c_str());
-
 	this->motorStart=utils::stoi(tmp);
+	printf("RaspiPWM::init() ---- motorStart %d\n", this->motorStart);
 
 	tmp = config.get("wiringpi.dir1.pin");
-	this->PIN_DIR1 = this->motorStart=utils::stoi(tmp);
+	this->PIN_DIR1 = utils::stoi(tmp);
+	printf("RaspiPWM::init() ---- motorStart %d\n", this->PIN_DIR1);
 	tmp = config.get("wiringpi.dir2.pin");
-	this->PIN_DIR2 = this->motorStart=utils::stoi(tmp);
+	this->PIN_DIR2 = utils::stoi(tmp);
+	printf("RaspiPWM::init() ---- motorStart %d\n", this->PIN_DIR2);
 
 	this->fRaspiLed = fopen("/sys/class/leds/led0/brightness", "w");
 	if(this->fRaspiLed) {
