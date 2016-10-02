@@ -3,6 +3,6 @@
 bluetoothserver/Makefile.config
 bluetoothserver/btserver
 bluetoothserver/digispark_test
-control-android/gen/
 bluetoothserver/conf/btserver.conf
 bluetoothserver/conf/lokdef.csv
+bluetoothserver/sound/
