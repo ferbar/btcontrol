@@ -85,6 +85,10 @@ ntpd -gq
 
 ```
 
+Bluetooth funktioniert nicht:
+
+bluez 5 hat neues Interface um ein Service zu registrieren, siehe lib/systemd/system/bluetooth.service
+
 ### raspbian aufräumen:
  
 ```
