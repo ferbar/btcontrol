@@ -5,6 +5,7 @@ Entweder mit einem Raspberry Pi in der Lok selbst (das ist nur für die Gartenba
 
 Diese Software ist meine private Spielerei, es sind jedoch alle herzlich willkommen den Code zu begutachten, auszuprobieren und Ideen beizutragen. Sollte allerdings irgendwas beschädigt werden ist jeder selbst schuld und ich lehne jegliche Verantwortung ab.
 
+Project home: https://github.com/ferbar/btcontrol/
 
 ## bluetoothserver
 Vermittlungsstelle bluetooth -> srcpd
@@ -39,7 +40,7 @@ rest: funktionsnamen
 ```
 ./btserver --help liefert eine mini-hilfe
 ```
-oder das init-script nach /etc/init.d kopieren und einschalten. **hint** möchte man bluetooth zum steuern verwenden dann bei Required-Start: bluetooth: hinzufügen!
+oder das init-script nach /etc/init.d kopieren und einschalten. **hint**: möchte man bluetooth zum steuern verwenden dann bei Required-Start: bluetooth: hinzufügen!
 ```
 update-rc.d btcontrol defaults
 ```
@@ -54,18 +55,19 @@ update-rc.d btcontrol defaults
 ## control-android
 
 Android App
-siehe control-android/README.txt
+siehe [readme](control-android/README.md).
 
 ## control-midp
 das MIDP - java Programm welches aufs Handy gehört
 
-die App ist unter /dist/btcontroll.jar
+siehe [readme](control-midp/README.md).
+Die App ist unter /dist/btcontroll.jar
 
 ### midptestenv
 Emulator um MIDP Programme am PC rennen zu lassen (zum Testen ganz nett, hat aber bugs)
 
 ## NB1A_partlist.txt
-partlist für den merg.co.uk - booster
+partlist für den http://merg.co.uk - booster
 
 ## usb k8055
 lib um eine Viessman - platine anzusteuern, früher für PWM verwendet (ohne DCC)
