@@ -16,7 +16,7 @@
 
 RaspiPWM::RaspiPWM(bool debug) :
 	USBPlatine(debug),
-	 dir(-1), pwm(-1), motorStart(70),
+	 dir(-1), pwm(-1), motorStart(70), motorFullSpeed(255),
 		fRaspiLed(NULL), raspiLedToggle(0){
 
 	for(int i=0; i < maxPins; i++) {
@@ -49,7 +49,13 @@ void RaspiPWM::init() {
 
 	std::string tmp = config.get("digispark.motorStart");
 	this->motorStart=utils::stoi(tmp);
-	printf("RaspiPWM::init() ---- motorStart %d\n", this->motorStart);
+	tmp = config.get("digispark.motorFullSpeed");
+	if(tmp == NOT_SET) {
+		//Default
+	} else {
+		this->motorFullSpeed=utils::stoi(tmp);
+	}
+	printf("RaspiPWM::init() ---- motorStart %d, fullspeed %d\n", this->motorStart, this->motorFullSpeed);
 
 	int n1=0;
 	int n2=0;
@@ -94,11 +100,10 @@ void RaspiPWM::init() {
 
 void RaspiPWM::setPWM(int f_speed) {
 	// Umrechnen in PWM einheiten
-	const double fullSpeed=255; // 256 is counter reset
 	// 255 = pwm max
 	unsigned char pwm = 0;
 	if(f_speed > 0) {
-		pwm = f_speed*(fullSpeed - this->motorStart)/255 + this->motorStart;
+		pwm = f_speed*((double)this->motorFullSpeed - this->motorStart)/255 + this->motorStart;
 	}
 	// int result = 0;
 	if(this->pwm!=pwm) {
