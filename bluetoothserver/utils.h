@@ -39,14 +39,15 @@ int myRead(int so, void *data, size_t size);
   #define ANSI_GREEN1 "\x1b[32m"
   #define ANSI_GREEN2 "\x1b[32;1m"
 
+extern const std::string NOT_SET;
 
 class Config {
 public:
 	Config();
 	void init(const std::string &confFilename);
-	std::string get(const std::string key);
-	std::multimap<std::string, std::string>::iterator begin() { return data.begin(); }
-	std::multimap<std::string, std::string>::iterator end() { return data.end(); }
+	const std::string get(const std::string key);
+	std::multimap<std::string, std::string>::const_iterator begin() { return data.begin(); }
+	std::multimap<std::string, std::string>::const_iterator end() { return data.end(); }
 private:
 	std::multimap<std::string, std::string> data;
 };
@@ -65,6 +66,8 @@ namespace utils
 		return stm.str() ;
 	}
 	int stoi(const std::string &in);
+	bool startsWith(const std::string &str, const std::string &with);
+	bool startsWith(const std::string &str, const char *with);
 }
 
 #include <stdexcept>

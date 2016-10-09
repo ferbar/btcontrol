@@ -17,6 +17,7 @@
 // dirname
 #include <libgen.h>
 
+const std::string NOT_SET="__NOT_SET";
 
 Config config;
 
@@ -44,9 +45,12 @@ void Config::init(const std::string &confFilename) {
 	}
 }
 
-std::string Config::get(const std::string key) {
+const std::string Config::get(const std::string key) {
 	try {
-		std::multimap<std::string, std::string>::iterator it = this->data.find(key);
+		std::multimap<std::string, std::string>::const_iterator it = this->data.find(key);
+		if(it == this->end()) { // raspi 20161004 macht keine exception wenn nicht gefunden
+			return NOT_SET;
+		}
 		return it->second;
 	} catch(std::out_of_range &e) {
 		throw std::out_of_range("key " + key + " not found");
@@ -54,12 +58,23 @@ std::string Config::get(const std::string key) {
 }
 
 int utils::stoi(const std::string &in)	{
-	char *endptr;
-	int ret=strtol(in.c_str(), &endptr, 0);
-	if(endptr != in.c_str() + in.length()) {
+	if(in == NOT_SET) {
+		throw std::runtime_error("NOT SET");
+	}
+	size_t end=0;
+	int ret=std::stoi(in, &end, 0);
+	if(end != in.length()) {
 		throw std::runtime_error("error converting number");
 	}
 	return ret;
+}
+
+bool utils::startsWith(const std::string &str, const std::string &with) {
+	return str.find(with) == 0;
+}
+
+bool utils::startsWith(const std::string &str, const char *with) {
+	return str.find(with) == 0;
 }
 
 #undef runtime_error

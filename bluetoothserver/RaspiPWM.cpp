@@ -11,18 +11,23 @@
 #include <stdexcept>
 #include <exception>
 #include <wiringPi.h>
+#include <assert.h>
+
+
+#include "ParseExpr.h"
 
 #define PIN_PWM		1
 
+ParseExpr *parseExpr=NULL;
+
 RaspiPWM::RaspiPWM(bool debug) :
 	USBPlatine(debug),
-	 dir(-1), pwm(-1), motorStart(70),
+	 dir(-1), pwm(-1), motorStart(70), motorFullSpeed(255),
 		fRaspiLed(NULL), raspiLedToggle(0){
 
-	for(int i=0; i < maxPins; i++) {
-		this->pinsDir1[i]=-1;
-		this->pinsDir2[i]=-1;
-	}
+	assert(parseExpr==NULL); // nur einmal da?
+	parseExpr=new ParseExpr();
+
 
 	try {
 		this->init();
@@ -36,6 +41,7 @@ RaspiPWM::RaspiPWM(bool debug) :
 RaspiPWM::~RaspiPWM() {
 	this->fullstop();
 	this->release();
+	delete(parseExpr); parseExpr=NULL;
 }
 
 void RaspiPWM::release() {
@@ -49,22 +55,26 @@ void RaspiPWM::init() {
 
 	std::string tmp = config.get("digispark.motorStart");
 	this->motorStart=utils::stoi(tmp);
-	printf("RaspiPWM::init() ---- motorStart %d\n", this->motorStart);
+	tmp = config.get("digispark.motorFullSpeed");
+	if(tmp == NOT_SET) {
+		//Default
+	} else {
+		this->motorFullSpeed=utils::stoi(tmp);
+	}
+	printf("RaspiPWM::init() ---- motorStart %d, fullspeed %d\n", this->motorStart, this->motorFullSpeed);
 
-	int n1=0;
-	int n2=0;
 	for (auto it=config.begin(); it!=config.end(); ++it) {
-		if(it->first == "wiringpi.dir1.pin") {
-			printf("setting wiringpi.dir1.pin[%d]=%s\n", n1, it->second.c_str());
-			this->pinsDir1[n1++]=utils::stoi(it->second);
+		if(utils::startsWith(it->first,"wiringpi.pin.")) {
+			int pin = stoi(it->first.substr(strlen("wiringpi.pin.")));
+			printf("setting wiringpi.pin[%d]=%s\n", pin, it->second.c_str());
+			// test ob parsbar:
+			parseExpr->getResult(it->second, 0, 0, 0);
+			pinMode(pin, OUTPUT);
+			this->pins[pin]=it->second;
 		}
-		if(it->first == "wiringpi.dir2.pin") {
-			printf("setting wiringpi.dir2.pin[%d]=%s\n", n2, it->second.c_str());
-			this->pinsDir2[n2++]=utils::stoi(it->second);
-		}
-		if(n1 >= this->maxPins || n2 >= this->maxPins){
-			throw std::runtime_error("error reading maxPins");
-		}
+	}	
+	if(pins.size() == 0) {
+		printf("WARN: no pin definitions found\n");
 	}
 
 	this->fRaspiLed = fopen("/sys/class/leds/led0/brightness", "w");
@@ -79,26 +89,15 @@ void RaspiPWM::init() {
 	pwmSetClock(4);
 	pwmSetRange(256);
 	this->setPWM(0);
-	for(int i=0; i<this->maxPins ; i++) {
-		if(this->pinsDir1[i] >= 0) {
-			pinMode(this->pinsDir1[i], OUTPUT);
-			printf("setting OUT for pin %d\n", this->pinsDir1[i]);
-		}
-		if(this->pinsDir2[i] >= 0) {
-			pinMode(this->pinsDir2[i], OUTPUT);
-			printf("setting OUT for pin %d\n", this->pinsDir2[i]);
-		}
-	}
-	this->setDir(1);
+	this->setDir(0); // default dir = 0
 }
 
 void RaspiPWM::setPWM(int f_speed) {
 	// Umrechnen in PWM einheiten
-	const double fullSpeed=255; // 256 is counter reset
 	// 255 = pwm max
 	unsigned char pwm = 0;
 	if(f_speed > 0) {
-		pwm = f_speed*(fullSpeed - this->motorStart)/255 + this->motorStart;
+		pwm = f_speed*((double)this->motorFullSpeed - this->motorStart)/255 + this->motorStart;
 	}
 	// int result = 0;
 	if(this->pwm!=pwm) {
@@ -118,14 +117,20 @@ void RaspiPWM::setDir(unsigned char dir) {
 	// int result = 0;
 	if(this->dir!=dir) {
 		printf("setting dir: %d\n", dir);
+		/*
 		for(int i=0; i<this->maxPins ; i++) {
 			if(this->pinsDir1[i] >= 0)
 				digitalWrite(this->pinsDir1[i], dir==1 ? 0 : 1);
 			if(this->pinsDir2[i] >= 0)
 				digitalWrite(this->pinsDir2[i], dir==1 ? 1 : 0);
 		}
+		*/
 		this->dir=dir;
 	}
+}
+
+void RaspiPWM::setFunction(int nFunc, bool *func) {
+	memcpy(&this->currentFunc, func, sizeof(this->currentFunc));
 }
 
 void RaspiPWM::fullstop() {
@@ -133,3 +138,11 @@ void RaspiPWM::fullstop() {
 	printf("RaspiPWM::fullstop() done\n");
 }
 
+void RaspiPWM::commit() {
+	bool F0=this->currentFunc[0];
+	for (auto it=this->pins.begin(); it!=this->pins.end(); ++it) {
+		bool value=parseExpr->getResult(it->second, this->dir, this->pwm, F0);
+		// printf("digitalWrite[%d] => %d (%s)\n",it->first,value,it->second.c_str());
+		digitalWrite(it->first, value);
+	}
+}

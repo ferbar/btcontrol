@@ -564,6 +564,12 @@ continue;
 
 				platine->setDir(lokdef[addr_index].currdir < 0 ? 1 : 0 );
 				platine->setPWM(f_speed);
+				bool func[MAX_NFUNC];
+				for(int j=0; j < lokdef[addr_index].nFunc; j++) {
+					func[j]=lokdef[addr_index].func[j].ison;
+				}
+
+				platine->setFunction(lokdef[addr_index].nFunc, func);
 				/*
 				// int ia2=lokdef[addr_index].currdir < 0 ? 255 : 0; // 255 -> relais zieht an
 				int ia2=0;
@@ -629,7 +635,7 @@ void ClientThread::sendLoco(int addr_index, bool emergencyStop) {
 						nFahrstufen = 28;
 					}
 					int dccSpeed = abs(lokdef[addr_index].currspeed) * nFahrstufen / 255;
-					bool func[16];
+					bool func[MAX_NFUNC];
 					for(int j=0; j < lokdef[addr_index].nFunc; j++) {
 						func[j]=lokdef[addr_index].func[j].ison;
 					}
