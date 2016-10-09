@@ -58,15 +58,23 @@ const std::string Config::get(const std::string key) {
 }
 
 int utils::stoi(const std::string &in)	{
-	char *endptr;
 	if(in == NOT_SET) {
 		throw std::runtime_error("NOT SET");
 	}
-	int ret=strtol(in.c_str(), &endptr, 0);
-	if(endptr != in.c_str() + in.length()) {
+	size_t end=0;
+	int ret=std::stoi(in, &end, 0);
+	if(end != in.length()) {
 		throw std::runtime_error("error converting number");
 	}
 	return ret;
+}
+
+bool utils::startsWith(const std::string &str, const std::string &with) {
+	return str.find(with) == 0;
+}
+
+bool utils::startsWith(const std::string &str, const char *with) {
+	return str.find(with) == 0;
 }
 
 #undef runtime_error
