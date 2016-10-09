@@ -1,4 +1,6 @@
+#include <map>
 #include "USBPlatine.h"
+#include "lokdef.h"
 
 class RaspiPWM : public USBPlatine {
 public:
@@ -7,15 +9,14 @@ public:
 	/// @param f_speed 0...255
 	virtual void setPWM(int f_speed);
 	virtual void setDir(unsigned char dir);
+	virtual void setFunction(int nFunc, bool *func);
 	// brauch ma da ned:
-	virtual void commit() {};
+	virtual void commit() ;
 	virtual void fullstop();
 
 
 private:
 	static const int maxPins=10;
-	int pinsDir1[maxPins];
-	int pinsDir2[maxPins];
 	void init();
 	void release();
 
@@ -27,4 +28,6 @@ private:
 
 	FILE *fRaspiLed;
 	int raspiLedToggle;
+	bool currentFunc[MAX_NFUNC];
+	std::map<int, std::string> pins;
 };

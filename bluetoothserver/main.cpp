@@ -58,7 +58,6 @@
 #include "srcp.h"
 
 #include "server.h"
-#include "lokdef.h"
 #include "message_layout.h"
 
 #include "utils.h"
