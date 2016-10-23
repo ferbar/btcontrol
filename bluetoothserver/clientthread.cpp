@@ -581,7 +581,7 @@ continue;
 
 #ifdef HAVE_ALSA
 				sound.setSpeed(a_speed);
-				if(lokdef[addr_index].func[1].ison) {
+				if(lokdef[addr_index].func[1].ison && (cfg_funcSound[CFG_FUNC_SOUND_HORN] != "" )) {
 					lokdef[addr_index].func[1].ison=false;
 					PlayAsync horn(CFG_FUNC_SOUND_HORN);
 					/*
@@ -592,7 +592,7 @@ continue;
 					// horn.close(false);
 					*/
 				}
-				if(lokdef[addr_index].func[2].ison) {
+				if(lokdef[addr_index].func[2].ison && cfg_funcSound[CFG_FUNC_SOUND_ABFAHRT] != "") {
 					lokdef[addr_index].func[2].ison=false;
 					PlayAsync horn(CFG_FUNC_SOUND_ABFAHRT);
 					/*
