@@ -1,4 +1,5 @@
 #ifndef LOKDEF_H
+#define LOKDEF_H
 
 #define F_DEFAULT 0
 #define F_DEC14 1
