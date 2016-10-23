@@ -292,8 +292,10 @@ void Sound::playSingleSound(int index) {
  * @return frames
  */
 int Sound::writeSound(const std::string &data, int startpos) {
+	assert(startpos >= 0);
+	assert(data.length() > (unsigned) startpos);
 	const char *wavData = data.data() + startpos;
-	int len = data.length() - startpos;
+	size_t len = data.length() - startpos;
 
 	snd_pcm_sframes_t frames = snd_pcm_writei(this->handle, wavData, len);
 	if (frames < 0) { // 2* probieren:
