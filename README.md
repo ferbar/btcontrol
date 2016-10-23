@@ -50,7 +50,7 @@ update-rc.d btcontrol defaults
 * Velleman k8055: uralt Variante um PWM direkt auf die Schienen zu legen
 * SRCPD: eine Software die über den Com Port DCC Commands an einen Booster schicken kann. Kann viele Loks auf einmal steuern.
 * Raspberry Pi + Digispark: kleine Attiny85 Platine und eine H - Brücke
-* Raspberry Pi ohne extra MC: H-Brücke hängt direkt am Raspberry Pi / PWM0 (hier ist leider kein Sound möglich da PWM + Sound die selbe Hardware verwenden) F9: MotorMax ignorieren
+* Raspberry Pi ohne extra MC: H-Brücke hängt direkt am Raspberry Pi / PWM0 (hier ist leider kein Sound möglich da PWM + Sound die selbe Hardware verwenden) F9: MotorBoost
 
 ## control-android
 

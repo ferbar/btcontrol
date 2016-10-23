@@ -25,6 +25,7 @@ private:
 
 	int motorStart;
 	int motorFullSpeed;
+	int motorFullSpeedBoost;
 
 	FILE *fRaspiLed;
 	int raspiLedToggle;

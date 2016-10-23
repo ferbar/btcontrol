@@ -22,7 +22,7 @@ ParseExpr *parseExpr=NULL;
 
 RaspiPWM::RaspiPWM(bool debug) :
 	USBPlatine(debug),
-	 dir(-1), pwm(-1), motorStart(70), motorFullSpeed(255),
+	 dir(-1), pwm(-1), motorStart(70), motorFullSpeed(255), motorFullSpeedBoost(255),
 		fRaspiLed(NULL), raspiLedToggle(0), nFunc(0) {
 
 	assert(parseExpr==NULL); // nur einmal da?
@@ -63,6 +63,15 @@ void RaspiPWM::init() {
 	}
 	printf("RaspiPWM::init() ---- motorStart %d, fullspeed %d\n", this->motorStart, this->motorFullSpeed);
 
+	tmp = config.get("digispark.motorFullSpeedBoost");
+	if(tmp == NOT_SET) {
+		//Default
+		this->motorFullSpeedBoost = this->motorStart; // nix eingestellt
+	} else {
+		this->motorFullSpeedBoost=utils::stoi(tmp);
+		printf("RaspiPWM::init() ---- motorFullSpeedBoost %d\n", this->motorFullSpeedBoost);
+	}
+
 	for (auto it=config.begin(); it!=config.end(); ++it) {
 		if(utils::startsWith(it->first,"wiringpi.pin.")) {
 			int pin = stoi(it->first.substr(strlen("wiringpi.pin.")));
@@ -97,8 +106,8 @@ void RaspiPWM::setPWM(int f_speed) {
 	// 255 = pwm max
 	unsigned char pwm = 0;
 	if(f_speed > 0) {
-		if(this->nFunc >= 9 && this->currentFunc[9]) { // motor FullSpeed ignorieren
-			pwm = f_speed*((double)255 - this->motorStart)/255 + this->motorStart;
+		if(f_speed == 255 && this->currentFunc[9]) { // motor FullSpeed ignorieren
+			pwm = this->motorFullSpeedBoost;
 		} else {
 			pwm = f_speed*((double)this->motorFullSpeed - this->motorStart)/255 + this->motorStart;
 		}

@@ -11,7 +11,8 @@ cvxy=xy
 
 # bei dem Wert fangt der motor in der lok sich an zu drehen
 digispark.motorStart=70
-#digispark.motorFullSpeed=255
+#digispark.motorFullSpeed=180
+#digispark.motorFullSpeedBoost=200
 
 # wenn RaspiPWM verwendet wird:
 # richtungs pin für die brücke

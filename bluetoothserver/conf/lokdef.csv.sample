@@ -20,3 +20,6 @@
 298,F_DEFAULT,298.56 (U),  dampf_rot.png,       4,1,2,3,4
 2010,F_DEFAULT,Waggon 2010,      waggon2ax.png,    8,l1,l2,l3,l4,l5,l6,l7,l8
 1820,F_DEFAULT,DB Taurus 182.01,  ge_4_4_III.png, 12,sSound ein/aus,sHorn1,sHorn2,sHorn3,sKupplung,lFernlicht,sPfeife,sLüftung,sDurchsage Salzbug,sDurchsage Zug fährt ab,sVorsicht bei der Abfahrt,s12
+
+# für raspiPWM:
+#3,  F_DEFAULT,lok3,                    ,   9,,,,,,,,,mMotor Boost
