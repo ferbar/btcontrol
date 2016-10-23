@@ -29,5 +29,6 @@ private:
 	FILE *fRaspiLed;
 	int raspiLedToggle;
 	bool currentFunc[MAX_NFUNC];
+	int nFunc;
 	std::map<int, std::string> pins;
 };

@@ -562,14 +562,15 @@ continue;
 				} else {
 				}
 
-				platine->setDir(lokdef[addr_index].currdir < 0 ? 1 : 0 );
-				platine->setPWM(f_speed);
+				// setPWM hängt beim RaspiPWM von den Funktionen ab
 				bool func[MAX_NFUNC];
 				for(int j=0; j < lokdef[addr_index].nFunc; j++) {
 					func[j]=lokdef[addr_index].func[j].ison;
 				}
-
 				platine->setFunction(lokdef[addr_index].nFunc, func);
+
+				platine->setDir(lokdef[addr_index].currdir < 0 ? 1 : 0 );
+				platine->setPWM(f_speed);
 				/*
 				// int ia2=lokdef[addr_index].currdir < 0 ? 255 : 0; // 255 -> relais zieht an
 				int ia2=0;

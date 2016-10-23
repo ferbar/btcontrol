@@ -23,7 +23,7 @@ ParseExpr *parseExpr=NULL;
 RaspiPWM::RaspiPWM(bool debug) :
 	USBPlatine(debug),
 	 dir(-1), pwm(-1), motorStart(70), motorFullSpeed(255),
-		fRaspiLed(NULL), raspiLedToggle(0){
+		fRaspiLed(NULL), raspiLedToggle(0), nFunc(0) {
 
 	assert(parseExpr==NULL); // nur einmal da?
 	parseExpr=new ParseExpr();
@@ -97,7 +97,11 @@ void RaspiPWM::setPWM(int f_speed) {
 	// 255 = pwm max
 	unsigned char pwm = 0;
 	if(f_speed > 0) {
-		pwm = f_speed*((double)this->motorFullSpeed - this->motorStart)/255 + this->motorStart;
+		if(this->nFunc >= 9 && this->currentFunc[9]) { // motor FullSpeed ignorieren
+			pwm = f_speed*((double)255 - this->motorStart)/255 + this->motorStart;
+		} else {
+			pwm = f_speed*((double)this->motorFullSpeed - this->motorStart)/255 + this->motorStart;
+		}
 	}
 	// int result = 0;
 	if(this->pwm!=pwm) {

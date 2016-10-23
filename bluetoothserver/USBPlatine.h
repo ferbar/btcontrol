@@ -9,6 +9,7 @@ public:
 	/// @param f_speed 0...255
 	virtual void setPWM(int f_speed)=0;
 	virtual void setDir(unsigned char dir)=0;
+	/// @param func[MAX_NFUNC]
 	virtual void setFunction(int nFunc, bool *func) {}; // optional
 	virtual void commit()=0;
 	virtual void fullstop()=0;
