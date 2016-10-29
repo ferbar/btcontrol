@@ -23,7 +23,8 @@ git submodule update --init
 ### bluetoothserver/initbtrail.sh
 registriert das serial-profile Service damit das Handy weiss dass auf channel 30 der btserver rennt
 
-kurze Bluetooth Einführung: damit ein Service gefunden wird muss es zuerst mit sdptool registriert werden,damit der PC überhaupt gefunden wird muss PISCAN eingeschalten sein
+kurze Bluetooth Einführung: damit ein Service gefunden wird muss es zuerst mit sdptool registriert werden,damit der PC überhaupt gefunden wird muss PISCAN eingeschalten sein.
+Für Bluez 5 muss der bluetoothd mit --compat gestartet werden. Das muss im /etc/systemd/system/dbus-org.bluez.service extra hinzugefügt werden.
 
 ### bluetoothserver/lokdef.csv
 cvs datei mit:
@@ -110,6 +111,9 @@ bluez 5 hat neues Interface um ein Service zu registrieren, siehe lib/systemd/sy
  apt-get install vim
  update-alternatives --config editor
 ```
+
+raspian kernel module kompilieren (wlan z.b.)
+ apt-get install raspberrypi-kernel-headers
 
 die sdkarte kann mit dd_rescue kopiert werden und mit parted <loopdevice> bearbeitet werden. mit kpartx müssen die partitionen vorher angelegt werden.
 
