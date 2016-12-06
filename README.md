@@ -82,13 +82,13 @@ ussp-push 00:11:22:33:44:55@ btcontrol.jar btcontrol.jar
 
 allgemeine Probleme:
 
-Uhrzeit falsch:
+* Uhrzeit falsch:
 ```
 ntpd -gq
-
 ```
+hint: raspberry pi3 + wlan + ntp hat einen Bug, siehe google suche nach TOS flag
 
-Bluetooth funktioniert nicht:
+* Bluetooth funktioniert nicht:
 
 bluez 5 hat neues Interface um ein Service zu registrieren, siehe lib/systemd/system/bluetooth.service
 
@@ -113,7 +113,9 @@ bluez 5 hat neues Interface um ein Service zu registrieren, siehe lib/systemd/sy
 ```
 
 raspian kernel module kompilieren (wlan z.b.)
- apt-get install raspberrypi-kernel-headers
+```
+apt-get install raspberrypi-kernel-headers
+```
 
 die sdkarte kann mit dd_rescue kopiert werden und mit parted <loopdevice> bearbeitet werden. mit kpartx müssen die partitionen vorher angelegt werden.
 
