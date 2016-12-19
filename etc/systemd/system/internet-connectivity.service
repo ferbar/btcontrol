@@ -3,4 +3,4 @@ Description=check internet connectivity, start hostapd+dnsmasq if not
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash -c 'echo "0" > /sys/class/leds/led1/brightness ; sleep 1 ; echo "1" > /sys/class/leds/led1/brightness ; '
+ExecStart=/bin/bash -c 'echo "0" > /sys/class/leds/led1/brightness ; if ping -c 3 www.google.at ; then sleep 0.2 ; echo "1" > /sys/class/leds/led1/brightness ; sleep 0.2 ; echo "0" > /sys/class/leds/led1/brightness ;  sleep 0.2 ; fi ; echo "1" > /sys/class/leds/led1/brightness ; '
