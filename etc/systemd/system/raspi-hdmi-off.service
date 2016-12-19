@@ -1,0 +1,16 @@
+# schaltet den hdmi ausgang ab wenn beim booten kein Bildschirm angesteckt ist
+# raspberry pi disable HDMI output (and save energy) if no screen connected at boot time
+#
+# cp raspi-hdmi-off.service /etc/systemd/system
+# systemctl daemon-reload
+# systemctl enable raspi-hdmi-off.service
+
+[Unit]
+After=network.target
+
+[Service]
+# wichtig: $ und % mit $$ und %% escapen
+ExecStart=/bin/sh -c 'if ! /usr/bin/tvservice -n | grep -q device_name ; then /usr/bin/tvservice -o ; fi'
+
+[Install]
+WantedBy=default.target
