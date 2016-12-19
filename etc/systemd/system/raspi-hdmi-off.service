@@ -1,5 +1,6 @@
 # schaltet den hdmi ausgang ab wenn beim booten kein Bildschirm angesteckt ist
 # raspberry pi disable HDMI output (and save energy) if no screen connected at boot time
+# https://monkeyinmysoup.gitbooks.io/raspberry-pi/content/3.4-HDMI-output.html
 #
 # cp raspi-hdmi-off.service /etc/systemd/system
 # systemctl daemon-reload
