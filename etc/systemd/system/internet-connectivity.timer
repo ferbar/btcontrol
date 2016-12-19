@@ -1,0 +1,13 @@
+# https://wiki.archlinux.org/index.php/Systemd/Timers
+# systemctl list-timers
+[Unit]
+Description=check internet connectivity, start hostapd+dnsmasq if not
+
+[Timer]
+OnUnitActiveSec=10s
+AccuracySec=1s
+#OnBootSec=1h
+#OnUnitInactiveSec=1d
+
+[Install]
+WantedBy=default.target

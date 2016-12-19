@@ -1,0 +1,6 @@
+[Unit]
+Description=check internet connectivity, start hostapd+dnsmasq if not
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'echo "0" > /sys/class/leds/led1/brightness ; sleep 1 ; echo "1" > /sys/class/leds/led1/brightness ; '

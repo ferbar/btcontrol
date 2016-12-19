@@ -8,10 +8,12 @@
 
 [Unit]
 After=network.target
+Description=disable HDMI output (and save energy) if no screen connected at boot time
 
 [Service]
 # wichtig: $ und % mit $$ und %% escapen
 ExecStart=/bin/sh -c 'if ! /usr/bin/tvservice -n | grep -q device_name ; then /usr/bin/tvservice -o ; fi'
+RemainAfterExit=true
 
 [Install]
 WantedBy=default.target
