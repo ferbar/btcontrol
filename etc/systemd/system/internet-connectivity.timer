@@ -1,0 +1,23 @@
+# https://wiki.archlinux.org/index.php/Systemd/Timers
+# man systemd.timer
+#
+# cp internet-connectivity.* /etc/systemd/system/
+# systemctl daemon-reload
+# systemctl enable internet-connectivity.timer
+# systemctl start internet-connectivity.timer
+# systemctl list-timers --all
+# 
+[Unit]
+Description=check internet connectivity, start hostapd+dnsmasq if not
+
+[Timer]
+#OnUnitActiveSec=10s
+#OnUnitActiveSec=1min
+#AccuracySec=1s
+#OnBootSec=1h
+#OnUnitInactiveSec=1d
+#OnCalendar=*:0/10
+OnCalendar=*:*:0/10
+
+[Install]
+WantedBy=default.target
