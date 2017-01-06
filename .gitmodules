@@ -4,3 +4,6 @@
 [submodule "control-android/extern/jmdns"]
 	path = control-android/extern/jmdns
 	url = https://github.com/jmdns/jmdns.git
+[submodule "android-server/extern/UsbSerial"]
+	path = android-server/extern/UsbSerial
+	url = https://github.com/felHR85/UsbSerial
