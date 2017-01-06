@@ -1,3 +1,7 @@
+ibeacon auflisten (txPower + RSSI)
+https://github.com/pwldp/iBeacon-Scanner-
+
+
 https://raw.githubusercontent.com/RadiusNetworks/altbeacon-reference/master/altbeacon_transmit
 http://altbeacon.org/examples/
 http://altbeacon.github.io/android-beacon-library/
