@@ -214,7 +214,7 @@ continue;
 		printf("select + read in %dµs\n",us);
 		*/
 		// printf("%d:reading msg.size: %d bytes\n",this->clientID,msgsize);
-		if(msgsize < 0 || msgsize > 10000) {
+		if(msgsize < 0 || msgsize > MAX_MESSAGE_SIZE) {
 			throw std::runtime_error("invalid size msgsize 2big");
 		}
 		char buffer[msgsize];

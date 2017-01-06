@@ -3,6 +3,8 @@
 
 #include "fbtctl_message.h"
 
+#define MAX_MESSAGE_SIZE 10000
+
 struct lastStatus_t {
 	int currspeed;
 	int func;
