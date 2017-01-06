@@ -16,3 +16,4 @@ proguard/
 # Local configuration file (sdk path, etc)
 local.properties
 
+/bin/
