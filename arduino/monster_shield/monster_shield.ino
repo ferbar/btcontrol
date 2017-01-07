@@ -65,19 +65,19 @@ bool processCmd() {
     if(line.startsWith("M")) {
         Serial.print("m");
         if(line.length() != 3) {
-            Serial.print(F("-invalid length:")); Serial.println(line.length()); return false;
+            Serial.print(F("-invalid length:")); Serial.print(line.length()); return false;
         }
         char c1=hex2val(line[1]);
         if(c1 < 0) {
-            Serial.print(F("-invalid hex1:")); Serial.println(line[1]); return false;
+            Serial.print(F("-invalid hex1:")); Serial.print(line[1]); return false;
         }
         char c2=hex2val(line[2]);
         if(c2 < 0) {
-            Serial.print(F("-invalied hex2:")); Serial.println(line[2]); return false;
+            Serial.print(F("-invalied hex2:")); Serial.print(line[2]); return false;
         }
         target_pwm=(c1<<4) + c2;
         Serial.println(target_pwm, HEX);
-        motorGo(0, CW, target_pwm);
+        motorGo(0, dir, target_pwm);
         return true;
     } else if(line.startsWith("D")) {
         if(line[1] == '0') {
@@ -109,7 +109,7 @@ bool processCmd() {
         return true;
     }
     // invalid command:
-    Serial.print(F("error:[")); Serial.print(line); Serial.print(F("]\n"));
+    Serial.print(F("error:[")); Serial.print(line); Serial.print(F("]"));
     return false;
 }
 

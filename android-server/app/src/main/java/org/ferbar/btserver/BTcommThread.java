@@ -14,7 +14,7 @@ public class BTcommThread extends org.ferbar.btcontrol.BTcommThread {
     int clientID=0;
 
     int currspeed=0;
-    int currDir=0;
+    int currDir=1;
 
     /**
      * Creates a new instance of BTcommThread
@@ -76,7 +76,7 @@ public class BTcommThread extends org.ferbar.btcontrol.BTcommThread {
                     this.currDir=dir;
                     sendStatusReply();
 
-                    String ret=MainActivity.usbArduino.sendCommand("D"+this.currDir);
+                    String ret=MainActivity.usbArduino.sendCommand("D"+(this.currDir==1 ? 1 : 0));
                     Log.d(TAG, "ACC ret:" + ret);
                 } else if(cmd.isType("POWER")) {
                     FBTCtlMessage reply = new FBTCtlMessage(); reply.setType(MessageLayouts.messageTypeID("POWER_REPLY"));
