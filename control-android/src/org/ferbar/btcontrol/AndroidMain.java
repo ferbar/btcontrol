@@ -49,6 +49,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import protocol.MessageLayouts;
@@ -274,7 +275,7 @@ public class AndroidMain extends Activity {
 		        	if(bonjourIPAddress != null) {
 		        		System.setProperty("net.mdns.interface", bonjourIPAddress);
 		        	}
-					AndroidMain.this.jmdns = JmDNS.create();  // Achtung !!! im strict mode macht das eine Network Exception!!!
+					AndroidMain.this.jmdns = JmDNS.create();  // Achtung !!! im strict mode macht das im UI thread eine Network Exception!!!
 					synchronized(AndroidMain.this.jmdns) {
 						AndroidMain.this.jmdns.addServiceListener(bonjourType, listener = new ServiceListener() {
 				            public void serviceResolved(final ServiceEvent ev) {
@@ -291,9 +292,29 @@ public class AndroidMain extends Activity {
 				                			return;
 				                		}
 				                		mDNSHosts.put(hostname, ip);
-				    	                final TextView tvHost=new TextView(list.getContext());
-				    	                tvHost.setText(ip);
-				                		list.addView(tvHost);
+				                		RelativeLayout horizontal=new RelativeLayout(list.getContext());
+				                		horizontal.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+				                		//horizontal.setBackgroundResource(R.color.white);
+				                		
+				                		RelativeLayout.LayoutParams lpView = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+				                		lpView.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+				    	                TextView tvIP=new TextView(list.getContext());
+				    	                tvIP.setText(ip);
+				    	                //tvIP.setGravity(Gravity.CENTER);
+				    	                tvIP.setLayoutParams(lpView);
+				                		horizontal.addView(tvIP);
+				                		
+				                		TextView tvTxt=new TextView(list.getContext());
+				                		tvTxt.setText(ev.getInfo().getName());
+				                		//tvTxt.setBackgroundResource(R.color.yellow);
+				                		//tvTxt.setGravity(Gravity.CENTER);
+				                		//lpView.gravity=Gravity.RIGHT;
+				                		lpView = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+				                		lpView.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+				                		tvTxt.setLayoutParams(lpView);
+				                		horizontal.addView(tvTxt);
+				                		list.addView(horizontal);
+				                		
 				                		final Button bHost=new Button(list.getContext());
 				                		bHost.setText(hostname);
 				                		bHost.setOnClickListener(new View.OnClickListener() {
