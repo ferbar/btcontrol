@@ -28,6 +28,10 @@ RaspiPWM::RaspiPWM(bool debug) :
 	assert(parseExpr==NULL); // nur einmal da?
 	parseExpr=new ParseExpr();
 
+	this->currentFunc[0]=1; // F0 beim booten ein
+	for(int i=1; i < MAX_NFUNC; i++) {
+		this->currentFunc[i]=0;
+	}
 
 	try {
 		this->init();
@@ -72,13 +76,15 @@ void RaspiPWM::init() {
 		printf("RaspiPWM::init() ---- motorFullSpeedBoost %d\n", this->motorFullSpeedBoost);
 	}
 
+	bool F0=this->currentFunc[0];
 	for (auto it=config.begin(); it!=config.end(); ++it) {
 		if(utils::startsWith(it->first,"wiringpi.pin.")) {
 			int pin = stoi(it->first.substr(strlen("wiringpi.pin.")));
 			printf("setting wiringpi.pin[%d]=%s\n", pin, it->second.c_str());
-			// test ob parsbar:
-			parseExpr->getResult(it->second, 0, 0, 0);
+			// test ob parsbar + bits initialisieren
+			bool value=parseExpr->getResult(it->second, 0, 0, F0);
 			pinMode(pin, OUTPUT);
+			digitalWrite(pin, value);
 			this->pins[pin]=it->second;
 		}
 	}	
