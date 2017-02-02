@@ -5,4 +5,5 @@ bluetoothserver/btserver
 bluetoothserver/digispark_test
 bluetoothserver/conf/btserver.conf
 bluetoothserver/conf/lokdef.csv
+bluetoothserver/conf/initbtrail.conf
 bluetoothserver/sound/

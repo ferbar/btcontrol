@@ -9,7 +9,7 @@ cvxy=xy
 #anfahrtdings
 cvxy=xy
 
-# bei dem Wert fangt der motor in der lok sich an zu drehen
+# bei dem Wert fahrt die Lok los
 digispark.motorStart=70
 #digispark.motorFullSpeed=180
 #digispark.motorFullSpeedBoost=200

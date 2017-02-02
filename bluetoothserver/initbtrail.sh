@@ -12,6 +12,7 @@
 # port 30 als SerialProfile registrieren
 SDPTOOL="sudo sdptool"
 HCICONFIG="hciconfig"
+BLUETOOTHNAME=""
 
 CONFFILE="$(dirname $0)/conf/initbtrail.conf"
 if [ -f $CONFFILE ] ; then
@@ -46,6 +47,10 @@ fi
 
 # port 30 auf /dev... mappen
 # rfcomm -r listen /dev/rfcomm30 30
+
+if [ "$BLUETOOTHNAME" ] ; then
+	sudo $HCICONFIG hci0 name "$BLUETOOTHNAME"
+fi
 
 # wenn pc master kann er bis zu 7 connections machen
 sudo $HCICONFIG hci0 lm master
