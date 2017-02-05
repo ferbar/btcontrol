@@ -2,6 +2,7 @@
 #define CLIENTTHREAD_H
 
 #include "fbtctl_message.h"
+#include "tcpclient.h"
 
 #define MAX_MESSAGE_SIZE 10000
 
@@ -12,14 +13,12 @@ struct lastStatus_t {
 };
 
 
-class ClientThread {
+class ClientThread : public TCPClient {
 public:
-	ClientThread(int id, int so) : so(so), clientID(id), msgNum(0) {
-		numClients++; // sollte atomic sein
+	ClientThread(int id, int so) : TCPClient(so, id), msgNum(0) {
 	};
 	virtual ~ClientThread();
 	virtual void run();
-	void readSelect();
 	void sendMessage(const FBTCtlMessage &msg);
 	void setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus);
 	void sendStatusReply(lastStatus_t *lastStatus);
@@ -28,12 +27,7 @@ public:
 
 	void sendClientUpdate();
 
-	int so;
-	// ID vom client
-	int clientID;
 	int msgNum;
-	// anzahl clients die gerade laufen
-	static int numClients;
 };
 
 #endif

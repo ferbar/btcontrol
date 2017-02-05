@@ -50,47 +50,15 @@
 
 extern USBPlatine *platine;
 
-int ClientThread::numClients=0;
-
-#define sendToPhone(text) \
-		if(strlen(text) != write(startupdata->so,text,strlen(text))) { \
-			printf("%d:error writing message (%s)\n",startupdata->clientID, strerror(errno)); \
-			break; \
-		} else { \
-			printf("%d: ->%s",startupdata->clientID,text); \
-		}
-
-
 void ClientThread::sendMessage(const FBTCtlMessage &msg)
 {
 	std::string binMsg=msg.getBinaryMessage();
 	int msgsize=binMsg.size();
 	printf("%d:  sendMessage size: %zu+4 %d=%s\n", this->clientID, binMsg.size(), msg.getType(), messageTypeName(msg.getType()).c_str());
-	int flag = 1;
-	setsockopt(this->so, IPPROTO_TCP, TCP_CORK, (char *)&flag, sizeof(flag) ); // prepare message, stopsel rein
+	this->prepareMessage();
 	write(this->so, &msgsize, 4);
 	write(this->so, binMsg.data(), binMsg.size());
-	flag=0;
-	setsockopt(this->so, IPPROTO_TCP, TCP_CORK, (char *)&flag, sizeof(flag) ); // message fertig, senden
-}
-
-/**
- * wartet bis daten daherkommen, macht exception wenn keine innerhalb von timeout gekommen sind
- */
-void ClientThread::readSelect()
-{
-	struct timeval timeout;
-	fd_set set;
-	timeout.tv_sec=cfg_tcpTimeout; timeout.tv_usec=0;
-	FD_ZERO(&set); FD_SET(this->so,&set);
-	int rc;
-	if((rc=select(this->so+1, &set, NULL, NULL, &timeout)) <= 0) {
-		if(rc != 0) {
-			throw std::runtime_error("error select");
-		}
-		printf("ClientThread::readSelect error in select(%d) %s\n", this->so, strerror(errno));
-		throw std::runtime_error("timeout reading cmd");
-	}
+	this->flushMessage();
 }
 
 void ClientThread::setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus)
