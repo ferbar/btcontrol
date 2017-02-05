@@ -2,7 +2,8 @@
 
 #include <string>
 #include <map>
-#include <stdlib.h>
+#include "RuntimeExceptionWithBacktrace.h"
+
 std::string readFile(std::string filename);
 
 #define STREQ(s1,s2) (strcmp(s1,s2)==0)
@@ -68,19 +69,5 @@ namespace utils
 	bool startsWith(const std::string &str, const char *with);
 }
 
-#include <stdexcept>
-
-namespace std
-{
-
-class RuntimeExceptionWithBacktrace : public std::runtime_error {
-public:
-	RuntimeExceptionWithBacktrace(const std::string &what);
-	virtual ~RuntimeExceptionWithBacktrace() throw ();
-private:
-};
-
-}
-#define runtime_error RuntimeExceptionWithBacktrace
 
 #endif

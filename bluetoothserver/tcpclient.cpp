@@ -25,10 +25,6 @@
 #include <strings.h>
 #include <string.h>
 #include <assert.h>
-#include "clientthread.h"
-#include "lokdef.h"
-#include "srcp.h"
-#include "USBPlatine.h"
 #include <stdexcept>
 
 // für setsockopt
@@ -43,12 +39,7 @@
 
 #include "utils.h"
 #include "server.h"
-
-#ifdef HAVE_ALSA
-#include "sound.h"
-#endif
-
-extern USBPlatine *platine;
+#include "tcpclient.h"
 
 int TCPClient::numClients=0;
 
