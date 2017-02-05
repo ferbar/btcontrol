@@ -25,7 +25,7 @@ class Server
 #endif
  {
 public:
-	Server();
+	Server(int port);
 	virtual ~Server() {};
 	virtual int accept();
 	void run();

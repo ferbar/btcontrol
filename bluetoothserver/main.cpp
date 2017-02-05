@@ -327,8 +327,8 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-
-	Server server;
+	int port=3030;
+	Server server(port);
 	try {
 		server.run();
 	} catch(std::runtime_error &e) {
