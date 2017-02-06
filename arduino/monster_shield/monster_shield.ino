@@ -5,6 +5,7 @@
  * PWM Basics:      https://www.arduino.cc/en/Tutorial/SecretsOfArduinoPWM
  *                  http://garagelab.com/profiles/blogs/tutorial-how-to-use-the-monster-moto-shield
  * PWM frequencies: http://playground.arduino.cc/Main/TimerPWMCheatsheet
+ * schematics:      http://cdn.sparkfun.com/datasheets/Dev/Arduino/Shields/MonsterMoto-Shield-v12.pdf
  */
 
 #define BRAKEVCC 0
@@ -12,10 +13,11 @@
 #define CCW 2
 #define BRAKEGND 3
 #define CS_THRESHOLD 30   // Definition of safety current (Check: "1.3 Monster Shield Example").
-// 5V/1023 * CS_THRESHOLD = I/10000 * 1,6kOhm => CS_THRESHOLD = I/10000 * 1,6kOhm * 1023 / 5V
+// 5V/1023 * CS_THRESHOLD = I/11370 * 1,5kOhm => CS_THRESHOLD = I/11370 * 1,5kOhm * 1023 / 5V
 
 int target_pwm=0;
 
+// Pins for bridge1 and bridge2 - see ARDUINO_SHIeLDLABEL 
 int inApin[2] = {7, 4}; // INA: Clockwise Direction Motor0 and Motor1 (Check:"1.2 Hardware Monster Motor Shield").
 int inBpin[2] = {8, 9}; // INB: Counterlockwise Direction Motor0 and Motor1 (Check: "1.2 Hardware Monster Motor Shield").
 int pwmpin[2] = {5, 6};            // PWM's input
@@ -107,8 +109,9 @@ bool processCmd() {
         DigiUSB.println(F("PUTZLOK"));
 #endif
 #ifdef CABLIGHT
-    DigiUSB.println(F("CABLIGHT"));
+        DigiUSB.println(F("CABLIGHT"));
 #endif
+        Serial.print(F("CS_THRESHOLD=")); Serial.print(CS_THRESHOLD); Serial.print(F("\n"));
         return true;
     }
     // invalid command:
