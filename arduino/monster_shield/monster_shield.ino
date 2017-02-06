@@ -1,8 +1,11 @@
 /**
  * arduino - uno prog für ein monster shield (dual H Brücke)
+ *
+ * @see
+ * PWM Basics:      https://www.arduino.cc/en/Tutorial/SecretsOfArduinoPWM
+ *                  http://garagelab.com/profiles/blogs/tutorial-how-to-use-the-monster-moto-shield
+ * PWM frequencies: http://playground.arduino.cc/Main/TimerPWMCheatsheet
  */
-// http://garagelab.com/profiles/blogs/tutorial-how-to-use-the-monster-moto-shield
-//
 
 #define BRAKEVCC 0
 #define CW 1
