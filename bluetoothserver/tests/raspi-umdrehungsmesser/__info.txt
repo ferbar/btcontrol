@@ -4,3 +4,5 @@ https://projects.drogon.net/raspberry-pi/wiringpi/functions/
 
 int wiringPiISR (int pin, int edgeType,  void (*function)(void)) ;
 
+damit einen counter setzen und diesen counter alle XYZ ms überprüfen
+
