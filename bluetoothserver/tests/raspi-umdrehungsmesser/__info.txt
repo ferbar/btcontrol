@@ -1,0 +1,6 @@
+im neuen wiringpi gibts:
+
+https://projects.drogon.net/raspberry-pi/wiringpi/functions/
+
+int wiringPiISR (int pin, int edgeType,  void (*function)(void)) ;
+
