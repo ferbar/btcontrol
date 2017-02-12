@@ -5,7 +5,8 @@ CFLAGS=-g -O0 -Wall -Wformat
 CFLAGS_DEP=-MMD -MF $(dir $@).$(notdir $(basename $@)).d
 
 # clock_gettime will -lrt
-LDFLAGS=-g -lpthread -lstdc++ -lrt
+# -rdynamic für schönere backtraces
+LDFLAGS=-g -lpthread -lstdc++ -lrt -rdynamic
 
 CPP=g++
 
