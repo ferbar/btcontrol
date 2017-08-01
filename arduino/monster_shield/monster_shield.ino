@@ -92,6 +92,7 @@ bool processCmd() {
             dir=CCW;
             Serial.println(F("d1"));
         }
+        motorGo(0, dir, target_pwm);
         return true;
     } else if(line == F("Q")) { // query debug info:
         //Serial.print(F("usb addr=")); DigiUSB.println(usbDeviceAddr,DEC);
@@ -104,7 +105,7 @@ bool processCmd() {
         Serial.print(F("cs1=")); Serial.print(cs); Serial.print(F("\n"));
         return true;
     } else if(line == F("V")) { // version ausgeben:
-        Serial.println(F("Version 1.1"));
+        Serial.println(F("Version 1.2"));
 #ifdef PUTZLOK
         DigiUSB.println(F("PUTZLOK"));
 #endif
@@ -208,7 +209,13 @@ void motorOff(int motor)     //Function to shut the motor down case it locks
     delay(1000*sleep);
 }
 
-void motorGo(uint8_t motor, uint8_t direct, uint8_t pwm)         //Function that controls the variables: motor(0 ou 1), direction (cw ou ccw) e pwm (entra 0 e 255);
+/**
+ * Function that controls the variables: 
+ * @param motor(0 ou 1)
+ * @param direction (BRAKEVCC CW CCW BRAKEGND) 
+ * @param pwm (0 255);
+ */
+void motorGo(uint8_t motor, uint8_t direct, uint8_t pwm)
 {
 if (motor <= 1)
     {
