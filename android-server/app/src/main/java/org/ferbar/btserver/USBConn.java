@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Created by chris on 05.01.17.
@@ -32,7 +33,8 @@ public class USBConn {
     UsbManager usbManager;
     UsbDevice device;
     UsbSerialDevice serialPort;
-    UsbDeviceConnection connection;
+    UsbDeviceConnection connection=null;
+
 
     interface USBCallbacks {
         void onReceivedData(String data);
@@ -60,44 +62,56 @@ public class USBConn {
         }
     };
 
+    public void initUSBConnection() {
+        this.connection = usbManager.openDevice(device);
+        this.serialPort = UsbSerialDevice.createUsbSerialDevice(device, connection);
+        if(this.serialPort != null) {
+            if(this.serialPort.syncOpen()) { //Set Serial Connection Parameters.
+
+                // serialPort.setBaudRate(9600);
+                this.serialPort.setBaudRate(115200);
+                this.serialPort.setDataBits(UsbSerialInterface.DATA_BITS_8);
+                this.serialPort.setStopBits(UsbSerialInterface.STOP_BITS_1);
+                this.serialPort.setParity(UsbSerialInterface.PARITY_NONE);
+                this.serialPort.setFlowControl(UsbSerialInterface.FLOW_CONTROL_OFF);
+                this.serialPort.read(mCallback);
+
+
+                for (USBCallbacks c : USBConn.this.callbacks) {
+                    try {
+                        c.onConnect();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        MainActivity.debuglog(e.toString());
+                    }
+                }
+            } else {
+                Log.d(TAG, "PORT NOT OPEN");
+            }
+        } else {
+            Log.d(TAG, "PORT IS NULL");
+        }
+    }
+
 
     private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() { //Broadcast Receiver to automatically start and stop the Serial connection.
         @Override
         public void onReceive(Context context, Intent intent) {
             try {
                 if (intent.getAction().equals(ACTION_USB_PERMISSION)) {
-                    // da kommts her wenn man auf connect drückt
+                    // da kommts her wenn man vom android die permission bekommen hat aufs device zu schreiben
                     boolean granted = intent.getExtras().getBoolean(UsbManager.EXTRA_PERMISSION_GRANTED);
                     if (granted) {
                         // da kommts her wenn man sagt usb permission is ok
-                        connection = usbManager.openDevice(device);
-                        serialPort = UsbSerialDevice.createUsbSerialDevice(device, connection);
-                        if (serialPort != null) {
-                            if (serialPort.syncOpen()) { //Set Serial Connection Parameters.
+                        initUSBConnection();
 
-                                // serialPort.setBaudRate(9600);
-                                serialPort.setBaudRate(115200);
-                                serialPort.setDataBits(UsbSerialInterface.DATA_BITS_8);
-                                serialPort.setStopBits(UsbSerialInterface.STOP_BITS_1);
-                                serialPort.setParity(UsbSerialInterface.PARITY_NONE);
-                                serialPort.setFlowControl(UsbSerialInterface.FLOW_CONTROL_OFF);
-                                serialPort.read(mCallback);
-
-
-                                for (USBCallbacks c : USBConn.this.callbacks) {
-                                    c.onConnect();
-                                }
-                            } else {
-                                Log.d(TAG, "PORT NOT OPEN");
-                            }
-                        } else {
-                            Log.d(TAG, "PORT IS NULL");
-                        }
                     } else {
+                        MainActivity.debuglog("USB PERM NOT GRANTED");
                         // Toast.makeText(MainActivity.this, "USB Permission not granted!", Toast.LENGTH_LONG).show();
                         Log.d(TAG, "PERM NOT GRANTED");
                     }
                 } else if (intent.getAction().equals(UsbManager.ACTION_USB_DEVICE_ATTACHED)) {
+                    // wenn der arduino angesteckt wurde
                     for (USBCallbacks c : USBConn.this.callbacks) {
                         c.onAttached();
                     }
@@ -108,25 +122,34 @@ public class USBConn {
 
                 }
             } catch(Exception e) {
+                MainActivity.debuglog(e.toString());
                 e.printStackTrace();
             }
         };
     };
 
-    USBConn(Context context, USBCallbacks callbacks) {
+    public USBConn(Context context) {
         this.context=context;
-        this.callbacks.add(callbacks);
         usbManager = (UsbManager) context.getSystemService(context.USB_SERVICE);
 
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(ACTION_USB_PERMISSION);
-        filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
-        filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
-        context.registerReceiver(broadcastReceiver, filter);
     }
 
     void registerCallbacks(USBCallbacks callbacks) {
+        if(this.callbacks.size() == 0) {
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(ACTION_USB_PERMISSION);
+            filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
+            filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
+            context.registerReceiver(broadcastReceiver, filter);
+        }
         this.callbacks.add(callbacks);
+    }
+
+    void unregisterCallbacks(USBCallbacks callbacks) {
+        this.callbacks.remove(callbacks);
+        if(this.callbacks.size() == 0) {
+            this.context.unregisterReceiver(broadcastReceiver);
+        }
     }
 
     void connect(Context context) {
@@ -140,8 +163,12 @@ public class USBConn {
                 // if (deviceVID == 0x2341)//Arduino Vendor ID
                 if (deviceVID == 0x0403) // 20161231: Arduino Vendor ID von einem arduino uno
                 {
-                    PendingIntent pi = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION), 0);
-                    this.usbManager.requestPermission(device, pi);
+                    if(!this.usbManager.hasPermission(device)) {
+                        PendingIntent pi = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION), 0);
+                        this.usbManager.requestPermission(device, pi);
+                    } else {
+                        initUSBConnection();
+                    }
                     keep = false;
                 } else {
                     connection = null;
@@ -154,11 +181,15 @@ public class USBConn {
         }
     }
 
+    public boolean isConnected() {
+        return this.connection != null;
+    }
 
     public void close() {
         this.serialPort.syncClose();
-        this.context.unregisterReceiver(broadcastReceiver);
-
+        this.serialPort=null;
+        this.connection.close();
+        this.connection=null;
     }
 
     public void write(String string) {
@@ -166,27 +197,27 @@ public class USBConn {
     }
 
     byte[] readBuffer=new byte[1024];
-    int readBufferLen=-1;
-    int readBufferPos=-1;
+    int readBufferLen=0;
+    int readBufferPos=0;
 
-    char readCharBuffered() throws Exception {
+    char readCharBuffered() throws TimeoutException {
         if(this.readBufferPos>=this.readBufferLen) {
             this.readBufferLen=this.serialPort.syncRead(this.readBuffer, 100);
             if(this.readBufferLen <= 0) {
-                throw new Exception("timeout");
+                throw new TimeoutException("timeout ("+this.readBufferLen+")");
             }
             this.readBufferPos=0;
         }
         return (char) this.readBuffer[this.readBufferPos++];
     }
 
-    public String readLineBuffered(int timeout) throws Exception {
+    public String readLineBuffered(int timeout) throws TimeoutException {
         String ret="";
         long beginTime = System.currentTimeMillis();
         long stopTime = beginTime + timeout;
         while(true) {
             if(System.currentTimeMillis() > stopTime) {
-                throw new Exception("error reading full line (timeout, data="+ret+")");
+                throw new TimeoutException("error reading full line (timeout, data="+ret+")");
             }
             char c=this.readCharBuffered();
             if(c=='\n') break;
@@ -198,18 +229,43 @@ public class USBConn {
         return ret;
     }
 
-    public String sendCommand(String cmd) throws Exception {
+    /**
+     * read data until timeout
+     * @param timeout
+     */
+    public String readFullBufferedTimeout(int timeout) {
+        String ret="";
+        long beginTime = System.currentTimeMillis();
+        long stopTime = beginTime + timeout;
+        while(true) {
+            if(this.readBufferPos>=this.readBufferLen) {
+                this.readBufferLen=this.serialPort.syncRead(this.readBuffer, timeout);
+                if(this.readBufferLen <= 0) {
+                    Log.i(TAG, "readFullBufferedTimeout ret="+this.readBufferLen);
+                    return ret;
+                }
+                this.readBufferPos=0;
+            }
+            ret+=new String( this.readBuffer, this.readBufferPos, this.readBufferLen);
+            this.readBufferPos=this.readBufferLen;
+        }
+
+    }
+
+    /*
+    public String sendCommand(String cmd) throws TimeoutException {
         this.serialPort.syncWrite(cmd.getBytes(),1000);
         byte data[]=new byte[1024];
         /*
         int len=serialPort.syncRead(data, 100);
         data = Arrays.copyOf(data, len);
         String ret = new String(data, "UTF-8");
-        */
+        * /
         String ret=this.readLineBuffered(200);
         for(USBCallbacks c : USBConn.this.callbacks) {
             c.onReceivedData(ret);
         }
         return ret;
     }
+    */
 }

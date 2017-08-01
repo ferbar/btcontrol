@@ -3,12 +3,13 @@ package org.ferbar.btserver;
 import android.util.Log;
 
 import java.io.UnsupportedEncodingException;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Created by chris on 05.01.17.
  */
 public class USBArduino {
-    USBConn usbConn=null;
+    public USBConn usbConn=null;
     final String TAG="USBArduino";
 
 
@@ -22,12 +23,9 @@ public class USBArduino {
 
         @Override
         public void onConnect() throws Exception {
-            /*
-            setUiEnabled(true);
-            tvAppend(textView, "Serial Connection Opened!\n");
-            */
-            String ret=sendCommand("V");
-            Log.d(TAG, ret);
+            String ret=sendCommand("V",true);
+            MainActivity.debuglog(ret);
+            //Log.d(TAG, ret);
         }
 
         @Override
@@ -38,6 +36,7 @@ public class USBArduino {
         @Override
         public void onDetached() {
             // onClickStop(stopButton);
+            usbConn.close();
         }
     }
 
@@ -46,8 +45,28 @@ public class USBArduino {
         this.usbConn.registerCallbacks(new ArduinoUSBCallbacks());
     }
 
-    public String sendCommand(String cmd) throws Exception {
-        return this.usbConn.sendCommand(cmd+"\r\n");
+
+    public String sendCommand(String cmd) throws TimeoutException {
+        return this.sendCommand(cmd, false);
+    }
+
+    /**
+     *
+     * @param cmd command
+     * @param multilineReturn nach \r\n lesen abbrechen oder nach timeout
+     * @return readLine()
+     * @throws TimeoutException
+     */
+    public String sendCommand(String cmd, boolean multilineReturn) throws TimeoutException {
+        MainActivity.debuglog(">" + cmd);
+        this.usbConn.write(cmd+"\r\n");
+        String ret;
+        if(multilineReturn)
+            ret=this.usbConn.readFullBufferedTimeout(200);
+        else
+            ret=this.usbConn.readLineBuffered(200);
+        MainActivity.debuglog("<"+ret);
+        return ret;
     }
 
 }
