@@ -128,7 +128,13 @@ public class BTcommThread extends org.ferbar.btcontrol.BTcommThread {
 
         } catch (Exception e) {
             e.printStackTrace();
+            MainActivity.debuglog("bt client exception " + e.toString());
         } finally {
+            try {
+                String ret = MainActivity.usbArduino.sendCommand("M00");
+            } catch (Exception e) {
+                MainActivity.debuglog("error sending stop " + e.toString());
+            }
             this.close(true);
         }
     }
