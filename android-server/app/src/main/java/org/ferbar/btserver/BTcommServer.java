@@ -80,6 +80,7 @@ public class BTcommServer extends Thread {
                 */
             }
         } catch (Exception e) {
+            MainActivity.debuglog("error creating BTserver");
             System.out.println("S: Error");
             e.printStackTrace();
 
