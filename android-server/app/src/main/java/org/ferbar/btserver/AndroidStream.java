@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.SocketException;
 
 /**
  * Created by chris on 05.01.17.
@@ -12,6 +13,11 @@ public class AndroidStream implements org.ferbar.btcontrol.BTcommThread.Plattfor
     Socket client=null;
     public AndroidStream(Socket client) {
         this.client=client;
+        try {
+            this.client.setSoTimeout(10000); // ms
+        } catch (SocketException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
