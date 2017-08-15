@@ -15,7 +15,7 @@ struct lastStatus_t {
 
 class ClientThread : public TCPClient {
 public:
-	ClientThread(int id, int so) : TCPClient(so, id), msgNum(0) {
+	ClientThread(int id, int so) : TCPClient(id, so), msgNum(0) {
 	};
 	virtual ~ClientThread();
 	virtual void run();
