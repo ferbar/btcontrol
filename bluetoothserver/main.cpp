@@ -127,8 +127,8 @@ void initPlatine()
 	if(!platine) {
 		try {
 			platine=new RaspiPWM(cfg_debug);
-			// FIXME:
-			strncpy(lokdef[0].name,"RaspiPWM", sizeof(lokdef[0].name));
+			// Lokname immer auf RaspiPWM setzen: (unpraktisch)
+			//strncpy(lokdef[0].name,"RaspiPWM", sizeof(lokdef[0].name));
 			lokdef[1].addr=0;
 		} catch(std::exception &errormsg) {
 			printf("RaspiPWM: error: %s\n",errormsg.what());
