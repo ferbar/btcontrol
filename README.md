@@ -144,7 +144,8 @@ bluetooth [4.99] speichert unter /var/lib/bluetooth/<mac>/config den hostname. K
 geändert werden
 
 ### Disable Raspberry PI BCM soundcard
-/etc/modprobe.d/alsa-blacklist.conf
+* /etc/modules checken ob snd-bcm2835 geladen wird
+* /etc/modprobe.d/alsa-blacklist.conf
 ```
 # disable bcm soundcard
 blacklist snd_bcm2835
