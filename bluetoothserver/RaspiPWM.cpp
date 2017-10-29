@@ -16,13 +16,13 @@
 
 #include "ParseExpr.h"
 
-#define PIN_PWM		1
+int cfg_pinPWM=1;
 
 ParseExpr *parseExpr=NULL;
 
 RaspiPWM::RaspiPWM(bool debug) :
-	USBPlatine(debug),
-	 dir(-1), pwm(-1), motorStart(70), motorFullSpeed(255), motorFullSpeedBoost(255),
+		USBPlatine(debug),
+		dir(-1), pwm(-1), motorStart(70), motorFullSpeed(255), motorFullSpeedBoost(255),
 		fRaspiLed(NULL), raspiLedToggle(0), nFunc(0) {
 
 	assert(parseExpr==NULL); // nur einmal da?
@@ -54,8 +54,7 @@ void RaspiPWM::release() {
 void RaspiPWM::init() {
 
 	printf("RaspiPWM::init()\n");
-	wiringPiSetup();
-
+	wiringPiSetupGpio();
 
 	std::string tmp = config.get("digispark.motorStart");
 	this->motorStart=utils::stoi(tmp);
@@ -81,6 +80,11 @@ void RaspiPWM::init() {
 		if(utils::startsWith(it->first,"wiringpi.pin.")) {
 			int pin = stoi(it->first.substr(strlen("wiringpi.pin.")));
 			printf("setting wiringpi.pin[%d]=%s\n", pin, it->second.c_str());
+			if(it->second == "pwm" ) {
+				cfg_pinPWM=pin;
+				printf("PWM on pin %d\n", pin);
+				continue;
+			}
 			// test ob parsbar + bits initialisieren
 			bool value=parseExpr->getResult(it->second, 0, 0, F0);
 			pinMode(pin, OUTPUT);
@@ -99,7 +103,7 @@ void RaspiPWM::init() {
 		printf("error opening raspi ACT led (%s)\n",strerror(errno));
 	}
 
-	pinMode(PIN_PWM, PWM_OUTPUT);
+	pinMode(cfg_pinPWM, PWM_OUTPUT);
 	pwmSetMode(PWM_MODE_MS);
 	pwmSetClock(4);
 	pwmSetRange(256);
@@ -121,7 +125,7 @@ void RaspiPWM::setPWM(int f_speed) {
 	// int result = 0;
 	if(this->pwm!=pwm) {
 		printf("setting pwm: %d\n", pwm);
-		pwmWrite(PIN_PWM, pwm);
+		pwmWrite(cfg_pinPWM, pwm);
 		this->pwm=pwm;
 	}
 
