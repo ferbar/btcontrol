@@ -114,14 +114,6 @@ void initPlatine()
 		printf("USBDigispark init: error: %s\n",errormsg.what());
 	}
 	printf("... done\n");
-#ifdef HAVE_ALSA
-	if(platine) {
-		SoundType *soundFiles=loadZSP();
-		if(soundFiles) {
-			Sound::loadSoundFiles(soundFiles);
-		}
-	}
-#endif
 #endif
 #ifdef HAVE_RASPI_WIRINGPI
 	if(!platine) {
@@ -132,6 +124,14 @@ void initPlatine()
 			lokdef[1].addr=0;
 		} catch(std::exception &errormsg) {
 			printf("RaspiPWM: error: %s\n",errormsg.what());
+		}
+	}
+#endif
+#ifdef HAVE_ALSA
+	if(platine) {
+		SoundType *soundFiles=loadZSP();
+		if(soundFiles) {
+			Sound::loadSoundFiles(soundFiles);
 		}
 	}
 #endif
