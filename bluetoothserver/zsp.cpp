@@ -51,7 +51,7 @@ std::string getSampleFilename(std::string number) {
 			}
 		}
 	}
-	throw std::runtime_error("invalid number ("+number+")");
+	throw std::runtime_error("invalid sample number ("+number+")");
 }
 
 
@@ -59,6 +59,12 @@ SoundType *loadZSP() {
 	// std::multimap< int,std::string > map_data;
 	// map_data.emplace(5,"sdfsdf");
 	// map_data[7]["hello"] = 3.1415926;
+
+	for(int i=0; i < 10; i++) {
+		cfg_soundFiles[i].up=NOT_SET;
+		cfg_soundFiles[i].run=NOT_SET;
+		cfg_soundFiles[i].down=NOT_SET;
+	}
 
 	printf("zimo sound projekt test\n");
 	std::string soundsetFile;
@@ -114,7 +120,7 @@ SoundType *loadZSP() {
 			printf("sp == null skipping\n");
 			continue;
 		}
-		printf("add %s=%s\n", subsection.c_str(), value.c_str());
+		// printf("add %s=%s\n", subsection.c_str(), value.c_str());
 		sp->data.insert(std::pair<std::string, std::string>(subsection, value) );
 
 		continue;
@@ -127,14 +133,44 @@ SoundType *loadZSP() {
 		}
 //		data[ */
 	}
-	DataType::iterator it = data.find("DiSet");
-	if(it!=data.end()) {
-		printf("searching SCHWELLE, SAMPLE @ DiSet\n");
-		it->second->dump();
+	bool found=false;
+	std::string soundSetName=config.get("sound.name");
+	if(soundSetName == NOT_SET) {
+		printf("sound.name not set\n");
+		abort();
 	}
-	for(int i=0; i < 10; i++) {
-		printf("searching Sounds Fahrstufe %d ",i);
-		cfg_soundFiles[i].dump();
+	auto diSets=data.equal_range("DiSet");
+	for(DataType::iterator it = diSets.first; it!=diSets.second; ++it) {
+		//it->second->dump();
+		std::string setName=it->second->getName();
+		printf("DiSet SetName: %s\n", setName.c_str());
+		if(setName == soundSetName) {
+			printf("searching SCHWELLE, SAMPLE @ DiSet\n");
+			it->second->parseDiSet();
+			found=true;
+		} else
+			printf("no match\n");
+	}
+	if(found) {
+		for(int i=0; i < 10; i++) {
+			printf("Fahrstufe %d ",i);
+			cfg_soundFiles[i].dump();
+		}
+	} else {
+		diSets=data.equal_range("DSet");
+		for(DataType::iterator it = diSets.first; it!=diSets.second; ++it) {
+			std::string setName=it->second->getName();
+			printf("DSet SetName: %s\n", setName.c_str());
+			if(setName == soundSetName) {
+				printf("searching SAMPLE @ DSet\n");
+				it->second->parseDSet();
+				found=true;
+			}
+		}
+	}
+	if(!found) {
+		printf("Error: D*Set Name %s not found\n", soundSetName.c_str());
+		abort();
 	}
 
 	printf("searching Function sounds\n");
@@ -203,32 +239,60 @@ SoundType *loadZSP() {
 	return cfg_soundFiles;
 }
 
+void SectionValues::dump() {
+	for(SectionType::const_iterator it=this->data.begin(); it!=this->data.end(); it++) {
+		printf(" -- '%s' '%s'\n", it->first.c_str(), it->second.c_str());
+	}
+}
+
+std::string SectionValues::getName() {
+	auto ret=this->data.find("NAME");
+	if(ret != this->data.end() ) {
+		return boost::algorithm::unquote(ret->second,'"','\b');
+	} else 
+		return NOT_SET;
+}
+
 /**
  * FIXME: das tut globale variablen setzen!!!!!!
  */
-void SectionValues::dump() {
-		for(SectionType::const_iterator it=data.begin(); it!=data.end(); it++) {
-			printf(" -- '%s' '%s'\n", it->first.c_str(), it->second.c_str());
-			if(it->first=="SAMPLE") {
-				size_t komma=it->second.find_first_of(',');
-				if(komma != std::string::npos) {
-					std::string nr = it->second.substr(0,komma);
-					std::string filename = getSampleFilename(it->second.substr(komma+1));
-					int n=atol(nr.c_str());
-					int fahrstufe=n/3;
-					switch(n%3) {
-						case 0: cfg_soundFiles[fahrstufe].up=filename; break;
-						case 1: cfg_soundFiles[fahrstufe].run=filename; break;
-						case 2: cfg_soundFiles[fahrstufe].down=filename; break;
-					}
+void SectionValues::parseDiSet() {
+	printf("SectionValues::parseDiSet()\n");
+	for(SectionType::const_iterator it=this->data.begin(); it!=this->data.end(); it++) {
+		printf(" -- '%s' '%s'\n", it->first.c_str(), it->second.c_str());
+		if(it->first=="SAMPLE") {
+			size_t komma=it->second.find_first_of(',');
+			if(komma != std::string::npos) {
+				std::string nr = it->second.substr(0,komma);
+				std::string filename = getSampleFilename(it->second.substr(komma+1));
+				int n=atol(nr.c_str());
+				int fahrstufe=n/3;
+				switch(n%3) {
+					case 0: cfg_soundFiles[fahrstufe].up=filename; break;
+					case 1: cfg_soundFiles[fahrstufe].run=filename; break;
+					case 2: cfg_soundFiles[fahrstufe].down=filename; break;
 				}
 			}
-			if(it->first=="SCHWELLE") {
-				size_t komma=it->second.find_first_of(',');
-				int fahrstufe=atol(it->second.substr(0,komma).c_str());
-				size_t komma2=it->second.find_first_of(',',komma+1);
-				cfg_soundFiles[fahrstufe].limit=atol(it->second.substr(komma+1,komma2).c_str());
-				printf("SCHWELLE: %d\n", cfg_soundFiles[fahrstufe].limit);
-			}
+		}
+		if(it->first=="SCHWELLE") {
+			size_t komma=it->second.find_first_of(',');
+			int fahrstufe=atol(it->second.substr(0,komma).c_str());
+			size_t komma2=it->second.find_first_of(',',komma+1);
+			cfg_soundFiles[fahrstufe].limit=atol(it->second.substr(komma+1,komma2).c_str());
+			printf("SCHWELLE: %d\n", cfg_soundFiles[fahrstufe].limit);
 		}
 	}
+}
+
+void SectionValues::parseDSet() {
+	printf("SectionValues::parseDSet()\n");
+	for(SectionType::const_iterator it=this->data.begin(); it!=this->data.end(); it++) {
+		printf(" -- '%s' '%s'\n", it->first.c_str(), it->second.c_str());
+		try {
+			utils::stoi(it->first);
+			std::string filename = getSampleFilename(it->first);
+		} catch(...) {
+		}
+	}
+}
+
