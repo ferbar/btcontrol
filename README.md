@@ -150,3 +150,6 @@ geändert werden
 # disable bcm soundcard
 blacklist snd_bcm2835
 ```
+/etc/modprobe.d/snd* : Zeile raus damit die USB soundcard card=0 wird
+# Keep snd-usb-audio from beeing loaded as first soundcard
+#options snd-usb-audio index=-2
