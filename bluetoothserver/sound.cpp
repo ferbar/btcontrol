@@ -115,20 +115,22 @@ void Sound::loadSoundFiles(SoundType *soundFiles) {
 	}
 	// std::string fileName=std::string("sound/DampfDieselZimoSounds/") + this->soundFiles[0].run;
 	for(int i=0; i < 10; i++) {
-		if(FahrSound::soundFiles[i].down != "") {
+		if(FahrSound::soundFiles[i].down != NOT_SET) {
 			Sound::loadSoundFile(FahrSound::soundFiles[i].down, FahrSound::soundFiles[i].down);
-			Sound::loadSoundFile(FahrSound::soundFiles[i].up,   FahrSound::soundFiles[i].up);
 			Sound::loadSoundFile(FahrSound::soundFiles[i].run,  FahrSound::soundFiles[i].run);
+		}
+		if(FahrSound::soundFiles[i].up != NOT_SET) { // bei der höchsten stufe gibts kein up
+			Sound::loadSoundFile(FahrSound::soundFiles[i].up,   FahrSound::soundFiles[i].up);
 		}
 	}
 	FahrSound::soundFilesLoaded=true;
 
-	if(cfg_funcSound[CFG_FUNC_SOUND_ABFAHRT] != "") {
+	if(cfg_funcSound[CFG_FUNC_SOUND_ABFAHRT] != NOT_SET) {
 		Sound::loadSoundFile(cfg_funcSound[CFG_FUNC_SOUND_ABFAHRT], cfg_funcSound[CFG_FUNC_SOUND_ABFAHRT] );
 	} else {
 		printf("no CFG_FUNC_SOUND_ABFAHRT\n");
 	}
-	if(cfg_funcSound[CFG_FUNC_SOUND_HORN] != "") {
+	if(cfg_funcSound[CFG_FUNC_SOUND_HORN] != NOT_SET) {
 		Sound::loadSoundFile(cfg_funcSound[CFG_FUNC_SOUND_HORN], cfg_funcSound[CFG_FUNC_SOUND_HORN] );
 	} else {
 		printf("no CFG_FUNC_SOUND_HORN\n");
