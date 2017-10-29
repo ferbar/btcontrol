@@ -142,3 +142,9 @@ dhcp & avahi übernimmt den hostname
 bluetooth [4.99] speichert unter /var/lib/bluetooth/<mac>/config den hostname. Kann dort und per 
  dbus-send --print-reply --system --dest=org.bluez /org/bluez/$(pidof bluetoothd)/hci0 org.bluez.Adapter.SetProperty string:'Name' variant:string:'<neuer name>'
 geändert werden
+
+### Disable Raspberry PI BCM soundcard
+```
+# disable bcm soundcard
+blacklist snd_bcm2835
+```
