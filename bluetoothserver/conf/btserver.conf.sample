@@ -1,14 +1,12 @@
 
 # soundset=sound/DampfDieselZimoSounds/DA_DI_R_EU_Coll1.zpr
-#sound.name=BR218
 # soundset=sound/oebb1099/oebb1099.zpr
+# sound.name=BR218
 # sound.horn=sound/oebb1099/Hupe_kurz.wav
 # sound.abfahrt=sound/oebb1099/ansprache.wav
 
-#lautstärke
-cvxy=xy
-#anfahrtdings
-cvxy=xy
+#level
+sound.level
 
 # bei dem Wert fahrt die Lok los
 digispark.motorStart=70
@@ -16,13 +14,14 @@ digispark.motorStart=70
 #digispark.motorFullSpeedBoost=200
 
 # wenn RaspiPWM verwendet wird:
-# richtungs pin für die brücke
-wiringpi.pin.2=dir
+wiringpi.pin.18=pwm
+# richtungs pin für die brüc
+wiringpi.pin.27=dir
 # led
-wiringpi.pin.7=dir && F0
+wiringpi.pin.4=dir && F0
 # richtungs pin für die brücke
-wiringpi.pin.3=!dir
+wiringpi.pin.22=!dir
 # led
-wiringpi.pin.0=!dir && F0
+wiringpi.pin.17=!dir && F0
 #Führerhaus Beleuchtung
-#wiringpi.pin.10=!speed
+#wiringpi.pin.8=!speed
