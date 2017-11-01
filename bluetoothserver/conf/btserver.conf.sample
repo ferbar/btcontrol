@@ -1,12 +1,14 @@
+#soundset=sound/EASY-DAMPF/EASYLINE_DAMPF_COL.zpr
+#soundset=sound/DampfDieselZimoSounds/DA_DI_R_EU_Coll1.zpr
+#soundset=sound/oebb1099/oebb1099.zpr
+#sound.name=BR218
+#sound.name=BR01-10
+#sound.horn=sound/EASY-DAMPF/Pfiffe/Volldampf/Pfiff_BR77_kurz_22_ID(1103).wav
+#sound.horn=sound/oebb1099/Hupe_kurz.wav
+#sound.abfahrt=sound/oebb1099/ansprache.wav
 
-# soundset=sound/DampfDieselZimoSounds/DA_DI_R_EU_Coll1.zpr
-# soundset=sound/oebb1099/oebb1099.zpr
-# sound.name=BR218
-# sound.horn=sound/oebb1099/Hupe_kurz.wav
-# sound.abfahrt=sound/oebb1099/ansprache.wav
-
-#level
-sound.level
+#volume level
+sound.level=150
 
 # bei dem Wert fahrt die Lok los
 digispark.motorStart=70
