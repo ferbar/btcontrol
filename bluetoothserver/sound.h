@@ -23,6 +23,11 @@ public:
 	static void loadWavFile(std::string filename, std::string &out);
 
 	static void setMasterVolume(int volume);
+	void dump_sw() {
+		snd_output_t* out;
+		snd_output_stdio_attach(&out, stderr, 0);
+		snd_pcm_dump_sw_setup(this->handle, out);
+	}
 private:
 	// jedes Sound objekt hat eigenes Handle 20150831: am raspi kamma das default device ohne probleme öfters aufmachen
 	snd_pcm_t *handle;
@@ -59,6 +64,9 @@ public:
 	void setSpeed(int speed);
 	void setFahrstufe(int fahrstufe) { this->currFahrstufe = fahrstufe; } ;
 	void outloop();
+	void diOutloop();
+	void dOutloop();
+	void steamOutloop();
 
 
 	static void loadSoundFiles(SoundType *soundFiles);
@@ -70,7 +78,7 @@ private:
 	static bool doRun;
 
 	static int currFahrstufe; // -1 aus, 0 stop
-
+	static int currSpeed;
 public:
 	static SoundType *soundFiles;
 	static bool soundFilesLoaded;

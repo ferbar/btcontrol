@@ -48,6 +48,7 @@ const char *device = "default";                        /* playback device */
 snd_output_t *output = NULL;
 
 int FahrSound::currFahrstufe=-1;
+int FahrSound::currSpeed=0;
 SoundType *FahrSound::soundFiles=NULL;
 bool FahrSound::soundFilesLoaded=false;
 bool FahrSound::doRun=false;
@@ -76,17 +77,31 @@ void Sound::init(int mode)
 		printf("Playback open error: %s\n", snd_strerror(err));
 		throw std::runtime_error(std::string("Sound::init() Playback open error: )") + snd_strerror(err));
 	}
-	printf("Sound::init() handle=%p\n",this->handle);
+	printf("Sound::init() handle=%p\nbits:%d, sample_rate:%d\n",this->handle,this->bits,this->sample_rate);
 	if ((err = snd_pcm_set_params(this->handle,
-					this->bits,
-					SND_PCM_ACCESS_RW_INTERLEAVED,
-					1,
-					this->sample_rate,
-					1,
+					this->bits,							// format
+					SND_PCM_ACCESS_RW_INTERLEAVED,		// access
+					1,									// channels
+					this->sample_rate,					// rate
+					1,									// soft resample: allow
 					500000)) < 0) {   /* 0.5sec */
 		printf("Playback open error - error setting params %s\n", snd_strerror(err));
 		exit(EXIT_FAILURE);
 	}
+
+	snd_pcm_uframes_t buffer_size = 1024*8;
+	snd_pcm_uframes_t period_size = 64*8;
+
+	snd_pcm_sw_params_t *sw_params;
+
+	snd_pcm_sw_params_malloc (&sw_params);
+	snd_pcm_sw_params_current (this->handle, sw_params);
+	// snd_pcm_sw_params_set_start_threshold(this->handle, sw_params, buffer_size - period_size);
+	snd_pcm_sw_params_set_start_threshold(this->handle, sw_params, 500);
+	// snd_pcm_sw_params_set_avail_min(this->handle, sw_params, period_size);
+	snd_pcm_sw_params_set_avail_min(this->handle, sw_params, 100);
+	snd_pcm_sw_params(this->handle, sw_params);
+	snd_pcm_sw_params_free (sw_params);
 }
 
 Sound::~Sound() {
@@ -108,21 +123,11 @@ void Sound::close(bool waitDone) {
 }
 
 void Sound::loadSoundFiles(SoundType *soundFiles) {
-	assert(soundFiles);
 	FahrSound::soundFiles=soundFiles;
 	if(FahrSound::soundFilesLoaded) {
 		return;
 	}
-	// std::string fileName=std::string("sound/DampfDieselZimoSounds/") + this->soundFiles[0].run;
-	for(int i=0; i < 10; i++) {
-		if(FahrSound::soundFiles[i].down != NOT_SET) {
-			Sound::loadSoundFile(FahrSound::soundFiles[i].down, FahrSound::soundFiles[i].down);
-			Sound::loadSoundFile(FahrSound::soundFiles[i].run,  FahrSound::soundFiles[i].run);
-		}
-		if(FahrSound::soundFiles[i].up != NOT_SET) { // bei der höchsten stufe gibts kein up
-			Sound::loadSoundFile(FahrSound::soundFiles[i].up,   FahrSound::soundFiles[i].up);
-		}
-	}
+	FahrSound::soundFiles->loadSoundFiles();
 	FahrSound::soundFilesLoaded=true;
 
 	if(cfg_funcSound[CFG_FUNC_SOUND_ABFAHRT] != NOT_SET) {
@@ -253,29 +258,93 @@ static void *sound_thread_func(void *startupData)
 }
 
 void FahrSound::outloop() {
+	if( dynamic_cast<DiSoundType*>(this->soundFiles)) {
+		this->diOutloop();
+	} else if( dynamic_cast<SteamSoundType*>(this->soundFiles)) {
+		this->steamOutloop();
+	} else {
+		printf("FahrSound::outloop invalid sound config\n");
+	}
+}
+
+void FahrSound::diOutloop() {
+	DiSoundType *diSoundFiles = dynamic_cast<DiSoundType*>(this->soundFiles);
+	assert(diSoundFiles && "Sound::diOutloop() no di sound");
 	int lastFahrstufe=this->currFahrstufe;
 	while(this->doRun || lastFahrstufe >= 0) {
-		printf(".[%d]",lastFahrstufe); fflush(stdout);
+		printf("playing [%d]\n",lastFahrstufe); fflush(stdout);
 		std::string wav;
 		if(this->currFahrstufe == lastFahrstufe) {
 			if(lastFahrstufe == -1) {
 				sleep(1);
 				continue;
 			}
-			wav=this->soundFiles[lastFahrstufe].run;
+			wav=diSoundFiles->steps[lastFahrstufe].run;
 		} else if(this->currFahrstufe < lastFahrstufe) {
-			wav=this->soundFiles[lastFahrstufe].down;
+			wav=diSoundFiles->steps[lastFahrstufe].down;
 			printf("v");
 			lastFahrstufe--;
 		} else {
 			lastFahrstufe++;
-			wav=this->soundFiles[lastFahrstufe].up;
+			wav=diSoundFiles->steps[lastFahrstufe].up;
 			printf("^");
 		}
 
 		this->writeSound(wav);
 
 		// printf("Sound::outloop() - testcancel\n");
+		pthread_testcancel();
+	}
+}
+
+void FahrSound::steamOutloop() {
+	SteamSoundType *dSoundFiles = dynamic_cast<SteamSoundType*>(this->soundFiles);
+	assert(dSoundFiles && "Sound::dOutloop() no steam sound");
+	// int lastFahrstufe=this->currFahrstufe;
+	int slot=0;
+
+	pthread_t   tid = pthread_self();
+	this->setBlocking(false);
+
+	printf(ANSI_RED2 "FahrSound::steamOutloop %d\n" ANSI_DEFAULT, tid);
+	while(this->doRun || this->currFahrstufe >= 0) {
+		char buffer[100];
+		time_t t=time(NULL);
+		strftime(buffer, sizeof(buffer), "%c", gmtime(&t));
+		printf(ANSI_RED "Fahrstufe:%d %s\n" ANSI_DEFAULT,this->currFahrstufe, buffer); fflush(stdout);
+		std::string wav;
+		if(this->currSpeed <= 0) {
+			printf(" ---- no sound \n");
+			sleep(1);
+			continue;
+		}
+
+		wav=dSoundFiles->steps[this->currFahrstufe].ch[1][(slot++)%dSoundFiles->nslots];
+		/*
+		if(this->currFahrstufe == lastFahrstufe) {
+			if(lastFahrstufe == -1) {
+				sleep(1);
+				continue;
+			}
+			wav=dSoundFiles->steps[lastFahrstufe].run;
+		} else if(this->currFahrstufe < lastFahrstufe) {
+			wav=dSoundFiles->steps[lastFahrstufe].down;
+			printf("v");
+			lastFahrstufe--;
+		} else {
+			lastFahrstufe++;
+			wav=dSoundFiles->steps[lastFahrstufe].up;
+			printf("^");
+		}
+		*/
+
+
+		this->dump_sw();
+		this->writeSound(wav);
+
+		double s=1-0.9*(this->currSpeed/255.0);
+		usleep(s*1000000);
+		printf("Sound::steamOutloop() - testcancel\n");
 		pthread_testcancel();
 	}
 }
@@ -299,15 +368,42 @@ int Sound::writeSound(const std::string &data, int startpos) {
 	const char *wavData = data.data() + startpos;
 	size_t len = data.length() - startpos;
 
+	snd_pcm_status_t *status;
+	snd_pcm_status_alloca(&status);
+	int err;
+	if ((err = snd_pcm_status(this->handle, status)) < 0) {
+		printf("Stream status error: %s\n", snd_strerror(err));
+		// exit(0);
+	}
+
+printf("Sound::writeSound ========= status dump\n");
+	snd_output_t* out;
+	snd_output_stdio_attach(&out, stderr, 0);
+	snd_pcm_status_dump(status, out);
+	if (snd_pcm_state(this->handle) == SND_PCM_STATE_XRUN || 
+		snd_pcm_state(handle) == SND_PCM_STATE_SUSPENDED) {
+		printf("Sound::writeSound need to recover ...\n");
+		err = snd_pcm_prepare(handle);
+		assert(err >= 0 && "Can't recovery from underrun, prepare failed"); // , snd_strerror(err));
+	}
+
+printf("Sound::writeSound dataLength=%d startpos=%d\n", data.length(), startpos);
 	snd_pcm_sframes_t frames = snd_pcm_writei(this->handle, wavData, len);
+printf("Sound::writeSound frames=%d\n", frames);
 	if (frames < 0) { // 2* probieren:
 		printf("Sound::writeSound recover error: %s\n", snd_strerror(frames));
 		frames = snd_pcm_recover(this->handle, frames, 0);
 	}
+	if (frames == -EPIPE) {
+		/* EPIPE means underrun */
+		fprintf(stderr, "underrun occurred\n");
+		snd_pcm_prepare(this->handle);
+    }
+	/*
 	if (frames < 0) { // noch immer putt
 		printf("Sound::writeSound snd_pcm_writei failed: %s\n", snd_strerror(frames));
 		return frames;
-	}
+	} */
 	if (frames > 0 && frames < (snd_pcm_sframes_t) len)
 		printf("Sound::writeSound Short write (expected %zi, wrote %li) %s\n", len, frames, strerror(errno));
 	printf("Sound::writeSound done\n");
@@ -472,7 +568,7 @@ snd_pcm_hw_params_any (pcm_handle, hw_params);
 	snd_async_handler_t *ahandler;
 	int err=snd_async_add_pcm_handler(&ahandler, this->sound->handle, async_callback, data);
 	if (err < 0) {
-		printf("Unable to register async handler\n");
+		printf("Unable to register async handler %s\n",snd_strerror(err));
 		abort();
 	}
 	err=snd_pcm_prepare(this->sound->handle);
@@ -514,7 +610,7 @@ void FahrSound::run() {
 		printf("FahrSound::run: already started\n");
 		return;
 	}
-	printf("Sound::run() starting sound thread\n");
+	printf("FahrSound::run() starting sound thread\n");
 	this->doRun=true;
 
 	/* Start a thread and then send it a cancellation request */
@@ -539,14 +635,19 @@ void FahrSound::kill() {
 }
 
 void FahrSound::setSpeed(int speed) {
-	if(this->soundFiles) {
-		for(int i=0; i < 10; i++) {
-			if(speed <= this->soundFiles[i].limit) {
-				this->currFahrstufe=i;
-				printf("set fahrstufe: %d\n", i);
-				return;
+	this->currSpeed=speed;
+	if( DiSoundType *diSoundFiles = dynamic_cast<DiSoundType*>(this->soundFiles) ) {
+		if(this->soundFiles) {
+			for(int i=0; i < diSoundFiles->maxSteps; i++) {
+				if(speed <= diSoundFiles->steps[i].limit) {
+					this->currFahrstufe=i;
+					printf("set fahrstufe: %d\n", i);
+					return;
+				}
 			}
 		}
+	} else if(SteamSoundType *dSoundFiles = dynamic_cast<SteamSoundType*>(this->soundFiles) ) {
+		this->currFahrstufe=speed/(256.0) * dSoundFiles->nsteps; // bei 3 fahrstufen:  0-90 => [0] ; -175 => [1] ; -255 => [2]
 	}
 }
 
@@ -561,3 +662,25 @@ int main(int argc, char *argv[]) {
 	SetAlsaMasterVolume(volume);
 }
 */
+
+void DiSoundType::loadSoundFiles() {
+	for(int step=0; step < this->nsteps; step++) {
+		if(this->steps[step].down != NOT_SET) {
+			Sound::loadSoundFile(this->steps[step].down, this->steps[step].down);
+			Sound::loadSoundFile(this->steps[step].run,  this->steps[step].run);
+		}
+		if(this->steps[step].up != NOT_SET) { // bei der höchsten stufe gibts kein up
+			Sound::loadSoundFile(this->steps[step].up,   this->steps[step].up);
+		}
+	}
+}
+
+void SteamSoundType::loadSoundFiles() {
+	for(int step=0; step < this->nsteps; step++) {
+		for(int hml=0; hml < 3; hml ++) {
+			for(int slot=0; slot < this->nslots; slot++) {
+				Sound::loadSoundFile(this->steps[step].ch[hml][slot], this->steps[step].ch[hml][slot]);
+			}
+		}
+	}
+}
