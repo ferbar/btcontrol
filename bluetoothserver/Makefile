@@ -1,6 +1,7 @@
 .SUFFIXES:
 .PHONY: tags clean
 
+SHELL:=/bin/bash
 CFLAGS=-g -O0 -Wall -Wformat
 CFLAGS_DEP=-MMD -MF $(dir $@).$(notdir $(basename $@)).d
 
@@ -109,9 +110,25 @@ zsptest: zsptest.cpp sound.cpp
 	${CPP} ${CFLAGS} ${LDFLAGS} -lasound $+ -g 
 
 help:
-	@echo -e "all\t alles builden\ntags\t c-tags generieren\ncopy\t auf ibm kiste kopieren\nsearch-ibm-desktop\t ibm kiste suchen\n"
+	@echo -e "all\t alles builden\n\
+tags\t c-tags generieren\n\
+install\t auf ibm kiste kopieren\n\
+search-ibm-desktop\t ibm kiste suchen\n\
+loop\t make bei jeder Änderung einer *.cpp *.h Datei aufrufen"
 
-copy:
+loop:
+	@if which inotifywait ; then \
+		reset ; \
+		echo "$$BASH_VERSION" ; \
+		echo "starting make after file changes" ; \
+		while inotifywait -q *.cpp *.h ; do reset; script -q --return -c "make" /dev/null | head -n $$(tput lines) ; \
+			if [ $${PIPESTATUS[0]} != 0 ] ; then echo -e "\b" ; fi; \
+		done ; \
+	else \
+		echo "please install inotify-tools" ; \
+	fi
+
+install:
 	cp ../ussp-push-0.11/src/ussp-push \
 		../MidpBluetoothExample2/MobileApplication/dist/btcontrol.jar \
 		btserver \
