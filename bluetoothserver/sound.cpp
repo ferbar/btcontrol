@@ -102,6 +102,11 @@ void Sound::init(int mode)
 	snd_pcm_sw_params_set_avail_min(this->handle, sw_params, 100);
 	snd_pcm_sw_params(this->handle, sw_params);
 	snd_pcm_sw_params_free (sw_params);
+
+	std::string volumeLevel=config.get("sound.level");
+	if(volumeLevel != NOT_SET) {
+		this->setMasterVolume(utils::stoi(volumeLevel));
+	}
 }
 
 Sound::~Sound() {
