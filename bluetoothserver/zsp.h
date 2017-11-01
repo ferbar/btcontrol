@@ -28,22 +28,22 @@ struct SoundType {
 };
 extern SoundType cfg_soundFiles[10];
 
-struct SteamSoundSlotType {
+struct SteamSoundStepType {
 	static const int maxSlots=6;
 	std::string ch[3][maxSlots]; // H M L
 	int ms;
 };
 
 struct SteamSoundType {
-	static const int maxStufen=5;
-	int nstufen;
+	static const int maxSteps=5;
+	int nsteps;
 	int nslots; // +1 im verzeich zum zsp
-	SteamSoundSlotType slots[maxStufen];
+	SteamSoundStepType steps[maxSteps];
 	void dump() {
-		for(int i=0; i < this->nstufen; i++) {
+		for(int i=0; i < this->nsteps; i++) {
 			for(int hml=0; hml < 3; hml ++) {
 				for(int j=0; j < this->nslots; j++) {
-					printf("ch: %s\n", this->slots[i].ch[hml][j] != NOT_SET ? this->slots[i].ch[hml][j].c_str() : "");
+					printf("ch: %s\n", this->steps[i].ch[hml][j] != NOT_SET ? this->steps[i].ch[hml][j].c_str() : "");
 				}
 			}
 		}
