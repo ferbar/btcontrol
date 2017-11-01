@@ -299,9 +299,9 @@ zeit in ms
 void SectionValues::parseDSet() {
 	printf("SectionValues::parseDSet()\n");
 	cfg_steamSoundFiles.nslots=utils::stoi(this->operator[]("SLOTS"))+1;
-	assert(cfg_steamSoundFiles.nslots <= SteamSoundSlotType::maxSlots);
-	cfg_steamSoundFiles.nstufen=utils::stoi(this->operator[]("STUFEN"));
-	assert(cfg_steamSoundFiles.nstufen <= SteamSoundType::maxStufen);
+	assert(cfg_steamSoundFiles.nslots <= SteamSoundStepType::maxSlots);
+	cfg_steamSoundFiles.nsteps=utils::stoi(this->operator[]("STUFEN"));
+	assert(cfg_steamSoundFiles.nsteps <= SteamSoundType::maxSteps);
 	SectionValues::const_iterator it=this->begin();
 	while(true) {
 		if(it->second=="") {
@@ -309,8 +309,8 @@ void SectionValues::parseDSet() {
 		}
 		++it;
 	}
-	printf("stufen: %d slots:%d\n", cfg_steamSoundFiles.nstufen, cfg_steamSoundFiles.nslots);
-	for(int stufe = 0 ; stufe < cfg_steamSoundFiles.nstufen; stufe++) {
+	printf("stufen: %d slots:%d\n", cfg_steamSoundFiles.nsteps, cfg_steamSoundFiles.nslots);
+	for(int step = 0 ; step < cfg_steamSoundFiles.nsteps; step++) {
 		for(int hml = 0 ; hml < 3 ; hml ++) {
 			for(int slot = 0 ; slot < cfg_steamSoundFiles.nslots ; slot++) {
 			// SectionValues::const_iterator it=this->begin(); it!=this->end(); it++) {
@@ -318,7 +318,7 @@ void SectionValues::parseDSet() {
 				try {
 					utils::stoi(it->first);
 					std::string filename = getSampleFilename(it->first);
-					cfg_steamSoundFiles.slots[stufe].ch[hml][slot] = filename;
+					cfg_steamSoundFiles.steps[step].ch[hml][slot] = filename;
 				} catch(...) {
 					printf("<<< invalid sound\n");
 				}
@@ -326,7 +326,7 @@ void SectionValues::parseDSet() {
 			}
 		}
 		printf("reading ms\n");
-		cfg_steamSoundFiles.slots[stufe].ms=utils::stoi(it->first);
+		cfg_steamSoundFiles.steps[step].ms=utils::stoi(it->first);
 		++it;
 	}
 }
