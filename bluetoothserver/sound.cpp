@@ -203,7 +203,7 @@ enum class WavFormat {
 
 
 void Sound::loadWavFile(std::string filename, std::string &out) {
-	printf("read file: %s\n", filename.c_str());
+	printf("Sound::loadWavFile() read file: %s\n", filename.c_str());
 	Reader reader(filename);
 	int channels=-1;
 	int32_t samplerate=-1;
@@ -273,8 +273,9 @@ void FahrSound::outloop() {
 }
 
 void FahrSound::diOutloop() {
+	printf("FahrSound::[%p]diOutloop()\n",this->handle);
 	DiSoundType *diSoundFiles = dynamic_cast<DiSoundType*>(this->soundFiles);
-	assert(diSoundFiles && "Sound::diOutloop() no di sound");
+	assert(diSoundFiles && "FahrSound::diOutloop() no di sound");
 	int lastFahrstufe=this->currFahrstufe;
 	while(this->doRun || lastFahrstufe >= 0) {
 		printf("playing [%d]\n",lastFahrstufe); fflush(stdout);
@@ -311,7 +312,7 @@ void FahrSound::steamOutloop() {
 	pthread_t   tid = pthread_self();
 	this->setBlocking(false);
 
-	printf(ANSI_RED2 "FahrSound::steamOutloop %d\n" ANSI_DEFAULT, tid);
+	printf(ANSI_RED2 "FahrSound::[%p]steamOutloop() %ul\n" ANSI_DEFAULT, this->handle, tid);
 	while(this->doRun || this->currFahrstufe >= 0) {
 		char buffer[100];
 		time_t t=time(NULL);
@@ -349,16 +350,16 @@ void FahrSound::steamOutloop() {
 
 		double s=1-0.9*(this->currSpeed/255.0);
 		usleep(s*1000000);
-		printf("Sound::steamOutloop() - testcancel\n");
+		printf("Sound::[%p]steamOutloop() - testcancel\n", this->handle);
 		pthread_testcancel();
 	}
 }
 
 void Sound::playSingleSound(int index) {
-	printf("Sound::playSingleSound(%d)\n",index);
+	printf("Sound::[%p]playSingleSound(%d)\n", this->handle, index);
 
 	this->writeSound(cfg_funcSound[index]);
-	printf("Sound::playSingleSound(%d) - done\n",index);
+	printf("Sound::[%p]playSingleSound(%d) - done\n", this->handle, index);
 }
 
 /**
@@ -381,7 +382,7 @@ int Sound::writeSound(const std::string &data, int startpos) {
 		// exit(0);
 	}
 
-printf("Sound::writeSound ========= status dump\n");
+printf("Sound::[%p]writeSound() ========= status dump\n",this->handle);
 	snd_output_t* out;
 	snd_output_stdio_attach(&out, stderr, 0);
 	snd_pcm_status_dump(status, out);
@@ -392,7 +393,7 @@ printf("Sound::writeSound ========= status dump\n");
 		assert(err >= 0 && "Can't recovery from underrun, prepare failed"); // , snd_strerror(err));
 	}
 
-printf("Sound::writeSound dataLength=%d startpos=%d\n", data.length(), startpos);
+printf("Sound::writeSound dataLength=%zd startpos=%d\n", data.length(), startpos);
 	snd_pcm_sframes_t frames = snd_pcm_writei(this->handle, wavData, len);
 printf("Sound::writeSound frames=%d\n", frames);
 	if (frames < 0) { // 2* probieren:
@@ -411,7 +412,7 @@ printf("Sound::writeSound frames=%d\n", frames);
 	} */
 	if (frames > 0 && frames < (snd_pcm_sframes_t) len)
 		printf("Sound::writeSound Short write (expected %zi, wrote %li) %s\n", len, frames, strerror(errno));
-	printf("Sound::writeSound done\n");
+	printf("Sound::[%p]writeSound done\n",this->handle);
 	return frames;
 }
 
@@ -419,7 +420,7 @@ printf("Sound::writeSound frames=%d\n", frames);
  * raspi hat nix geändert
  */
 void Sound::setBlocking(bool blocking) {
-	printf("Sound::setBlocking %d\n",blocking);	
+	printf("Sound::[%p]setBlocking %d\n", this->handle, blocking);	
 	int rc=snd_pcm_nonblock	(this->handle, blocking ? 0 : 1);
 	if(rc != 0) {
 		printf("error setting blocking mode\n");
@@ -446,6 +447,7 @@ void Sound::setMasterVolume(int volume)
 		printf("snd_mixer_open: %s", snd_strerror(rc));
 		abort();
 	}
+	printf("Sound::[%p]setMasterVolume(%d)\n", handle, volume);
 	/*
 	snd_ctl_card_info_alloca(&info);
 	if (rc = snd_ctl_card_info(handle, info)) {
@@ -594,7 +596,7 @@ snd_pcm_hw_params_any (pcm_handle, hw_params);
 };
 
 FahrSound::~FahrSound() {
-	printf("FahrSound::~FahrSound()\n");
+	printf("FahrSound::[%p]~FahrSound()\n",this->handle);
 	this->currFahrstufe=-1;
 	this->doRun=false;
 	void *ret;
@@ -606,6 +608,7 @@ FahrSound::~FahrSound() {
 }
 
 void FahrSound::run() {
+	printf("FahrSound::[%p]run()\n",this->handle);
 	if(!FahrSound::soundFiles) {
 		printf("===== no sound files loaded ====\n");
 		return;
@@ -629,6 +632,7 @@ void FahrSound::run() {
 }
 
 void FahrSound::kill() {
+	printf("FahrSound::[%p]kill()\n",this->handle);
 	if(this->thread) {
 		int s = pthread_cancel(this->thread);
 		if (s != 0)
