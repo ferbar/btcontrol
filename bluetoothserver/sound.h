@@ -28,7 +28,7 @@ public:
 		snd_output_stdio_attach(&out, stderr, 0);
 		snd_pcm_dump_sw_setup(this->handle, out);
 	}
-private:
+protected:
 	// jedes Sound objekt hat eigenes Handle 20150831: am raspi kamma das default device ohne probleme öfters aufmachen
 	snd_pcm_t *handle;
 
