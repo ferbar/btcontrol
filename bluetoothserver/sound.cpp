@@ -103,10 +103,6 @@ void Sound::init(int mode)
 	snd_pcm_sw_params(this->handle, sw_params);
 	snd_pcm_sw_params_free (sw_params);
 
-	std::string volumeLevel=config.get("sound.level");
-	if(volumeLevel != NOT_SET) {
-		this->setMasterVolume(utils::stoi(volumeLevel));
-	}
 }
 
 Sound::~Sound() {
@@ -435,6 +431,7 @@ void Sound::setBlocking(bool blocking) {
  */
 void Sound::setMasterVolume(int volume)
 {
+	printf("Sound::setMasterVolume(%d)\n",volume);
     long min, max;
     snd_mixer_t *handle;
     snd_mixer_selem_id_t *sid;
@@ -544,56 +541,67 @@ static void async_callback(snd_async_handler_t *ahandler)
 }
 
 PlayAsync::PlayAsync(int index) {
-	this->sound=new Sound();
-	// this->sound->init(SND_PCM_NONBLOCK| SND_PCM_ASYNC);
-	this->sound->init(SND_PCM_NONBLOCK);
-	PlayAsyncData *data = new PlayAsyncData(cfg_funcSound[index], this->sound, 0);
+	Sound *sound=new Sound();
+	PlayAsyncData *data = new PlayAsyncData(cfg_funcSound[index], sound, 0);
+	data->index=index;
+	if(false) { // use alsa async: --- not supported by pulseaudio, crashes sometimes on raspi
+		// this->sound->init(SND_PCM_NONBLOCK| SND_PCM_ASYNC);
+		sound->init(SND_PCM_NONBLOCK);
 
-	snd_pcm_uframes_t buffer_size = 1024*8;
-	snd_pcm_uframes_t period_size = 64*8;
-/*
+		snd_pcm_uframes_t buffer_size = 1024*8;
+		snd_pcm_uframes_t period_size = 64*8;
+	/*
 
-snd_pcm_hw_params_t *hw_params;
+	snd_pcm_hw_params_t *hw_params;
 
-snd_pcm_hw_params_malloc (&hw_params);
-snd_pcm_hw_params_any (pcm_handle, hw_params);
-	snd_pcm_hw_params_set_buffer_size_near (this->sound->handle, hw_params, &buffer_size);
-	snd_pcm_hw_params_set_period_size_near (this->sound->handle, hw_params, &period_size, NULL);
-	snd_pcm_hw_params (pcm_handle, hw_params);
-	snd_pcm_hw_params_free (hw_params);
-*/
+	snd_pcm_hw_params_malloc (&hw_params);
+	snd_pcm_hw_params_any (pcm_handle, hw_params);
+		snd_pcm_hw_params_set_buffer_size_near (this->sound->handle, hw_params, &buffer_size);
+		snd_pcm_hw_params_set_period_size_near (this->sound->handle, hw_params, &period_size, NULL);
+		snd_pcm_hw_params (pcm_handle, hw_params);
+		snd_pcm_hw_params_free (hw_params);
+	*/
 
-	snd_pcm_sw_params_t *sw_params;
+		snd_pcm_sw_params_t *sw_params;
 
-	snd_pcm_sw_params_malloc (&sw_params);
-	snd_pcm_sw_params_current (this->sound->handle, sw_params);
-	snd_pcm_sw_params_set_start_threshold(this->sound->handle, sw_params, buffer_size - period_size);
-	snd_pcm_sw_params_set_avail_min(this->sound->handle, sw_params, period_size);
-	snd_pcm_sw_params(this->sound->handle, sw_params);
-	snd_pcm_sw_params_free (sw_params);
+		snd_pcm_sw_params_malloc (&sw_params);
+		snd_pcm_sw_params_current (data->sound->handle, sw_params);
+		snd_pcm_sw_params_set_start_threshold(data->sound->handle, sw_params, buffer_size - period_size);
+		snd_pcm_sw_params_set_avail_min(data->sound->handle, sw_params, period_size);
+		snd_pcm_sw_params(data->sound->handle, sw_params);
+		snd_pcm_sw_params_free (sw_params);
 
-	snd_async_handler_t *ahandler;
-	int err=snd_async_add_pcm_handler(&ahandler, this->sound->handle, async_callback, data);
-	if (err < 0) {
-		printf("Unable to register async handler %s\n",snd_strerror(err));
-		abort();
-	}
-	err=snd_pcm_prepare(this->sound->handle);
-	if (err < 0) {
-		printf("prepare error: %s\n", snd_strerror(err));
-		abort();
-	}
-
-	data->position=this->sound->writeSound(data->data);
-	if (snd_pcm_state(this->sound->handle) == SND_PCM_STATE_PREPARED) {
-		printf("PlayAsync in PREPARED state\n");
-		err = snd_pcm_start(this->sound->handle);
+		snd_async_handler_t *ahandler;
+		int err=snd_async_add_pcm_handler(&ahandler, data->sound->handle, async_callback, data);
 		if (err < 0) {
-			printf("Start error: %s\n", snd_strerror(err));
+			printf("Unable to register async handler %s\n",snd_strerror(err));
 			abort();
 		}
+		err=snd_pcm_prepare(data->sound->handle);
+		if (err < 0) {
+			printf("prepare error: %s\n", snd_strerror(err));
+			abort();
+		}
+
+		data->position=data->sound->writeSound(data->data);
+		if (snd_pcm_state(data->sound->handle) == SND_PCM_STATE_PREPARED) {
+			printf("PlayAsync in PREPARED state\n");
+			err = snd_pcm_start(data->sound->handle);
+			if (err < 0) {
+				printf("Start error: %s\n", snd_strerror(err));
+				abort();
+			}
+		}
+	} else { // use thread
+		data->start();
 	}
 };
+
+void PlayAsyncData::run() {
+	this->sound->init();
+	this->sound->writeSound(cfg_funcSound[index]);
+	delete(this);
+}
 
 FahrSound::~FahrSound() {
 	printf("FahrSound::[%p]~FahrSound()\n",this->handle);

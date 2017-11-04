@@ -2,6 +2,7 @@
 #define SOUND_H
 #include <alsa/asoundlib.h>
 #include "zsp.h"
+#include "Thread.h"
 
 class PlayAsync;
 
@@ -39,19 +40,20 @@ protected:
 	friend class PlayAsync;
 };
 
-class PlayAsyncData {
+class PlayAsyncData : public Thread {
 public:
 	PlayAsyncData(const std::string &data, Sound *sound, int position) : data(data), position(position), sound(sound) {};
 	const std::string &data;
 	int position;
 	Sound *sound;
+	void run();
+	int index;
 };
 
 class PlayAsync {
 public:
 	PlayAsync(int soundIndex);
 private:
-	Sound *sound;
 };
 
 class FahrSound : public Sound {
