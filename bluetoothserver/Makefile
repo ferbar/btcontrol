@@ -19,6 +19,10 @@ all: btserver
 Makefile.config:
 	@echo -e "no Makefile.config - generating new config for you - if you want a new config: \n" \
 		"\trm Makefile.config; make"
+	@echo "checking gcc >=4.9 (colored error messages)"
+	@if [ $$( (echo "4.9" ; gcc -dumpversion ) | sort -V | head -n1 ) == "4.9" ] ; then \
+		echo "CPP:=g++ -fdiagnostics-color" >> Makefile.config ; \
+	fi
 	@echo -e "checking libusb-dev for velleman_usb_k8055 board / digispark:"
 	@usblibs=$$(pkg-config --libs libusb-1.0) ;\
 		if [ $$? = 0 ] ; then \
