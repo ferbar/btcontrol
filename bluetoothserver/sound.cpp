@@ -310,7 +310,8 @@ void FahrSound::steamOutloop() {
 	int slot=0;
 
 	pthread_t   tid = pthread_self();
-	this->setBlocking(false);
+	// this->setBlocking(false);
+	std::string outSilence= std::string(22000 / 100, 0x80);
 
 	printf(ANSI_RED2 "FahrSound::[%p]steamOutloop() %ul\n" ANSI_DEFAULT, this->handle, tid);
 	while(this->doRun || this->currFahrstufe >= 0) {
@@ -320,7 +321,7 @@ void FahrSound::steamOutloop() {
 		printf(ANSI_RED "Fahrstufe:%d %s\n" ANSI_DEFAULT,this->currFahrstufe, buffer); fflush(stdout);
 		std::string wav;
 		if(this->currSpeed <= 0) {
-			printf(" ---- no sound \n");
+			printf(" ---- out silence\n");
 			sleep(1);
 			continue;
 		}
@@ -346,10 +347,22 @@ void FahrSound::steamOutloop() {
 
 
 		this->dump_sw();
-		this->writeSound(wav);
+		double x=this->currSpeed/255.0;
+		// double factor=x - pow(x-0.5,2) + 0.25;
+		// https://graphsketch.com/?eqn1_color=1&eqn1_eqn=&eqn2_color=2&eqn2_eqn=sin%28x*pi%2F2%29%5E0.6&eqn3_color=3&eqn3_eqn=&eqn4_color=4&eqn4_eqn=&eqn5_color=5&eqn5_eqn=&eqn6_color=6&eqn6_eqn=&x_min=-2&x_max=2&y_min=-2&y_max=2&x_tick=1&y_tick=1&x_label_freq=5&y_label_freq=5&do_grid=0&do_grid=1&bold_labeled_lines=0&bold_labeled_lines=1&line_width=4&image_w=850&image_h=525
+		double factor=pow(sin(x*3.14/2),0.6);
+		double s=1-0.95*(factor);
+		if(s < 0.1) {
+			this->writeSound(wav.substr(0, wav.length()*(s/0.1)) );
+		} else {
+			this->writeSound(wav);
+		}
 
-		double s=1-0.9*(this->currSpeed/255.0);
-		usleep(s*1000000);
+		printf("FahrSound::steamOutloop wait: %g\n", s);
+		// usleep(s*1000000);
+		for(int i = 0; i < ((s-0.1)*100); i++) {
+			this->writeSound(outSilence); // => 0,01s stille
+		}
 		printf("Sound::[%p]steamOutloop() - testcancel\n", this->handle);
 		pthread_testcancel();
 	}
@@ -369,10 +382,12 @@ void Sound::playSingleSound(int index) {
  * @return frames
  */
 int Sound::writeSound(const std::string &data, int startpos) {
+	printf("Sound::[%p]writeSound(len=%d, start=%d) \n", data.length(), startpos);
 	assert(startpos >= 0);
 	assert(data.length() > (unsigned) startpos);
 	const char *wavData = data.data() + startpos;
 	size_t len = data.length() - startpos;
+
 
 	snd_pcm_status_t *status;
 	snd_pcm_status_alloca(&status);
