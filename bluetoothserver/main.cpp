@@ -132,6 +132,10 @@ void initPlatine()
 		SoundType *soundFiles=loadZSP();
 		if(soundFiles) {
 			Sound::loadSoundFiles(soundFiles);
+			std::string volumeLevel=config.get("sound.level");
+			if(volumeLevel != NOT_SET) {
+				Sound::setMasterVolume(utils::stoi(volumeLevel));
+			}
 		}
 	}
 #endif
