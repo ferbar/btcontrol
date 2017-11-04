@@ -89,37 +89,41 @@ void Sound::init(int mode)
 		exit(EXIT_FAILURE);
 	}
 
-	snd_pcm_uframes_t buffer_size = 1024*8;
-	snd_pcm_uframes_t period_size = 64*8;
+	if(false) {
+		snd_pcm_uframes_t buffer_size = 1024*8;
+		snd_pcm_uframes_t period_size = 64*8;
 
-	snd_pcm_sw_params_t *sw_params;
+		snd_pcm_sw_params_t *sw_params;
 
-	snd_pcm_sw_params_malloc (&sw_params);
-	snd_pcm_sw_params_current (this->handle, sw_params);
-	// snd_pcm_sw_params_set_start_threshold(this->handle, sw_params, buffer_size - period_size);
-	snd_pcm_sw_params_set_start_threshold(this->handle, sw_params, 500);
-	// snd_pcm_sw_params_set_avail_min(this->handle, sw_params, period_size);
-	snd_pcm_sw_params_set_avail_min(this->handle, sw_params, 100);
-	snd_pcm_sw_params(this->handle, sw_params);
-	snd_pcm_sw_params_free (sw_params);
+		snd_pcm_sw_params_malloc (&sw_params);
+		snd_pcm_sw_params_current (this->handle, sw_params);
+		// snd_pcm_sw_params_set_start_threshold(this->handle, sw_params, buffer_size - period_size);
+		snd_pcm_sw_params_set_start_threshold(this->handle, sw_params, 500);
+		// snd_pcm_sw_params_set_avail_min(this->handle, sw_params, period_size);
+		snd_pcm_sw_params_set_avail_min(this->handle, sw_params, 100);
+		snd_pcm_sw_params(this->handle, sw_params);
+		snd_pcm_sw_params_free (sw_params);
+	}
 
 }
 
 Sound::~Sound() {
-	printf("Sound::~Sound()\n");
+	printf("Sound::[%p]~Sound()\n",this->handle);
 	this->close();
-	printf("Sound::~Sound() done\n");
+	printf("Sound::[%p]~Sound() done\n",this->handle);
 }
 
 void Sound::close(bool waitDone) {
-	printf("Sound::close()\n");
+	printf("Sound::[%p]close()\n",this->handle);
+	// FIXME: race condition: wenn close() in 2 threads in snd_pcm_drain hängtstirbt snd_pcm_close
 	if(this->handle) {
 		if(waitDone) {
-			printf("Sound::close -- wait till done\n");
+			printf("Sound::[%p]close() -- wait till done\n",this->handle);
 			snd_pcm_drain(this->handle); // darauf warten bis alles bis zum ende gespielt wurde
 		}
 		snd_pcm_close(this->handle);
 		this->handle=NULL;
+		printf("Sound::[%p]close() -- closed\n",this->handle);
 	}
 }
 
@@ -393,7 +397,7 @@ printf("Sound::writeSound dataLength=%zd startpos=%d\n", data.length(), startpos
 	snd_pcm_sframes_t frames = snd_pcm_writei(this->handle, wavData, len);
 printf("Sound::writeSound frames=%d\n", frames);
 	if (frames < 0) { // 2* probieren:
-		printf("Sound::writeSound recover error: %s\n", snd_strerror(frames));
+		printf("Sound::[%p]writeSound recover error: %s\n", this->handle, snd_strerror(frames));
 		frames = snd_pcm_recover(this->handle, frames, 0);
 	}
 	if (frames == -EPIPE) {
@@ -498,6 +502,10 @@ static void async_callback(snd_async_handler_t *ahandler)
 	printf("async_callback\n");
         // snd_pcm_t *handle = snd_async_handler_get_pcm(ahandler);
         PlayAsyncData *data = (PlayAsyncData*) snd_async_handler_get_callback_private(ahandler);
+	if (data->sound == NULL) {
+		printf("async_callback --- sound closing/deleted\n");
+		return;
+	}
         // signed short *samples = data->samples;
         // snd_pcm_channel_area_t *areas = data->areas;
         int end=false;
@@ -516,10 +524,12 @@ static void async_callback(snd_async_handler_t *ahandler)
 	printf("async_callback new position=%d\n", data->position);
 
 		if(end) {
-			printf("playAsync end");
-			data->sound->close();
-			delete data->sound;
+			printf("playAsync end\n");
+			// macht das ~Sound() schon. Damit destructur fix nur einmal aufgerufen wird:
+			// data->sound->close();
+			Sound *tmp_sound=data->sound;
 			data->sound=NULL;
+			delete tmp_sound;
 			delete data;
 			data=NULL;
 		}
@@ -612,7 +622,7 @@ FahrSound::~FahrSound() {
 		pthread_join(this->thread,&ret);
 	}
 	this->thread=0;
-	printf("FahrSound::~FahrSound() done\n");
+	printf("FahrSound::[%p]~FahrSound() done\n",this->handle);
 }
 
 void FahrSound::run() {
