@@ -131,15 +131,12 @@ void Sound::loadSoundFiles(SoundType *soundFiles) {
 	FahrSound::soundFiles->loadSoundFiles();
 	FahrSound::soundFilesLoaded=true;
 
-	if(cfg_funcSound[CFG_FUNC_SOUND_ABFAHRT] != NOT_SET) {
-		Sound::loadSoundFile(cfg_funcSound[CFG_FUNC_SOUND_ABFAHRT], cfg_funcSound[CFG_FUNC_SOUND_ABFAHRT] );
-	} else {
-		printf("no CFG_FUNC_SOUND_ABFAHRT\n");
-	}
-	if(cfg_funcSound[CFG_FUNC_SOUND_HORN] != NOT_SET) {
-		Sound::loadSoundFile(cfg_funcSound[CFG_FUNC_SOUND_HORN], cfg_funcSound[CFG_FUNC_SOUND_HORN] );
-	} else {
-		printf("no CFG_FUNC_SOUND_HORN\n");
+	for(int i=0; i < countof(cfg_funcSound); i++) {
+		if(cfg_funcSound[CFG_FUNC_SOUND_ABFAHRT] != NOT_SET) {
+			Sound::loadSoundFile(cfg_funcSound[i], cfg_funcSound[i] );
+		} else {
+			printf("no CFG_FUNC_SOUND_%d\n",i);
+		}
 	}
 }
 

@@ -28,6 +28,14 @@ extern bool cfg_X11;
 #define     _STR(x)   _VAL(x)
 #define     _VAL(x)   #x
 
+// returns const-array length()
+// https://blogs.msdn.microsoft.com/the1/2004/05/07/how-would-you-get-the-count-of-an-array-in-c-2/
+template <typename T, size_t N>
+char ( &_ArraySizeHelper( T (&array)[N] ))[N];
+
+#define countof( array ) (sizeof( _ArraySizeHelper( array ) ))
+
+
 #define read myRead
 int myRead(int so, void *data, size_t size);
 
