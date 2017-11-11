@@ -104,8 +104,10 @@ typedef std::multimap<std::string, SectionValuesPtr > ZSPDataType;
 
 #define CFG_FUNC_SOUND_ABFAHRT 0
 #define CFG_FUNC_SOUND_HORN 1
+#define CFG_FUNC_SOUND_BRAKE 2
+#define CFG_FUNC_SOUND_BOIL 3
 
-extern std::string cfg_funcSound[2];
+extern std::string cfg_funcSound[4];
 
 SoundType *loadZSP();
 
