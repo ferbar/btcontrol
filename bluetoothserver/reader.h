@@ -5,7 +5,7 @@
  */
 class Reader {
 	public:
-		Reader(const std::string fileName) {
+		Reader(const std::string &fileName) {
 			this->f=fopen(fileName.c_str(),"r");
 			if(!this->f) {
 				throw std::runtime_error("error opening " + fileName);
