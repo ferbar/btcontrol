@@ -121,16 +121,19 @@ search-ibm-desktop\t ibm kiste suchen\n\
 loop\t make bei jeder Änderung einer *.cpp *.h Datei aufrufen"
 
 loop:
-	@if which inotifywait ; then \
-		reset ; \
-		echo "$$BASH_VERSION" ; \
-		echo "starting make after file changes" ; \
-		while inotifywait -q *.cpp *.h ; do reset; script -q --return -c "make" /dev/null | head -n $$(tput lines) ; \
-			if [ $${PIPESTATUS[0]} != 0 ] ; then echo -e "\b" ; fi; \
-		done ; \
-	else \
+	@if ! which inotifywait ; then \
 		echo "please install inotify-tools" ; \
+		exit 1 ; \
 	fi
+	@reset
+	@echo "$$BASH_VERSION" 
+	@echo "starting make after file changes"
+	#script -q --return -c "make" /dev/null | head -n $$(tput lines) ; 
+	@while inotifywait -q *.cpp *.h ; do \
+		reset; \
+		make | head -n $$(tput lines) ; \
+		if [ $${PIPESTATUS[0]} != 0 ] ; then echo -e "\b" ; fi; \
+	done ;
 
 install:
 	cp ../ussp-push-0.11/src/ussp-push \
