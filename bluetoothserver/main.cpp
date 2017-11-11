@@ -129,6 +129,12 @@ void initPlatine()
 #endif
 #ifdef HAVE_ALSA
 	if(platine) {
+		std::string samplerate=config.get("sound.samplerate");
+		if(samplerate != NOT_SET) {
+			printf("new samplerate:%s\n",samplerate.c_str());
+			Sound::sample_rate=utils::stoi(samplerate);
+		}
+
 		SoundType *soundFiles=loadZSP();
 		if(soundFiles) {
 			Sound::loadSoundFiles(soundFiles);

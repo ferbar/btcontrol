@@ -21,7 +21,8 @@ public:
 
 	static void loadSoundFiles(SoundType *soundFiles);
 	static void loadSoundFile(const std::string &fileName, std::string &dst);
-	static void loadWavFile(std::string filename, std::string &out);
+	static void loadWavFile(const std::string &filename, std::string &out);
+	static void resampleX2(const std::string &in, std::string &out);
 
 	static void setMasterVolume(int volume);
 	void dump_sw() {
@@ -29,21 +30,21 @@ public:
 		snd_output_stdio_attach(&out, stderr, 0);
 		snd_pcm_dump_sw_setup(this->handle, out);
 	}
+	static int sample_rate;
 protected:
 	// jedes Sound objekt hat eigenes Handle 20150831: am raspi kamma das default device ohne probleme öfters aufmachen
 	snd_pcm_t *handle;
 
 	// die wav files solten alle im selben format sein ...
 	static snd_pcm_format_t bits;
-	static int sample_rate;
 
 	friend class PlayAsync;
 };
 
 class PlayAsyncData : public Thread {
 public:
-	PlayAsyncData(const std::string &data, Sound *sound, int position) : data(data), position(position), sound(sound) {};
-	const std::string &data;
+	PlayAsyncData(const std::string &wav, Sound *sound, int position) : wav(wav), position(position), sound(sound) {};
+	const std::string &wav;
 	int position;
 	Sound *sound;
 	void run();
@@ -53,21 +54,21 @@ public:
 class PlayAsync {
 public:
 	PlayAsync(int soundIndex);
+	PlayAsync(const std::string &wav);
 private:
 };
 
-class FahrSound : public Sound {
+class FahrSound : public Thread {
 public:
 	// Sound(SoundSet soundSet);
-	FahrSound(SoundType *soundFiles) { };
+	FahrSound() : doRun(false), currFahrstufe(-1), currSpeed(0) { };
 	virtual ~FahrSound();
+	void start();
+	void cancel();
 	void run();
-	void kill();
 	void setSpeed(int speed);
 	void setFahrstufe(int fahrstufe) { this->currFahrstufe = fahrstufe; } ;
-	void outloop();
 	void diOutloop();
-	void dOutloop();
 	void steamOutloop();
 
 
@@ -75,15 +76,14 @@ public:
 	static void loadSoundFile(const std::string &fileName, std::string &dst);
 	static void loadWavFile(std::string filename, std::string &out);
 
+	bool doRun;
+	int currFahrstufe; // -1 aus, 0 stop
+	int currSpeed;
 private:
-	static pthread_t thread;
-	static bool doRun;
 
-	static int currFahrstufe; // -1 aus, 0 stop
-	static int currSpeed;
 public:
 	static SoundType *soundFiles;
-	static bool soundFilesLoaded;
+	static bool soundFilesLoaded; // in soundFiles stehen zuerst nur die dateinamen
 
 };
 #endif
