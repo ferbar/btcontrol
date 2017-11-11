@@ -50,6 +50,8 @@
 
 extern USBPlatine *platine;
 
+static FahrSound clientFahrSound;
+
 void ClientThread::sendMessage(const FBTCtlMessage &msg)
 {
 	std::string binMsg=msg.getBinaryMessage();
@@ -123,10 +125,8 @@ void ClientThread::run()
 	// startupdata_t *startupdata=(startupdata_t *)data;
 
 #ifdef HAVE_ALSA
-	FahrSound sound(cfg_soundFiles);
 	if(platine && FahrSound::soundFiles != NULL) { // nur wenn eine platine angeschlossen und sound files geladen
-		sound.init();
-		sound.run();
+		clientFahrSound.start();
 	}
 #endif
 	printf("%d:socket accepted sending welcome msg\n",this->clientID);
@@ -394,7 +394,7 @@ continue;
 				} else {
 				#ifdef HAVE_ALSA
 					if(cv==266) {
-					    sound.setMasterVolume(value);
+					    Sound::setMasterVolume(value);
 						reply["value"]=1;
 					} else {
 				#endif
@@ -548,7 +548,7 @@ continue;
 				platine->commit();
 
 #ifdef HAVE_ALSA
-				sound.setSpeed(a_speed);
+				clientFahrSound.setSpeed(a_speed);
 				if(lokdef[addr_index].func[1].ison && (cfg_funcSound[CFG_FUNC_SOUND_HORN] != "" )) {
 					lokdef[addr_index].func[1].ison=false;
 					PlayAsync horn(CFG_FUNC_SOUND_HORN);
@@ -638,6 +638,8 @@ ClientThread::~ClientThread()
 {
 	printf("%d:~ClientThread numClientd=%d\n",this->clientID, this->numClients);
 	if(--this->numClients == 0) {
+		// letzter client => sound aus
+		clientFahrSound.cancel();
 		// letzter client => alles notstop
 		if(srcp) { // erddcd/srcpd/dcc:
 			int addr_index=0;

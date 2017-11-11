@@ -7,8 +7,10 @@
 #sound.horn=sound/oebb1099/Hupe_kurz.wav
 #sound.abfahrt=sound/oebb1099/ansprache.wav
 
-#volume level
-sound.level=150
+# volume level
+#sound.level=150
+# force samplerate
+#sound.samplerate=22050
 
 # bei dem Wert fahrt die Lok los
 digispark.motorStart=70

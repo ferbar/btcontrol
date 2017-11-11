@@ -47,12 +47,8 @@ struct __attribute__((packed)) WavHeader
 const char *device = "default";                        /* playback device */
 snd_output_t *output = NULL;
 
-int FahrSound::currFahrstufe=-1;
-int FahrSound::currSpeed=0;
 SoundType *FahrSound::soundFiles=NULL;
 bool FahrSound::soundFilesLoaded=false;
-bool FahrSound::doRun=false;
-pthread_t FahrSound::thread=0;
 snd_pcm_format_t Sound::bits=SND_PCM_FORMAT_UNKNOWN;
 int Sound::sample_rate=0;
 
@@ -90,8 +86,8 @@ void Sound::init(int mode)
 	}
 
 	if(false) {
-		snd_pcm_uframes_t buffer_size = 1024*8;
-		snd_pcm_uframes_t period_size = 64*8;
+		// snd_pcm_uframes_t buffer_size = 1024*8;
+		// snd_pcm_uframes_t period_size = 64*8;
 
 		snd_pcm_sw_params_t *sw_params;
 
@@ -202,7 +198,7 @@ enum class WavFormat {
 };
 
 
-void Sound::loadWavFile(std::string filename, std::string &out) {
+void Sound::loadWavFile(const std::string &filename, std::string &out) {
 	printf("Sound::loadWavFile() read file: %s\n", filename.c_str());
 	Reader reader(filename);
 	int channels=-1;
@@ -251,18 +247,45 @@ void Sound::loadWavFile(std::string filename, std::string &out) {
 	if(bitdepth == 8) {
 		Sound::bits=SND_PCM_FORMAT_U8;
 	}
-	Sound::sample_rate = samplerate;
 	reader.ReadData(datasize, out);
+
+	if(Sound::sample_rate == 0) {
+		Sound::sample_rate = samplerate;
+	} else if(Sound::sample_rate == samplerate) {
+		printf("samplerate OK\n");
+	} else if(Sound::sample_rate == samplerate*2) {
+		std::string outX2;
+		Sound::resampleX2(out, outX2);
+		out=outX2;
+	} else {
+		printf("========== error: invalid samplerate %d\n",samplerate);
+		abort();
+	}
 }
 
+void Sound::resampleX2(const std::string &in, std::string &out) {
+	printf("Sound::resampleX2()\n");
+	assert(in.length() > 0);
+	out.resize((in.length() * 2) -1 );
+	for(size_t i=0; i < in.length()-1; i++) {
+		out[i*2]=in[i];
+		out[i*2+1]=(((unsigned int) (unsigned char) in[i]) + ((unsigned int) (unsigned char) in[i+1])) / 2 ;
+
+		// printf("%d [%d] (%d) ",out[i*2] & 0xff, out[i*2+1] & 0xff, in[i+1] & 0xff);
+	}
+	out[(in.length()-1)*2]=in[in.length()-1];
+}
+
+/*
 static void *sound_thread_func(void *startupData)
 {
 	FahrSound *s=(FahrSound*) startupData;
 	s->outloop();
 	return NULL;
 }
+*/
 
-void FahrSound::outloop() {
+void FahrSound::run() {
 	if( dynamic_cast<DiSoundType*>(this->soundFiles)) {
 		this->diOutloop();
 	} else if( dynamic_cast<SteamSoundType*>(this->soundFiles)) {
@@ -272,8 +295,16 @@ void FahrSound::outloop() {
 	}
 }
 
+void FahrSound::cancel() {
+	this->currFahrstufe=-1;
+	this->doRun=false;
+	printf(ANSI_RED2 "FahrSound::cancel() %p\n" ANSI_DEFAULT, this);
+}
+
 void FahrSound::diOutloop() {
-	printf("FahrSound::[%p]diOutloop()\n",this->handle);
+	printf("FahrSound::diOutloop()\n");
+	Sound sound;
+	sound.init();
 	DiSoundType *diSoundFiles = dynamic_cast<DiSoundType*>(this->soundFiles);
 	assert(diSoundFiles && "FahrSound::diOutloop() no di sound");
 	int lastFahrstufe=this->currFahrstufe;
@@ -296,29 +327,63 @@ void FahrSound::diOutloop() {
 			printf("^");
 		}
 
-		this->writeSound(wav);
+		sound.writeSound(wav);
 
 		// printf("Sound::outloop() - testcancel\n");
-		pthread_testcancel();
+		this->testcancel();
 	}
 }
 
+class BoilSteamOutLoop : public Thread {
+public:
+	BoilSteamOutLoop(const FahrSound *fahrsound) {
+		this->fahrsound=fahrsound;
+		if(BoilSteamOutLoop::wav == "") {
+			Sound::loadSoundFile("sound/DA_DI_R_EU_Coll1/DA_DI_R_EU_Coll1/Sieden/Sieden_dumpf -leise.wav",wav);
+			Sound::loadSoundFile("sound/DA_DI_R_EU_Coll1/DA_DI_R_EU_Coll1/Bremsenqietschen/Bremse.wav",wavBremse);
+		}
+	};
+	~BoilSteamOutLoop() {
+		this->cancel();
+	};
+	void run() {
+		Sound sound;
+		sound.init();
+		int lastSpeed=fahrsound->currSpeed;
+		while(true) {
+			if(lastSpeed > 0 && fahrsound->currSpeed==0) {
+				PlayAsync quietschen(wavBremse);
+			}
+			lastSpeed=fahrsound->currSpeed;
+			sound.writeSound(wav);
+			this->testcancel();
+		}
+	};
+private:
+	static std::string wav;
+	static std::string wavBremse;
+	const FahrSound *fahrsound;
+};
+std::string BoilSteamOutLoop::wav;
+std::string BoilSteamOutLoop::wavBremse;
+
 void FahrSound::steamOutloop() {
+	Sound sound;
+	sound.init();
 	SteamSoundType *dSoundFiles = dynamic_cast<SteamSoundType*>(this->soundFiles);
-	assert(dSoundFiles && "Sound::dOutloop() no steam sound");
+	assert(dSoundFiles && "Sound::steamOutloop() no steam sound");
 	// int lastFahrstufe=this->currFahrstufe;
 	int slot=0;
+	BoilSteamOutLoop boil(this);
+	boil.start();
 
-	pthread_t   tid = pthread_self();
+	pthread_t   tid = this->self();
 	// this->setBlocking(false);
 	std::string outSilence= std::string(22000 / 100, 0x80);
 
-	printf(ANSI_RED2 "FahrSound::[%p]steamOutloop() %ul\n" ANSI_DEFAULT, this->handle, tid);
+	printf(ANSI_RED2 "FahrSound::steamOutloop() %lu\n" ANSI_DEFAULT, tid);
 	while(this->doRun || this->currFahrstufe >= 0) {
-		char buffer[100];
-		time_t t=time(NULL);
-		strftime(buffer, sizeof(buffer), "%c", gmtime(&t));
-		printf(ANSI_RED "Fahrstufe:%d %s\n" ANSI_DEFAULT,this->currFahrstufe, buffer); fflush(stdout);
+		printf(ANSI_RED "FahrSound::steamOutloop %p Fahrstufe:%d\n" ANSI_DEFAULT,this,this->currFahrstufe); fflush(stdout);
 		std::string wav;
 		if(this->currSpeed <= 0) {
 			printf(" ---- out silence\n");
@@ -346,33 +411,34 @@ void FahrSound::steamOutloop() {
 		*/
 
 
-		this->dump_sw();
+		// sound.dump_sw();
 		double x=this->currSpeed/255.0;
 		// double factor=x - pow(x-0.5,2) + 0.25;
 		// https://graphsketch.com/?eqn1_color=1&eqn1_eqn=&eqn2_color=2&eqn2_eqn=sin%28x*pi%2F2%29%5E0.6&eqn3_color=3&eqn3_eqn=&eqn4_color=4&eqn4_eqn=&eqn5_color=5&eqn5_eqn=&eqn6_color=6&eqn6_eqn=&x_min=-2&x_max=2&y_min=-2&y_max=2&x_tick=1&y_tick=1&x_label_freq=5&y_label_freq=5&do_grid=0&do_grid=1&bold_labeled_lines=0&bold_labeled_lines=1&line_width=4&image_w=850&image_h=525
+		// https://www.desmos.com/calculator (x-1)^3+1
 		double factor=pow(sin(x*3.14/2),0.6);
 		double s=1-0.95*(factor);
 		if(s < 0.1) {
-			this->writeSound(wav.substr(0, wav.length()*(s/0.1)) );
+			sound.writeSound(wav.substr(0, wav.length()*(s/0.1)) );
 		} else {
-			this->writeSound(wav);
+			sound.writeSound(wav);
 		}
 
 		printf("FahrSound::steamOutloop wait: %g\n", s);
 		// usleep(s*1000000);
 		for(int i = 0; i < ((s-0.1)*100); i++) {
-			this->writeSound(outSilence); // => 0,01s stille
+			sound.writeSound(outSilence); // => 0,01s stille
 		}
-		printf("Sound::[%p]steamOutloop() - testcancel\n", this->handle);
-		pthread_testcancel();
+		printf("Sound::steamOutloop() - testcancel\n");
+		this->testcancel();
 	}
 }
 
 void Sound::playSingleSound(int index) {
-	printf("Sound::[%p]playSingleSound(%d)\n", this->handle, index);
+	printf("Sound::playSingleSound(%d)\n", index);
 
 	this->writeSound(cfg_funcSound[index]);
-	printf("Sound::[%p]playSingleSound(%d) - done\n", this->handle, index);
+	printf("Sound::playSingleSound(%d) - done\n", index);
 }
 
 /**
@@ -382,7 +448,7 @@ void Sound::playSingleSound(int index) {
  * @return frames
  */
 int Sound::writeSound(const std::string &data, int startpos) {
-	printf("Sound::[%p]writeSound(len=%d, start=%d) \n", data.length(), startpos);
+	printf("Sound::writeSound(len=%lu, start=%d) \n", data.length(), startpos);
 	assert(startpos >= 0);
 	assert(data.length() > (unsigned) startpos);
 	const char *wavData = data.data() + startpos;
@@ -410,7 +476,7 @@ printf("Sound::[%p]writeSound() ========= status dump\n",this->handle);
 
 printf("Sound::writeSound dataLength=%zd startpos=%d\n", data.length(), startpos);
 	snd_pcm_sframes_t frames = snd_pcm_writei(this->handle, wavData, len);
-printf("Sound::writeSound frames=%d\n", frames);
+printf("Sound::writeSound frames=%ld\n", frames);
 	if (frames < 0) { // 2* probieren:
 		printf("Sound::[%p]writeSound recover error: %s\n", this->handle, snd_strerror(frames));
 		frames = snd_pcm_recover(this->handle, frames, 0);
@@ -526,11 +592,11 @@ static void async_callback(snd_async_handler_t *ahandler)
         int end=false;
         
         // snd_pcm_sframes_t avail = snd_pcm_avail_update(handle);
-		int writtenFrames=data->sound->writeSound(data->data, data->position);
+		int writtenFrames=data->sound->writeSound(data->wav, data->position);
 	printf("async_callback writtenFrames=%d\n",writtenFrames);
 		if(writtenFrames > 0) {
 			data->position+=writtenFrames;
-			if(data->position >= (int) data->data.length()) {
+			if(data->position >= (int) data->wav.length()) {
 				end=true;
 			}
 		} else {
@@ -563,6 +629,13 @@ static void async_callback(snd_async_handler_t *ahandler)
                 avail = snd_pcm_avail_update(handle);
         }
 		*/
+}
+
+PlayAsync::PlayAsync(const std::string &wav) {
+	Sound *sound=new Sound();
+	PlayAsyncData *data = new PlayAsyncData(wav, sound, 0);
+	data->index=-1;
+	data->start();
 }
 
 PlayAsync::PlayAsync(int index) {
@@ -608,7 +681,7 @@ PlayAsync::PlayAsync(int index) {
 			abort();
 		}
 
-		data->position=data->sound->writeSound(data->data);
+		data->position=data->sound->writeSound(data->wav);
 		if (snd_pcm_state(data->sound->handle) == SND_PCM_STATE_PREPARED) {
 			printf("PlayAsync in PREPARED state\n");
 			err = snd_pcm_start(data->sound->handle);
@@ -624,28 +697,23 @@ PlayAsync::PlayAsync(int index) {
 
 void PlayAsyncData::run() {
 	this->sound->init();
-	this->sound->writeSound(cfg_funcSound[index]);
+	this->sound->writeSound(this->wav);
 	delete(this);
 }
 
 FahrSound::~FahrSound() {
-	printf("FahrSound::[%p]~FahrSound()\n",this->handle);
-	this->currFahrstufe=-1;
-	this->doRun=false;
-	void *ret;
-	if(this->thread) {
-		pthread_join(this->thread,&ret);
-	}
-	this->thread=0;
-	printf("FahrSound::[%p]~FahrSound() done\n",this->handle);
+	printf("FahrSound::~FahrSound()\n");
+	this->cancel();
+	printf("FahrSound::~FahrSound() done\n");
 }
 
-void FahrSound::run() {
-	printf("FahrSound::[%p]run()\n",this->handle);
+void FahrSound::start() {
+	printf("FahrSound::start()\n");
 	if(!FahrSound::soundFiles) {
 		printf("===== no sound files loaded ====\n");
 		return;
 	}
+	/*
 // FIXME: wenn thread rennt und doRun false is dann warten bis thread tot und neu starten
 	if(this->thread) {
 		printf("FahrSound::run: already started\n");
@@ -654,16 +722,23 @@ void FahrSound::run() {
 	printf("FahrSound::run() starting sound thread\n");
 	this->doRun=true;
 
-	/* Start a thread and then send it a cancellation request */
+	// Start a thread and then send it a cancellation request
 
 	int s = pthread_create(&this->thread, NULL, &sound_thread_func, (void *) this);
 	if (s != 0)
 		perror("pthread_create");
-
+*/
+	if(this->isRunning() ) {
+		printf("FahrSound::start already started\n");
+	} else {
+		this->doRun=true;
+		Thread::start();
+	}
 	usleep(10000);
 	this->currFahrstufe=0;
 }
 
+/*
 void FahrSound::kill() {
 	printf("FahrSound::[%p]kill()\n",this->handle);
 	if(this->thread) {
@@ -675,6 +750,7 @@ void FahrSound::kill() {
 		this->thread=0;
 	}
 }
+*/
 
 void FahrSound::setSpeed(int speed) {
 	this->currSpeed=speed;
