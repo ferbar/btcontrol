@@ -6,6 +6,8 @@
 #sound.horn=sound/EASY-DAMPF/Pfiffe/Volldampf/Pfiff_BR77_kurz_22_ID(1103).wav
 #sound.horn=sound/oebb1099/Hupe_kurz.wav
 #sound.abfahrt=sound/oebb1099/ansprache.wav
+#sound.boil=sound/DA_DI_R_EU_Coll1/DA_DI_R_EU_Coll1/Sieden/Sieden_dumpf -leise.wav
+#sound.brake=sound/DA_DI_R_EU_Coll1/DA_DI_R_EU_Coll1/Bremsenqietschen/Bremse.wav
 
 # volume level
 #sound.level=150

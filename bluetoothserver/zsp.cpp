@@ -17,7 +17,7 @@
 #include "utils.h"
 
 SoundType *cfg_soundFiles=NULL;
-std::string cfg_funcSound[2];
+std::string cfg_funcSound[];
 SteamSoundType cfg_steamSoundFiles;
 
 ZSPDataType ZSPData;
@@ -227,6 +227,16 @@ SoundType *loadZSP() {
 		cfg_funcSound[CFG_FUNC_SOUND_ABFAHRT] = config.get("sound.abfahrt");
 	} catch(std::exception &e) {
 		printf("unable to get config/sound.abfahrt\n");
+	}
+	try {
+		cfg_funcSound[CFG_FUNC_SOUND_BOIL] = config.get("sound.boil");
+	} catch(std::exception &e) {
+		printf("unable to get config/sound.boil\n");
+	}
+	try {
+		cfg_funcSound[CFG_FUNC_SOUND_BRAKE] = config.get("sound.brake");
+	} catch(std::exception &e) {
+		printf("unable to get config/sound.brake\n");
 	}
 	return cfg_soundFiles;
 }

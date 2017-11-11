@@ -338,34 +338,30 @@ class BoilSteamOutLoop : public Thread {
 public:
 	BoilSteamOutLoop(const FahrSound *fahrsound) {
 		this->fahrsound=fahrsound;
-		if(BoilSteamOutLoop::wav == "") {
-			Sound::loadSoundFile("sound/DA_DI_R_EU_Coll1/DA_DI_R_EU_Coll1/Sieden/Sieden_dumpf -leise.wav",wav);
-			Sound::loadSoundFile("sound/DA_DI_R_EU_Coll1/DA_DI_R_EU_Coll1/Bremsenqietschen/Bremse.wav",wavBremse);
-		}
 	};
 	~BoilSteamOutLoop() {
 		this->cancel();
 	};
 	void run() {
+		if(cfg_funcSound[CFG_FUNC_SOUND_BOIL] == NOT_SET) {
+			printf(ANSI_RED "no boiler sound");
+			return;
+		}
 		Sound sound;
 		sound.init();
 		int lastSpeed=fahrsound->currSpeed;
 		while(true) {
 			if(lastSpeed > 0 && fahrsound->currSpeed==0) {
-				PlayAsync quietschen(wavBremse);
+				PlayAsync quietschen(CFG_FUNC_SOUND_BRAKE);
 			}
 			lastSpeed=fahrsound->currSpeed;
-			sound.writeSound(wav);
+			sound.writeSound(cfg_funcSound[CFG_FUNC_SOUND_BOIL]);
 			this->testcancel();
 		}
 	};
 private:
-	static std::string wav;
-	static std::string wavBremse;
 	const FahrSound *fahrsound;
 };
-std::string BoilSteamOutLoop::wav;
-std::string BoilSteamOutLoop::wavBremse;
 
 void FahrSound::steamOutloop() {
 	Sound sound;
