@@ -31,3 +31,5 @@ wiringpi.pin.22=!dir
 wiringpi.pin.17=!dir && F0
 #Führerhaus Beleuchtung
 #wiringpi.pin.8=!speed
+# led dimmen
+#wiringpi.pin.8.softPwm=50
