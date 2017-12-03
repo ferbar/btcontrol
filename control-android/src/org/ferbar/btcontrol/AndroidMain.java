@@ -339,6 +339,7 @@ public class AndroidMain extends Activity {
 				    		public void run() {
 				    			TextView t=(TextView) AndroidMain.this.findViewById(R.id.textViewInfo);
 				    			try {
+				    				// FIXME: da war mal eine NullPointer Exception. ka wie das geht ( AndroidMain.this.jmdns )
 									t.setText(AndroidMain.this.getText(R.string.main_found_serives) + "(" + AndroidMain.this.jmdns.getInetAddress().getHostAddress() + ")");
 								} catch (IOException e) {
 									// lmaa
