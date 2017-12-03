@@ -77,6 +77,10 @@ bool utils::startsWith(const std::string &str, const char *with) {
 	return str.find(with) == 0;
 }
 
+bool utils::endsWith(const std::string &str, const char *with) {
+	return str.rfind(with) == str.length()-strlen(with);
+}
+
 #undef runtime_error
 std::RuntimeExceptionWithBacktrace::RuntimeExceptionWithBacktrace(const std::string &what)
 	: std::runtime_error(what)
