@@ -19,6 +19,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdexcept>
+#include <math.h>
 #include "utils.h"
 #include "reader.h"
 
