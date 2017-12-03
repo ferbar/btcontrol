@@ -10,9 +10,9 @@
 #include "utils.h"
 #include <stdexcept>
 #include <exception>
-#include <wiringPi.h>
 #include <assert.h>
-
+#include <wiringPi.h>
+#include <softPwm.h>
 
 #include "ParseExpr.h"
 
@@ -79,12 +79,12 @@ void RaspiPWM::init() {
 	for (auto it=config.begin(); it!=config.end(); ++it) {
 		if(utils::startsWith(it->first,"wiringpi.pin.")) {
 			int pin = stoi(it->first.substr(strlen("wiringpi.pin.")));
-			if(utils::endsWith(it->first,".softPwm")) {
-				if(this->pins.find(pin) == this->pins.end())
+			if(utils::endsWith(it->first,".pwm")) {
+				if(this->pins.find(pin) == this->pins.end()) {
 					printf("RaspiPWM::init() ---- invaild softPwm pin\n");
 					abort();
 				}
-				this->pins[pin].softPwm=stoi(it->second);
+				this->pins[pin].pwm=stoi(it->second);
 			} else {
 				printf("setting wiringpi.pin[%d]=%s\n", pin, it->second.c_str());
 				if(it->second == "pwm" ) {
@@ -92,11 +92,13 @@ void RaspiPWM::init() {
 					printf("PWM on pin %d\n", pin);
 					continue;
 				}
-				// test ob parsbar + bits initialisieren
-				bool value=parseExpr->getResult(it->second, 0, 0, F0);
+				// test ob parsbar
+				parseExpr->getResult(it->second, 0, 0, F0);
+				// pin mode initialisieren
 				pinMode(pin, OUTPUT);
-				digitalWrite(pin, value);
-				this->pins[pin]=new PinCtl(it->second);
+				// digitalWrite(pin, value);
+				this->pins[pin]={.function=it->second, .lastState=PinCtl::UNDEFINED, .pwm=100};
+				// this->pins[pin]=new PinCtl(it->second);
 			}
 		}
 	}	
@@ -117,6 +119,8 @@ void RaspiPWM::init() {
 	pwmSetRange(256);
 	this->setPWM(0);
 	this->setDir(0); // default dir = 0
+	// test ob parsbar + bits initialisieren
+	this->commit();
 }
 
 void RaspiPWM::setPWM(int f_speed) {
@@ -172,11 +176,20 @@ void RaspiPWM::fullstop() {
 void RaspiPWM::commit() {
 	bool F0=this->currentFunc[0];
 	for (auto it=this->pins.begin(); it!=this->pins.end(); ++it) {
-		bool value=parseExpr->getResult(it->second->function, this->dir, this->pwm, F0);
+		bool value=parseExpr->getResult(it->second.function, this->dir, this->pwm, F0);
 		// printf("digitalWrite[%d] => %d (%s)\n",it->first,value,it->second.c_str());
-		if(it->second.lastState == PinCtl.UNDEFINED || value != it->second.lastState) {
-			digitalWrite(it->first, value);
-			it->second->lastState=value;
+		if(it->second.lastState == PinCtl::UNDEFINED || value != it->second.lastState) {
+			if(it->second.pwm != 100) {
+				if(value) {
+					printf("RaspiPWM::commit() soft pwm create");
+					softPwmCreate(it->first, it->second.pwm, 100);
+				} else {
+					softPwmStop(it->first);
+				}
+			} else {
+				digitalWrite(it->first, value);
+				it->second.lastState=value;
+			}
 		}
 	}
 }
