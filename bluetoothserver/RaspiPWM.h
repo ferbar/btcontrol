@@ -32,12 +32,12 @@ private:
 	int raspiLedToggle;
 	bool currentFunc[MAX_NFUNC];
 	int nFunc;
-	struct pinCtl {
-		const char UNDEFINED=-1;
-		pinCtl(std::string function) : function(function), lastState(-1), pwm(100) {}
+	struct PinCtl {
+		static const char UNDEFINED=2;
+		// PinCtl(std::string function) : function(function), lastState(UNDEFINED), pwm(100) {}
 		std::string function;
 		char lastState;
 		int pwm;
 	};
-	std::map<int, pinCtl> pins;
+	std::map<int, PinCtl> pins;
 };
