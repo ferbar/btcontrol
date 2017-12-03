@@ -23,15 +23,19 @@ digispark.motorStart=70
 wiringpi.pin.18=pwm
 # richtungs pin für die brücke
 wiringpi.pin.27=dir
-# led
+# Lampen vorne
 wiringpi.pin.4=dir && F0
 # led dimmen
 #wiringpi.pin.4.pwm=10
+wiringpi.pin.4.a=dir && F0 && speed
 # richtungs pin für die brücke
 wiringpi.pin.22=!dir
-# led
+# Lampen hinten
 wiringpi.pin.17=!dir && F0
-#wiringpi.pin.17.pwm=10
+wiringpi.pin.17.pwm=10
+# volle beleuchtung wenn wir fahren
+#wiringpi.pin.17.a=!dir && F0 && speed
+#wiringpi.pin.17.pwm=20
 #Führerhaus Beleuchtung
 #wiringpi.pin.8=!speed
 #wiringpi.pin.8.pwm=50
