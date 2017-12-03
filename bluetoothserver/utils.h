@@ -77,6 +77,8 @@ namespace utils
 	int stoi(const std::string &in);
 	bool startsWith(const std::string &str, const std::string &with);
 	bool startsWith(const std::string &str, const char *with);
+
+	bool endsWith(const std::string &str, const char *with);
 }
 
 

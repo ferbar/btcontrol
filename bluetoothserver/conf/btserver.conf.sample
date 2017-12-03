@@ -21,15 +21,17 @@ digispark.motorStart=70
 
 # wenn RaspiPWM verwendet wird:
 wiringpi.pin.18=pwm
-# richtungs pin für die brüc
+# richtungs pin für die brücke
 wiringpi.pin.27=dir
 # led
 wiringpi.pin.4=dir && F0
+# led dimmen
+#wiringpi.pin.4.pwm=10
 # richtungs pin für die brücke
 wiringpi.pin.22=!dir
 # led
 wiringpi.pin.17=!dir && F0
+#wiringpi.pin.17.pwm=10
 #Führerhaus Beleuchtung
 #wiringpi.pin.8=!speed
-# led dimmen
-#wiringpi.pin.8.softPwm=50
+#wiringpi.pin.8.pwm=50
