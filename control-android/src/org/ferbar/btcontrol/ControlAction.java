@@ -856,7 +856,8 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
         if((keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP)) {
             // to your stuff here
         	System.out.println("key up ("+event.toString()+")");
-        	timer.cancel();
+        	if(timer != null) // wenn die app zum onKeyDown Zeitpunkt noch nicht gelaufen ist stürzts ab ...
+        		timer.cancel();
             return true;
         }
         return super.onKeyUp(keyCode, event);
