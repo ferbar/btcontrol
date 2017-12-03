@@ -5,6 +5,7 @@
 #include <string>
 #include <boost/shared_ptr.hpp>
 #include "utils.h"
+#include <vector>
 
 
 class ZSP {
