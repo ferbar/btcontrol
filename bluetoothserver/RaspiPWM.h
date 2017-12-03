@@ -11,8 +11,9 @@ public:
 	virtual void setPWM(int f_speed);
 	virtual void setDir(unsigned char dir);
 	virtual void setFunction(int nFunc, bool *func);
-	// brauch ma da ned:
-	virtual void commit() ;
+	// setzt die Pins, force zum initial initen
+	virtual void commit();
+	virtual void commit(bool force);
 	virtual void fullstop();
 
 
@@ -33,11 +34,12 @@ private:
 	bool currentFunc[MAX_NFUNC];
 	int nFunc;
 	struct PinCtl {
-		static const char UNDEFINED=2;
 		// PinCtl(std::string function) : function(function), lastState(UNDEFINED), pwm(100) {}
 		std::string function;
-		char lastState;
+		bool lastState;
 		int pwm;
+		typedef std::pair<int, PinCtl> pair;
 	};
-	std::map<int, PinCtl> pins;
+	std::multimap<int, PinCtl> pins;
+	void dumpPins();
 };

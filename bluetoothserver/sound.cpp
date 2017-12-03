@@ -457,10 +457,10 @@ int Sound::writeSound(const std::string &data, int startpos) {
 		// exit(0);
 	}
 
-printf("Sound::[%p]writeSound() ========= status dump\n",this->handle);
-	snd_output_t* out;
-	snd_output_stdio_attach(&out, stderr, 0);
-	snd_pcm_status_dump(status, out);
+	//printf("Sound::[%p]writeSound() ========= status dump\n",this->handle);
+	//snd_output_t* out;
+	//snd_output_stdio_attach(&out, stderr, 0);
+	//snd_pcm_status_dump(status, out);
 	if (snd_pcm_state(this->handle) == SND_PCM_STATE_XRUN || 
 		snd_pcm_state(handle) == SND_PCM_STATE_SUSPENDED) {
 		printf("Sound::writeSound need to recover ...\n");
@@ -468,9 +468,9 @@ printf("Sound::[%p]writeSound() ========= status dump\n",this->handle);
 		assert(err >= 0 && "Can't recovery from underrun, prepare failed"); // , snd_strerror(err));
 	}
 
-printf("Sound::writeSound dataLength=%zd startpos=%d\n", data.length(), startpos);
+	//printf("Sound::writeSound dataLength=%zd startpos=%d\n", data.length(), startpos);
 	snd_pcm_sframes_t frames = snd_pcm_writei(this->handle, wavData, len);
-printf("Sound::writeSound frames=%ld\n", frames);
+	//printf("Sound::writeSound frames=%ld\n", frames);
 	if (frames < 0) { // 2* probieren:
 		printf("Sound::[%p]writeSound recover error: %s\n", this->handle, snd_strerror(frames));
 		frames = snd_pcm_recover(this->handle, frames, 0);
@@ -479,7 +479,7 @@ printf("Sound::writeSound frames=%ld\n", frames);
 		/* EPIPE means underrun */
 		fprintf(stderr, "underrun occurred\n");
 		snd_pcm_prepare(this->handle);
-    }
+	}
 	/*
 	if (frames < 0) { // noch immer putt
 		printf("Sound::writeSound snd_pcm_writei failed: %s\n", snd_strerror(frames));
