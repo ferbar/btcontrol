@@ -5,7 +5,7 @@
 #define F_DEC14 1
 #define F_DEC28 2
 
-#define MAX_NFUNC 17
+#define MAX_NFUNC 32
 
 struct func_t {
 	char name[32];
