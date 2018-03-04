@@ -79,6 +79,8 @@ namespace utils
 	bool startsWith(const std::string &str, const char *with);
 
 	bool endsWith(const std::string &str, const char *with);
+
+	std::string format(const char *fmt, ...);
 }
 
 
