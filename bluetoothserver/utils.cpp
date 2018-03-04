@@ -1,9 +1,12 @@
 #include <stdio.h>
 #include <boost/algorithm/string.hpp>
-#include "utils.h"
 #include <stdexcept>
 #include <sstream>
 #include <iostream>
+#include <memory>
+#include <stdarg.h>
+
+#include "utils.h"
 
 // fürs backtrace:
 #include <execinfo.h>
@@ -197,6 +200,17 @@ std::string readFile(std::string filename)
 		printf("%s:%lu bytes\n",filename.c_str(),buf.st_size);
 	}
 	return ret;
+}
+
+std::string utils::format(const char *fmt, ...) {
+	size_t size = 0;
+	va_list ap;
+	char *buf=NULL;
+	va_start(ap, fmt);
+	size=vasprintf(&buf, fmt, ap );
+	printf("format result size:%zu string:%s\n", size, buf);
+	va_end(ap);
+	return std::string( buf, size ); // We don't want the '\0' inside
 }
 
 /**
