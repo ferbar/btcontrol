@@ -1151,6 +1151,8 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 									imageID=R.drawable.image_button_sound_durchsage;
 								} else if(imgName.startsWith("sHorn")) {
 									imageID=R.drawable.image_button_sound_horn;
+								} else if(imgName.startsWith("sTrillerpfeife")) {
+									imageID=R.drawable.image_button_sound_trillerpfeife;
 								} else if(imgName.startsWith("sPfeife")) {
 									imageID=R.drawable.image_button_sound_pfeife;
 								} else if(imgName.startsWith("sSound ein/aus")) {
