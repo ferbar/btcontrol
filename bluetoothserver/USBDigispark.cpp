@@ -260,6 +260,7 @@ void USBDigispark::init(int devnr) {
 	}
 	*/
 	if(digiSpark == NULL) {
+		libusb_free_device_list(connected_devices, 1); /* we got the handle, free references to other devices */
 		throw std::runtime_error("No Digispark Found");
 	}
 	int r = libusb_open(digiSpark, &this->devHandle);
