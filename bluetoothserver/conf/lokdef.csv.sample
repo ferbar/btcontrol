@@ -29,4 +29,4 @@
 3508,F_DEFAULT,AbE 8/12, abe_8_12.png,           28,sTrillerpfeife,sPfeife,sAnsage St Moritz,sAnsage Landquart,sAnsage Filisur,sAnsage Filisur,sHauptwechselrichter,sSound ein/aus,sKurvenquietschen,pPantho,pPantho,pPantho,sKupplungsgeräusch,sBremsvakuumpumpe,sDruckluft Kompressor,sTunnelfader,lBeleuchtung,lFernlicht,lFührerstandbeleuchtung,lFahrpultbeleuchtung,lhinten rot,lWarnsignal 3x/2x rot,lScheinwerfer aus,lRücklicht aus,sTür,sTür,sAnsage St.Moritz,sAnsage Tirano
 
 # für raspiPWM:
-#3,  F_DEFAULT,lok3,                    ,   9,,,,,,,,,mMotor Boost
+#3,  F_DEFAULT,lok3,                    ,   9,sPfeie,,,,,,,,mMotor Boost
