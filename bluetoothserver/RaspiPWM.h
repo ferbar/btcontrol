@@ -2,6 +2,17 @@
 #include <string>
 #include "USBPlatine.h"
 #include "lokdef.h"
+#include "Thread.h"
+
+class RaspiPWM;
+
+class RaspiPWMFuncThread : public Thread {
+public:
+	RaspiPWMFuncThread(RaspiPWM &raspiPWM) : raspiPWM(raspiPWM) {};
+private:
+	RaspiPWM &raspiPWM;
+	virtual void run();
+};
 
 class RaspiPWM : public USBPlatine {
 public:
@@ -42,4 +53,6 @@ private:
 	};
 	std::multimap<int, PinCtl> pins;
 	void dumpPins();
+	Mutex funcMutex;
+	RaspiPWMFuncThread funcThread;
 };

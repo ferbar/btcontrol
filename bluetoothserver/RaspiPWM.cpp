@@ -23,7 +23,8 @@ ParseExpr *parseExpr=NULL;
 RaspiPWM::RaspiPWM(bool debug) :
 		USBPlatine(debug),
 		dir(-1), pwm(-1), motorStart(70), motorFullSpeed(255), motorFullSpeedBoost(255),
-		fRaspiLed(NULL), raspiLedToggle(0), nFunc(0) {
+		fRaspiLed(NULL), raspiLedToggle(0), nFunc(0),
+		funcThread(*this) {
 
 	assert(parseExpr==NULL); // nur einmal da?
 	parseExpr=new ParseExpr();
@@ -46,6 +47,8 @@ RaspiPWM::~RaspiPWM() {
 	this->fullstop();
 	this->release();
 	delete(parseExpr); parseExpr=NULL;
+	this->funcThread.cancel();
+	printf("RaspiPWM::~RaspiPWM() done\n");
 }
 
 void RaspiPWM::release() {
@@ -126,6 +129,7 @@ void RaspiPWM::init() {
 	// test ob parsbar + bits initialisieren
 	this->commit(true);
 	this->dumpPins();
+	this->funcThread.start();
 }
 
 void RaspiPWM::setPWM(int f_speed) {
@@ -191,6 +195,7 @@ void RaspiPWM::commit() {
 
 void RaspiPWM::commit(bool force) {
 this->dumpPins();
+	Lock lock(this->funcMutex);
 	bool F0=this->currentFunc[0];
 	auto it=this->pins.begin();
 	while (it!=this->pins.end()) {
@@ -231,5 +236,13 @@ this->dumpPins();
 		} else {
 			printf("  no force\n");
 		}
+	}
+}
+
+void RaspiPWMFuncThread::run() {
+	while(true) {
+		printf("RaspiPWMFuncThread::run()\n");
+		raspiPWM.commit(false);
+		sleep(1);
 	}
 }
