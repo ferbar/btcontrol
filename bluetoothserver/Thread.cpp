@@ -49,3 +49,39 @@ void Thread::testcancel() {
 int Thread::self() {
 	return pthread_self();
 }
+
+Mutex::Mutex() {
+	if(pthread_mutex_init(&this->m, NULL) != 0) {
+		throw std::runtime_error("error creating mutex");
+	}
+}
+
+Mutex::~Mutex() {
+	if(! this->tryLock()) {
+		throw std::runtime_error("error destroying mutex - mutex is locked");
+	}
+	this->unlock();
+	if(pthread_mutex_destroy(&this->m)) {
+		throw std::runtime_error("error destroying mutex");
+	}
+}
+
+void Mutex::lock() {
+	if(pthread_mutex_lock(&this->m) != 0 ) {
+		throw std::runtime_error("error Mutex::lock()");
+	}
+}
+
+void Mutex::unlock() {
+	if(pthread_mutex_unlock(&this->m) != 0 ) {
+		throw std::runtime_error("error Mutex::unlock()");
+	}
+}
+
+bool Mutex::tryLock() {
+	// 0 on success
+	int ret = pthread_mutex_trylock(&this->m);
+	if(ret == 0) return true;
+	if(ret == EBUSY) return false;
+	throw std::runtime_error("error Mutex::trylock()");
+}
