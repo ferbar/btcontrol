@@ -36,6 +36,9 @@ wiringpi.pin.17.pwm=10
 # volle beleuchtung wenn wir fahren
 #wiringpi.pin.17.a=!dir && F0 && speed
 #wiringpi.pin.17.pwm=20
-#Führerhaus Beleuchtung
+# Führerhaus Beleuchtung
 #wiringpi.pin.8=!speed
 #wiringpi.pin.8.pwm=50
+# Rauchfang
+#wiringpi.pin.9=accel+10s
+#wiringpi.pin.10=accel+5s
