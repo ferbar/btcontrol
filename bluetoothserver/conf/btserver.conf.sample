@@ -40,5 +40,5 @@ wiringpi.pin.17.pwm=10
 #wiringpi.pin.8=!speed
 #wiringpi.pin.8.pwm=50
 # Rauchfang
-#wiringpi.pin.9=accel+10s
-#wiringpi.pin.10=accel+5s
+#wiringpi.pin.9=accel+15s
+#wiringpi.pin.10=accel+10s
