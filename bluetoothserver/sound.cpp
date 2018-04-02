@@ -133,7 +133,7 @@ void Sound::loadSoundFiles(SoundType *soundFiles) {
 	FahrSound::soundFilesLoaded=true;
 
 	for(unsigned int i=0; i < countof(cfg_funcSound); i++) {
-		if(cfg_funcSound[CFG_FUNC_SOUND_ABFAHRT] != NOT_SET) {
+		if(cfg_funcSound[i] != NOT_SET) {
 			Sound::loadSoundFile(cfg_funcSound[i], cfg_funcSound[i] );
 		} else {
 			printf("no CFG_FUNC_SOUND_%d\n",i);
