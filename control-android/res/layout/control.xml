@@ -337,7 +337,126 @@
                                 android:text="F18" />
                         </TableRow>
 
+                        <TableRow
+                            android:layout_width="match_parent"
+                            android:layout_gravity="center"
+                            android:layout_marginBottom="2dip"
+                            android:layout_marginTop="2dip"
+                            android:baselineAligned="false" >
 
+                            <ImageButton
+                                android:id="@+id/bF19"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:onClick="onClickButton"
+                                android:text="F19" />
+
+                            <ImageButton
+                                android:id="@+id/bF20"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:onClick="onClickButton"
+                                android:text="F20" />
+                        </TableRow>
+
+                        <TableRow
+                            android:layout_width="match_parent"
+                            android:layout_gravity="center"
+                            android:layout_marginBottom="2dip"
+                            android:layout_marginTop="2dip"
+                            android:baselineAligned="false" >
+
+                            <ImageButton
+                                android:id="@+id/bF21"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:onClick="onClickButton"
+                                android:text="F21" />
+
+                            <ImageButton
+                                android:id="@+id/bF22"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:onClick="onClickButton"
+                                android:text="F22" />
+                        </TableRow>
+
+                        <TableRow
+                            android:layout_width="match_parent"
+                            android:layout_gravity="center"
+                            android:layout_marginBottom="2dip"
+                            android:layout_marginTop="2dip"
+                            android:baselineAligned="false" >
+
+                            <ImageButton
+                                android:id="@+id/bF23"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:onClick="onClickButton"
+                                android:text="F23" />
+
+                            <ImageButton
+                                android:id="@+id/bF24"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:onClick="onClickButton"
+                                android:text="F24" />
+                        </TableRow>
+
+                        <TableRow
+                            android:layout_width="match_parent"
+                            android:layout_gravity="center"
+                            android:layout_marginBottom="2dip"
+                            android:layout_marginTop="2dip"
+                            android:baselineAligned="false" >
+
+                            <ImageButton
+                                android:id="@+id/bF25"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:onClick="onClickButton"
+                                android:text="F25" />
+
+                            <ImageButton
+                                android:id="@+id/bF26"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:onClick="onClickButton"
+                                android:text="F26" />
+                        </TableRow>
+
+                        <TableRow
+                            android:layout_width="match_parent"
+                            android:layout_gravity="center"
+                            android:layout_marginBottom="10dip"
+                            android:layout_marginTop="2dip"
+                            android:baselineAligned="false" >
+
+                            <ImageButton
+                                android:id="@+id/bF27"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:onClick="onClickButton"
+                                android:text="F27" />
+
+                            <ImageButton
+                                android:id="@+id/bF28"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:onClick="onClickButton"
+                                android:text="F28" />
+                        </TableRow>
+                        
 
                     </TableLayout>
                 </LinearLayout>

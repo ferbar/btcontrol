@@ -1,13 +1,44 @@
+#soundset=sound/EASY-DAMPF/EASYLINE_DAMPF_COL.zpr
+#soundset=sound/DampfDieselZimoSounds/DA_DI_R_EU_Coll1.zpr
+#soundset=sound/oebb1099/oebb1099.zpr
+#sound.name=BR218
+#sound.name=BR01-10
+#sound.horn=sound/EASY-DAMPF/Pfiffe/Volldampf/Pfiff_BR77_kurz_22_ID(1103).wav
+#sound.horn=sound/oebb1099/Hupe_kurz.wav
+#sound.abfahrt=sound/oebb1099/ansprache.wav
+#sound.boil=sound/DA_DI_R_EU_Coll1/DA_DI_R_EU_Coll1/Sieden/Sieden_dumpf -leise.wav
+#sound.brake=sound/DA_DI_R_EU_Coll1/DA_DI_R_EU_Coll1/Bremsenqietschen/Bremse.wav
 
-soundset=sound/DampfDieselZimoSounds/DA_DI_R_EU_Coll1.zpr
-# soundset=sound/oebb1099/oebb1099.zpr
-# sound.horn=sound/oebb1099/Hupe_kurz.wav
-# sound.abfahrt=sound/oebb1099/ansprache.wav
+# volume level
+#sound.level=150
+# force samplerate
+#sound.samplerate=22050
 
-#lautstärke
-cvxy=xy
-#anfahrtdings
-cvxy=xy
-
-# bei dem Wert fangt der motor in der lok sich an zu drehen
+# bei dem Wert fahrt die Lok los
 digispark.motorStart=70
+#digispark.motorFullSpeed=180
+#digispark.motorFullSpeedBoost=200
+
+# wenn RaspiPWM verwendet wird:
+wiringpi.pin.18=pwm
+# richtungs pin für die brücke
+wiringpi.pin.27=dir
+# Lampen vorne
+wiringpi.pin.4=dir && F0
+# led dimmen
+#wiringpi.pin.4.pwm=10
+wiringpi.pin.4.a=dir && F0 && speed
+# richtungs pin für die brücke
+wiringpi.pin.22=!dir
+# Lampen hinten
+wiringpi.pin.17=!dir && F0
+wiringpi.pin.17.pwm=10
+# volle beleuchtung wenn wir fahren
+#wiringpi.pin.17.a=!dir && F0 && speed
+#wiringpi.pin.17.pwm=20
+# Führerhaus Beleuchtung
+#wiringpi.pin.8=!speed
+#wiringpi.pin.8.pwm=50
+# Rauchfang
+#wiringpi.pin.9=accel+15s
+#wiringpi.pin.10=accel+10s

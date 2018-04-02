@@ -156,6 +156,7 @@ public class FBTCtlMessage {
 	
 	/**
 	 * wandelt die aktuelle message in einen bin - string um
+	 * Vorsicht: zusätzliche Felder die im MessageLayout nicht vorkommen werden stillschweigend ignoriert
 	 */
 	public OutputWriter getBinaryMessage() throws Exception  {
 		MessageLayout layout = MessageLayouts.getLayout(this.type);

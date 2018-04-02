@@ -11,7 +11,8 @@
 # sdptool browse ff:ff:ff:00:00:00 -> port registrierungen anzeigen
 # port 30 als SerialProfile registrieren
 SDPTOOL="sudo sdptool"
-HCICONFIG="sudo hciconfig"
+HCICONFIG="hciconfig"
+BLUETOOTHNAME=""
 
 CONFFILE="$(dirname $0)/conf/initbtrail.conf"
 if [ -f $CONFFILE ] ; then
@@ -47,8 +48,12 @@ fi
 # port 30 auf /dev... mappen
 # rfcomm -r listen /dev/rfcomm30 30
 
+if [ "$BLUETOOTHNAME" ] ; then
+	sudo $HCICONFIG hci0 name "$BLUETOOTHNAME"
+fi
+
 # wenn pc master kann er bis zu 7 connections machen
-$HCICONFIG hci0 lm master
+sudo $HCICONFIG hci0 lm master
 
 # verbindungen anzeigen
 # hcitool con
@@ -65,7 +70,7 @@ $HCICONFIG | grep ISCAN -q
 rc=$?
 if [ $rc != 0 ]; then
 	echo "bluetooth ISCAN noch nicht eingeschalten"
-	if $HCICONFIG hci0 piscan ; then
+	if sudo $HCICONFIG hci0 piscan ; then
 		echo "[ok] ... eingeschalten"
 	else
 		echo "[error] '$HCICONFIG hci0 piscan'" >&2

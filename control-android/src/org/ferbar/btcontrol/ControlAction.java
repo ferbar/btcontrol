@@ -155,7 +155,8 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
     
     // SeekBar seekBarDirection;
     int [] viewFunctions={R.id.bF0, R.id.bF1, R.id.bF2, R.id.bF3, R.id.bF4, R.id.bF5, R.id.bF6, R.id.bF7, R.id.bF8, R.id.bF9, 
-    		R.id.bF10, R.id.bF11, R.id.bF12, R.id.bF13, R.id.bF14, R.id.bF15, R.id.bF16, R.id.bF17, R.id.bF18
+    		R.id.bF10, R.id.bF11, R.id.bF12, R.id.bF13, R.id.bF14, R.id.bF15, R.id.bF16, R.id.bF17, R.id.bF18,  R.id.bF19,
+    		R.id.bF20, R.id.bF21, R.id.bF22, R.id.bF23, R.id.bF24, R.id.bF25, R.id.bF26, R.id.bF27, R.id.bF28
     };
 
 	
@@ -856,7 +857,8 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
         if((keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP)) {
             // to your stuff here
         	System.out.println("key up ("+event.toString()+")");
-        	timer.cancel();
+        	if(timer != null) // wenn die app zum onKeyDown Zeitpunkt noch nicht gelaufen ist stürzts ab ...
+        		timer.cancel();
             return true;
         }
         return super.onKeyUp(keyCode, event);
@@ -1105,10 +1107,12 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 			for(int i=0; i < this.viewFunctions.length; i++) {
 				ImageButton ib=(ImageButton)this.findViewById(this.viewFunctions[i]);
 				if(i >= n) { // lok hat weniger als 10 funktions -> button disablen
-					ib.setEnabled(false);
+					// ib.setEnabled(false);
+					ib.setVisibility(View.GONE);
 					continue;
 				}
-				ib.setEnabled(true);
+				// ib.setEnabled(true);
+				ib.setVisibility(View.VISIBLE);
 				this.funcStates[i]=((item.funcBits >> i) & 1) != 0;
 				/*
 				try {
@@ -1142,13 +1146,17 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 								imgName=funcName.substring(p+1);
 							}
 							switch(c) {
-							case 's':
-								if(imgName.startsWith("sDurchsage")) {
+							case 's': // lokdef.csv.sample updaten!!!
+								if(imgName.startsWith("sDurchsage") || imgName.startsWith("sAnsage")) {
 									imageID=R.drawable.image_button_sound_durchsage;
 								} else if(imgName.startsWith("sHorn")) {
 									imageID=R.drawable.image_button_sound_horn;
+								} else if(imgName.startsWith("sTrillerpfeife")) {
+									imageID=R.drawable.image_button_sound_trillerpfeife;
 								} else if(imgName.startsWith("sPfeife")) {
 									imageID=R.drawable.image_button_sound_pfeife;
+								} else if(imgName.startsWith("sSound ein/aus")) {
+									imageID=R.drawable.image_button_sound_on_off;
 								} else {
 									imageID=R.drawable.image_button_sound;									
 								}
@@ -1156,6 +1164,8 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 							case 'l':
 								if(imgName.startsWith("lRauchfang")) {
 									imageID=R.drawable.image_button_rauchfang;
+								} else if(imgName.startsWith("lFernlicht")) {
+										imageID=R.drawable.image_button_headlight;
 								} else {
 									imageID=R.drawable.image_button_light;
 								}

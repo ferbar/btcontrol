@@ -39,8 +39,6 @@
 
 #include <pthread.h>
 
-// dirname
-#include <libgen.h>
 
 #include <map>
 
@@ -91,56 +89,6 @@ void *platine=NULL;
 #endif
 SRCP *srcp=NULL;
 
-#undef read
-int myRead(int so, void *data, size_t size) {
-	int read=0;
-	// printf("myRead: %zd\n",size);
-	while(read < (int) size) {
-		// printf("read: %zd\n",size-read);
-		int rc=::read(so,((char *) data)+read,size-read);
-		// printf("rc: %d\n",rc);
-		if(rc < 0) {
-			throw std::runtime_error("error reading data");
-		} else if(rc == 0) { // stream is blocking -> sollt nie vorkommen
-			throw std::runtime_error("nothing to read");
-		}
-		read+=rc;
-	}
-	return read;
-}
-
-// FIXME: das ins utils.cpp ?
-std::string readFile(std::string filename)
-{
-	std::string ret;
-	struct stat buf;
-	if(stat(filename.c_str(), &buf) != 0) {
-		char execpath[MAXPATHLEN];
-		if(readlink("/proc/self/exe", execpath, sizeof(execpath)) <= 0) {
-			printf("error reading /proc/self/exe\n");
-			abort();
-		}
-		char *linkpath=dirname(execpath);
-		filename.insert(0,std::string(linkpath) + '/');
-		if(stat(filename.c_str(), &buf) != 0) {
-			fprintf(stderr,"error stat file %s\n",filename.c_str());
-			throw std::runtime_error("error stat file");
-		}
-	}
-	ret.resize(buf.st_size,'\0');
-	FILE *f=fopen(filename.c_str(),"r");
-	if(!f) {
-		fprintf(stderr,"error reading file %s\n",filename.c_str());
-		throw std::runtime_error("error reading file");
-	} else {
-		const char *data=ret.data(); // mutig ...
-		fread((void*)data,1,buf.st_size,f);
-		fclose(f);
-		printf("%s:%lu bytes\n",filename.c_str(),buf.st_size);
-	}
-	return ret;
-}
-
 /**
  * Velleman k8055 init
  */
@@ -166,24 +114,34 @@ void initPlatine()
 		printf("USBDigispark init: error: %s\n",errormsg.what());
 	}
 	printf("... done\n");
-#if defined HAVE_ALSA
-	if(platine) {
-		SoundType *soundFiles=loadZSP();
-		if(soundFiles) {
-			Sound::loadSoundFiles(soundFiles);
-		}
-	}
-#endif
 #endif
 #ifdef HAVE_RASPI_WIRINGPI
 	if(!platine) {
 		try {
 			platine=new RaspiPWM(cfg_debug);
-			// FIXME:
-			strncpy(lokdef[0].name,"RaspiPWM", sizeof(lokdef[0].name));
+			// Lokname immer auf RaspiPWM setzen: (unpraktisch)
+			//strncpy(lokdef[0].name,"RaspiPWM", sizeof(lokdef[0].name));
 			lokdef[1].addr=0;
 		} catch(std::exception &errormsg) {
 			printf("RaspiPWM: error: %s\n",errormsg.what());
+		}
+	}
+#endif
+#ifdef HAVE_ALSA
+	if(platine) {
+		std::string samplerate=config.get("sound.samplerate");
+		if(samplerate != NOT_SET) {
+			printf("new samplerate:%s\n",samplerate.c_str());
+			Sound::sample_rate=utils::stoi(samplerate);
+		}
+
+		SoundType *soundFiles=loadZSP();
+		if(soundFiles) {
+			Sound::loadSoundFiles(soundFiles);
+			std::string volumeLevel=config.get("sound.level");
+			if(volumeLevel != NOT_SET) {
+				Sound::setMasterVolume(utils::stoi(volumeLevel));
+			}
 		}
 	}
 #endif
@@ -243,6 +201,28 @@ int main(int argc, char *argv[])
 				break;
 			case 'v':
 				printf("btserver version %s\n", _STR(SVNVERSION));
+#ifdef HAVE_RASPI_WIRINGPI
+				printf("+RASPI_WIRINGPI ");
+#endif
+#ifdef HAVE_ALSA
+				printf("+alsa ");
+#endif
+#ifdef HAVE_LIBUSB
+				printf("+libusb ");
+#endif
+#ifdef INCL_QRCODE
+				printf("+INCL_QRCODE ");
+#endif
+#ifdef INCL_BT
+				printf("+INCL_BT ");
+#endif
+#ifdef HAVE_RASPI_ACT_LED
+				printf("+HAVE_RASPI_ACT_LED ");
+#endif
+#ifdef INCL_X11
+				printf("+X11 ");
+#endif
+				printf("\n");
 				exit(0);
 			case 's':
 				cfg_hostname=optarg;
@@ -283,6 +263,7 @@ int main(int argc, char *argv[])
 
 	// FBTCtlMessage test(FBTCtlMessage::STRUCT)
 	try {
+		config.init("conf/btserver.conf");
 		messageLayouts.load();
 		printf("---------------protohash = %d\n",messageLayouts.protocolHash);
 		printf("TCP RX Timeout = %d\n",cfg_tcpTimeout);
@@ -356,8 +337,8 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-
-	Server server;
+	int port=3030;
+	Server server(port);
 	try {
 		server.run();
 	} catch(std::runtime_error &e) {

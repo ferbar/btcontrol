@@ -13,6 +13,20 @@
 CODE=$(git rev-list master --first-parent --count)
 VERSION="dev"
 
+PROTOCOL_VERSION=$(grep '^version' ./src/protocol/protocol.dat)
+if [ $? != 0 ] ; then
+	echo "error: protocol.dat version not found [1]">&2
+	exit 1
+fi
+REGEX="^version=([0-9.]*):I"
+if [[ "$PROTOCOL_VERSION" =~ $REGEX ]] ; then
+	# echo "match: ${BASH_REMATCH[1]}"
+	VERSION="${BASH_REMATCH[1]}-$CODE-$VERSION"
+else
+	echo "error: protocol.dat regex error">&2
+	exit 1
+fi
+
 echo "   Code: ${CODE}"
 echo "   Ver:  ${VERSION}"
 

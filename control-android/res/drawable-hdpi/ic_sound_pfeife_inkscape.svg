@@ -14,8 +14,8 @@
    height="48px"
    id="svg4660"
    version="1.1"
-   inkscape:version="0.48.2 r9819"
-   sodipodi:docname="ic_sound_pfeife.svg">
+   inkscape:version="0.91 r13725"
+   sodipodi:docname="ic_sound_pfeife_inkscape.svg">
   <defs
      id="defs4662">
     <linearGradient
@@ -150,14 +150,6 @@
        id="linearGradient4925"
        xlink:href="#linearGradient5221-6-5"
        inkscape:collect="always" />
-    <filter
-       inkscape:collect="always"
-       id="filter4948">
-      <feGaussianBlur
-         inkscape:collect="always"
-         stdDeviation="0.3046875"
-         id="feGaussianBlur4950" />
-    </filter>
     <linearGradient
        gradientTransform="translate(0,-2)"
        y2="25"
@@ -189,18 +181,6 @@
        id="linearGradient4967"
        xlink:href="#linearGradient5221-8"
        inkscape:collect="always" />
-    <filter
-       inkscape:collect="always"
-       id="filter5022"
-       x="-0.082162921"
-       width="1.1643258"
-       y="-0.22243346"
-       height="1.4448669">
-      <feGaussianBlur
-         inkscape:collect="always"
-         stdDeviation="1.5234375"
-         id="feGaussianBlur5024" />
-    </filter>
     <linearGradient
        gradientTransform="translate(-7,4)"
        y2="23"
@@ -243,28 +223,6 @@
          offset="1"
          id="stop5225-0-0" />
     </linearGradient>
-    <linearGradient
-       y2="23"
-       x2="30"
-       y1="20"
-       x1="23"
-       gradientTransform="translate(-7,4)"
-       gradientUnits="userSpaceOnUse"
-       id="linearGradient3825-4"
-       xlink:href="#linearGradient5221-6-70"
-       inkscape:collect="always" />
-    <filter
-       inkscape:collect="always"
-       id="filter3913"
-       x="-0.312"
-       width="1.624"
-       y="-0.104"
-       height="1.208">
-      <feGaussianBlur
-         inkscape:collect="always"
-         stdDeviation="1.04"
-         id="feGaussianBlur3915" />
-    </filter>
     <filter
        inkscape:collect="always"
        id="filter3941">
@@ -273,18 +231,31 @@
          stdDeviation="0.24"
          id="feGaussianBlur3943" />
     </filter>
+    <filter
+       inkscape:collect="always"
+       style="color-interpolation-filters:sRGB"
+       id="filter4239"
+       x="-0.624"
+       width="2.248"
+       y="-0.208"
+       height="1.416">
+      <feGaussianBlur
+         inkscape:collect="always"
+         stdDeviation="2.08"
+         id="feGaussianBlur4241" />
+    </filter>
   </defs>
   <sodipodi:namedview
      id="base"
-     pagecolor="#ffffff"
+     pagecolor="#ff3fff"
      bordercolor="#666666"
      borderopacity="1.0"
-     inkscape:pageopacity="0.0"
+     inkscape:pageopacity="0"
      inkscape:pageshadow="2"
      inkscape:zoom="9.8994949"
-     inkscape:cx="9.2963654"
+     inkscape:cx="-11.815823"
      inkscape:cy="20.921342"
-     inkscape:current-layer="layer6"
+     inkscape:current-layer="layer5"
      showgrid="true"
      inkscape:grid-bbox="true"
      inkscape:document-units="px"
@@ -305,7 +276,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title />
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -315,7 +286,7 @@
      inkscape:label="glow"
      style="display:inline">
     <path
-       style="fill:url(#linearGradient3825-4);fill-opacity:1;stroke:none;display:inline;filter:url(#filter3913)"
+       style="fill:none;fill-opacity:1;stroke:#ffffff;display:inline;stroke-opacity:1;filter:url(#filter4239);stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none"
        d="m 23,14 c 2,0 2,-2 0,-2 -1.781066,0 -3,0 -5,0 -2,0 -2,2 0,2 0,2 0,19 0,22 15,0 2,0 5,0 0,-1.587099 0.0329,-7.562541 0,-12 -0.965912,0 0,0 -2,0 2,-5 1.530585,-4.061171 2,-5 0,-2 0,-4.213677 0,-5 z"
        id="path3394-2"
        inkscape:connector-curvature="0"

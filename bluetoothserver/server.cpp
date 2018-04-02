@@ -51,13 +51,12 @@ bool Server::isrunning=false;
 bool Server::exit=false;
 std::map <int,pthread_t> Server::clients;
 
-Server::Server()
+Server::Server(int port)
 : clientID_counter(1)
 {
 
 	// init socket
 	int on=1;
-	int port=3030;
 	int rc;
 
 	struct sockaddr_in address;

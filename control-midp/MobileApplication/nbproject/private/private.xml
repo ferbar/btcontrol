@@ -1,4 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?><project-private xmlns="http://www.netbeans.org/ns/project-private/1">
+<?xml version="1.0" encoding="UTF-8"?>
+<project-private xmlns="http://www.netbeans.org/ns/project-private/1">
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/1">
         <file>
             <url>src/btcontroll/PrintClient.java</url>
@@ -6,4 +7,31 @@
             <line>245</line>
         </file>
     </editor-bookmarks>
+    <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0">
+        <file>
+            <url>src/btcontroll/PrintClient.java</url>
+            <bookmark id="0">
+                <name/>
+                <line>155</line>
+                <key/>
+            </bookmark>
+            <bookmark id="0">
+                <name/>
+                <line>245</line>
+                <key/>
+            </bookmark>
+        </file>
+    </editor-bookmarks>
+    <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
+        <group>
+            <file>file:/home/chris/dev/btcontrol/control-midp/MobileApplication/src/org/ferbar/btcontrol/YesNoAlert.java</file>
+            <file>file:/home/chris/dev/btcontrol/control-midp/MobileApplication/src/protocol/FBTCtlMessage.java</file>
+            <file>file:/home/chris/dev/btcontrol/control-midp/MobileApplication/src/org/ferbar/btcontrol/ValueList.java</file>
+            <file>file:/home/chris/dev/btcontrol/control-midp/MobileApplication/src/org/ferbar/btcontrol/BTcommThread.java</file>
+            <file>file:/home/chris/dev/btcontrol/control-midp/MobileApplication/src/org/ferbar/btcontrol/Debuglog.java</file>
+            <file>file:/home/chris/dev/btcontrol/control-midp/MobileApplication/src/org/ferbar/btcontrol/MIDPCanvas.java</file>
+            <file>file:/home/chris/dev/btcontrol/control-midp/MobileApplication/src/org/ferbar/btcontrol/PrintClient.java</file>
+            <file>file:/home/chris/dev/btcontrol/control-midp/MobileApplication/src/org/ferbar/btcontrol/btrailClient.java</file>
+        </group>
+    </open-files>
 </project-private>

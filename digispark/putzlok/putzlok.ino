@@ -1,5 +1,5 @@
 /**
- * Digispark | arduino PWM erzeug-code
+ * Digispark | attiny85 | arduino PWM erzeug-code
  * 
  * hints:
  *   wenns nach code änderung nix mehr tut sind vielleicht zu viele strings in verwendung. dann mit F() die strings kapseln!
@@ -42,7 +42,7 @@
 char line[20];
 unsigned int pos=0;
 // test - start pwm:
-int pwm=0;
+int target_pwm=0;
 int pwm_hw=0;
 int dir=0;
 
@@ -115,9 +115,9 @@ bool processCmd() {
     if(c2 < 0) return false;
     DigiUSB.print("m");
     // DigiUSB.print(c1,DEC); DigiUSB.print(":");DigiUSB.print(c2,DEC);DigiUSB.print(":");
-    pwm=(c1<<4) + c2;
-    DigiUSB.println(pwm, HEX);
-    // analogWrite(1,pwm);
+    target_pwm=(c1<<4) + c2;
+    DigiUSB.println(target_pwm, HEX);
+    // analogWrite(1,target_pwm);
     return true;
   } else if(pos==3 && line[0]=='D') {
     if(line[1] == '0') {
@@ -228,13 +228,13 @@ void loop() {
 #endif
   
 // test:analogWrite(1,20);
-   if(pwm_hw<pwm) {
+   if(pwm_hw<target_pwm) {
      analogWrite(1,++pwm_hw);
      DigiUSB.delay(10);
      #ifdef CABLIGHT
        setCablight();
      #endif
-   } else if(pwm_hw>pwm) {
+   } else if(pwm_hw>target_pwm) {
      analogWrite(1,--pwm_hw);
      DigiUSB.delay(10);
      #ifdef CABLIGHT
@@ -245,10 +245,10 @@ void loop() {
 
 #ifdef PUTZLOK
    if(putz) {
-     putz_target_pwm=min(pwm,255); // TODO: formel
+     putz_target_pwm=min(target_pwm,255); // TODO: formel
      putz_target_pwm*=-1;
    } else {
-     putz_target_pwm=min(pwm/2,255);
+     putz_target_pwm=min(target_pwm/2,255);
    }
    if(dir==0)
      putz_target_pwm*=-1;
@@ -257,7 +257,7 @@ void loop() {
    if(putz_target_pwm<putz_pwm_hw) {
      ++putz_pwm_hw;
      putz_changed=1;
-   } else if(pwm_hw>pwm) {
+   } else if(pwm_hw>target_pwm) {
      --putz_pwm_hw;
      putz_changed=1;     
    }

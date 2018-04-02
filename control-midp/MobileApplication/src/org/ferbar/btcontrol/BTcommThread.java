@@ -74,6 +74,7 @@ public class BTcommThread extends Thread {
 	// doClient neu starten wenn verbindung abgebrochen?
 	private boolean stop=false;
 
+	public static final int MAX_MESSAGE_SIZE=10000;
 	
 	public static final int STATE_DISCONNECTED = 0;
 	public static final int STATE_OPENPORT = 1;
@@ -341,7 +342,7 @@ public class BTcommThread extends Thread {
 	 * sendet eine Message incl message header (size)
 	 * TODO: da sind 2 new OutputWriter - optimieren
 	 */
-	private void sendMessage(FBTCtlMessage msg) throws Exception
+	protected void sendMessage(FBTCtlMessage msg) throws Exception
 	{
 		// debugForm.debug("txMsg "); msg.dump(debugForm);
 		OutputWriter out;
@@ -367,7 +368,7 @@ public class BTcommThread extends Thread {
 	 */
 	byte msgSizeBuffer[] = new byte[4];
 	InputReader msgSizeIn = new InputReader(msgSizeBuffer);
-	private FBTCtlMessage receiveMessage() throws Exception
+	protected FBTCtlMessage receiveMessage() throws Exception
 	{
 		// debugForm.debug("rxMsg: ");
 		int rc=iStream.read(msgSizeBuffer,0,4);
@@ -376,6 +377,9 @@ public class BTcommThread extends Thread {
 		}
 		msgSizeIn.reset();
 		int msgSize = msgSizeIn.getInt();
+		if(msgSize < 0 || msgSize > MAX_MESSAGE_SIZE) {
+			throw new Exception("message Size invalid! ("+msgSize+")");
+		}
 		byte[] buffer = new byte[msgSize];
 		// debugForm.debug("rxMsg: size: "+msgSize);
 		int readBytes=0;

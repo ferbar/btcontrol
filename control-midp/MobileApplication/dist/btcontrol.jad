@@ -1,6 +1,6 @@
 MIDlet-1: BT Rail Client,/icons/logo.png,org.ferbar.btcontrol.btrailClient
 MIDlet-Icon: /icons/logo.png
-MIDlet-Jar-Size: 73726
+MIDlet-Jar-Size: 68319
 MIDlet-Jar-URL: btcontrol.jar
 MIDlet-Name: btcontrol
 MIDlet-Permissions-Opt: javax.microedition.io.Connector.bluetooth.client

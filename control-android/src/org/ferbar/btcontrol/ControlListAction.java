@@ -17,7 +17,7 @@
  *  along with btcontrol.  If not, see <http://www.gnu.org/licenses/>.
  */
 /**
- * Listenansicht für Lok auswahl
+ * Listenansicht für Lokauswahl
  */
 package org.ferbar.btcontrol;
 

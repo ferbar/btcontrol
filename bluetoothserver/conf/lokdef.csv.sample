@@ -1,22 +1,32 @@
-3,  F_DEFAULT,lok3,                    ,   12,func1,func2,func3,func4,func5,func6,func7,func8,func9,func10,func11,func12
-# 3, F_DEC28,lok 3 (28 FS),  dampf.png
-4,  F_DEFAULT,Ge 4/4 I (605),    ge_4_4_I.png,   12,sPfeife,sBremse,sPfeife+Echo,sDurchsage,sAggregat ein/aus,sSound ein/aus,lFührerstand,Rangiergang,sDurchsage,sLufthahn,Pantho,Pantho,sKompressor,sVakuumpumpe,sStufenschalter,schaltbare Verzögerung,
+# icons:
+# s => Sound: sSound ein/aus ; sDurchsage/sAnsage ; sHorn ; sPfeife ; sTrillerpfeife
+# l => Licht: lRauchfang, lFernlicht
+# p => Pantho
+
+3,  F_DEFAULT,lok3,                  ,           12,func1,func2,func3,func4,func5,func6,func7,func8,func9,func10,func11,func12
+#3, F_DEC28,lok 3 (28 FS),  dampf.png,             4,1,2,3,4
+4,  F_DEFAULT,Ge 4/4 I (605),    ge_4_4_I.png,   16,sPfeife,sBremse,sPfeife+Echo,sDurchsage,sAggregat ein/aus,sSound ein/aus,lFührerstand,Rangiergang,sDurchsage,sLufthahn,Pantho,Pantho,sKompressor,sVakuumpumpe,sStufenschalter,schaltbare Verzögerung
 621,  F_DEFAULT,Ge 4/4 II (621), ge_4_4_II.png,  12,sPfeife,2,lSchweizer Rücklicht,lFührerstand,5,lFernlicht,sDurchsage Zug fährt ab,sSound ein/aus,sQuietschen,10,11,sKompressor
 641,F_DEFAULT,Ge 4/4 III (641),  ge_4_4_III.png, 12,sHorn,sQuietschen,sPfeife,sDurchsage Zug fährt ab,sGeräusch,sSound ein/aus,p1,p2,sSchalter,sPressluft,sPffft,sZischen
-647,F_DEFAULT,Ge 4/4 III (647),  capito.png,     12,lFührerstand,2,3,sPfeife,5,6,sDurchsage This Train remains in Landquart,sSound ein/aus,sQuietschen,10,11,sPressluft,
+647,F_DEFAULT,Ge 4/4 III (647),  capito.png,     12,lFührerstand,2,3,sPfeife,5,6,sDurchsage This Train remains in Landquart,sSound ein/aus,sQuietschen,10,11,sPressluft
 802,  F_DEFAULT,RhB Murmeli (802),    ge_4_4_I.png,   12,sF1,sF2,sPfeife,sPfeife lang,lFührerstand,sSound ein/aus,lSchweizer Rücklicht,sDurchsage,sSchaffnerpfiff,sLüfter,sKomppressor,Rangiergang
 #,Kuppeln,zweiter Dieselmotor, sQuietschen
 # 5,  F_DEFAULT,lok5,
-413,F_DEFAULT,Ge 6/6 I (413),    kroko.png,      12,lRücklicht,sPfeife,sPfiff,sKupplung,sKupplung,pBügel1,pBügel2,sSound ein/aus,sQuietschen,10,11,sVakuumbremse,sKompressor,sDurchsage,15,sSound inv
-33,F_DEFAULT,AbE (33),    abe_4_4_1.png,         12,lInnenbeleuchtung,sPfeife,sPfiff,sDurchsage,sKupplung,pBügel1,pBügel2,sSound ein/aus,sQuietschen,sSchalter,11,sVakuumbremse,sKompressor,sDurchsage,15,sSound inv
-6,  F_DEFAULT,Ge 6/6 II (703),   ge_6_6_II.png,   8,sSound ein/aus,sPfeife,sRangierpfiff,sKompressor,sPressluft,Rangiergang,,,
+413,F_DEFAULT,Ge 6/6 I (413),    kroko.png,      16,lRücklicht,sPfeife,sPfiff,sKupplung,sKupplung,pBügel1,pBügel2,sSound ein/aus,sQuietschen,10,11,sVakuumbremse,sKompressor,sDurchsage,15,sSound inv
+33, F_DEFAULT,AbE (33),    abe_4_4_1.png,        16,lInnenbeleuchtung,sPfeife,sPfiff,sDurchsage,sKupplung,pBügel1,pBügel2,sSound ein/aus,sQuietschen,sSchalter,11,sVakuumbremse,sKompressor,sDurchsage,15,sSound inv
+6,  F_DEFAULT,Ge 6/6 II (703),   ge_6_6_II.png,   8,sSound ein/aus,sPfeife,sRangierpfiff,sKompressor,sPressluft,Rangiergang,,
 11, F_DEFAULT,G 3/4 Heidi,  dampf.png,			 12,lRauchfang,sPfeife,lRücklicht aus,lFührerstand,sPfeife,s6,s7,sSound ein/aus,s9,s10,s11,s12
-108,F_DEFAULT,G 4/5 (108),       dampf.png,      12,lRauchfang,sPfeife kurz,3,sZylinderventile,sPfeife,sGlocke,sKohleschaufeln,sSound ein/aus,sPfeife,sLuftpumpe,sGenerator,sWasserpumpe,
-203,F_DEFAULT,Ge 2/4 203,  ge_2_4_203.png, 16,1,sPeife,sKondukteur,sKupplung,sKupplung,6,7,sSound ein/aus,sKurvenquietschen,10,11,sVakuumpumpe,sKompressor,sAnsage,15,sSound Invert
+108,F_DEFAULT,G 4/5 (108),       dampf.png,      12,lRauchfang,sPfeife kurz,3,sZylinderventile,sPfeife,sGlocke,sKohleschaufeln,sSound ein/aus,sPfeife,sLuftpumpe,sGenerator,sWasserpumpe
+203,F_DEFAULT,Ge 2/4 203,  ge_2_4_203.png,       16,1,sPeife,sKondukteur,sKupplung,sKupplung,6,7,sSound ein/aus,sKurvenquietschen,10,11,sVakuumpumpe,sKompressor,sAnsage,15,sSound Invert
 #213, F_DEC28,Ge 2/4 213,  ge_2_4_213.png
-213,F_DEFAULT,Ge 2/4 213,  ge_2_4_213.png, 12,sPfeife,2,lSchweizer Rücklicht,lFührerstand,5,lFernlicht,sZug fährt ab,sSound ein/aus,squietschen,10,11,sKompressor
-14, F_DEFAULT,Rottenfahrzeug,    schienentraktor.png,     4,lblink,lblink,,,
-241,F_DEFAULT,99241, dampf_rot.png,       4,1,2,3,4
-298,F_DEFAULT,298.56 (U),  dampf_rot.png,       4,1,2,3,4
-2010,F_DEFAULT,Waggon 2010,      waggon2ax.png,    8,l1,l2,l3,l4,l5,l6,l7,l8
-1820,F_DEFAULT,DB Taurus 182.01,  ge_4_4_III.png, 12,sSound ein/aus,sHorn1,sHorn2,sHorn3,sKupplung,lFernlicht,sPfeife,sLüftung,sDurchsage Salzbug,sDurchsage Zug fährt ab,sVorsicht bei der Abfahrt,s12
+213,F_DEFAULT,Ge 2/4 213,  ge_2_4_213.png,       12,sPfeife,2,lSchweizer Rücklicht,lFührerstand,5,lFernlicht,sZug fährt ab,sSound ein/aus,squietschen,10,11,sKompressor
+14, F_DEFAULT,Rottenfahrzeug,    schienentraktor.png,     4,lblink,lblink,,
+241,F_DEFAULT,99241, dampf_rot.png,               4,1,2,3,4
+298,F_DEFAULT,298.56 (U),  dampf_rot.png,         4,1,2,3,4
+2010,F_DEFAULT,Waggon 2010,      waggon2ax.png,   8,l1,l2,l3,l4,l5,l6,l7,l8
+2041,F_DEFAULT,1020-41, 1020_blau.png,           10,sSound ein/aus,sPfeife,sPfeife,sKompressor,sTrillerpfeife,,sKupplung,sDurchsage,sDurchsage,
+1820,F_DEFAULT,DB Taurus 182.01,  ge_4_4_III.png,12,sSound ein/aus,sHorn1,sHorn2,sHorn3,sKupplung,lFernlicht,sPfeife,sLüftung,sDurchsage Salzbug,sDurchsage Zug fährt ab,sVorsicht bei der Abfahrt,s12
+3508,F_DEFAULT,AbE 8/12, abe_8_12.png,           28,sTrillerpfeife,sPfeife,sAnsage St Moritz,sAnsage Landquart,sAnsage Filisur,sAnsage Filisur,sHauptwechselrichter,sSound ein/aus,sKurvenquietschen,pPantho,pPantho,pPantho,sKupplungsgeräusch,sBremsvakuumpumpe,sDruckluft Kompressor,sTunnelfader,lBeleuchtung,lFernlicht,lFührerstandbeleuchtung,lFahrpultbeleuchtung,lhinten rot,lWarnsignal 3x/2x rot,lScheinwerfer aus,lRücklicht aus,sTür,sTür,sAnsage St.Moritz,sAnsage Tirano
+
+# für raspiPWM:
+#3,  F_DEFAULT,lok3,                    ,   9,sPfeie,,,,,,,,mMotor Boost
