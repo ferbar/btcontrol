@@ -469,9 +469,13 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 					debugForm.setTitle("nothing selected (index="+index+")");
 					Debuglog.debugln("no connection url");
 				} else {
-					MidpStream currStream=(MidpStream)(btcomm.BTStreamConnection);
-					if((btcomm == null) || (currStream.BTCtlServerURL.compareTo(connectionURL)) != 0) {
+					debugForm.append("creating connection");
+					
+					// btcomm kann null sein -> btcomm.BTStreamConnection vor if abfrage macht nullpointer excption
+					if((btcomm == null) || (((MidpStream)btcomm.BTStreamConnection).BTCtlServerURL.compareTo(connectionURL)) != 0) {
+        					debugForm.append("20");
 						if(btcomm != null) {
+							debugForm.append("cleaning up");
 							btcomm.close(true);
 							int n=0;
 							while(btcomm.isAlive()) {
@@ -483,13 +487,15 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 							}
 							btcomm=null;
 						}
+						debugForm.append("starting ConnectThread");
 						ConnectThread connectThread = new ConnectThread(new MidpStream(connectionURL));
 						connectThread.start();
 						// DataInputStream input = (InputConnection) connection.openDataInputStream();
 						// DataOutputStream output = connection.openDataOutputStream();
 
 					} else {
-						getDisplay().setCurrent(get_controllCanvas(btcomm));
+						debugForm.append("40");
+        					getDisplay().setCurrent(get_controllCanvas(btcomm));
 					}
 				}
 				// Insert pre-action code here
@@ -565,6 +571,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 		
 		// Insert global post-action code here
 		} catch(Exception e) {
+			debugForm.append("exception:"+e.toString());
 			Alert alert;
 			alert = new Alert("commandAction","Exception:"+e.toString(),null,null);
 			alert.setTimeout(Alert.FOREVER);

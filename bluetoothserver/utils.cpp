@@ -1,25 +1,38 @@
 #include <stdio.h>
 #include <boost/algorithm/string.hpp>
-#include "utils.h"
 #include <stdexcept>
+#include <sstream>
+#include <iostream>
+#include <memory>
+#include <stdarg.h>
+
+#include "utils.h"
+
 // fürs backtrace:
 #include <execinfo.h>
 // fürs demangle:
 #include <cxxabi.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
+// dirname
+#include <libgen.h>
 
-Config config("conf/btserver.conf");
+const std::string NOT_SET="__NOT_SET";
 
-Config::Config(const std::string confFilename) {
-	FILE *f=fopen(confFilename.c_str(),"r");
-	if(!f) {
-		fprintf(stderr,"no config file ... skipping\n");
-		return;
-	}
-	char buffer[1024];
-	while(fgets(buffer,sizeof(buffer),f)) {
-		std::string line(buffer);
+Config config;
+
+Config::Config() {
+
+}
+
+void Config::init(const std::string &confFilename) {
+	std::string data=readFile(confFilename);
+	std::istringstream f(data);
+	std::string line;    
+	while (std::getline(f, line)) {
 		std::string key, value;
 		size_t komma=line.find_first_of('=');
 		if(komma != std::string::npos) {
@@ -31,25 +44,44 @@ Config::Config(const std::string confFilename) {
 			key=line;
 			value="";
 		}
-		this->data[key] = value;
+		this->data.insert( std::pair<std::string, std::string>(key, value) );
 	}
 }
 
-std::string Config::get(const std::string key) {
+const std::string Config::get(const std::string key) {
 	try {
-		return this->data.at(key);
+		std::multimap<std::string, std::string>::const_iterator it = this->data.find(key);
+		if(it == this->end()) { // raspi 20161004 macht keine exception wenn nicht gefunden
+			return NOT_SET;
+		}
+		return it->second;
 	} catch(std::out_of_range &e) {
 		throw std::out_of_range("key " + key + " not found");
 	}
 }
 
 int utils::stoi(const std::string &in)	{
-	char *endptr;
-	int ret=strtol(in.c_str(), &endptr, 0);
-	if(endptr != in.c_str() + in.length()) {
+	if(in == NOT_SET) {
+		throw std::runtime_error("NOT SET");
+	}
+	size_t end=0;
+	int ret=std::stoi(in, &end, 0);
+	if(end != in.length()) {
 		throw std::runtime_error("error converting number");
 	}
 	return ret;
+}
+
+bool utils::startsWith(const std::string &str, const std::string &with) {
+	return str.find(with) == 0;
+}
+
+bool utils::startsWith(const std::string &str, const char *with) {
+	return str.find(with) == 0;
+}
+
+bool utils::endsWith(const std::string &str, const char *with) {
+	return str.rfind(with) == str.length()-strlen(with);
 }
 
 #undef runtime_error
@@ -133,5 +165,73 @@ std::RuntimeExceptionWithBacktrace::RuntimeExceptionWithBacktrace(const std::str
 std::RuntimeExceptionWithBacktrace::~RuntimeExceptionWithBacktrace() throw ()
 {
 
+}
+
+/**
+ * liest eine komplette Datei, wenn nicht gefunden dann relativ zum bin dir
+ * @param filename - das was eingelesen wird, kopie(!!)
+ */
+std::string readFile(std::string filename)
+{
+	std::string ret;
+	struct stat buf;
+	if(stat(filename.c_str(), &buf) != 0) {
+		char execpath[MAXPATHLEN];
+		if(readlink("/proc/self/exe", execpath, sizeof(execpath)) <= 0) {
+			printf("error reading /proc/self/exe\n");
+			abort();
+		}
+		char *linkpath=dirname(execpath);
+		filename.insert(0,std::string(linkpath) + '/');
+		if(stat(filename.c_str(), &buf) != 0) {
+			fprintf(stderr,"error stat file %s\n",filename.c_str());
+			throw std::runtime_error("error stat file");
+		}
+	}
+	ret.resize(buf.st_size,'\0');
+	FILE *f=fopen(filename.c_str(),"r");
+	if(!f) {
+		fprintf(stderr,"error reading file %s\n",filename.c_str());
+		throw std::runtime_error("error reading file");
+	} else {
+		const char *data=ret.data(); // mutig ...
+		fread((void*)data,1,buf.st_size,f);
+		fclose(f);
+		printf("%s:%lu bytes\n",filename.c_str(),buf.st_size);
+	}
+	return ret;
+}
+
+std::string utils::format(const char *fmt, ...) {
+	size_t size = 0;
+	va_list ap;
+	char *buf=NULL;
+	va_start(ap, fmt);
+	size=vasprintf(&buf, fmt, ap );
+	printf("format result size:%zu string:%s\n", size, buf);
+	va_end(ap);
+	return std::string( buf, size ); // We don't want the '\0' inside
+}
+
+/**
+ * das muss am ende der Datei sein!!!
+ * @throws exception bei einem fehler / wenn size nicht gelesen werden konnte
+ */
+#undef read
+int myRead(int so, void *data, size_t size) {
+	int read=0;
+	// printf("myRead: %zd\n",size);
+	while(read < (int) size) {
+		// printf("read: %zd\n",size-read);
+		int rc=::read(so,((char *) data)+read,size-read);
+		// printf("rc: %d\n",rc);
+		if(rc < 0) {
+			throw std::runtime_error("error reading data");
+		} else if(rc == 0) { // stream is blocking -> sollt nie vorkommen
+			throw std::runtime_error("nothing to read");
+		}
+		read+=rc;
+	}
+	return read;
 }
 

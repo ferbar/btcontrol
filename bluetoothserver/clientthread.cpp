@@ -50,47 +50,17 @@
 
 extern USBPlatine *platine;
 
-int ClientThread::numClients=0;
-
-#define sendToPhone(text) \
-		if(strlen(text) != write(startupdata->so,text,strlen(text))) { \
-			printf("%d:error writing message (%s)\n",startupdata->clientID, strerror(errno)); \
-			break; \
-		} else { \
-			printf("%d: ->%s",startupdata->clientID,text); \
-		}
-
+static FahrSound clientFahrSound;
 
 void ClientThread::sendMessage(const FBTCtlMessage &msg)
 {
 	std::string binMsg=msg.getBinaryMessage();
 	int msgsize=binMsg.size();
 	printf("%d:  sendMessage size: %zu+4 %d=%s\n", this->clientID, binMsg.size(), msg.getType(), messageTypeName(msg.getType()).c_str());
-	int flag = 1;
-	setsockopt(this->so, IPPROTO_TCP, TCP_CORK, (char *)&flag, sizeof(flag) ); // prepare message, stopsel rein
+	this->prepareMessage();
 	write(this->so, &msgsize, 4);
 	write(this->so, binMsg.data(), binMsg.size());
-	flag=0;
-	setsockopt(this->so, IPPROTO_TCP, TCP_CORK, (char *)&flag, sizeof(flag) ); // message fertig, senden
-}
-
-/**
- * wartet bis daten daherkommen, macht exception wenn keine innerhalb von timeout gekommen sind
- */
-void ClientThread::readSelect()
-{
-	struct timeval timeout;
-	fd_set set;
-	timeout.tv_sec=cfg_tcpTimeout; timeout.tv_usec=0;
-	FD_ZERO(&set); FD_SET(this->so,&set);
-	int rc;
-	if((rc=select(this->so+1, &set, NULL, NULL, &timeout)) <= 0) {
-		if(rc != 0) {
-			throw std::runtime_error("error select");
-		}
-		printf("ClientThread::readSelect error in select(%d) %s\n", this->so, strerror(errno));
-		throw std::runtime_error("timeout reading cmd");
-	}
+	this->flushMessage();
 }
 
 void ClientThread::setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus)
@@ -155,10 +125,8 @@ void ClientThread::run()
 	// startupdata_t *startupdata=(startupdata_t *)data;
 
 #ifdef HAVE_ALSA
-	FahrSound sound(cfg_soundFiles);
 	if(platine && FahrSound::soundFiles != NULL) { // nur wenn eine platine angeschlossen und sound files geladen
-		sound.init();
-		sound.run();
+		clientFahrSound.start();
 	}
 #endif
 	printf("%d:socket accepted sending welcome msg\n",this->clientID);
@@ -214,7 +182,7 @@ continue;
 		printf("select + read in %dµs\n",us);
 		*/
 		// printf("%d:reading msg.size: %d bytes\n",this->clientID,msgsize);
-		if(msgsize < 0 || msgsize > 10000) {
+		if(msgsize < 0 || msgsize > MAX_MESSAGE_SIZE) {
 			throw std::runtime_error("invalid size msgsize 2big");
 		}
 		char buffer[msgsize];
@@ -426,7 +394,7 @@ continue;
 				} else {
 				#ifdef HAVE_ALSA
 					if(cv==266) {
-					    sound.setMasterVolume(value);
+					    Sound::setMasterVolume(value);
 						reply["value"]=1;
 					} else {
 				#endif
@@ -562,6 +530,13 @@ continue;
 				} else {
 				}
 
+				// setPWM hängt beim RaspiPWM von den Funktionen ab
+				bool func[MAX_NFUNC];
+				for(int j=0; j < lokdef[addr_index].nFunc; j++) {
+					func[j]=lokdef[addr_index].func[j].ison;
+				}
+				platine->setFunction(lokdef[addr_index].nFunc, func);
+
 				platine->setDir(lokdef[addr_index].currdir < 0 ? 1 : 0 );
 				platine->setPWM(f_speed);
 				/*
@@ -573,8 +548,8 @@ continue;
 				platine->commit();
 
 #ifdef HAVE_ALSA
-				sound.setSpeed(a_speed);
-				if(lokdef[addr_index].func[1].ison) {
+				clientFahrSound.setSpeed(a_speed);
+				if(lokdef[addr_index].func[1].ison && (cfg_funcSound[CFG_FUNC_SOUND_HORN] != "" )) {
 					lokdef[addr_index].func[1].ison=false;
 					PlayAsync horn(CFG_FUNC_SOUND_HORN);
 					/*
@@ -585,7 +560,7 @@ continue;
 					// horn.close(false);
 					*/
 				}
-				if(lokdef[addr_index].func[2].ison) {
+				if(lokdef[addr_index].func[2].ison && cfg_funcSound[CFG_FUNC_SOUND_ABFAHRT] != "") {
 					lokdef[addr_index].func[2].ison=false;
 					PlayAsync horn(CFG_FUNC_SOUND_ABFAHRT);
 					/*
@@ -629,7 +604,7 @@ void ClientThread::sendLoco(int addr_index, bool emergencyStop) {
 						nFahrstufen = 28;
 					}
 					int dccSpeed = abs(lokdef[addr_index].currspeed) * nFahrstufen / 255;
-					bool func[16];
+					bool func[MAX_NFUNC];
 					for(int j=0; j < lokdef[addr_index].nFunc; j++) {
 						func[j]=lokdef[addr_index].func[j].ison;
 					}
@@ -663,6 +638,8 @@ ClientThread::~ClientThread()
 {
 	printf("%d:~ClientThread numClientd=%d\n",this->clientID, this->numClients);
 	if(--this->numClients == 0) {
+		// letzter client => sound aus
+		clientFahrSound.cancel();
 		// letzter client => alles notstop
 		if(srcp) { // erddcd/srcpd/dcc:
 			int addr_index=0;

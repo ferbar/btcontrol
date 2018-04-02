@@ -1,0 +1,14 @@
+ibeacon auflisten (txPower + RSSI)
+https://github.com/pwldp/iBeacon-Scanner-
+
+
+https://raw.githubusercontent.com/RadiusNetworks/altbeacon-reference/master/altbeacon_transmit
+http://altbeacon.org/examples/
+http://altbeacon.github.io/android-beacon-library/
+http://www.theregister.co.uk/2013/11/29/feature_diy_apple_ibeacons/
+https://learn.adafruit.com/pibeacon-ibeacon-with-a-raspberry-pi/what-is-ibeacon
+http://t3n.de/news/ibeacon-501365/
+
+
+
+http://stackoverflow.com/questions/16151360/use-bluez-stack-as-a-peripheral-advertiser

@@ -1,11 +1,13 @@
 .SUFFIXES:
 .PHONY: tags clean
 
+SHELL:=/bin/bash
 CFLAGS=-g -O0 -Wall -Wformat
 CFLAGS_DEP=-MMD -MF $(dir $@).$(notdir $(basename $@)).d
 
 # clock_gettime will -lrt
-LDFLAGS=-g -lpthread -lstdc++ -lrt
+# -rdynamic für schönere backtraces
+LDFLAGS=-g -lpthread -lstdc++ -lrt -rdynamic
 
 CPP=g++
 
@@ -17,6 +19,10 @@ all: btserver
 Makefile.config:
 	@echo -e "no Makefile.config - generating new config for you - if you want a new config: \n" \
 		"\trm Makefile.config; make"
+	@echo "checking gcc >=4.9 (colored error messages)"
+	@if [ $$( (echo "4.9" ; gcc -dumpversion ) | sort -V | head -n1 ) == "4.9" ] ; then \
+		echo "CPP:=g++ -fdiagnostics-color" >> Makefile.config ; \
+	fi
 	@echo -e "checking libusb-dev for velleman_usb_k8055 board / digispark:"
 	@usblibs=$$(pkg-config --libs libusb-1.0) ;\
 		if [ $$? = 0 ] ; then \
@@ -86,17 +92,19 @@ Makefile.config:
 		echo "found" ;\
 		echo "CFLAGS+=-DHAVE_RASPI_ACT_LED" >> Makefile.config ; \
 		echo -e "checking for wiringPI:" ; \
-		if [ -f "/usr/local/lib/libwiringPi.so" ] ; then \
+		if [ -f "/usr/local/lib/libwiringPi.so" -o -f "/usr/lib/libwiringPi.so" ] ; then \
 			echo "found" ;		\
 			echo "CFLAGS+=-DHAVE_RASPI_WIRINGPI" >> Makefile.config ; \
 			echo "LDFLAGS+=-lwiringPi" >> Makefile.config;			\
 			echo "btserver: RaspiPWM.o" >> Makefile.config;			\
+		else					\
+			echo "not found - RaspiPWM disabled"	;\
 		fi ; 					\
 	else						\
 		echo "not found - raspi ACT led disabled"	;\
 	fi
 
-btserver: fbtctl_message.o message_layout.o server.o clientthread.o lokdef.o main.o srcp.o utils.o
+btserver: fbtctl_message.o message_layout.o server.o tcpclient.o clientthread.o lokdef.o main.o srcp.o utils.o ParseExpr.o Thread.o
 	${CPP} ${LDFLAGS} $+ -o btserver
 
 digispark_test: USBDigispark.cpp utils.o
@@ -106,9 +114,28 @@ zsptest: zsptest.cpp sound.cpp
 	${CPP} ${CFLAGS} ${LDFLAGS} -lasound $+ -g 
 
 help:
-	@echo -e "all\t alles builden\ntags\t c-tags generieren\ncopy\t auf ibm kiste kopieren\nsearch-ibm-desktop\t ibm kiste suchen\n"
+	@echo -e "all\t alles builden\n\
+tags\t c-tags generieren\n\
+install\t auf ibm kiste kopieren\n\
+search-ibm-desktop\t ibm kiste suchen\n\
+loop\t make bei jeder Änderung einer *.cpp *.h Datei aufrufen"
 
-copy:
+loop:
+	@if ! which inotifywait ; then \
+		echo "please install inotify-tools" ; \
+		exit 1 ; \
+	fi
+	@reset
+	@echo "$$BASH_VERSION" 
+	@echo "starting make after file changes"
+	#script -q --return -c "make" /dev/null | head -n $$(tput lines) ; 
+	@while inotifywait -q *.cpp *.h ; do \
+		reset; \
+		make | head -n $$(tput lines) ; \
+		if [ $${PIPESTATUS[0]} != 0 ] ; then echo -e "\b" ; fi; \
+	done ;
+
+install:
 	cp ../ussp-push-0.11/src/ussp-push \
 		../MidpBluetoothExample2/MobileApplication/dist/btcontrol.jar \
 		btserver \

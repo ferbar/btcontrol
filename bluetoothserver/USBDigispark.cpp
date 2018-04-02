@@ -131,7 +131,7 @@ static void *startCommThread(void *data)
 			char *pos=buffer;
 			// FIXME: bis \n hinausschreiben und dann rest buffer nach vorne schieben und antwort einlesen
 			while(*pos != '\0') {
-				printf("W " ANSI_RED1 "%c" ANSI_DEFAULT " ",*pos); fflush(stdout);
+				printf("W " ANSI_RED "%c" ANSI_DEFAULT " ",*pos); fflush(stdout);
 				// TODO: *pos == uint16_t wValue da könnt ma Mxx statt 4 bytes einzeln machen!
 				int result = libusb_control_transfer(usbDigispark->devHandle, (0x01 << 5), 0x09, 0, *pos, 0, 0, 1000);
 				//printf("Writing character \"%c\" to DigiSpark.\n", input[i]);
@@ -260,6 +260,7 @@ void USBDigispark::init(int devnr) {
 	}
 	*/
 	if(digiSpark == NULL) {
+		libusb_free_device_list(connected_devices, 1); /* we got the handle, free references to other devices */
 		throw std::runtime_error("No Digispark Found");
 	}
 	int r = libusb_open(digiSpark, &this->devHandle);
@@ -343,7 +344,7 @@ void USBDigispark::setPWM(int f_speed) {
 	/*
 	char *pos=buffer;
 	while(*pos != '\0') {
-		printf("W "ANSI_RED1 "%c" ANSI_DEFAULT " ",*pos);
+		printf("W "ANSI_RED "%c" ANSI_DEFAULT " ",*pos);
 		// TODO: *pos == uint16_t wValue da könnt ma Mxx statt 4 bytes einzeln machen!
 		result = libusb_control_transfer(this->devHandle, (0x01 << 5), 0x09, 0, *pos, 0, 0, 1000);
 		//printf("Writing character \"%c\" to DigiSpark.\n", input[i]);
@@ -369,7 +370,7 @@ void USBDigispark::setDir(unsigned char dir) {
 	/*
 	char *pos=buffer;
 	while(*pos != '\0') {
-		printf("W "ANSI_RED1 "%c" ANSI_DEFAULT " ",*pos);
+		printf("W "ANSI_RED "%c" ANSI_DEFAULT " ",*pos);
 		result = libusb_control_transfer(this->devHandle, (0x01 << 5), 0x09, 0, *pos, 0, 0, 1000);
 		//printf("Writing character \"%c\" to DigiSpark.\n", input[i]);
 		if(result < 0) {

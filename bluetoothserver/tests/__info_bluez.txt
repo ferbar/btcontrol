@@ -1,0 +1,14 @@
+leider gibts fürs bluez keine gescheite docu, da sind ein paar links: (bluetooth - SDP gehört portiert)
+
+http://www.bluez.org/bluez-5-api-introduction-and-porting-guide/
+
+eine bsp datei:
+http://dev-builds.libreoffice.org/lcov_reports/master~2014-04-11_00.55.10/sd/source/ui/remotecontrol/BluetoothServer.cxx.gcov.html
+
+stackoverflow:
+http://stackoverflow.com/questions/37573014/how-do-i-register-a-profile-with-bluez-using-dbus-gio
+
+sourcecode von bluetoothctl
+
+dbus bluez bsp:
+git clone bitbucket.org/kaylum/bluez-rssi-example.git

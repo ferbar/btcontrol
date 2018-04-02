@@ -57,7 +57,12 @@ public class MessageLayouts {
 	 * setzt this.hash: hashwert von protocol.dat (zum vergleichen ob server protocol.dat und handy protocol.dat stimmen
 	 */
 	public void load() throws Exception {
-		InputStream protocolFile = this.getClass().getResourceAsStream("protocol.dat");
+		this.load(this.getClass().getResourceAsStream("protocol.dat"));
+	}
+	public void load(InputStream protocolFile) throws Exception {
+		if(protocolFile == null) {
+			throw new Exception("error loading protocol.dat");
+		}
 		String line;
 		this.hash=0;
 		int typeNr = FBTCtlMessage.STRUCT + 1;
