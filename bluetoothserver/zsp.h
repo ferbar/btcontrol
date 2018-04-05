@@ -26,7 +26,7 @@ class SoundType {
 
 class DiSoundStepType {
 public:
-	DiSoundStepType() : up(NOT_SET), down(NOT_SET), run(NOT_SET) {};
+	DiSoundStepType() : up(NOT_SET), down(NOT_SET), run(NOT_SET), limit(0) {};
 	std::string up;
 	std::string down;
 	std::string run;
