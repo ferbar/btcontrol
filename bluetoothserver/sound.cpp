@@ -300,14 +300,15 @@ void FahrSound::cancel() {
 }
 
 void FahrSound::diOutloop() {
-	printf("FahrSound::diOutloop()\n");
+	printf("FahrSound::diOutloop() %d\n", this->currFahrstufe);
 	Sound sound;
 	sound.init();
 	DiSoundType *diSoundFiles = dynamic_cast<DiSoundType*>(this->soundFiles);
 	assert(diSoundFiles && "FahrSound::diOutloop() no di sound");
 	int lastFahrstufe=this->currFahrstufe;
+	this->currFahrstufe=0;
 	while(this->doRun || lastFahrstufe >= 0) {
-		printf("playing [%d]\n",lastFahrstufe); fflush(stdout);
+		printf("FahrSound::diOutloop() playing [%d/%d]\n",lastFahrstufe, this->currFahrstufe); fflush(stdout);
 		std::string wav;
 		if(this->currFahrstufe == lastFahrstufe) {
 			if(lastFahrstufe == -1) {
@@ -728,8 +729,8 @@ void FahrSound::start() {
 		this->doRun=true;
 		Thread::start();
 	}
-	usleep(10000);
-	this->currFahrstufe=0;
+	// usleep(10000);
+	// this->currFahrstufe=0;
 }
 
 /*
