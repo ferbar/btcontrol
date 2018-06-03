@@ -1,9 +1,57 @@
+/**
+ * expression parser
+ * es funktioniert:
+ *     F\d => func ein/aus
+ *     "(expr) && (expr)" bzw "(expr) || (expr)"    => wichtig auf die spaces achten!
+ *     wird ein Pin öfters definiert wird ein or gemacht - wie (expr) || (expr)
+ *     die strings unten
+ */
 #include <string>
 #include <stdexcept>
 
 #include "ParseExpr.h"
 
-int ParseExpr::getResult(std::string expr, int dir, int speed, int F0) {
+int ParseExpr::getResult(const std::string &expr, int dir, int speed, bool *currentFunc) {
+	if(expr.length() > 0 && expr[0] == '(') {
+		size_t exprA_end=expr.find(")",1);
+		if(exprA_end == std::string::npos) {
+			throw std::runtime_error("invalid expressionA [" + expr + "]");
+		}
+		const std::string exprA=expr.substr(1,exprA_end-1);
+		printf("parseExpr::getResult A: %s\n", exprA.c_str());
+		bool is_and=false;
+		if(expr.compare(exprA_end, 6, ") && (") == 0) {
+			is_and=true;
+		} else if(expr.compare(exprA_end, 6, ") || (") == 0) {
+		} else {
+			throw std::runtime_error("invalid and (" + expr + ")");
+		}
+		size_t exprB_start=exprA_end+6;
+		size_t exprB_end=expr.find(")",exprB_start);
+		if(exprB_end == std::string::npos) {
+			throw std::runtime_error("invalid expressionB [" + expr + "]");
+		}
+
+		const std::string exprB=expr.substr(exprB_start,exprB_end - exprB_start);
+		printf("parseExpr::getResult B: %s\n", exprB.c_str());
+		bool a=this->getResult(exprA, dir, speed, currentFunc);
+
+		bool b=this->getResult(exprB, dir, speed, currentFunc);
+		
+		if(is_and) {
+			return a && b;
+		} else {
+			return a || b;
+		}
+	}
+
+	if(expr.length() == 2 && expr[0]=='F') {
+		if(expr[1] >= '0' && expr[1] <= '9') {
+			printf("parseExpr::getResult %s:%d\n",expr.c_str(), currentFunc[expr[1] - '0']);
+			return currentFunc[expr[1] - '0'];
+		}
+	}
+
 	if(this->speed != speed) {
 		if(speed > this->speed)
 			this->lastAccel=time(NULL);
@@ -14,12 +62,12 @@ int ParseExpr::getResult(std::string expr, int dir, int speed, int F0) {
 		
 	if(expr == "dir")	return dir;
 	if(expr == "!dir")	return !dir;
-	if(expr == "dir && F0")	return dir && F0;
-	if(expr == "!dir && F0") return !dir && F0;
-	if(expr == "dir && F0 && speed")	return dir && F0 && speed;
-	if(expr == "!dir && F0 && speed")	return !dir && F0 && speed;
-	if(expr == "dir && F0 && !speed")	return dir && F0 && !speed;
-	if(expr == "!dir && F0 && !speed")	return !dir && F0 && !speed;
+	if(expr == "dir && F0")	return dir && currentFunc[0];
+	if(expr == "!dir && F0") return !dir && currentFunc[0];
+	if(expr == "dir && F0 && speed")	return dir && currentFunc[0] && speed;
+	if(expr == "!dir && F0 && speed")	return !dir && currentFunc[0] && speed;
+	if(expr == "dir && F0 && !speed")	return dir && currentFunc[0] && !speed;
+	if(expr == "!dir && F0 && !speed")	return !dir && currentFunc[0] && !speed;
 	if(expr == "speed")	return speed;
 	if(expr == "!speed")	return !speed;
 

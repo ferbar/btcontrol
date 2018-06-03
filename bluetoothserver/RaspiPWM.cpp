@@ -78,7 +78,6 @@ void RaspiPWM::init() {
 		printf("RaspiPWM::init() ---- motorFullSpeedBoost %d\n", this->motorFullSpeedBoost);
 	}
 
-	bool F0=this->currentFunc[0];
 	for (auto it=config.begin(); it!=config.end(); ++it) {
 		if(utils::startsWith(it->first,"wiringpi.pin.")) {
 			int pin = stoi(it->first.substr(strlen("wiringpi.pin.")));
@@ -90,7 +89,7 @@ void RaspiPWM::init() {
 					continue;
 				}
 				// test ob parsbar
-				parseExpr->getResult(it->second, 0, 0, F0);
+				parseExpr->getResult(it->second, 0, 0, this->currentFunc);
 				// pin mode initialisieren
 				pinMode(pin, OUTPUT);
 				// digitalWrite(pin, value);
@@ -196,7 +195,6 @@ void RaspiPWM::commit() {
 void RaspiPWM::commit(bool force) {
 this->dumpPins();
 	Lock lock(this->funcMutex);
-	bool F0=this->currentFunc[0];
 	auto it=this->pins.begin();
 	while (it!=this->pins.end()) {
 		int pin=it->first;
@@ -204,7 +202,7 @@ this->dumpPins();
 		PinCtl *pinCtl=&it->second;
 		bool value=false;
 		do {
-			if(parseExpr->getResult(it->second.function, this->dir, this->pwm, F0)) {
+			if(parseExpr->getResult(it->second.function, this->dir, this->pwm, this->currentFunc)) {
 				printf("   %s [true, last:%d]\n", it->second.function.c_str(), it->second.lastState);
 				value=true;
 				pinCtl=&it->second;
@@ -234,7 +232,7 @@ this->dumpPins();
 			}
 			pinCtl->lastState=value;
 		} else {
-			printf("  no force\n");
+			printf("  commit: no force\n");
 		}
 	}
 }
