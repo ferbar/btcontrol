@@ -16,7 +16,7 @@
 #include "sound.h"
 #include "utils.h"
 
-const char *overrideConfigNames[] = {"sound.boil", "sound.brake", "sound.entwaessern", "sound.abfahrt", "sound.horn" };
+const char *overrideConfigNames[] = {"sound.boil", "sound.brake", "sound.entwaessern", "sound.abfahrt", "sound.horn", NULL };
 
 SoundType *cfg_soundFiles=NULL;
 //SteamSoundType cfg_steamSoundFiles;
