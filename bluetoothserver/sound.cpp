@@ -386,6 +386,8 @@ void FahrSound::steamOutloop() {
 	std::string outSilence= std::string(22000 / 100, 0x80);
 
 	int lastSpeed=0;
+	int lastBrake=0;
+	int lastAcc=0;
 	printf(ANSI_RED2 "FahrSound::steamOutloop() %lu\n" ANSI_DEFAULT, tid);
 	while(this->doRun || this->currFahrstufe >= 0) {
 		this->currSpeed=lokdef[0].currspeed;
@@ -395,8 +397,12 @@ void FahrSound::steamOutloop() {
 		if(lastSpeed > 0 && this->currSpeed==0) {
 			PlayAsync quietschen(this->soundFiles->funcSound[CFG_FUNC_SOUND_BRAKE]);
 		} else if(lastSpeed == 0 && this->currSpeed > 0) {
-			printf("BoilSteamOutLoop:run -> entwaessern #################################\n");
 			PlayAsync entwaessern(this->soundFiles->funcSound[CFG_FUNC_SOUND_ENTWAESSERN]);
+		}
+		if(this->currSpeed > lastSpeed) {
+			lastAcc=time(NULL);
+		} else if(this->currSpeed < lastSpeed) {
+			lastBrake=time(NULL);
 		}
 		lastSpeed=this->currSpeed;
 
@@ -406,7 +412,16 @@ void FahrSound::steamOutloop() {
 			continue;
 		}
 
-		const std::string &wav=dSoundFiles->steps[this->currFahrstufe].ch[1][(slot++)%dSoundFiles->nslots];
+		int lmh=1;
+		if(lastAcc > time(NULL) - 2) {
+			lmh=2;
+		} else // Acc hat vorrang
+		if(lastBrake > time(NULL) -2) {
+			lmh=0;
+		}
+		// printf("BoilSteamOutLoop:run -> lmh: %i #################################\n", lmh);
+			
+		const std::string &wav=dSoundFiles->steps[this->currFahrstufe].ch[lmh][(slot++)%dSoundFiles->nslots];
 		/*
 		if(this->currFahrstufe == lastFahrstufe) {
 			if(lastFahrstufe == -1) {
@@ -465,7 +480,7 @@ void Sound::playSingleSound(int index) {
  * @return frames
  */
 int Sound::writeSound(const std::string &data, int startpos) {
-	printf("Sound::writeSound(len=%lu, start=%d) \n", data.length(), startpos);
+	//printf("Sound::writeSound(len=%lu, start=%d) \n", data.length(), startpos);
 	assert(startpos >= 0);
 	assert(data.length() > (unsigned) startpos);
 	const char *wavData = data.data() + startpos;
@@ -510,7 +525,7 @@ int Sound::writeSound(const std::string &data, int startpos) {
 	} */
 	if (frames > 0 && frames < (snd_pcm_sframes_t) len)
 		printf("Sound::writeSound Short write (expected %zi, wrote %li) %s\n", len, frames, strerror(errno));
-	printf("Sound::[%p]writeSound done\n",this->handle);
+	// printf("Sound::[%p]writeSound done\n",this->handle);
 	return frames;
 }
 
