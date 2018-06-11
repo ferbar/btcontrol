@@ -19,6 +19,10 @@
 
 extern const char *overrideConfigNames[];
 
+#define STEAM_SLOT_NORMAL 0
+#define STEAM_SLOT_BRAKE 1
+#define STEAM_SLOT_ACC 2
+
 class ZSP {
 public:
 	ZSP(const char file){};
