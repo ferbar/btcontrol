@@ -50,7 +50,9 @@
 
 extern USBPlatine *platine;
 
+#ifdef HAVE_ALSA
 static FahrSound clientFahrSound;
+#endif
 
 void ClientThread::sendMessage(const FBTCtlMessage &msg)
 {
@@ -548,29 +550,24 @@ continue;
 				platine->commit();
 
 #ifdef HAVE_ALSA
-				clientFahrSound.setSpeed(a_speed);
-				if(lokdef[addr_index].func[1].ison && (cfg_funcSound[CFG_FUNC_SOUND_HORN] != "" )) {
+				clientFahrSound.startPlayFuncSound();
+		/*
+				if(lokdef[addr_index].func[1].ison && (clientFahrSound.funcSound[CFG_FUNC_SOUND_HORN] != "" )) {
 					lokdef[addr_index].func[1].ison=false;
 					PlayAsync horn(CFG_FUNC_SOUND_HORN);
-					/*
+					/ *
 					Sound horn;
 					horn.init(SND_PCM_NONBLOCK);
 					// horn.setBlocking(false);
 					horn.playSingleSound(CFG_FUNC_SOUND_HORN);
 					// horn.close(false);
-					*/
+					* /
 				}
 				if(lokdef[addr_index].func[2].ison && cfg_funcSound[CFG_FUNC_SOUND_ABFAHRT] != "") {
 					lokdef[addr_index].func[2].ison=false;
 					PlayAsync horn(CFG_FUNC_SOUND_ABFAHRT);
-					/*
-					Sound horn;
-					horn.init(SND_PCM_NONBLOCK);
-					// horn.setBlocking(false);
-					horn.playSingleSound(CFG_FUNC_SOUND_ABFAHRT);
-					// horn.close(false);
-					*/
 				}
+		*/
 #endif
 			}
 		} else
@@ -639,7 +636,9 @@ ClientThread::~ClientThread()
 	printf("%d:~ClientThread numClientd=%d\n",this->clientID, this->numClients);
 	if(--this->numClients == 0) {
 		// letzter client => sound aus
+#ifdef HAVE_ALSA
 		clientFahrSound.cancel();
+#endif
 		// letzter client => alles notstop
 		if(srcp) { // erddcd/srcpd/dcc:
 			int addr_index=0;

@@ -8,7 +8,7 @@ class PlayAsync;
 
 class Sound {
 public:
-	Sound() : handle(NULL) {} ;
+	Sound() : handle(NULL) {Sound::soundObjects++; } ;
 	virtual ~Sound();
 	void init(int mode=0);
 	void close(bool waitDone=true);
@@ -20,8 +20,7 @@ public:
 	int writeSound(const std::string &data, int startpos=0);
 
 	static void loadSoundFiles(SoundType *soundFiles);
-	static void loadSoundFile(const std::string &fileName, std::string &dst);
-	static void loadWavFile(const std::string &filename, std::string &out);
+	static void loadWavFile(const std::string &filename, std::string &out, int volumeLevel);
 	static void resampleX2(const std::string &in, std::string &out);
 
 	static void setMasterVolume(int volume);
@@ -39,25 +38,56 @@ protected:
 	static snd_pcm_format_t bits;
 
 	friend class PlayAsync;
+	static void loadSoundFile(const std::string &fileName, std::string &dst, int volumeLevel);
+	static int soundObjects;
+	Mutex mutex;
 };
 
 class PlayAsyncData : public Thread {
 public:
-	PlayAsyncData(const std::string &wav, Sound *sound, int position) : wav(wav), position(position), sound(sound) {};
+	PlayAsyncData(const std::string &wav, int position) : wav(wav), position(position) {};
 	const std::string &wav;
 	int position;
-	Sound *sound;
 	void run();
-	int index;
+	virtual void done() { printf("PlayAsyncData:done ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"); };
 };
 
 class PlayAsync {
 public:
-	PlayAsync(int soundIndex);
+	//PlayAsync(int soundIndex);
 	PlayAsync(const std::string &wav);
+	/// *data wird nach abspielen deleted
+	PlayAsync(PlayAsyncData *data);
+	PlayAsync() : data(NULL) {};
+	~PlayAsync() {
+		if(this->data != NULL) {
+			if(data->isRunning()) {
+				data->setAutodelete();
+			} else {
+				delete data;
+			}
+		}
+	}
+	void play(PlayAsyncData *data);
+	// geht nur mit play
+	bool isPlaying() { return this->data != NULL && this->data->isRunning();};
 private:
+	PlayAsyncData *data;
 };
 
+class FahrSoundPlayFuncAsyncData : public PlayAsyncData {
+public:
+	FahrSoundPlayFuncAsyncData(const std::string &wav, int func) : PlayAsyncData(wav,0), func(func) {
+	//	printf("FahrSoundPlayFuncAsyncData::FahrSoundPlayFuncAsyncData =======================================\n");
+	};
+	virtual void done();
+private:
+	int func;
+};
+
+/**
+ * spielt sound entsprechend lokdef[0] ab
+ */
 class FahrSound : public Thread {
 public:
 	// Sound(SoundSet soundSet);
@@ -66,15 +96,15 @@ public:
 	void start();
 	void cancel();
 	void run();
-	void setSpeed(int speed);
+	void startPlayFuncSound();
 	void setFahrstufe(int fahrstufe) { this->currFahrstufe = fahrstufe; } ;
 	void diOutloop();
 	void steamOutloop();
 
 
-	static void loadSoundFiles(SoundType *soundFiles);
-	static void loadSoundFile(const std::string &fileName, std::string &dst);
-	static void loadWavFile(std::string filename, std::string &out);
+	// static void loadSoundFiles(SoundType *soundFiles);
+	// static void loadSoundFile(const std::string &fileName, std::string &dst);
+	// static void loadWavFile(std::string filename, std::string &out);
 
 	bool doRun;
 	int currFahrstufe; // -1 aus, 0 stop
@@ -84,6 +114,7 @@ private:
 public:
 	static SoundType *soundFiles;
 	static bool soundFilesLoaded; // in soundFiles stehen zuerst nur die dateinamen
+
 
 };
 #endif
