@@ -329,9 +329,9 @@ DiSoundType *SectionValues::parseDiSet() {
 "STUFEN",2
 "SLOTS",3             <- +1
 (
-slots+1 'ch' sample hoch last
 slots+1 'ch' sample normal
 slots+1 'ch' sample beim bremsen
+slots+1 'ch' sample hoch last
 
 zeit in ms
 ) STUFEN#

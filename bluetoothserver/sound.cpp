@@ -412,12 +412,12 @@ void FahrSound::steamOutloop() {
 			continue;
 		}
 
-		int lmh=1;
+		int lmh=STEAM_SLOT_NORMAL;
 		if(lastAcc > time(NULL) - 2) {
-			lmh=2;
+			lmh=STEAM_SLOT_ACC;
 		} else // Acc hat vorrang
 		if(lastBrake > time(NULL) -2) {
-			lmh=0;
+			lmh=STEAM_SLOT_BRAKE;
 		}
 		// printf("BoilSteamOutLoop:run -> lmh: %i #################################\n", lmh);
 			
