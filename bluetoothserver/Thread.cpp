@@ -9,6 +9,9 @@ void *Thread::startupThread(void *ptr) {
 	t->run();
 	printf("Thread::startupThread() done\n");
 	t->exited=true;
+	if(t->autodelete) {
+		delete t;
+	}
 	return NULL;
 }
 
