@@ -16,9 +16,10 @@
 #include "sound.h"
 #include "utils.h"
 
+const char *overrideConfigNames[] = {"sound.boil", "sound.brake", "sound.entwaessern", "sound.abfahrt", "sound.horn" };
+
 SoundType *cfg_soundFiles=NULL;
-std::string cfg_funcSound[];
-SteamSoundType cfg_steamSoundFiles;
+//SteamSoundType cfg_steamSoundFiles;
 
 ZSPDataType ZSPData;
 
@@ -140,7 +141,6 @@ SoundType *loadZSP() {
 			printf("searching SCHWELLE, SAMPLE @ DiSet\n");
 			cfg_soundFiles=it->second->parseDiSet();
 			found=true;
-			cfg_soundFiles->dump();
 			break;
 		} else
 			printf("no match\n");
@@ -155,7 +155,6 @@ SoundType *loadZSP() {
 				printf("searching SAMPLE @ DSet\n");
 				cfg_soundFiles=it->second->parseDSet();
 				found=true;
-				cfg_soundFiles->dump();
 				break;
 			}
 		}
@@ -165,6 +164,7 @@ SoundType *loadZSP() {
 		abort();
 	}
 
+	/*
 	printf("searching Function sounds\n");
 	auto range = ZSPData.equal_range("Func");
 	for(ZSPDataType::iterator it = range.first; it!=range.second; ++it) {
@@ -175,7 +175,32 @@ SoundType *loadZSP() {
 		std::string fileName=getSampleFilename(tmp);
 		printf("  filename=%s\n", fileName.c_str());
 	}
+	*/
 
+	// Ablauf Sounds laden:
+	auto abl=ZSPData.equal_range("Abl");
+	for(ZSPDataType::iterator it=abl.first; it!=abl.second; ++it) {
+		it->second->dump();
+		printf("Abl\n");
+		SectionValuesPtr sp = it->second;
+		if(utils::stoi(sp->operator[]("LOK")) == cfg_soundFiles->lok) {
+			int nummer=utils::stoi(sp->operator[]("NUMMER"));
+			sp->dump();
+			std::string filename = getSampleFilename(sp->operator[]("SAMPLE"));
+			cfg_soundFiles->funcSound[nummer]=filename;
+			printf(" ----------------- Ablauf %i => %s --------------\n", nummer, filename.c_str());
+			cfg_soundFiles->funcSoundVolume[nummer]=utils::stoi(sp->operator[]("LAUTST"));
+		}
+	}
+	// Ablauf Sound overrides:
+	printf("Sound override config:\n");
+	for(size_t i = 0 ; overrideConfigNames[i] ; i++) {
+		std::string overrideConfig=config.get(overrideConfigNames[i]);
+		if(overrideConfig != NOT_SET) {
+			cfg_soundFiles->funcSound[i] = config.get(overrideConfigNames[i]);
+		}
+	}
+	cfg_soundFiles->dump();
 	/*
 	Sound s(cfg_soundFiles);
 	s.init();
@@ -218,6 +243,8 @@ SoundType *loadZSP() {
 		"FNR",34
 	"/Sample"
 	*/
+
+	/*
 	try {
 		cfg_funcSound[CFG_FUNC_SOUND_HORN] = config.get("sound.horn");
 	} catch(std::exception &e) {
@@ -238,6 +265,7 @@ SoundType *loadZSP() {
 	} catch(std::exception &e) {
 		printf("unable to get config/sound.brake\n");
 	}
+	*/
 	return cfg_soundFiles;
 }
 
@@ -316,6 +344,8 @@ SteamSoundType *SectionValues::parseDSet() {
 	assert(soundFiles->nslots <= SteamSoundStepType::maxSlots);
 	soundFiles->nsteps=utils::stoi(this->operator[]("STUFEN"));
 	assert(soundFiles->nsteps <= SteamSoundType::maxSteps);
+	soundFiles->lok=utils::stoi(this->operator[]("NUMMER"));
+	printf("     nslots:%d, nsteps:%d, lok #%d\n", soundFiles->nslots, soundFiles->nsteps, soundFiles->lok);
 	SectionValues::const_iterator it=this->begin();
 	while(true) {
 		if(it->second=="") {
@@ -330,6 +360,7 @@ SteamSoundType *SectionValues::parseDSet() {
 			// SectionValues::const_iterator it=this->begin(); it!=this->end(); it++) {
 				printf(" -- '%s' '%s'\n", it->first.c_str(), it->second.c_str());
 				try {
+					//check if it->first is an int
 					utils::stoi(it->first);
 					std::string filename = getSampleFilename(it->first);
 					soundFiles->steps[step].ch[hml][slot] = filename;
@@ -343,6 +374,7 @@ SteamSoundType *SectionValues::parseDSet() {
 		soundFiles->steps[step].ms=utils::stoi(it->first);
 		++it;
 	}
+
 	return soundFiles;
 }
 
