@@ -8,6 +8,17 @@
 #include <vector>
 
 
+// zpr => ABL
+#define CFG_FUNC_SOUND_BOIL 0
+#define CFG_FUNC_SOUND_BRAKE 1
+#define CFG_FUNC_SOUND_ENTWAESSERN 2
+#define CFG_FUNC_SOUND_ABFAHRT 3
+
+#define CFG_FUNC_SOUND_HORN 4
+#define CFG_FUNC_SOUND_N 5
+
+extern const char *overrideConfigNames[];
+
 class ZSP {
 public:
 	ZSP(const char file){};
@@ -19,13 +30,13 @@ std::string getSampleFilename(std::string number);
 
 class SoundType {
 	public:
-	SoundType() {};
+	SoundType() {for(int i =0; i < CFG_FUNC_SOUND_N; i++) { this->funcSound[i]=NOT_SET; this->funcSoundVolume[i]=0; }};
 	virtual void dump() {};
 	virtual void loadSoundFiles() {};
 	// ID vom soundset
 	int lok;
-    std::string funcSound[5];
-    int funcSoundVolume[5];
+	std::string funcSound[CFG_FUNC_SOUND_N];
+	int funcSoundVolume[CFG_FUNC_SOUND_N];
 };
 
 class DiSoundStepType {
@@ -107,15 +118,6 @@ typedef boost::shared_ptr<SectionValues> SectionValuesPtr;
 typedef std::multimap<std::string, SectionValuesPtr > ZSPDataType;
 
 
-// zpr => ABL
-#define CFG_FUNC_SOUND_BOIL 0
-#define CFG_FUNC_SOUND_BRAKE 1
-#define CFG_FUNC_SOUND_ENTWAESSERN 2
-#define CFG_FUNC_SOUND_ABFAHRT 3
-
-#define CFG_FUNC_SOUND_HORN 4
-
-extern const char *overrideConfigNames[];
 
 SoundType *loadZSP();
 
