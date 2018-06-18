@@ -103,6 +103,16 @@ Makefile.config:
 	else						\
 		echo "not found - raspi ACT led disabled"	;\
 	fi
+	
+	@echo -e "checking libsndfile:"
+	@sndfilelibs=$$(pkg-config --libs sndfile) ;\
+		if [ $$? = 0 ] ; then \
+			echo "found" ;\
+			echo "all: zpp2zsp" >> Makefile.config   ;\
+		else						\
+			echo "not found - zpp2zsp disabled"	;\
+		fi
+	@echo .
 
 btserver: fbtctl_message.o message_layout.o server.o tcpclient.o clientthread.o lokdef.o main.o srcp.o utils.o ParseExpr.o Thread.o
 	${CPP} ${LDFLAGS} $+ -o btserver
@@ -112,6 +122,9 @@ digispark_test: USBDigispark.cpp utils.o
 
 zsptest: zsptest.cpp sound.cpp
 	${CPP} ${CFLAGS} ${LDFLAGS} -lasound $+ -g 
+
+zpp2zsp: zpp2zsp.cpp utils.o
+	${CPP} ${CFLAGS} ${LDFLAGS} -lsndfile $+ -g -o zpp2zsp
 
 help:
 	@echo -e "all\t alles builden\n\
