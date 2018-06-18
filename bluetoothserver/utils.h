@@ -81,6 +81,8 @@ namespace utils
 	bool endsWith(const std::string &str, const char *with);
 
 	std::string format(const char *fmt, ...);
+
+	bool isDir(const char *filename);
 }
 
 

@@ -235,3 +235,14 @@ int myRead(int so, void *data, size_t size) {
 	return read;
 }
 
+bool utils::isDir(const char *filename) {
+	struct stat buffer;
+	if(stat(filename, &buffer) != 0) {
+		return false;
+	}
+	if(S_ISDIR(buffer.st_mode)) {
+		return true;
+	} else {
+		return false;
+	}
+}
