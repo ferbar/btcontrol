@@ -4,6 +4,10 @@
  * hints:
  *   wenns nach code änderung nix mehr tut sind vielleicht zu viele strings in verwendung. dann mit F() die strings kapseln!
  *   siehe: http://playground.arduino.cc/Learning/Memory
+ * 
+ *   der USBID ist in der libraries/DigisparkUSB/usbconfig.h hardcoded - kann nur dort geändert werden
+ *   
+ *   micronucleus-1.11-entry-jumper-pb0-upgrade siehe info.txt (programmieren über P0->masse)
  *   
  * defines:
  *  CABLIGHT
