@@ -42,4 +42,20 @@ private:
 	Mutex &m;
 };
 
+/**
+ * threadspecific wrapper klasse
+ * muss global sein!
+ */
+class ThreadSpecific {
+public:
+	ThreadSpecific();
+	virtual ~ThreadSpecific();
+	virtual void *get();
+	virtual void set(void *ptr);
+// TODO: wird beim beenden vom thread aufgerufen
+	virtual void del();
+private:
+	pthread_key_t key;
+//	pthread_once_t key_once;
+};
 #endif

@@ -88,3 +88,27 @@ bool Mutex::tryLock() {
 	if(ret == EBUSY) return false;
 	throw std::runtime_error("error Mutex::trylock()");
 }
+
+void ThreadSpecific_Descructor(void *ptr) {
+}
+
+ThreadSpecific::ThreadSpecific() {
+	pthread_key_create(&this->key,ThreadSpecific_Descructor);
+}
+
+ThreadSpecific::~ThreadSpecific() {
+	pthread_key_delete(this->key);
+}
+
+void *ThreadSpecific::get() {
+	return pthread_getspecific(this->key);
+}
+
+void ThreadSpecific::set(void *ptr) {
+	pthread_setspecific(this->key, ptr);
+}
+
+void ThreadSpecific::del() {
+	pthread_setspecific(this->key, NULL);
+}
+
