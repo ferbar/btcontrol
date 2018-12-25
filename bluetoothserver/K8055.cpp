@@ -106,7 +106,7 @@ void K8055::commit() {
 	this->write_output(ia1, ia2, id8);
 }
 
-void K8055::fullstop() {
+void K8055::fullstop(bool stopAll, bool emergencyStop) {
 	this->write_output(0, 0, 3);
 }
 

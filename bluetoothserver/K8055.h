@@ -10,7 +10,7 @@ public:
 	virtual void setPWM(int f_speed);
 	virtual void setDir(unsigned char dir);
 	virtual void commit();
-	virtual void fullstop();
+	virtual void fullstop(bool stopAll, bool emergencyStop);
 
 private:
 	int write_output ( unsigned char a1, unsigned char a2, unsigned char d );
@@ -25,7 +25,6 @@ private:
 	int set_counter2_bouncetime ( int msec );
 	int reset_counter1 ( );
 	int reset_counter2 ( );
-
 
 private:
 	int takeover_device( int interface );

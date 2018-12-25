@@ -27,32 +27,19 @@
 #include <assert.h>
 #include "clientthread.h"
 #include "lokdef.h"
-#include "srcp.h"
-#include "USBPlatine.h"
+#include "Hardware.h"
 #include <stdexcept>
-
-// für setsockopt
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <unistd.h>
 
 #include <errno.h>
 
-#include "utils.h"
 #include "server.h"
 
 #ifdef HAVE_ALSA
+#warning FIXME: sound gehört ins USBPlatine rein
 #include "sound.h"
 #endif
 
-extern USBPlatine *platine;
-
-#ifdef HAVE_ALSA
-static FahrSound clientFahrSound;
-#endif
+#include "utils.h"
 
 void ClientThread::sendMessage(const FBTCtlMessage &msg)
 {
@@ -127,11 +114,13 @@ void ClientThread::run()
 	// startupdata_t *startupdata=(startupdata_t *)data;
 
 #ifdef HAVE_ALSA
-	if(platine && FahrSound::soundFiles != NULL) { // nur wenn eine platine angeschlossen und sound files geladen
+#warning FIXME: nur bei platine sound spielen
+	if(FahrSound::soundFiles != NULL) { // nur wenn eine platine angeschlossen und sound files geladen
 		clientFahrSound.start();
 	}
 #endif
 	printf("%d:socket accepted sending welcome msg\n",this->clientID);
+	utils::setThreadClientID(this->clientID);
 	FBTCtlMessage heloReply(messageTypeID("HELO"));
 	heloReply["name"]="my bt server";
 	heloReply["version"]="0.9";
@@ -377,12 +366,12 @@ continue;
 			} else if(cmd.isType("POWER")) { // special: value=-1   -> nix ändern, nur status liefern
 // TODO: alle loks auf speed=0 setzten, dir=notaus
 				int value=cmd["value"].getIntVal();
-				if(srcp && (value != -1) ) {
-					if(value) srcp->pwrOn();
-					else srcp->pwrOff();
+				if(value != -1) {
+					if(value) hardware->pwrOn();
+					else hardware->pwrOff();
 				}
 				FBTCtlMessage reply(messageTypeID("POWER_REPLY"));
-				reply["value"]=srcp->powered;
+				reply["value"]=hardware->getPowerState();
 				sendMessage(reply);
 			} else if(cmd.isType("POM")) {
 				int addr=cmd["addr"].getIntVal();
@@ -390,21 +379,7 @@ continue;
 				int cv=cmd["cv"].getIntVal();
 				int value=cmd["value"].getIntVal();
 				FBTCtlMessage reply(messageTypeID("POM_REPLY"));
-				if(srcp) {
-					reply["value"]=1;
-					srcp->sendPOM(lokdef[addr_index].addr, cv, value);
-				} else {
-				#ifdef HAVE_ALSA
-					if(cv==266) {
-					    Sound::setMasterVolume(value);
-						reply["value"]=1;
-					} else {
-				#endif
-						reply["value"]=0;
-				#ifdef HAVE_ALSA
-					}
-				#endif
-				}
+				reply["value"]=hardware->sendPOM(lokdef[addr_index].addr, cv, value);
 				sendMessage(reply);
 			} else if(cmd.isType("POMBIT")) {
 				int addr=cmd["addr"].getIntVal();
@@ -413,12 +388,7 @@ continue;
 				int bitNr=cmd["bit"].getIntVal();
 				int value=cmd["value"].getIntVal();
 				FBTCtlMessage reply(messageTypeID("POMBIT_REPLY"));
-				if(srcp) {
-					reply["value"]=1;
-					srcp->sendPOMBit(lokdef[addr_index].addr, cv, bitNr, value);
-				} else {
-					reply["value"]=0;
-				}
+				reply["value"]=hardware->sendPOMBit(lokdef[addr_index].addr, cv, bitNr, value);
 				sendMessage(reply);
 			} else if(cmd.isType("GETIMAGE")) {
 				std::string imageName=cmd["imgname"].getStringVal();
@@ -507,125 +477,21 @@ continue;
 		*/
 
 		// PLATINE ANSTEUERN ------------
-		if(platine) {
-			// geschwindigkeit 
-			// double f_speed=sqrt(sqrt((double)lokdef[addr_index].currspeed/255.0))*255.0; // für üperhaupt keine elektronik vorm motor gut (schienentraktor)
-			// TODO: wemmas wieder brauchen sollt gucken ob sich wirklich was geändert hat
-			// int changedAddr=3; // eine adresse mit der nummer muss in der lokdef eingetragen sein
-			int addr_index=-1; // getAddrIndex(changedAddr);
-			for(int i=0; i <= nLokdef; i++) {
-				if(changedAddrIndex[i]) {
-					changedAddrIndex[i]=false;
-					addr_index=i;
-					break;
-				}
-			}
-			printf(" --- addr_index=%d\n", addr_index);
-			//	if(changedAddrIndex[i]) { changedAddrIndex[i]=false;
-			if(addr_index >= 0) {
-				assert(addr_index >= 0);
-				int a_speed=abs(lokdef[addr_index].currspeed);
+		// erddcd/srcpd/dcc:
+		// wegen X_MULTI könnten sich mehrere adressen geändert ham:
+		for(int i=0; i <= nLokdef; i++) {
+			if(changedAddrIndex[i]) {
+				// printf(" --- addr_index=%d\n", addr_index);
+				changedAddrIndex[i]=false;
+				int addr_index=i;
+				lokdef[addr_index].lastClientID = this->clientID;
+				hardware->sendLoco(addr_index, emergencyStop);
 
-				double f_speed=a_speed;
-				if(f_speed < 5) {
-					f_speed=0;
-				} else {
-				}
-
-				// setPWM hängt beim RaspiPWM von den Funktionen ab
-				bool func[MAX_NFUNC];
-				for(int j=0; j < lokdef[addr_index].nFunc; j++) {
-					func[j]=lokdef[addr_index].func[j].ison;
-				}
-				platine->setFunction(lokdef[addr_index].nFunc, func);
-
-				platine->setDir(lokdef[addr_index].currdir < 0 ? 1 : 0 );
-				platine->setPWM(f_speed);
-				/*
-				// int ia2=lokdef[addr_index].currdir < 0 ? 255 : 0; // 255 -> relais zieht an
-				int ia2=0;
-				printf("%d:lokdef[addr_index=%d].currspeed: %d dir: %d pwm1 val=>%d pwm2 %d (%f)\n",this->clientID,addr_index,lokdef[addr_index].currspeed,lokdef[addr_index].currdir,ia1,ia2,f_speed);
-				// printf("lokdef[addr_index].currspeed=%d: ",lokdef[addr_index].currspeed);
-				*/
-				platine->commit();
-
-#ifdef HAVE_ALSA
-				clientFahrSound.startPlayFuncSound();
-		/*
-				if(lokdef[addr_index].func[1].ison && (clientFahrSound.funcSound[CFG_FUNC_SOUND_HORN] != "" )) {
-					lokdef[addr_index].func[1].ison=false;
-					PlayAsync horn(CFG_FUNC_SOUND_HORN);
-					/ *
-					Sound horn;
-					horn.init(SND_PCM_NONBLOCK);
-					// horn.setBlocking(false);
-					horn.playSingleSound(CFG_FUNC_SOUND_HORN);
-					// horn.close(false);
-					* /
-				}
-				if(lokdef[addr_index].func[2].ison && cfg_funcSound[CFG_FUNC_SOUND_ABFAHRT] != "") {
-					lokdef[addr_index].func[2].ison=false;
-					PlayAsync horn(CFG_FUNC_SOUND_ABFAHRT);
-				}
-		*/
-#endif
-			}
-		} else
-		if(srcp) { // erddcd/srcpd/dcc:
-			// wegen X_MULTI gucken was wir geändert ham:
-			for(int i=0; i <= nLokdef; i++) {
-				if(changedAddrIndex[i]) {
-					changedAddrIndex[i]=false;
-					int addr_index=i;
-					this->sendLoco(addr_index,emergencyStop);
-
-				}
 			}
 		}
 		msgNum++;
 	}
 	printf("%d:client exit\n",this->clientID);
-}
-
-
-void ClientThread::sendLoco(int addr_index, bool emergencyStop) {
-	lokdef[addr_index].lastClientID = this->clientID;
-					int dir= lokdef[addr_index].currdir < 0 ? 0 : 1;
-					if(emergencyStop) {
-						dir=2;
-					}
-					int nFahrstufen = 128;
-					if(lokdef[addr_index].flags & F_DEC14) {
-						nFahrstufen = 14;
-					} else if(lokdef[addr_index].flags & F_DEC28) {
-						nFahrstufen = 28;
-					}
-					int dccSpeed = abs(lokdef[addr_index].currspeed) * nFahrstufen / 255;
-					bool func[MAX_NFUNC];
-					for(int j=0; j < lokdef[addr_index].nFunc; j++) {
-						func[j]=lokdef[addr_index].func[j].ison;
-					}
-					if(!lokdef[addr_index].initDone) {
-						SRCPReplyPtr replyInit = srcp->sendLocoInit(lokdef[addr_index].addr, nFahrstufen, lokdef[addr_index].nFunc);
-						if(replyInit->type != SRCPReply::OK) {
-							fprintf(stderr,ANSI_RED "%d/%d: error init loco: (%s)\n" ANSI_DEFAULT, this->clientID, this->msgNum, replyInit->message);
-							if(replyInit->code == 412) {
-								fprintf(stderr,"%d/%d: loopback/ddl|number_gl, max addr < %d?\n", this->clientID, this->msgNum, lokdef[addr_index].addr);
-								lokdef[addr_index].currspeed=-1;
-							}
-						} else {
-							lokdef[addr_index].initDone=true;
-							printf("try to read curr state...\n");
-							if(!srcp->getInfo(lokdef[addr_index].addr,&dir,&dccSpeed,lokdef[addr_index].nFunc, func)) {
-								fprintf(stderr,ANSI_RED "%d/%d: error getting state of loco: (%s)\n" ANSI_DEFAULT, this->clientID, this->msgNum, replyInit->message);
-							}
-						}
-					}
-					SRCPReplyPtr reply = srcp->sendLocoSpeed(lokdef[addr_index].addr, dir, nFahrstufen, dccSpeed, lokdef[addr_index].nFunc, func);
-
-					if(reply->type != SRCPReply::OK) {
-						fprintf(stderr,ANSI_RED "%d/%d: error sending speed: (%s)\n" ANSI_DEFAULT, this->clientID, this->msgNum, reply->message);
-					}
 }
 
 /**
@@ -640,37 +506,11 @@ ClientThread::~ClientThread()
 		clientFahrSound.cancel();
 #endif
 		// letzter client => alles notstop
-		if(srcp) { // erddcd/srcpd/dcc:
-			int addr_index=0;
-			while(lokdef[addr_index].addr) {
-				printf("last client [%d]=%d\n",addr_index,lokdef[addr_index].currspeed);
-				if(lokdef[addr_index].currspeed != 0) {
-					printf("emgstop [%d]=addr:%d\n",addr_index, lokdef[addr_index].addr);
-					lokdef[addr_index].currspeed=0;
-					this->sendLoco(addr_index, true);
-					lokdef[addr_index].lastClientID=0;
-				}
-				addr_index++;
-			}
-		}
-		else if(platine) {
-			platine->fullstop();
-		}
+		hardware->fullstop(true, true);
 	} else {
 		// nicht letzter client => alle loks die von mir gesteuert wurden notstop
 		printf("lastClient, stopping my Locos\n");
-		if(srcp) {
-			int addr_index=0;
-			while(lokdef[addr_index].addr) {
-				if(lokdef[addr_index].lastClientID == this->clientID ) {
-					printf("\tstop %d\n",addr_index);
-					lokdef[addr_index].currspeed=0;
-					this->sendLoco(addr_index, true);
-					lokdef[addr_index].lastClientID=0;
-				}
-				addr_index++;
-			}
-		}
+		hardware->fullstop(false, true);
 	}
 	close(this->so);
 }

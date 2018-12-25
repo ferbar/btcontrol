@@ -114,7 +114,7 @@ Makefile.config:
 		fi
 	@echo .
 
-btserver: fbtctl_message.o message_layout.o server.o tcpclient.o clientthread.o lokdef.o main.o srcp.o utils.o ParseExpr.o Thread.o
+btserver: fbtctl_message.o message_layout.o server.o tcpclient.o clientthread.o lokdef.o main.o srcp.o utils.o ParseExpr.o Thread.o USBPlatine.o
 	${CPP} ${LDFLAGS} $+ -o btserver
 
 digispark_test: USBDigispark.cpp utils.o
@@ -123,7 +123,7 @@ digispark_test: USBDigispark.cpp utils.o
 zsptest: zsptest.cpp sound.cpp
 	${CPP} ${CFLAGS} ${LDFLAGS} -lasound $+ -g 
 
-zpp2zsp: zpp2zsp.cpp utils.o
+zpp2zsp: zpp2zsp.cpp utils.o Thread.o
 	${CPP} ${CFLAGS} ${LDFLAGS} -lsndfile $+ -g -o zpp2zsp
 
 help:

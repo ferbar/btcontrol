@@ -23,8 +23,6 @@ public:
 	void setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus);
 	void sendStatusReply(lastStatus_t *lastStatus);
 
-	void sendLoco(int addr_index, bool emergencyStop);
-
 	void sendClientUpdate();
 
 	int msgNum;

@@ -24,6 +24,7 @@
 #include "reader.h"
 #include "lokdef.h"
 
+FahrSound clientFahrSound;
 
 // typedef
 struct __attribute__((packed)) WavHeader 

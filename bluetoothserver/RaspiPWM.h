@@ -25,7 +25,7 @@ public:
 	// setzt die Pins, force zum initial initen
 	virtual void commit();
 	virtual void commit(bool force);
-	virtual void fullstop();
+	virtual void fullstop(bool stopAll, bool emergencyStop);
 
 
 private:

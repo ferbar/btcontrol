@@ -26,8 +26,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
-#include "srcp.h"
 #include <errno.h>
+#include "srcp.h"
+#include "utils.h"
+#include "lokdef.h"
 
 bool SRCP::powered=false;
 
@@ -250,4 +252,65 @@ bool SRCP::getInfo(int addr, int *dir, int *dccSpeed, int nFunc, bool *func)
 		return true;
 	}
 	return false;
+}
+
+void SRCP_Hardware::fullstop(bool stopAll, bool emergencyStop) {
+	int clientID=utils::getThreadClientID();
+	int addr_index=0;
+	while(lokdef[addr_index].addr) {
+		if(clientID)
+			printf("last client [%d]=%d\n",addr_index,lokdef[addr_index].currspeed);
+		if( (stopAll && (lokdef[addr_index].currspeed != 0) ) ||
+		    (!stopAll && (lokdef[addr_index].lastClientID == clientID ) ) ) {
+			if(clientID)
+				printf("\tstop %d\n",addr_index);
+			else
+				printf("emgstop [%d]=addr:%d\n",addr_index, lokdef[addr_index].addr);
+			lokdef[addr_index].currspeed=0;
+			this->sendLoco(addr_index, true);
+			lokdef[addr_index].lastClientID=0;
+		}
+		addr_index++;
+	}
+}
+
+void SRCP_Hardware::sendLoco(int addr_index, bool emergencyStop) {
+	int clientID=utils::getThreadClientID();
+	int msgNum=utils::getThreadMessageID();
+					int dir= lokdef[addr_index].currdir < 0 ? 0 : 1;
+					if(emergencyStop) {
+						dir=2;
+					}
+					int nFahrstufen = 128;
+					if(lokdef[addr_index].flags & F_DEC14) {
+						nFahrstufen = 14;
+					} else if(lokdef[addr_index].flags & F_DEC28) {
+						nFahrstufen = 28;
+					}
+					int dccSpeed = abs(lokdef[addr_index].currspeed) * nFahrstufen / 255;
+					bool func[MAX_NFUNC];
+					for(int j=0; j < lokdef[addr_index].nFunc; j++) {
+						func[j]=lokdef[addr_index].func[j].ison;
+					}
+					if(!lokdef[addr_index].initDone) {
+						SRCPReplyPtr replyInit = this->sendLocoInit(lokdef[addr_index].addr, nFahrstufen, lokdef[addr_index].nFunc);
+						if(replyInit->type != SRCPReply::OK) {
+							fprintf(stderr,ANSI_RED "%d/%d: error init loco: (%s)\n" ANSI_DEFAULT, clientID, msgNum, replyInit->message);
+							if(replyInit->code == 412) {
+								fprintf(stderr,"%d/%d: loopback/ddl|number_gl, max addr < %d?\n", clientID, msgNum, lokdef[addr_index].addr);
+								lokdef[addr_index].currspeed=-1;
+							}
+						} else {
+							lokdef[addr_index].initDone=true;
+							printf("try to read curr state...\n");
+							if(!this->getInfo(lokdef[addr_index].addr,&dir,&dccSpeed,lokdef[addr_index].nFunc, func)) {
+								fprintf(stderr,ANSI_RED "%d/%d: error getting state of loco: (%s)\n" ANSI_DEFAULT, clientID, msgNum, replyInit->message);
+							}
+						}
+					}
+					SRCPReplyPtr reply = this->sendLocoSpeed(lokdef[addr_index].addr, dir, nFahrstufen, dccSpeed, lokdef[addr_index].nFunc, func);
+
+					if(reply->type != SRCPReply::OK) {
+						fprintf(stderr,ANSI_RED "%d/%d: error sending speed: (%s)\n" ANSI_DEFAULT, clientID, msgNum, reply->message);
+					}
 }
