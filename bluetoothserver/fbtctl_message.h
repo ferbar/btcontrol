@@ -34,7 +34,7 @@ public:
 		unsigned char len=this->getByte() | (this->getByte() << 8);
 		std::string ret=std::string(&this->data[this->pos],len); this->pos +=len;
 		// printf("getString %s\n",ret.c_str());
-		if(this->pos > this->len) throw "getString übers ende gelesen"; return ret; };
+		if(this->pos > this->len) { throw "getString übers ende gelesen"; } return ret; };
 	const char *data;
 	int len;
 	int pos;

@@ -33,7 +33,8 @@ void printQRCode(const char *url) {
 		// const char *BYTES[] = {" ", /*50%oben*/ "\xE2\x96\x80", /*50%unten*/ "\xE2\x96\x84", /*100%*/ "\xE2\x96\x88"};
 		const char *BYTES_INVERTED[] = {/*100%*/ "\xE2\x96\x88", /*50%unten*/ "\xE2\x96\x84", /*50%oben*/ "\xE2\x96\x80", " "};
 		printf("version: %d, width: %d\n\n",qrcode->version, qrcode->width);
-		for(int x=0; x < qrcode->width+2; x++) printf(BYTES_INVERTED[1]); printf("\n");
+		for(int x=0; x < qrcode->width+2; x++) printf(BYTES_INVERTED[1]);
+		printf("\n");
 		for(int y=0; y < qrcode->width; y++) {
 			printf(BYTES_INVERTED[0]);
 			for(int x=0; x < qrcode->width; x++) {
@@ -48,7 +49,8 @@ void printQRCode(const char *url) {
 			printf(BYTES_INVERTED[0]);
 			printf("\n");
 		}
-		for(int x=0; x < qrcode->width+2; x++) printf(BYTES_INVERTED[2]); printf("\n");
+		for(int x=0; x < qrcode->width+2; x++) printf(BYTES_INVERTED[2]);
+		printf("\n");
 		QRcode_free(qrcode);
 		printf("\n");
 	} else {
