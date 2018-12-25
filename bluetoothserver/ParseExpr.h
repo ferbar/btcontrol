@@ -1,3 +1,5 @@
+#ifndef PARSEEXPR_H
+#define PARSEEXPR_H
 #include <string>
 
 class ParseExpr {
@@ -8,3 +10,4 @@ public:
 	time_t lastAccel;
 	time_t lastBrake;
 };
+#endif

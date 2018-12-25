@@ -117,4 +117,7 @@ public:
 
 
 };
+
+extern FahrSound clientFahrSound;
+
 #endif

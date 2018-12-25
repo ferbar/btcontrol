@@ -35,9 +35,8 @@ char ( &_ArraySizeHelper( T (&array)[N] ))[N];
 
 #define countof( array ) (sizeof( _ArraySizeHelper( array ) ))
 
-
 #define read myRead
-int myRead(int so, void *data, size_t size);
+ssize_t myRead(int so, void *data, size_t size);
 
 
   #define ANSI_DEFAULT "\x1b[0m"
@@ -83,6 +82,11 @@ namespace utils
 	std::string format(const char *fmt, ...);
 
 	bool isDir(const char *filename);
+
+	void setThreadClientID(int clientID);
+	void setThreadMessageID(int messageID);
+	int getThreadClientID();
+	int getThreadMessageID();
 }
 
 

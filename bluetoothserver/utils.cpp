@@ -6,6 +6,7 @@
 #include <memory>
 #include <stdarg.h>
 
+#include "Thread.h"
 #include "utils.h"
 
 // fürs backtrace:
@@ -19,6 +20,9 @@
 
 // dirname
 #include <libgen.h>
+
+// intptr_t
+#include <inttypes.h>
 
 const std::string NOT_SET="__NOT_SET";
 
@@ -218,7 +222,7 @@ std::string utils::format(const char *fmt, ...) {
  * @throws exception bei einem fehler / wenn size nicht gelesen werden konnte
  */
 #undef read
-int myRead(int so, void *data, size_t size) {
+ssize_t myRead(int so, void *data, size_t size) {
 	int read=0;
 	// printf("myRead: %zd\n",size);
 	while(read < (int) size) {
@@ -245,4 +249,21 @@ bool utils::isDir(const char *filename) {
 	} else {
 		return false;
 	}
+}
+
+ThreadSpecific threadSpecificClientID;
+ThreadSpecific threadSpecificMessageID;
+void utils::setThreadClientID(int clientID) {
+	threadSpecificClientID.set((void*) clientID);
+}
+void utils::setThreadMessageID(int messageID) {
+	threadSpecificMessageID.set((void*) messageID);
+}
+int utils::getThreadClientID() {
+	intptr_t tmp = (intptr_t) (threadSpecificClientID.get() );
+	return (int) tmp;
+}
+int utils::getThreadMessageID() {
+	intptr_t tmp = (intptr_t) (threadSpecificMessageID.get() );
+	return (int) tmp;
 }

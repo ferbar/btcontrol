@@ -82,12 +82,7 @@ bool cfg_X11=false;
 #endif
 
 int cfg_tcpTimeout=10; // TCP RX Timeout in sekunden
-#if defined HAVE_LIBUSB || defined HAVE_RASPI_WIRINGPI
-USBPlatine *platine=NULL;
-#else
-void *platine=NULL;
-#endif
-SRCP *srcp=NULL;
+Hardware *hardware=NULL;
 
 /**
  * Velleman k8055 init
@@ -95,10 +90,10 @@ SRCP *srcp=NULL;
 void initPlatine()
 {
 #ifdef HAVE_LIBUSB
-	assert(!platine);
+	assert(!hardware);
 	printf("init platine\n");
 	try {
-		platine=new K8055(1,cfg_debug);
+		hardware=new K8055(1,cfg_debug);
 		// FIXME:
 		strncpy(lokdef[0].name,"K8055", sizeof(lokdef[0].name));
 		lokdef[1].addr=0;
@@ -106,7 +101,7 @@ void initPlatine()
 		printf("K8055: error: %s\n",errormsg.what());
 	}
 	try {
-		platine=new USBDigispark(1,cfg_debug);
+		hardware=new USBDigispark(1,cfg_debug);
 		// Lokname immer auf RaspiPWM setzen: (unpraktisch)
 		//strncpy(lokdef[0].name,"USBDigispark", sizeof(lokdef[0].name));
 		lokdef[1].addr=0;
@@ -116,9 +111,9 @@ void initPlatine()
 	printf("... done\n");
 #endif
 #ifdef HAVE_RASPI_WIRINGPI
-	if(!platine) {
+	if(!hardware) {
 		try {
-			platine=new RaspiPWM(cfg_debug);
+			hardware=new RaspiPWM(cfg_debug);
 			// Lokname immer auf RaspiPWM setzen: (unpraktisch)
 			//strncpy(lokdef[0].name,"RaspiPWM", sizeof(lokdef[0].name));
 			lokdef[1].addr=0;
@@ -128,7 +123,7 @@ void initPlatine()
 	}
 #endif
 #ifdef HAVE_ALSA
-	if(platine) {
+	if(hardware) {
 		std::string samplerate=config.get("sound.samplerate");
 		if(samplerate != NOT_SET) {
 			printf("new samplerate:%s\n",samplerate.c_str());
@@ -149,10 +144,8 @@ void initPlatine()
 
 void deletePlatine()
 {
-#if defined HAVE_LIBUSB || defined HAVE_RASPI_WIRINGPI
 	printf("delete Platine\n");
-	delete platine;
-#endif
+	delete hardware;
 }
 
 void signalHandler(int signo, siginfo_t *p, void *ucontext)
@@ -324,10 +317,9 @@ int main(int argc, char *argv[])
 			fprintf(stderr,"ansteuer platine error: %s\n",errormsg);
 		}
 
-		if(!platine) {
-			assert(!srcp);
+		if(!hardware) {
 			try {
-				srcp=new SRCP();
+				hardware=new SRCP_Hardware();
 				printf("init erddcd\n");
 			} catch(const char *errormsg) {
 				fprintf(stderr,"error connecting to erddcd (%s)\n",errormsg);
@@ -347,8 +339,6 @@ int main(int argc, char *argv[])
 
 	server.waitExit();
 
-	if(platine) {
-		deletePlatine();
-	}
+	deletePlatine();
 
 }

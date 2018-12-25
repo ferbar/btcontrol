@@ -84,8 +84,9 @@ static void *startCommThread(void *data)
 		usleep(100000);
 		printf("S "); fflush(stdout);
 		if(fRaspiLed) {
-			if(raspiLedToggle & 0x10)
+			if(raspiLedToggle & 0x10) {
 				fwrite(raspiLedToggle & 0x20 ? "1\n" : "0\n", 1, 2, fRaspiLed); fflush(fRaspiLed);
+			}
 			raspiLedToggle++;
 		}
 		/*
@@ -142,8 +143,9 @@ static void *startCommThread(void *data)
 				pos++;
 
 				if(fRaspiLed) {
-					if(raspiLedToggle & 0x1)
+					if(raspiLedToggle & 0x1) {
 						fwrite(raspiLedToggle & 0x2 ? "1\n" : "0\n", 1, 2, fRaspiLed); fflush(fRaspiLed);
+					}
 					raspiLedToggle++;
 				}
 			}
@@ -198,7 +200,7 @@ USBDigispark::USBDigispark(int devnr, bool debug) :
 }
 
 USBDigispark::~USBDigispark() {
-	this->fullstop();
+	this->fullstop(true,true);
 	this->release();
 }
 
@@ -384,7 +386,7 @@ void USBDigispark::setDir(unsigned char dir) {
 	// TODO: return einlesen!
 }
 
-void USBDigispark::fullstop() {
+void USBDigispark::fullstop(bool stopAll, bool emergencyStop) {
 	printf("USBDigispark::fullstop()\n");
 	this->setPWM(0);
 	// 1s warten dass das command fertig is:
