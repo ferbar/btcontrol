@@ -76,14 +76,14 @@ void FBTCtlMessage::readMessage(InputReader &in, const MessageLayout *layout)
 	}
 
 	if(!layout)
-		throw "no message layout";
+		throw std::runtime_error("no message layout");
 
 	std::vector<MessageLayout>::const_iterator it;
 	for(it=layout->childLayouts.begin(); it != layout->childLayouts.end(); ++it) {
 		MessageLayout::DataType type=(MessageLayout::DataType)in.getByte();
 		if(type != it->type) {
 			printf("unexpected type! %d, %d (%s)\n",type, it->type, messageTypeName(it->type).c_str());
-			throw "unexpected DataType";
+			throw std::runtime_error("unexpected DataType");
 		}
 		switch(it->type){
 			case MessageLayout::INT:
@@ -161,13 +161,13 @@ void FBTCtlMessage::clear()
 
 int FBTCtlMessage::getIntVal()
 {
-	if(type != MessageLayout::INT) throw "invalid type(int)";
+	if(type != MessageLayout::INT) throw std::runtime_error("invalid type(int)");
 	return ival;
 }
 
 std::string FBTCtlMessage::getStringVal()
 {
-	if(this->type != MessageLayout::STRING) throw "invalid type(string)";
+	if(this->type != MessageLayout::STRING) throw std::runtime_error("invalid type(string)");
 	return sval;
 }
 
@@ -179,7 +179,7 @@ int FBTCtlMessage::getArraySize()
 FBTCtlMessage &FBTCtlMessage::operator [](int i)
 {
 	if(this->type == MessageLayout::UNDEF) this->type=MessageLayout::ARRAY;
-	if(this->type != MessageLayout::ARRAY) throw "invalid type(array)";
+	if(this->type != MessageLayout::ARRAY) throw std::runtime_error("invalid type(array)");
 	if((signed)arrayVal.size() <= i) {
 		arrayVal.push_back(FBTCtlMessage(MessageLayout::STRUCT));
 	}
@@ -188,7 +188,7 @@ FBTCtlMessage &FBTCtlMessage::operator [](int i)
 
 FBTCtlMessage &FBTCtlMessage::operator [](const std::string &s)
 {
-	if(this->type < MessageLayout::STRUCT) throw "invalid type(stuct)";
+	if(this->type < MessageLayout::STRUCT) throw std::runtime_error("invalid type(stuct)");
 	return structVal[s];
 }
 
@@ -199,7 +199,7 @@ std::string FBTCtlMessage::getBinaryMessage(const MessageLayout *layout) const
 		layout=&getMessageLayout(this->type);
 
 	if(!layout)
-		throw "no message layout";
+		throw std::runtime_error("no message layout");
 	
 	ret += std::string((char *) &this->type, 1);
 	switch(this->type) {
@@ -231,10 +231,10 @@ std::string FBTCtlMessage::getBinaryMessage(const MessageLayout *layout) const
 					if(element->second.type == it->type) {
 						ret += element->second.getBinaryMessage(&*it);
 					} else {
-						throw "invalid type (try dump before)";
+						throw std::runtime_error("invalid type (try dump before)");
 					}
 				} else {
-					throw std::string("struct \"")+messageTypeName(this->type)+ " value \""+it->name+"\" - field not set";
+					throw std::runtime_error(std::string("struct \"")+messageTypeName(this->type)+ " value \""+it->name+"\" - field not set");
 				}
 			}
 			break; }
@@ -250,7 +250,7 @@ void FBTCtlMessage::dump(int indent, const MessageLayout *layout) const
 		layout=&getMessageLayout(this->type);
 
 	if(!layout)
-		throw "no message layout";
+		throw std::runtime_error("no message layout");
 
 	// layout->dump();
 	if(indent == 0) {
