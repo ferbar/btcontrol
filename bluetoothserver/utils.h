@@ -2,6 +2,7 @@
 #define UTILS_H
 
 #include <string>
+#include <sstream>
 #include <map>
 #include "RuntimeExceptionWithBacktrace.h"
 
@@ -61,8 +62,6 @@ private:
 
 extern Config config;
 
-#include <string>
-#include <sstream>
 
 namespace utils
 {

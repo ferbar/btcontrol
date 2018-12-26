@@ -1,6 +1,7 @@
 #include "Thread.h"
 #include "stdio.h"
 #include <stdexcept>
+#include <sys/errno.h>
 
 
 void *Thread::startupThread(void *ptr) {
