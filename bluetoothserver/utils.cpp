@@ -1,6 +1,8 @@
 #include <stdio.h>
-#include <stdexcept>
-#include <sstream>
+// am ESP32 geht das std::stoi sonst ned: - muss vorm utils.h includet sein
+#define _GLIBCXX_USE_C99 1
+//#include <stdexcept>
+//#include <sstream>
 #include <iostream>
 #include <memory>
 #include <stdarg.h>
@@ -11,10 +13,12 @@
 #include "Thread.h"
 #include "utils.h"
 
+#ifdef HAVE_EXECINFO
 // fürs backtrace:
 #include <execinfo.h>
 // fürs demangle:
 #include <cxxabi.h>
+#endif
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -94,6 +98,7 @@ bool utils::endsWith(const std::string &str, const char *with) {
 std::RuntimeExceptionWithBacktrace::RuntimeExceptionWithBacktrace(const std::string &what)
 	: std::runtime_error(what)
 {
+#ifdef HAVE_EXECINFO
 	void *array[10];
 	size_t size;
 
@@ -166,6 +171,9 @@ std::RuntimeExceptionWithBacktrace::RuntimeExceptionWithBacktrace(const std::str
 	std::cerr << std::endl;
 
 	free(messages);
+#else
+	printf("~~~~~~~~~~~~~~~~ BACKTRACE disabled ~~~~~~~~~~~~~~~~~~~~~~~~+++\n");
+#endif
 }
 
 std::RuntimeExceptionWithBacktrace::~RuntimeExceptionWithBacktrace() throw ()
@@ -179,6 +187,10 @@ std::RuntimeExceptionWithBacktrace::~RuntimeExceptionWithBacktrace() throw ()
  */
 std::string readFile(std::string filename)
 {
+#ifdef ESP_PLATFORM
+	#warning FIXME
+	abort();
+#else
 	std::string ret;
 	struct stat buf;
 	if(stat(filename.c_str(), &buf) != 0) {
@@ -206,6 +218,7 @@ std::string readFile(std::string filename)
 		printf("%s:%lu bytes\n",filename.c_str(),buf.st_size);
 	}
 	return ret;
+#endif
 }
 
 std::string utils::format(const char *fmt, ...) {
