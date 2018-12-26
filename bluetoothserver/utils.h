@@ -35,7 +35,7 @@ char ( &_ArraySizeHelper( T (&array)[N] ))[N];
 
 #define countof( array ) (sizeof( _ArraySizeHelper( array ) ))
 
-#define read myRead
+// #define read myRead
 ssize_t myRead(int so, void *data, size_t size);
 
 
@@ -87,6 +87,8 @@ namespace utils
 	void setThreadMessageID(int messageID);
 	int getThreadClientID();
 	int getThreadMessageID();
+	// ESP32 hat keine boost lib
+	std::string trim(const std::string &s);
 }
 
 

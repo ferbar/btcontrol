@@ -32,11 +32,13 @@
 
 #include <errno.h>
 
-#include "server.h"
-
 #ifdef HAVE_ALSA
 #warning FIXME: sound gehört ins USBPlatine rein
 #include "sound.h"
+#endif
+
+#ifdef INCL_BT
+#include "BTUtils.h"
 #endif
 
 #include "utils.h"
@@ -47,8 +49,8 @@ void ClientThread::sendMessage(const FBTCtlMessage &msg)
 	int msgsize=binMsg.size();
 	printf("%d:  sendMessage size: %zu+4 %d=%s\n", this->clientID, binMsg.size(), msg.getType(), messageTypeName(msg.getType()).c_str());
 	this->prepareMessage();
-	write(this->so, &msgsize, 4);
-	write(this->so, binMsg.data(), binMsg.size());
+	this->write(&msgsize, 4);
+	this->write(binMsg.data(), binMsg.size());
 	this->flushMessage();
 }
 
@@ -99,7 +101,12 @@ void ClientThread::sendStatusReply(lastStatus_t *lastStatus)
 void ClientThread::sendClientUpdate()
 {
 #ifdef INCL_BT
-	BTServer::pushUpdate(this->so);
+	std::string clientAddr = this->getRemoteAddr();
+	for(int i=0; i < 10; i++) {
+		printf("."); fflush(stdout);
+		sleep(1);
+	}
+	BTUtils::BTPush(clientAddr);
 #else
 	printf("ClientThread::sendClientUpdate ohne BT\n");
 	abort();
@@ -164,7 +171,7 @@ continue;
 		gettimeofday(&t0, NULL);
 		*/
 		this->readSelect(); // auf daten warten, macht exception wenn innerhalb vom timeout nix kommt
-		if((rc=read(this->so, &msgsize, 4)) != 4) {
+		if((rc=this->read(&msgsize, 4)) != 4) {
 			throw std::runtime_error("error reading cmd: " + rc);
 		}
 		/*
@@ -178,8 +185,8 @@ continue;
 		}
 		char buffer[msgsize];
 		this->readSelect();
-		if((rc=read(this->so, buffer, msgsize)) != msgsize) {
-			throw std::runtime_error("error reading cmd.data: " + rc );
+		if((rc=this->read(buffer, msgsize)) != msgsize) {
+			throw std::runtime_error("error reading cmd.data: " + rc);
 		}
 		InputReader in(buffer,msgsize);
 		// printf("%d:parsing msg\n",this->clientID);
@@ -404,16 +411,16 @@ continue;
 #ifdef INCL_BT
 			} else if(cmd.isType("BTSCAN")) { // liste mit eingetragenen loks abrufen, format: <name>;<adresse>;...\n
 				FBTCtlMessage reply(messageTypeID("BTSCAN_REPLY"));
-				BTServer::BTScan(reply);
+				BTUtils::BTScan(reply);
 				// reply.dump();
 				sendMessage(reply);
-			} else if(cmd.isType("BTPUSH")) { // 
+			} else if(cmd.isType("BTPUSH")) { // sendUpdate
 				printf("BTPUSH ---------------------------------------------------\n");
 				FBTCtlMessage reply(messageTypeID("BTPUSH_REPLY"));
 				std::string addr=cmd["addr"].getStringVal();
 				// TODO: ussppush oder gammu push 
 				// int type=cmd["type"].getIntVal();
-				BTServer::BTPush(addr);
+				BTUtils::BTPush(addr);
 
 				// reply.dump();
 				reply["rc"]=1;
@@ -421,7 +428,7 @@ continue;
 #endif
 			} else {
 				printf(ANSI_RED "%d/%d:----------------- invalid/unimplemented command (%d,%s)------------------------\n" ANSI_DEFAULT,
-					this->clientID,this->msgNum,cmd.getType(),messageTypeName(cmd.getType()).c_str());
+					this->clientID, this->msgNum, cmd.getType(), messageTypeName(cmd.getType()).c_str());
 			/*
 			if(memcmp(cmd,"invalid_key",10)==0) {
 				printf("%d:invalid key ! param1: %s\n",startupdata->clientID,param1);
@@ -512,5 +519,4 @@ ClientThread::~ClientThread()
 		printf("lastClient, stopping my Locos\n");
 		hardware->fullstop(false, true);
 	}
-	close(this->so);
 }

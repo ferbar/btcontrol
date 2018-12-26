@@ -114,7 +114,7 @@ Makefile.config:
 		fi
 	@echo .
 
-btserver: fbtctl_message.o message_layout.o server.o tcpclient.o clientthread.o lokdef.o main.o srcp.o utils.o ParseExpr.o Thread.o USBPlatine.o
+btserver: fbtctl_message.o message_layout.o server.o tcpclient.o clientthread.o lokdef.o main.o srcp.o utils.o ParseExpr.o Thread.o USBPlatine.o BTUtils.o
 	${CPP} ${LDFLAGS} $+ -o btserver
 
 digispark_test: USBDigispark.cpp utils.o

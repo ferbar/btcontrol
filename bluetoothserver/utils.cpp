@@ -1,10 +1,12 @@
 #include <stdio.h>
-#include <boost/algorithm/string.hpp>
 #include <stdexcept>
 #include <sstream>
 #include <iostream>
 #include <memory>
 #include <stdarg.h>
+#include <cctype>
+#include <algorithm>
+#include <string.h>
 
 #include "Thread.h"
 #include "utils.h"
@@ -42,8 +44,8 @@ void Config::init(const std::string &confFilename) {
 		if(komma != std::string::npos) {
 			key=line.substr(0,komma);
 			value=line.substr(komma+1);
-			boost::algorithm::trim(key);
-			boost::algorithm::trim(value);
+			utils::trim(key);
+			utils::trim(value);
 		} else {
 			key=line;
 			value="";
@@ -266,4 +268,12 @@ int utils::getThreadClientID() {
 int utils::getThreadMessageID() {
 	intptr_t tmp = (intptr_t) (threadSpecificMessageID.get() );
 	return (int) tmp;
+}
+
+// c++11 magick
+std::string utils::trim(const std::string &s)
+{
+   auto wsfront=std::find_if_not(s.begin(),s.end(),[](int c){return std::isspace(c);});
+   auto wsback=std::find_if_not(s.rbegin(),s.rend(),[](int c){return std::isspace(c);}).base();
+   return (wsback<=wsfront ? std::string() : std::string(wsfront,wsback));
 }
