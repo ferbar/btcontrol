@@ -1,5 +1,8 @@
 #include <assert.h>
+#include <stdlib.h>
+#ifdef HAVE_ALSA
 #include "sound.h"
+#endif
 #include "utils.h"
 #include "USBPlatine.h"
 #include "lokdef.h"

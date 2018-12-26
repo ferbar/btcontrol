@@ -40,6 +40,7 @@
 #include "utils.h"
 #include "server.h"
 #include "tcpclient.h"
+#include "BTUtils.h"
 
 int TCPClient::numClients=0;
 
@@ -81,4 +82,21 @@ void TCPClient::readSelect()
 TCPClient::~TCPClient()
 {
 	close(this->so);
+}
+
+std::string TCPClient::getRemoteAddr() {
+#ifdef INCL_BT
+	return BTUtils::getRemoteAddr(this->so);
+#else
+	printf("TCPClient::getRemoteAddr ohne BT\n");
+	abort();
+#endif
+}
+
+ssize_t TCPClient::read(void *buf, size_t count) {
+	return ::myRead(this->so, buf, count);
+}
+
+ssize_t TCPClient::write(const void *buf, size_t count) {
+	return ::write(this->so, buf, count);
 }

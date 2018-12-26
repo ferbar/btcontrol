@@ -8,6 +8,7 @@
  */
 #include <string>
 #include <stdexcept>
+#include <stdio.h>
 
 #include "ParseExpr.h"
 

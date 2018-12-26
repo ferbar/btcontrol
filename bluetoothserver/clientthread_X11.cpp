@@ -28,7 +28,9 @@
 #include "clientthread_X11.h"
 #include "lokdef.h"
 #include "utils.h"
-#include "server.h"
+#ifdef INCL_BT
+#include "BTUtils.h"
+#endif
 
 #include <X11/Xlib.h>
 #include <X11/extensions/XTest.h>
@@ -53,6 +55,7 @@ void ClientThreadX11::run()
 	// startupdata_t *startupdata=(startupdata_t *)data;
 
 	printf("%d:socket accepted sending welcome msg\n",this->clientID);
+	utils::setThreadClientID(this->clientID);
 	FBTCtlMessage heloReply(messageTypeID("HELO"));
 	heloReply["name"]="my bt server";
 	heloReply["version"]="0.9";
@@ -70,6 +73,7 @@ void ClientThreadX11::run()
 	for(int i=0; i <= nLokdef; i++) { changedAddrIndex[i] = false; }
 
 
+	printf("%d:hello done, enter main loop\n",this->clientID);
 	// int speed=0;
 	// int addr=3;
 	while(1) {
@@ -80,16 +84,16 @@ void ClientThreadX11::run()
 		int msgsize=0;
 		int rc;
 		this->readSelect(); // auf daten warten, macht exception wenn innerhalb vom timeout nix kommt
-		if((rc=read(this->so, &msgsize, 4)) != 4) {
+		if((rc=this->read(&msgsize, 4)) != 4) {
 			throw std::runtime_error("error reading cmd: " + rc);
 		}
 		// printf("%d:reading msg.size: %d bytes\n",this->clientID,msgsize);
-		if(msgsize < 0 || msgsize > 10000) {
+		if(msgsize < 0 || msgsize > MAX_MESSAGE_SIZE) {
 			throw std::runtime_error("invalid size msgsize 2big");
 		}
 		char buffer[msgsize];
 		this->readSelect();
-		if((rc=read(this->so, buffer, msgsize)) != msgsize) {
+		if((rc=this->read(buffer, msgsize)) != msgsize) {
 			throw std::runtime_error("error reading cmd.data: " + rc);
 		}
 		InputReader in(buffer,msgsize);
@@ -318,16 +322,16 @@ void ClientThreadX11::run()
 #ifdef INCL_BT
 			} else if(cmd.isType("BTSCAN")) { // liste mit eingetragenen loks abrufen, format: <name>;<adresse>;...\n
 				FBTCtlMessage reply(messageTypeID("BTSCAN_REPLY"));
-				BTServer::BTScan(reply);
+				BTUtils::BTScan(reply);
 				// reply.dump();
 				sendMessage(reply);
-			} else if(cmd.isType("BTPUSH")) { // 
+			} else if(cmd.isType("BTPUSH")) { // sendUpdate
 				printf("BTPUSH ---------------------------------------------------\n");
 				FBTCtlMessage reply(messageTypeID("BTPUSH_REPLY"));
 				std::string addr=cmd["addr"].getStringVal();
 				// TODO: ussppush oder gammu push 
 				// int type=cmd["type"].getIntVal();
-				BTServer::BTPush(addr);
+				BTUtils::BTPush(addr);
 
 				// reply.dump();
 				reply["rc"]=1;
