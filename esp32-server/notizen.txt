@@ -1,0 +1,6 @@
+ 
+https://github.com/espressif/arduino-esp32/blob/a59eafbc9dfa3ce818c110f996eebf68d755be24/libraries/ESPmDNS/examples/mDNS_Web_Server/mDNS_Web_Server.ino
+
+https://techtutorialsx.com/2018/10/12/esp32-http-web-server-handling-body-data/
+
+**** WICHTIG *** bei der mdns lib example muss man als service _http _tcp verwenden!!!
