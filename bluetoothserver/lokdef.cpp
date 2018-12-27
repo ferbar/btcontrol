@@ -28,7 +28,7 @@
 #include "utils.h"
 #include <stdexcept>
 
-lokdef_t *lokdef; 
+lokdef_t *lokdef=NULL; 
 
 /**
  * liefert den index
