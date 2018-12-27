@@ -1,8 +1,10 @@
-#include "Thread.h"
-#include "stdio.h"
+#include <stdio.h>
 #include <stdexcept>
 #include <sys/errno.h>
+#include "utils.h"
+#include "Thread.h"
 
+static const char *TAG="THREAD";
 
 void *Thread::startupThread(void *ptr) {
 	printf("Thread::startupThread()\n");
@@ -62,11 +64,13 @@ Mutex::Mutex() {
 
 Mutex::~Mutex() {
 	if(! this->tryLock()) {
-		throw std::runtime_error("error destroying mutex - mutex is locked");
+		debugf("error destroying mutex - mutex is locked");
+		abort();
 	}
 	this->unlock();
 	if(pthread_mutex_destroy(&this->m)) {
-		throw std::runtime_error("error destroying mutex");
+		debugf("error destroying mutex");
+		abort();
 	}
 }
 
