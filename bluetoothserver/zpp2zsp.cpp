@@ -19,11 +19,11 @@ std::string baseFolder;
 
 static void write_wav_file(const std::string &wavData, const char *outfilename)
 {
-	static float buffer [BUFFER_LEN] ;
+	// static float buffer [BUFFER_LEN] ;
 
 	SNDFILE		*outfile ;
 	SF_INFO		sfinfo ;
-	int			k, readcount ;
+	// int			k, readcount ;
 
 	printf ("    -> %s ", outfilename) ;
 	fflush (stdout) ;
@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
 		int address=(((unsigned char) data[i*4+1]) << 16) + 
 			(((unsigned char) data[i*4+2]) << 8) +
 			((unsigned char) data[i*4+3]);
-		if(address > 0 && address < data.length()) {
+		if(address > 0 && address < (signed) data.length()) {
 			printf("%02x address: %06x ", (unsigned char) data[i*4], address);
 			printf("data: %02x%02x:%02x%02x ", (unsigned char) data[address], (unsigned char) data[address+1], (unsigned char) data[address+2], (unsigned char) data[address+3]);
 			printf(" %02x%02x:%02x%02x ", (unsigned char) data[address+4], (unsigned char) data[address+5], (unsigned char) data[address+6], (unsigned char) data[address+7]);
@@ -161,7 +161,7 @@ int main(int argc, char *argv[]) {
 			}
 			printf("wav end: %06x ", wavEnd);
 			std::string infoName;
-			if(wavEnd < data.length()) {
+			if(wavEnd < (signed) data.length()) {
 				printf("%02x%02x ", (unsigned char) data[wavEnd+1], (unsigned char) data[wavEnd+2]);
 				int infoLen=(unsigned char) data[wavEnd+3];
 				infoName=data.substr(wavEnd+4, infoLen);
