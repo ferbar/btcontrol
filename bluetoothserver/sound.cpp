@@ -249,7 +249,7 @@ void Sound::loadWavFile(const std::string &filename, std::string &out, int volum
 						 break; }
 		}
 	}
-	printf("wav file: size=%d, bitdepth=%d, bytespersecond=%d, samplerate=%d channels=%d wavFormat=%d\n", datasize, bitdepth, bytespersecond, samplerate, channels, wavFormat);
+	printf("wav file: size=%d, bitdepth=%d, bytespersecond=%d, samplerate=%d channels=%d wavFormat=%x\n", datasize, bitdepth, bytespersecond, samplerate, channels, (int) wavFormat);
 	if(bitdepth == 8) {
 		Sound::bits=SND_PCM_FORMAT_U8;
 	}
