@@ -20,3 +20,9 @@ private:
 
 	int motorStart;
 };
+
+#define BRAKEVCC 0
+#define CW 1
+#define CCW 2
+#define BRAKEGND 3
+void motorGo(uint8_t motor, uint8_t direct);
