@@ -43,11 +43,13 @@
 
 #include "utils.h"
 
+static const char *TAG="clientthread";
+
 void ClientThread::sendMessage(const FBTCtlMessage &msg)
 {
 	std::string binMsg=msg.getBinaryMessage();
 	int msgsize=binMsg.size();
-	printf("%d:  sendMessage size: %zu+4 %d=%s\n", this->clientID, binMsg.size(), msg.getType(), messageTypeName(msg.getType()).c_str());
+	DEBUGF(":sendMessage size: %zu+4 %d=%s", binMsg.size(), msg.getType(), messageTypeName(msg.getType()).c_str());
 	this->prepareMessage();
 	this->write(&msgsize, 4);
 	this->write(binMsg.data(), binMsg.size());
@@ -103,12 +105,12 @@ void ClientThread::sendClientUpdate()
 #ifdef INCL_BT
 	std::string clientAddr = this->getRemoteAddr();
 	for(int i=0; i < 10; i++) {
-		printf("."); fflush(stdout);
+		DEBUGF(".");
 		sleep(1);
 	}
 	BTUtils::BTPush(clientAddr);
 #else
-	printf("ClientThread::sendClientUpdate ohne BT\n");
+	ERRORF("ClientThread::sendClientUpdate ohne BT\n");
 	abort();
 #endif
 }
@@ -126,8 +128,8 @@ void ClientThread::run()
 		clientFahrSound.start();
 	}
 #endif
-	printf("%d:socket accepted sending welcome msg\n",this->clientID);
 	utils::setThreadClientID(this->clientID);
+	NOTICEF("%d:socket accepted sending welcome msg\n",this->clientID);
 	FBTCtlMessage heloReply(messageTypeID("HELO"));
 	heloReply["name"]="my bt server";
 	heloReply["version"]="0.9";
@@ -145,7 +147,7 @@ void ClientThread::run()
 	for(int i=0; i <= nLokdef; i++) { changedAddrIndex[i] = false; }
 
 
-	printf("%d:hello done, enter main loop\n",this->clientID);
+	NOTICEF("%d:hello done, enter main loop\n",this->clientID);
 	// int speed=0;
 	// int addr=3;
 // int sleepTime=0; -> velleman platine test
@@ -155,7 +157,7 @@ void ClientThread::run()
 if(sleepTime <= 0) {
 	sleepTime= 3000000;
 }
-printf("sleep: %d\n",sleepTime);
+DEBUGF("sleep: %d\n",sleepTime);
 usleep(sleepTime);
 sleepTime-=90000;
 platine->onebench();
@@ -172,47 +174,48 @@ continue;
 		*/
 		this->readSelect(); // auf daten warten, macht exception wenn innerhalb vom timeout nix kommt
 		if((rc=this->read(&msgsize, 4)) != 4) {
-			throw std::runtime_error("error reading cmd: " + rc);
+			throw std::runtime_error(utils::format("error reading cmd: %d", rc));
 		}
 		/*
 		gettimeofday(&t, NULL);
 		int us=(t.tv_sec - t0.tv_sec) * 1000000 + t.tv_usec - t0.tv_usec;
-		printf("select + read in %dµs\n",us);
+		DEBUGF("select + read in %dµs",us);
 		*/
-		// printf("%d:reading msg.size: %d bytes\n",this->clientID,msgsize);
+		// DEBUGF("%d:reading msg.size: %d bytes",this->clientID,msgsize);
 		if(msgsize < 0 || msgsize > MAX_MESSAGE_SIZE) {
 			throw std::runtime_error("invalid size msgsize 2big");
 		}
 		char buffer[msgsize];
 		this->readSelect();
 		if((rc=this->read(buffer, msgsize)) != msgsize) {
-			throw std::runtime_error("error reading cmd.data: " + rc);
+			throw std::runtime_error(utils::format("error reading cmd.data: %d", rc));
 		}
+		DEBUGF(":main loop - reader");
 		InputReader in(buffer,msgsize);
-		// printf("%d:parsing msg\n",this->clientID);
+		// DEBUGF("%d:parsing msg\n",this->clientID);
 		FBTCtlMessage cmd;
 		cmd.readMessage(in);
 		if(cfg_debug) {
-			printf("%d/%d: msg",this->clientID, this->msgNum);
+			DEBUGF("/%d: msg", this->msgNum);
 			cmd.dump();
 		} else {
-			printf("%d/%d: msg %d=%s\n", this->clientID, this->msgNum, cmd.getType(), messageTypeName(cmd.getType()).c_str());
+			DEBUGF("/%d: msg %d=%s", this->msgNum, cmd.getType(), messageTypeName(cmd.getType()).c_str());
 		}
 		/*
 		int nr=0; // für die conrad platine
 		int size;
 		char buffer[256];
 		if((size = read(startupdata->so, buffer, sizeof(buffer))) <= 0) {
-			printf("%d:error reading message size=%d \"%.*s\"\n",startupdata->clientID,size,size >= 0 ? buffer : NULL);
+			DEBUGF("%d:error reading message size=%d \"%.*s\"\n",startupdata->clientID,size,size >= 0 ? buffer : NULL);
 			break;
 		}
 		buffer[size]='\0';
-		printf("%.*s",size,buffer);
+		DEBUGF("%.*s",size,buffer);
 		char cmd[sizeof(buffer)]="";
 		char param1[sizeof(buffer)]="";
 		char param2[sizeof(buffer)]="";
 		sscanf(buffer,"%d %s %s %s",&nr,&cmd, &param1, &param2);
-		printf("%d:<- %s p1=%s p2=%s\n",startupdata->clientID,cmd,param1,param2);
+		DEBUGF("%d:<- %s p1=%s p2=%s\n",startupdata->clientID,cmd,param1,param2);
 		*/
 		if(true) {
 			if(cmd.isType("PING")) {
@@ -310,13 +313,13 @@ continue;
 				int funcNr=cmd["funcnr"].getIntVal();
 				int value=cmd["value"].getIntVal();
 				if(funcNr >= 0 && funcNr < lokdef[addr_index].nFunc) {
-					if(cfg_debug) printf("%d/%d:set funcNr[%d]=%d\n",this->clientID,this->msgNum,funcNr,value);
+					if(cfg_debug) DEBUGF("/%d:set funcNr[%d]=%d", this->msgNum, funcNr, value);
 					if(value)
 						lokdef[addr_index].func[funcNr].ison = true;
 					else
 						lokdef[addr_index].func[funcNr].ison = false;
 				} else {
-					printf(ANSI_RED "%d/%d:invalid funcNr out of bounds(%d)\n" ANSI_DEFAULT, this->clientID,this->msgNum,funcNr);
+					ERRORF("/%d:invalid funcNr out of bounds(%d)", this->msgNum, funcNr);
 				}
 				sendStatusReply(lastStatus);
 				changedAddrIndex[addr_index]=true;
@@ -324,7 +327,7 @@ continue;
 /*
 			} else if(STREQ(cmd,"select")) { // ret = lokname
 				int new_addr=atoi(param1);
-				printf("%d:neue lok addr:%d\n",startupdata->clientID,new_addr);
+				DEBUGF("%d:neue lok addr:%d\n",startupdata->clientID,new_addr);
 				int new_addr_index=getAddrIndex(new_addr);
 				if(new_addr_index >= 0) {
 					addr=new_addr;
@@ -361,7 +364,7 @@ continue;
 				int addr=cmd["addr"].getIntVal();
 				int addr_index=getAddrIndex(addr);
 				FBTCtlMessage reply(messageTypeID("GETFUNCTIONS_REPLY"));
-				printf("%d/%d: funclist for addr %d\n",this->clientID,this->msgNum,addr);
+				DEBUGF("/%d: funclist for addr %d", this->msgNum, addr);
 				// char buffer[32];
 				for(int i=0; i < lokdef[addr_index].nFunc; i++) {
 					// snprintf(buffer,sizeof(buffer)," %d;%d;%s\n",j+1,lokdef[addr_index].func[j].ison,lokdef[addr_index].func[j].name);
@@ -403,10 +406,10 @@ continue;
 				reply["img"]=readFile("img/"+imageName);
 				sendMessage(reply);
 			} else if(cmd.isType("HELO_ERR")) {
-				printf(ANSI_RED "%d/%d: client proto error\n" ANSI_DEFAULT, this->clientID, this->msgNum);
+				ERRORF("/%d: client proto error", this->msgNum);
 				int protohash=cmd["protohash"].getIntVal();
 				int doupdate=cmd["doupdate"].getIntVal();
-				printf("hash=%d (me:%d), doupdate=%d\n",protohash,messageLayouts.protocolHash,doupdate);
+				ERRORF("hash=%d (me:%d), doupdate=%d",protohash,messageLayouts.protocolHash,doupdate);
 				this->sendClientUpdate();
 #ifdef INCL_BT
 			} else if(cmd.isType("BTSCAN")) { // liste mit eingetragenen loks abrufen, format: <name>;<adresse>;...\n
@@ -415,7 +418,7 @@ continue;
 				// reply.dump();
 				sendMessage(reply);
 			} else if(cmd.isType("BTPUSH")) { // sendUpdate
-				printf("BTPUSH ---------------------------------------------------\n");
+				DEBUGF("BTPUSH ---------------------------------------------------");
 				FBTCtlMessage reply(messageTypeID("BTPUSH_REPLY"));
 				std::string addr=cmd["addr"].getStringVal();
 				// TODO: ussppush oder gammu push 
@@ -427,11 +430,11 @@ continue;
 				sendMessage(reply);
 #endif
 			} else {
-				printf(ANSI_RED "%d/%d:----------------- invalid/unimplemented command (%d,%s)------------------------\n" ANSI_DEFAULT,
-					this->clientID, this->msgNum, cmd.getType(), messageTypeName(cmd.getType()).c_str());
+				ERRORF("/%d:----------------- invalid/unimplemented command (%d,%s)------------------------",
+					this->msgNum, cmd.getType(), messageTypeName(cmd.getType()).c_str());
 			/*
 			if(memcmp(cmd,"invalid_key",10)==0) {
-				printf("%d:invalid key ! param1: %s\n",startupdata->clientID,param1);
+				DEBUGF("%d:invalid key ! param1: %s\n",startupdata->clientID,param1);
 				bool notaus=false;
 				/ *
 				int i=0;
@@ -460,14 +463,14 @@ continue;
 				}
 				* /
 				if(notaus) {
-					printf("notaus\n");
+					DEBUGF("notaus\n");
 					lokdef[addr_index].currspeed=0;
 					emergencyStop=true;
 				}
 				*/
 			}
 		} else {
-			printf("%d:no command?????",this->clientID);
+			ERRORF(":no command?????");
 		}
 
 		/*
@@ -488,7 +491,7 @@ continue;
 		// wegen X_MULTI könnten sich mehrere adressen geändert ham:
 		for(int i=0; i <= nLokdef; i++) {
 			if(changedAddrIndex[i]) {
-				// printf(" --- addr_index=%d\n", addr_index);
+				// DEBUGF(" --- addr_index=%d\n", addr_index);
 				changedAddrIndex[i]=false;
 				int addr_index=i;
 				lokdef[addr_index].lastClientID = this->clientID;
@@ -498,7 +501,7 @@ continue;
 		}
 		msgNum++;
 	}
-	printf("%d:client exit\n",this->clientID);
+	NOTICEF("%d:client exit\n",this->clientID);
 }
 
 /**
@@ -506,7 +509,7 @@ continue;
  */
 ClientThread::~ClientThread()
 {
-	printf("%d:~ClientThread numClientd=%d\n",this->clientID, this->numClients);
+	ERRORF(":~ClientThread numClientd=%d\n", this->numClients);
 	if(--this->numClients == 0) {
 		// letzter client => sound aus
 #ifdef HAVE_ALSA
@@ -516,7 +519,7 @@ ClientThread::~ClientThread()
 		hardware->fullstop(true, true);
 	} else {
 		// nicht letzter client => alle loks die von mir gesteuert wurden notstop
-		printf("lastClient, stopping my Locos\n");
+		NOTICEF("lastClient, stopping my Locos\n");
 		hardware->fullstop(false, true);
 	}
 }

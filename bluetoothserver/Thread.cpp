@@ -1,16 +1,17 @@
 #include <stdio.h>
 #include <stdexcept>
 #include <sys/errno.h>
+#include <stdlib.h>
 #include "utils.h"
 #include "Thread.h"
 
 static const char *TAG="THREAD";
 
 void *Thread::startupThread(void *ptr) {
-	printf("Thread::startupThread()\n");
+	NOTICEF("Thread::startupThread()\n");
 	Thread *t=(Thread *) ptr;
 	t->run();
-	printf("Thread::startupThread() done\n");
+	NOTICEF("Thread::startupThread() done\n");
 	t->exited=true;
 	if(t->autodelete) {
 		delete t;
@@ -25,7 +26,7 @@ void Thread::start() {
 }
 
 void *Thread::cancel() {
-	printf("Thread::cancel()\n");
+	NOTICEF("Thread::cancel()\n");
 	void *ret;
 	if(this->thread) {
 		int s = pthread_cancel(this->thread);
@@ -64,12 +65,12 @@ Mutex::Mutex() {
 
 Mutex::~Mutex() {
 	if(! this->tryLock()) {
-		debugf("error destroying mutex - mutex is locked");
+		ERRORF("error destroying mutex - mutex is locked");
 		abort();
 	}
 	this->unlock();
 	if(pthread_mutex_destroy(&this->m)) {
-		debugf("error destroying mutex");
+		ERRORF("error destroying mutex");
 		abort();
 	}
 }
