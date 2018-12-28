@@ -88,7 +88,22 @@ namespace utils
 	int getThreadMessageID();
 	// ESP32 hat keine boost lib
 	std::string trim(const std::string &s);
-}
 
+	class Log {
+	public:
+		void printf(const char *tag, int level, const char *file, int line, const char *fmt, ...)
+			__attribute__ ((format (printf, 6, 7)));
+		static const int LEVEL_DEBUG=1;
+		static const int LEVEL_NOTICE=2;
+		static const int LEVEL_ERROR=3;
+	};
+	extern utils::Log log;
+	void dumpBacktrace();
+};
+
+// hint ## => ... kann auch leer sein! -> https://gcc.gnu.org/onlinedocs/cpp/Variadic-Macros.html
+#define DEBUGF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_DEBUG, __FILE__, __LINE__, fmt, ##__VA_ARGS__ )
+#define NOTICEF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_NOTICE, __FILE__, __LINE__, fmt, ##__VA_ARGS__ )
+#define ERRORF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_ERROR, __FILE__, __LINE__, fmt, ##__VA_ARGS__ )
 
 #endif
