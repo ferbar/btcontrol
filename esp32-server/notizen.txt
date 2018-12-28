@@ -4,3 +4,19 @@ https://github.com/espressif/arduino-esp32/blob/a59eafbc9dfa3ce818c110f996eebf68
 https://techtutorialsx.com/2018/10/12/esp32-http-web-server-handling-body-data/
 
 **** WICHTIG *** bei der mdns lib example muss man als service _http _tcp verwenden!!!
+
+Partition Table:
+~/Arduino/hardware/espressif/esp32/tools/partitions/default.csv
+
+Esp EspExceptionDecoder:
+https://github.com/me-no-dev/EspExceptionDecoder
+
+muss ma vorher im menuconfig panic handler -> GDBStub aktivieren
+./xtensa-esp32-elf-gdb "/tmp/arduino_build_468425/btcontrol.ino.elf" -b 115200 -ex 'target remote /dev/ttyUSB0'
+
+Fehlermeldungen:
+https://github.com/espressif/esp-idf/blob/master/docs/en/api-guides/fatal-errors.rst
+
+
+exportierte funktionen anzeigen:
+nm -C libfreertos.a
