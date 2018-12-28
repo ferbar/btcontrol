@@ -19,18 +19,23 @@
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <WiFiClient.h>
+// WifiClient verwendet pthread_*specific => pthread lib wird immer dazu gelinkt
 #include <pthread.h>
+// #include <freertos/task.h>
 #include "ESP32PWM.h"
 #include "clientthread.h"
+#include "utils.h"
+#include "lokdef.h"
 
-const char* ssid = "******";
-const char* password = "******";
+#include "wifi_sid_password.h"
+
+static const char *TAG="main";
 
 Hardware *hardware=NULL;
 bool cfg_debug=false;
 
 // TCP server at port 80 will respond to HTTP requests
-WiFiServer server(80);
+WiFiServer server(3030);
 
 void setup(void)
 {  
@@ -38,7 +43,7 @@ void setup(void)
 
     // Connect to WiFi network
     WiFi.begin(ssid, password);
-    Serial.println("");
+    Serial.println("connecting to wifi ...");
 
     // Wait for connection
     while (WiFi.status() != WL_CONNECTED) {
@@ -62,19 +67,80 @@ void setup(void)
             delay(1000);
         }
     }
-    Serial.println("mDNS responder started");
-
-    // Start TCP (HTTP) server
-    server.begin();
-    Serial.println("TCP server started");
+    Serial.println("btcontrol responder started");
 
     // Add service to MDNS-SD
     MDNS.addService("_btcontrol", "_tcp", 3030);
 
     hardware=new ESP32PWM();
+    Serial.println("init monstershield done");
+
+    Serial.println("loading message layouts");
+    messageLayouts.load();
+    Serial.println("loading message layouts - done");
+
+    Serial.println("loading lokdef");
+    readLokdef();
+    Serial.println("loading lokdef done");
+
+    // Start TCP server
+    server.begin();
+    Serial.println("TCP server started");
+
 }
 
-int clientId=1;
+class StartupData {
+public:
+    WiFiClient client;
+};
+
+// https://www.freertos.org/a00125.html
+int clientID_counter=1;
+void startClientThread(void *s) {
+    Serial.println("client thread");
+    int clientID=clientID_counter++;
+    const char *taskname=pcTaskGetTaskName(NULL);
+    Serial.printf("task name: %s\n", taskname);
+    utils::setThreadClientID(clientID);
+
+    utils::dumpBacktrace();
+    
+    Serial.printf("local storage: clientID: %d\n", utils::getThreadClientID());
+    Serial.println("Free HEAP: " + String(ESP.getFreeHeap()));
+    StartupData *startupData=(StartupData *) s;
+    /*
+    UBaseType_t uxTaskGetSystemState(
+                       TaskStatus_t * const pxTaskStatusArray,
+                       const UBaseType_t uxArraySize,
+                       unsigned long * const pulTotalRunTime );
+    */                 
+    
+    ClientThread *clientThread=NULL;
+    try {
+        clientThread = new ClientThread(clientID, startupData->client);
+        clientThread->run();
+    } catch(const char *e) {
+        ERRORF("%d: exception %s - client thread killed\n", clientID, e);
+    } catch(std::RuntimeExceptionWithBacktrace &e) {
+        ERRORF("%d: Runtime Exception [%s] - client thread killed\n", clientID, e.what());
+    } catch(std::exception &e) {
+        ERRORF("%d: exception %s - client thread killed\n", clientID, e.what());
+        /*
+    } catch (abi::__forced_unwind&) {
+        Serial.printf("%d: exception unwind\n");
+        throw; */
+    } catch (...) {
+        Serial.printf("%d: unknown exception\n", clientID);
+    }
+    if(clientThread) {
+        delete(clientThread);
+    }
+    delete(startupData);
+    Serial.printf("%d: ============= client thread done =============\n", clientID);
+    // ohne dem rebootet er mit fehler... [ https://www.freertos.org/FreeRTOS_Support_Forum_Archive/September_2013/freertos_Better_exit_from_task_8682337.html ]
+    vTaskDelete( NULL );
+}
+
 void loop(void)
 {
     // Check if a client has connected
@@ -85,14 +151,38 @@ void loop(void)
     Serial.println("");
     Serial.println("New client");
 
+/*
     // Wait for data from client to become available
     while(client.connected() && !client.available()){
+        Serial.println("sleep until available");
         delay(1);
     }
+*/
 
-    ClientThread *clientThread = new ClientThread(clientId++,client);
-    clientThread->run();
+    Serial.println("creating thread");
+    StartupData *startupData=new StartupData;
+    startupData->client=client;
+    //pthread_t thread;
+    //int returnValue = pthread_create(&thread, NULL, startClientThread, (void *)&client);
+    TaskHandle_t xHandle = NULL;
+    BaseType_t xReturned;
+    xReturned = xTaskCreate(
+                    startClientThread,       /* Function that implements the task. */
+                    "client",          /* Text name for the task. */
+                    8000,      /* Stack size in words, not bytes. */
+                    ( void * ) startupData,    /* Parameter passed into the task. */
+                    tskIDLE_PRIORITY,/* Priority at which the task is created. */
+                    &xHandle );      /* Used to pass out the created task's handle. */
+                    
+    if( xReturned != pdPASS ) {
+    // if (returnValue) {
+        Serial.println("error creating thread: An error has occurred");
+    } else {
+        Serial.println("thread created");
+    }
 
+
+/*
     // Read the first line of HTTP request
     String req = client.readStringUntil('\r');
 
@@ -128,5 +218,6 @@ void loop(void)
     client.print(s);
 
     Serial.println("Done with client");
+    */
 }
 
