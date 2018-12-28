@@ -6,8 +6,9 @@
 
 class TCPClient {
 public:
-	TCPClient(int id, WiFiClient client) : clientID(id), client(client) {
+	TCPClient(int id, WiFiClient &client) : clientID(id), client(client) {
 		numClients++; // sollte atomic sein
+		this->client.setTimeout(10); // in sekunden
 	};
 	virtual ~TCPClient();
 	virtual void run()=0;
