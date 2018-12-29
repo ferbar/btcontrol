@@ -20,3 +20,8 @@ https://github.com/espressif/esp-idf/blob/master/docs/en/api-guides/fatal-errors
 
 exportierte funktionen anzeigen:
 nm -C libfreertos.a
+
+ESPDUIONO Board + Monstster Shield (china pins sind anders als sparkfun !!! )
+GPIO36 ist in wirklichkeit GPIO35
+
+ENa vom Monster Shield wird beim ESP32 auf 0 gezogen, damit schaltet sich bridge A aus ....

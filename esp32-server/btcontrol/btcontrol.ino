@@ -27,6 +27,10 @@
 #include "utils.h"
 #include "lokdef.h"
 
+// TODO:
+// https://arduino.stackexchange.com/questions/23743/include-git-tag-or-svn-revision-in-arduino-sketch
+//#include "gitTagVersion.h"
+
 #include "wifi_sid_password.h"
 
 static const char *TAG="main";
