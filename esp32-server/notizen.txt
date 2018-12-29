@@ -21,7 +21,22 @@ https://github.com/espressif/esp-idf/blob/master/docs/en/api-guides/fatal-errors
 exportierte funktionen anzeigen:
 nm -C libfreertos.a
 
+======== Motor shield ========
+dual monster VNH2SP30 passt halbwegs gut. - "high" ist 3,25V -> beim PWM wird das teilweise nicht erreicht (=> R, siehe unten)
+VNH5019 wäre besser
+
 ESPDUIONO Board + Monstster Shield (china pins sind anders als sparkfun !!! )
 GPIO36 ist in wirklichkeit GPIO35
 
 ENa vom Monster Shield wird beim ESP32 auf 0 gezogen, damit schaltet sich bridge A aus ....
+
+2k2 R zwischen +5V und PWM vom VNH2SP30
+
+========= Audio: ==============
+der ESP32 hat einen DAC drinnen, braucht nur einen audio verstärker
+https://github.com/bitluni/AudioVideoExample/tree/master/AudioVideoExample
+beschreibung: http://bitluni.net/esp32-composite-audio/
+
+oder (ohne DMA)
+http://www.xtronical.com/dacaudio-hardware/
+https://www.hackster.io/julianfschroeter/stream-your-audio-on-the-esp32-2e4661
