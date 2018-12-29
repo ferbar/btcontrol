@@ -1,17 +1,14 @@
 /*
-  ESP32 mDNS responder sample
-
-  This is an example of an HTTP server that is accessible
-  via http://esp32.local URL thanks to mDNS responder.
+  btcontrol ESP32 Arduino sketch
 
   Instructions:
-  - Update WiFi SSID and password as necessary.
+  - creae wifi_sid_password.h with const char*ssid and password
   - Flash the sketch to the ESP32 board
   - Install host software:
     - For Linux, install Avahi (http://avahi.org/).
     - For Windows, install Bonjour (http://www.apple.com/support/bonjour/).
     - For Mac OSX and iOS support is built in through Bonjour already.
-  - Point your browser to http://esp32.local, you should see a response.
+  - Open the btclient app on your phone
 
  */
 
