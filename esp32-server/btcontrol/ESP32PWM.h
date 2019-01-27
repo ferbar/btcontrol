@@ -19,6 +19,7 @@ private:
 	char buffer[1024];
 
 	int motorStart;
+	int motorFullSpeed;
 };
 
 #define BRAKEVCC 0
