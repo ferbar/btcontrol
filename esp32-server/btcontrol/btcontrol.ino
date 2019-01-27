@@ -2,13 +2,36 @@
   btcontrol ESP32 Arduino sketch
 
   Instructions:
-  - creae wifi_sid_password.h with const char*ssid and password
+  - creae config.h with
+      #define wifi_ssid "wifiname"
+      #define wifi_password (***password must be at least 8 characters ***) "password"
+      #define lok_name "esp32-lok"
+      #define SOFTAP (softap or client wifi)
+      #define CHINA_MONSTER_SHIELD ---or--- KEYES_SHIELD
+      
+    optionally define SOFTAP
   - Flash the sketch to the ESP32 board
   - Install host software:
     - For Linux, install Avahi (http://avahi.org/).
     - For Windows, install Bonjour (http://www.apple.com/support/bonjour/).
     - For Mac OSX and iOS support is built in through Bonjour already.
   - Open the btclient app on your phone
+
+TODO: bt client für nokia handies
+https://techtutorialsx.com/2018/12/09/esp32-arduino-serial-over-bluetooth-client-connection-event/
+
+TODO: BLE gamepad:
+https://github.com/nkolban/esp32-snippets/blob/master/Documentation/BLE%20C%2B%2B%20Guide.pdf
+
+TODO: mocute BT gamepad (nicht BLE)
+vielleicht geht BTstack lib:
+https://github.com/bluekitchen/btstack
+https://www.dfrobot.com/blog-945.html
+
+HID host: https://github.com/bluekitchen/btstack/blob/e034024d16933df0720cab3582d625294e26c667/test/pts/hid_host_test.c
+
+TODO: sound mit MAX98357A (semaf)
+
 
  */
 
@@ -28,7 +51,37 @@
 // https://arduino.stackexchange.com/questions/23743/include-git-tag-or-svn-revision-in-arduino-sketch
 //#include "gitTagVersion.h"
 
-#include "wifi_sid_password.h"
+#include "config.h"
+
+// https://github.com/espressif/arduino-esp32/blob/master/libraries/DNSServer/examples/CaptivePortal/CaptivePortal.ino
+#ifdef SOFTAP
+
+// => haut irgendwas zam
+// #define DNSSERVER
+// #define HTTPSERVER
+
+#ifdef DNSSERVER
+#include <DNSServer.h>
+DNSServer dnsServer;
+#endif
+
+const byte DNS_PORT = 53;
+IPAddress apIP(192, 168, 1, 1);
+// => haut irgendwie ned hin, ESP32 crasht dann hin und wieder
+
+#ifdef HTTPSERVER
+WiFiServer HTTPServer(80);
+#endif
+
+String responseHTML = ""
+  "<!DOCTYPE html><html><head><title>" lok_name "</title></head><body>"
+  "<h1>" lok_name "</h1><p>Mit folgender App kannst du die Lok steuern: "
+  "<a href='https://github.com/ferbar/btcontrol/raw/master/control-android/bin/btcontrol.apk'>btcontrol.apk</a> "
+  "(vor dem Download wieder ins Internet wechseln)"
+  "</p>"
+  "<p>Bitte auf Sicht fahren und keine Unf&auml;lle bauen!</p>"
+  "</body></html>";
+#endif
 
 static const char *TAG="main";
 
@@ -36,33 +89,62 @@ Hardware *hardware=NULL;
 bool cfg_debug=false;
 
 // TCP server at port 80 will respond to HTTP requests
-WiFiServer server(3030);
+WiFiServer BTServer(3030);
 
 void setup(void)
 {  
     Serial.begin(115200);
 
+    Serial.println("init wifi");
+#ifdef SOFTAP
+    if(strlen(wifi_password) < 8) {
+        Serial.println("Setting Access Point");
+        Serial.println("ERROR: password < 8 characters, fallback to unencrypted");      
+    } else {
+        Serial.printf("Setting Access Point ssid:%s password:%s\n", wifi_ssid, wifi_password);
+    }
+    WiFi.mode(WIFI_AP);
+    WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
+    WiFi.softAP(wifi_ssid, wifi_password);
+    Serial.print("softAPmacAddress:");
+    Serial.println(WiFi.softAPmacAddress());
+    IPAddress IP = WiFi.softAPIP();
+
+    // if DNSServer is started with "*" for domain name, it will reply with
+    // provided IP to all DNS request
+#ifdef DNSSERVER
+        Serial.println("starting DNS server");
+        dnsServer.start(DNS_PORT, "*", apIP);
+#endif
+
+#ifdef HTTPSERVER
+        Serial.println("starting HTTP server");
+        HTTPServer.begin();
+#endif
+
+#else
     // Connect to WiFi network
-    WiFi.begin(ssid, password);
-    Serial.println("connecting to wifi ...");
+    WiFi.begin(wifi_ssid, wifi_password);
+    Serial.printf("connecting to wifi %s...\n", wifi_ssid);
 
     // Wait for connection
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
         Serial.print(".");
     }
-    Serial.println("");
+    IPAddress IP = WiFi.localIP()
     Serial.print("Connected to ");
     Serial.println(ssid);
+#endif    
     Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
+    Serial.println(IP);
 
     // Set up mDNS responder:
     // - first argument is the domain name, in this example
     //   the fully-qualified domain name is "esp8266.local"
     // - second argument is the IP address to advertise
     //   we send our IP address on the WiFi network
-    if (!MDNS.begin("esp32")) {
+    if (!MDNS.begin(lok_name)) {
         Serial.println("Error setting up MDNS responder!");
         while(1) {
             delay(1000);
@@ -85,7 +167,7 @@ void setup(void)
     Serial.println("loading lokdef done");
 
     // Start TCP server
-    server.begin();
+    BTServer.begin();
     Serial.println("TCP server started");
 
 }
@@ -142,11 +224,43 @@ void startClientThread(void *s) {
     vTaskDelete( NULL );
 }
 
+void handleHTTPRequest(Client &client) {
+    String currentLine = "";
+    while (client.connected()) {
+      if (client.available()) {
+        char c = client.read();
+        if (c == '\n') {
+          if (currentLine.length() == 0) {
+            client.println("HTTP/1.1 200 OK");
+            client.println("Content-type:text/html");
+            client.println();
+            client.print(responseHTML);
+            break;
+          } else {
+            currentLine = "";
+          }
+        } else if (c != '\r') {
+          currentLine += c;
+        }
+      }
+    }
+    // client.stop();
+}
+
 void loop(void)
 {
     // Check if a client has connected
-    WiFiClient client = server.available();
+    WiFiClient client = BTServer.available();
     if (!client) {
+#ifdef HTTPSERVER
+        client = HTTPServer.available();
+        if(client) {
+            Serial.println("New HTTP Client");
+            handleHTTPRequest(client);
+        } else {
+            // Serial.println("loop");
+        }
+#endif
         return;
     }
     Serial.println("");
