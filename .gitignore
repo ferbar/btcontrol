@@ -11,4 +11,4 @@ bluetoothserver/conf/initbtrail.conf
 bluetoothserver/sound/
 bluetoothserver/tags
 bluetoothserver/protocol.h
-esp32-server/btcontrol/wifi_sid_password.h
+esp32-server/btcontrol/config.h
