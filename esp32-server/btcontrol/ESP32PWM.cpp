@@ -1,10 +1,12 @@
 #include <Arduino.h>
 #include "ESP32PWM.h"
 #include "utils.h"
+#include "config.h"
 
 static const char *TAG="ESP32PWM";
 
-// Pins for bridge1 and bridge2 - see ARDUINO_SHIeLDLABEL
+// Pins for bridge1 and bridge2
+#ifdef CHINA_MONSTER_SHIELD
 // ****** pins für china arduino monster shield !!!! nicht für sparkfun !!!!!
 int inApin[2] = {14, 17}; // INA: Clockwise Direction Motor0 and Motor1 (Check:"1.2 Hardware Monster Motor Shield").
 int inBpin[2] = {12, 13}; // INB: Counterlockwise Direction Motor0 and Motor1 (Check: "1.2 Hardware Monster Motor Shield").
@@ -12,12 +14,23 @@ int pwmpin[2] = {16, 27}; // PWM's input
 int cspin[2] = {35, 34};  // Current's sensor input
 
 int enpin[2] = {2, 4}; // open drain output vom VNH2SP30, 2 hat einen 1k PullDown R
+#endif
 
-// Motor 0 geht nicht: EN1 wird über einen R am ESP32 board auf 0 gezogen
+#ifdef KEYES_SHIELD
+// KEYES VNH5019 shield:
+int inApin[2] = {26, 14}; // INA: Clockwise Direction Motor0 and Motor1 (Check:"1.2 Hardware Monster Motor Shield").
+int inBpin[2] = {17, 12}; // INB: Counterlockwise Direction Motor0 and Motor1 (Check: "1.2 Hardware Monster Motor Shield").
+int pwmpin[2] = {13, 05}; // PWM's input
+int cspin[2] = {02, 04};  // Current's sensor input
+
+int enpin[2] = {27, 19}; // open drain output vom VNH2SP30, 2 hat einen 1k PullDown R
+#endif
+
+// Motor 0 geht beim monster shield nicht: EN1 wird über einen R am ESP32 board auf 0 gezogen
 #define MOTOR_NR 1
 #define MOTOR_FREQUENCY 16000
 
-ESP32PWM::ESP32PWM() : USBPlatine(false), dir(0), pwm(0), motorStart(70) {
+ESP32PWM::ESP32PWM() : USBPlatine(false), dir(0), pwm(0), motorStart(40), motorFullSpeed(255) {
 
 
 	for (int i=0; i<2; i++) {
@@ -42,15 +55,22 @@ ESP32PWM::ESP32PWM() : USBPlatine(false), dir(0), pwm(0), motorStart(70) {
 }
 
 ESP32PWM::~ESP32PWM() {
-	fullstop();
+	fullstop(true, true);
 }
 
 void ESP32PWM::setPWM(int f_speed) {
-	// analogWrite(pwmpin[motor], f_speed);
-	ledcWrite(MOTOR_NR, f_speed);
+  unsigned char pwm = 0;
+  if(f_speed > 0) {
+    pwm = f_speed*((double)this->motorFullSpeed - this->motorStart)/255 + this->motorStart;
+  }
+
+  DEBUGF("ESP32PWM::setPWM set pwm=%d", pwm);
+  // analogWrite(pwmpin[motor], f_speed);
+	ledcWrite(MOTOR_NR, pwm);
 }
 
 void ESP32PWM::setDir(unsigned char dir) {
+  this->fullstop(true, true);
 	motorGo(MOTOR_NR, dir ? CW : CCW);
 }
 
