@@ -14,6 +14,13 @@ int pwmpin[2] = {16, 27}; // PWM's input
 int cspin[2] = {35, 34};  // Current's sensor input
 
 int enpin[2] = {2, 4}; // open drain output vom VNH2SP30, 2 hat einen 1k PullDown R
+
+// Motor 0 geht beim monster shield nicht: EN1 wird über einen R am ESP32 board auf 0 gezogen
+#define MOTOR_NR 1
+
+// disabled = 0
+// am espduion hängt eine blaue led auf pin 2
+const int infoLedPin=2;
 #endif
 
 #ifdef KEYES_SHIELD
@@ -24,13 +31,17 @@ int pwmpin[2] = {13, 05}; // PWM's input
 int cspin[2] = {02, 04};  // Current's sensor input
 
 int enpin[2] = {27, 19}; // open drain output vom VNH2SP30, 2 hat einen 1k PullDown R
+
+#define MOTOR_NR 1
+
+// disabled = 0
+// am espduion hängt eine blaue led auf pin 2
+const int infoLedPin=2;
 #endif
 
-// Motor 0 geht beim monster shield nicht: EN1 wird über einen R am ESP32 board auf 0 gezogen
-#define MOTOR_NR 1
 #define MOTOR_FREQUENCY 16000
 
-ESP32PWM::ESP32PWM() : USBPlatine(false), dir(0), pwm(0), motorStart(40), motorFullSpeed(255) {
+ESP32PWM::ESP32PWM() : USBPlatine(false), dir(0), pwm(0), motorStart(40), motorFullSpeed(255),ledToggle(0) {
 
 
 	for (int i=0; i<2; i++) {
@@ -52,6 +63,9 @@ ESP32PWM::ESP32PWM() : USBPlatine(false), dir(0), pwm(0), motorStart(40), motorF
 		DEBUGF("inB[%d]=%d", i, digitalRead(inBpin[i]));
 		DEBUGF("en[%d]=%d", i, digitalRead(enpin[i]));
 	}
+  if(infoLedPin) {
+    pinMode(infoLedPin, OUTPUT);
+  }
 }
 
 ESP32PWM::~ESP32PWM() {
@@ -67,6 +81,12 @@ void ESP32PWM::setPWM(int f_speed) {
   DEBUGF("ESP32PWM::setPWM set pwm=%d", pwm);
   // analogWrite(pwmpin[motor], f_speed);
 	ledcWrite(MOTOR_NR, pwm);
+  if(infoLedPin) {
+    if(this->ledToggle)
+      digitalWrite(infoLedPin, this->ledToggle & 0x1);
+    this->ledToggle++;
+  }
+
 }
 
 void ESP32PWM::setDir(unsigned char dir) {
@@ -87,7 +107,7 @@ void ESP32PWM::fullstop(bool stopAll, bool emergencyStop) {
 void motorGo(uint8_t motor, uint8_t direct)
 {
 if (motor <= 1)
-	DEBUGF("set motor[%d] dir %d\n", motor, direct);
+	DEBUGF("set motor[%d] dir %d", motor, direct);
     {
     if (direct <=4)
         {

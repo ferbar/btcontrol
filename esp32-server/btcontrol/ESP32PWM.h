@@ -20,6 +20,7 @@ private:
 
 	int motorStart;
 	int motorFullSpeed;
+  unsigned int ledToggle;
 };
 
 #define BRAKEVCC 0
