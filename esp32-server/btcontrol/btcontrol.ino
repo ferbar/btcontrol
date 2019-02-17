@@ -57,8 +57,14 @@ TODO: sound mit MAX98357A (semaf)
 #ifdef SOFTAP
 
 // => haut irgendwas zam
-// #define DNSSERVER
-// #define HTTPSERVER
+ #define DNSSERVER
+ #define HTTPSERVER
+
+// DNSServer + HTTPServer + MDNS braucht mehr sockets als default.
+// wenn das nicht gesetzt wird funktioniert das netzwerk random mässig irgendwann einfach nicht mehr
+#if CONFIG_LWIP_MAX_SOCKETS <= 10 and defined HTTPSERVER
+#error increase CONFIG_LWIP_MAX_SOCKETS to 20 in hardware/espressif/esp32/tools/sdk/include/config/sdkconfig.h 
+#endif
 
 #ifdef DNSSERVER
 #include <DNSServer.h>
@@ -225,9 +231,12 @@ void startClientThread(void *s) {
 }
 
 void handleHTTPRequest(Client &client) {
+    Serial.println("handleHTTPRequest");
     String currentLine = "";
     while (client.connected()) {
+      Serial.println("handleHTTPRequest connected");
       if (client.available()) {
+        Serial.println("handleHTTPRequest available");
         char c = client.read();
         if (c == '\n') {
           if (currentLine.length() == 0) {
@@ -245,10 +254,19 @@ void handleHTTPRequest(Client &client) {
       }
     }
     // client.stop();
+    Serial.println("handleHTTPRequest done");
 }
 
 void loop(void)
 {
+/*
+    Serial.print("loop ");
+    Serial.print(ESP.getFreeHeap()); // ./cores/esp32/Esp.h
+    Serial.print("/");
+    Serial.print(ESP.getMinFreeHeap());
+    Serial.print("/");
+    Serial.println(ESP.getMaxAllocHeap());
+*/
     // Check if a client has connected
     WiFiClient client = BTServer.available();
     if (!client) {
