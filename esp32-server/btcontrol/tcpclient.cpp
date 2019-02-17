@@ -16,12 +16,12 @@ void TCPClient::readSelect() {
 			throw std::runtime_error("client not connected");
 		}
 		if(this->client.available() > 0) {
-			DEBUGF("TCPClient::readSelect available bytes after %d",i);
+			DEBUGF("TCPClient::readSelect available bytes after %dms",i*50);
 			return;
 		}
 		delay(50);
 	}
-	DEBUGF("readselect: nothing to read within 5s");
+	DEBUGF("TCPClient::readselect: nothing to read within 5s");
 }
 
 void TCPClient::prepareMessage() {
