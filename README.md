@@ -56,7 +56,8 @@ update-rc.d btcontrol defaults
 ## control-android
 
 Android App
-siehe [readme](control-android/README.md).
+siehe [readme](control-android/).
+download [btcontrol.apk](../../raw/master/control-android/bin/btcontrol.apk)
 
 ## control-midp
 das MIDP - java Programm welches aufs Handy gehört
