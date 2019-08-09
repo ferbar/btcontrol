@@ -21,6 +21,10 @@ https://github.com/espressif/esp-idf/blob/master/docs/en/api-guides/fatal-errors
 exportierte funktionen anzeigen:
 nm -C libfreertos.a
 
+Filehandles:
+dem ESP32 gehen recht schnell die filehandles aus! (siehe btcontrol.ino)
+#define CONFIG_LWIP_MAX_SOCKETS 20
+
 ======== Motor shield ========
 dual monster VNH2SP30 passt halbwegs gut. - "high" ist 3,25V -> beim PWM wird das teilweise nicht erreicht (=> R, siehe unten)
 VNH5019 wäre besser
@@ -32,7 +36,7 @@ ENa vom Monster Shield wird beim ESP32 auf 0 gezogen, damit schaltet sich bridge
 
 2k2 R zwischen +5V und PWM vom VNH2SP30
 
-========= Audio: ==============
+========= Audio: ============== ***TODO***
 der ESP32 hat einen DAC drinnen, braucht nur einen audio verstärker
 https://github.com/bitluni/AudioVideoExample/tree/master/AudioVideoExample
 beschreibung: http://bitluni.net/esp32-composite-audio/
@@ -40,3 +44,11 @@ beschreibung: http://bitluni.net/esp32-composite-audio/
 oder (ohne DMA)
 http://www.xtronical.com/dacaudio-hardware/
 https://www.hackster.io/julianfschroeter/stream-your-audio-on-the-esp32-2e4661
+
+
+
+========= Bluetooth: =========== ***TODO***
+SDP und SPP sollte funktionieren:
+https://techtutorialsx.com/2017/07/17/esp32-bluetooth-advertising-a-spp-service-with-sdp/
+
+
