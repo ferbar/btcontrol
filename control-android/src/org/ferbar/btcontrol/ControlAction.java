@@ -285,7 +285,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 	@Override
 	public void onResume() {
 		super.onResume();
-		System.out.println("ControlAction::onResume");
+		Log.d(TAG, "ControlAction::onResume");
 		AndroidMain.plusActivity();
 		powerManager_wl.acquire();
 	}
@@ -301,7 +301,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 		if (!pm.isScreenOn()) {
 		   this.setPower(false);
 		}
-		System.out.println("ControlAction::onPause isFinishing:"+this.isFinishing());
+		Log.d(TAG, "ControlAction::onPause isFinishing:"+this.isFinishing());
 		AndroidMain.minusActivity();
 		powerManager_wl.release();
 		// TODO: alle threads stoppen
@@ -707,7 +707,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 			case R.id.buttonDirRight: {
 				int main_addr=ControlAction.currSelectedAddr.get(0);
 				if(Math.abs(availLocos.get(main_addr).speed) > 1) {
-					System.out.println("error: changing dir only when stopped ("+availLocos.get(main_addr).speed+")");
+					Log.e(TAG, "error: changing dir only when stopped ("+availLocos.get(main_addr).speed+")");
 					Toast.makeText(this, "geht nur bei v=0", Toast.LENGTH_LONG).show();
 					return;
 				}
@@ -834,7 +834,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 					timerwait=new Object();
 					task = new HoldDownKeyTask(msg,this);
 					timer.schedule(task, repeatTimeout, repeatTimeout);
-		        	System.out.println("key down ("+event.toString()+")");
+		        	Log.e(TAG, "key down ("+event.toString()+")");
 	        	}
 	            return true;
         	}
@@ -856,7 +856,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
     public boolean onKeyUp(int keyCode, KeyEvent event) {
         if((keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP)) {
             // to your stuff here
-        	System.out.println("key up ("+event.toString()+")");
+        	Log.d(TAG, "key up ("+event.toString()+")");
         	if(timer != null) // wenn die app zum onKeyDown Zeitpunkt noch nicht gelaufen ist stürzts ab ...
         		timer.cancel();
             return true;
@@ -906,13 +906,14 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 				throw new Exception("callback-timeout");
 			} else {
 				if(reply.isType("STATUS_REPLY")) {
+					Log.d(TAG, "BTCallback STATUS_REPLY");
 					// debugForm.debug("pingReply rx ");
 					int an=reply.get("info").getArraySize();
 					// debugForm.debug("asize:"+an+" ");
 					for(int i=0; i < an; i++) {
 						int addr= reply.get("info").get(i).get("addr").getIntVal();
 						
-						System.out.println("addr:"+addr+
+						Log.d(TAG, "STATUS_REPLY ["+i+"] addr:"+addr+
 							" speed: "+reply.get("info").get(i).get("speed").getIntVal()+
 							" func: "+reply.get("info").get(i).get("functions").getIntVal());
 						AvailLocosListItem item=(AvailLocosListItem)ControlAction.availLocos.get(Integer.valueOf(addr));
@@ -920,7 +921,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 							item.speed=reply.get("info").get(i).get("speed").getIntVal();
 							item.funcBits=reply.get("info").get(i).get("functions").getIntVal();
 						} else {
-							System.out.println("addr:"+addr+"not in list!!!");
+							Log.d(TAG, "addr:"+addr+"not in list!!!");
 						}
 					}
 				} else if(reply.isType("GETFUNCTIONS_REPLY")) {
@@ -986,7 +987,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 	public void repaint() {
 		// check obs uithread is
 		if(Looper.getMainLooper().getThread() != Thread.currentThread()) {
-			System.out.println("drawDealers wrong thread");
+			Log.d(TAG, "drawDealers wrong thread");
 			throw new NullPointerException("error: not called from UI thread");
 		}
 		if(!this.hasWindowFocus()) {
@@ -1275,7 +1276,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 					ret=BitmapFactory.decodeStream(imageData);
 					ret=Bitmap.createScaledBitmap(ret, ret.getWidth()*4, ret.getHeight()*4, true );
 				} catch (Exception e) {
-					Debuglog.debugln("getImageCached exception:"+e.toString());
+					Log.d(TAG, "getImageCached exception:"+e.toString());
 					/*
 					System.out.println("[0]="+imageData.charAt(0)+" [1]="+imageData.charAt(1)+
 				" [2]="+imageData.charAt(2));
@@ -1285,7 +1286,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 						System.out.print(data[i]+" ");
 					}
 					*/
-					System.out.println("\n"+imageData);
+					Log.d(TAG, "\n"+imageData);
 					ret = null;
 				}
 				Debuglog.debugln("getimg: ["+ret.getWidth()+"/"+ret.getHeight()+"]");
