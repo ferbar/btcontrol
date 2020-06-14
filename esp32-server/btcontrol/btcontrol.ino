@@ -2,14 +2,18 @@
   btcontrol ESP32 Arduino sketch
 
   Instructions:
-  - creae config.h with
+  - creae config.h with (or copy config.h.sample)
       #define wifi_ssid "wifiname"
       #define wifi_password (***password must be at least 8 characters ***) "password"
       #define lok_name "esp32-lok"
       #define SOFTAP (softap or client wifi)
-      #define CHINA_MONSTER_SHIELD ---or--- KEYES_SHIELD
+      #define CHINA_MONSTER_SHIELD ---or--- KEYES_SHIELD ---or--- DRV8871
       
     optionally define SOFTAP
+    optionally define SOUND FILES
+       -> upload SPIFFS with arduino-esp32fs-plugin
+          F-F-1.raw F0.raw F0-F-1.raw F0-F1.raw F1.raw .... horn.raw
+       
   - Flash the sketch to the ESP32 board
   - Install host software:
     - For Linux, install Avahi (http://avahi.org/).
@@ -41,6 +45,8 @@ TODO: sound mit MAX98357A (semaf)
 #include <WiFiClient.h>
 // WifiClient verwendet pthread_*specific => pthread lib wird immer dazu gelinkt
 #include <pthread.h>
+// fürs esp_wifi_set_ps
+#include <esp_wifi.h>
 // #include <freertos/task.h>
 #include "ESP32PWM.h"
 #include "clientthread.h"
@@ -52,6 +58,11 @@ TODO: sound mit MAX98357A (semaf)
 //#include "gitTagVersion.h"
 
 #include "config.h"
+
+#ifdef OTA_UPDATE
+// https://lastminuteengineers.com/esp32-ota-updates-arduino-ide/
+#include <ArduinoOTA.h>
+#endif
 
 // https://github.com/espressif/arduino-esp32/blob/master/libraries/DNSServer/examples/CaptivePortal/CaptivePortal.ino
 #ifdef SOFTAP
@@ -73,7 +84,7 @@ DNSServer dnsServer;
 
 const byte DNS_PORT = 53;
 IPAddress apIP(192, 168, 1, 1);
-// => haut irgendwie ned hin, ESP32 crasht dann hin und wieder
+// => haut irgendwie ned hin, ESP32 crasht dann hin und wieder => fix mit delay(...)
 
 #ifdef HTTPSERVER
 WiFiServer HTTPServer(80);
@@ -100,6 +111,40 @@ WiFiServer BTServer(3030);
 void setup(void)
 {  
     Serial.begin(115200);
+    Serial.println("starting esp32 btcontrol");
+
+    // uint32_t realSize = ESP.getFlashChipRealSize();
+    uint32_t ideSize = ESP.getFlashChipSize();
+    FlashMode_t ideMode = ESP.getFlashChipMode();
+
+    Serial.printf("ChipRevision:   %02X\r\n", ESP.getChipRevision());
+    Serial.printf("SketchSize:     %0d\r\n", ESP.getSketchSize());
+    Serial.printf("FreeSketchSpace:%d\r\n", ESP.getFreeSketchSpace());
+
+    Serial.printf("Flash ide  size: %u bytes\r\n", ideSize);
+    Serial.printf("Flash ide speed: %u Hz\r\n", ESP.getFlashChipSpeed());
+    Serial.printf("Flash ide mode:  %s\r\n", (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN"));
+      
+        /* Print chip information */
+    esp_chip_info_t chip_info;
+    esp_chip_info(&chip_info);
+
+    printf("This is %s chip with %d CPU cores (%s) , WiFi%s%s, ",
+            CONFIG_IDF_TARGET,
+            chip_info.cores,
+            chip_info.model==CHIP_ESP32 ? "ESP32" :
+#if ESP_IDF_VERSION_MAJOR >= 4        
+            chip_info.model==CHIP_ESP32S2 ? "ESP32-S2" :
+#endif
+            "unknown",
+            (chip_info.features & CHIP_FEATURE_BT) ? "/BT" : "",
+            (chip_info.features & CHIP_FEATURE_BLE) ? "/BLE" : "");
+    printf("silicon revision %d, ", chip_info.revision);
+
+    printf("%dMB %s flash\n", spi_flash_get_chip_size() / (1024 * 1024),
+            (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
+    printf("ESP_IDF Version: %s\n", esp_get_idf_version());
+
 
     Serial.println("init wifi");
 #ifdef SOFTAP
@@ -109,12 +154,28 @@ void setup(void)
     } else {
         Serial.printf("Setting Access Point ssid:%s password:%s\n", wifi_ssid, wifi_password);
     }
+#ifdef RESET_INFO_PIN
+    pinMode(RESET_INFO_PIN, OUTPUT);
+#endif
+    WiFi.persistent(false);
     WiFi.mode(WIFI_AP);
+    //delay(2000); // VERY IMPORTANT  https://github.com/espressif/arduino-esp32/issues/2025
+    for(int i=0; i < 20; i++) {
+      delay(200);
+#ifdef RESET_INFO_PIN
+      digitalWrite(RESET_INFO_PIN, 1);
+      delay(10);
+      digitalWrite(RESET_INFO_PIN, 0);
+#endif
+    }
     WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
     WiFi.softAP(wifi_ssid, wifi_password);
     Serial.print("softAPmacAddress:");
     Serial.println(WiFi.softAPmacAddress());
     IPAddress IP = WiFi.softAPIP();
+#ifdef RESET_INFO_PIN
+    pinMode(RESET_INFO_PIN, INPUT);
+#endif
 
     // if DNSServer is started with "*" for domain name, it will reply with
     // provided IP to all DNS request
@@ -131,16 +192,16 @@ void setup(void)
 #else
     // Connect to WiFi network
     WiFi.begin(wifi_ssid, wifi_password);
-    Serial.printf("connecting to wifi %s...\n", wifi_ssid);
+    Serial.printf("connecting to wifi %s...\r\n", wifi_ssid);
 
     // Wait for connection
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
         Serial.print(".");
     }
-    IPAddress IP = WiFi.localIP()
+    IPAddress IP = WiFi.localIP();
     Serial.print("Connected to ");
-    Serial.println(ssid);
+    Serial.println(wifi_ssid);
 #endif    
     Serial.print("IP address: ");
     Serial.println(IP);
@@ -161,7 +222,7 @@ void setup(void)
     // Add service to MDNS-SD
     MDNS.addService("_btcontrol", "_tcp", 3030);
 
-    hardware=new ESP32PWM();
+    hardware=new ESP32PWM(); //muss nach wifi connect sein wegen RESET_INFO_PIN
     Serial.println("init monstershield done");
 
     Serial.println("loading message layouts");
@@ -176,6 +237,52 @@ void setup(void)
     BTServer.begin();
     Serial.println("TCP server started");
 
+
+#ifdef OTA_UPDATE
+  // Port defaults to 3232
+  // ArduinoOTA.setPort(3232);
+
+  // Hostname defaults to esp3232-[MAC]
+  // ArduinoOTA.setHostname("myesp32");
+
+  // No authentication by default
+  // ArduinoOTA.setPassword("admin");
+
+  // Password can be set with it's md5 value as well
+  // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
+  // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
+
+  ArduinoOTA
+    .onStart([]() {
+      String type;
+      if (ArduinoOTA.getCommand() == U_FLASH)
+        type = "sketch";
+      else // U_SPIFFS
+        type = "filesystem";
+
+      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+      Serial.println("Start updating " + type);
+#ifdef HAVE_SOUND
+      Audio.stop();
+#endif
+    })
+    .onEnd([]() {
+      Serial.println("\nEnd");
+    })
+    .onProgress([](unsigned int progress, unsigned int total) {
+      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+    })
+    .onError([](ota_error_t error) {
+      Serial.printf("Error[%u]: ", error);
+      if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+      else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+      else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+      else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+      else if (error == OTA_END_ERROR) Serial.println("End Failed");
+    });
+
+  ArduinoOTA.begin();
+#endif
 }
 
 class StartupData {
@@ -186,16 +293,16 @@ public:
 // https://www.freertos.org/a00125.html
 int clientID_counter=1;
 void startClientThread(void *s) {
-    Serial.println("client thread");
+    printf("client thread\n");
     int clientID=clientID_counter++;
     const char *taskname=pcTaskGetTaskName(NULL);
-    Serial.printf("task name: %s\n", taskname);
+    printf("task name: %s\n", taskname);
     utils::setThreadClientID(clientID);
 
-    utils::dumpBacktrace();
+    // utils::dumpBacktrace();
     
-    Serial.printf("local storage: clientID: %d\n", utils::getThreadClientID());
-    Serial.println("Free HEAP: " + String(ESP.getFreeHeap()));
+    printf("local storage: clientID: %d\n", utils::getThreadClientID());
+    printf("Free HEAP: %d",ESP.getFreeHeap());
     StartupData *startupData=(StartupData *) s;
     /*
     UBaseType_t uxTaskGetSystemState(
@@ -203,7 +310,14 @@ void startClientThread(void *s) {
                        const UBaseType_t uxArraySize,
                        unsigned long * const pulTotalRunTime );
     */                 
-    
+
+#if not defined SOFTAP
+    // disable wifi power saving
+    esp_wifi_set_ps(WIFI_PS_NONE);
+#endif
+#ifdef HAVE_SOUND
+    Audio.begin();
+#endif
     ClientThread *clientThread=NULL;
     try {
         clientThread = new ClientThread(clientID, startupData->client);
@@ -219,17 +333,28 @@ void startClientThread(void *s) {
         Serial.printf("%d: exception unwind\n");
         throw; */
     } catch (...) {
-        Serial.printf("%d: unknown exception\n", clientID);
+        printf("%d: unknown exception\n", clientID);
     }
     if(clientThread) {
         delete(clientThread);
     }
     delete(startupData);
-    Serial.printf("%d: ============= client thread done =============\n", clientID);
+    printf("%d: ============= client thread done =============\n", clientID);
+#if not defined SOFTAP
+    if(TCPClient::numClients == 0) {
+        esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
+    }
+#endif
+#ifdef HAVE_SOUND
+    if(TCPClient::numClients == 0) {
+        Audio.stop();
+    }
+#endif
     // ohne dem rebootet er mit fehler... [ https://www.freertos.org/FreeRTOS_Support_Forum_Archive/September_2013/freertos_Better_exit_from_task_8682337.html ]
     vTaskDelete( NULL );
 }
 
+#ifdef HTTPSERVER
 void handleHTTPRequest(Client &client) {
     Serial.println("handleHTTPRequest");
     String currentLine = "";
@@ -256,6 +381,7 @@ void handleHTTPRequest(Client &client) {
     // client.stop();
     Serial.println("handleHTTPRequest done");
 }
+#endif
 
 void loop(void)
 {
@@ -278,6 +404,9 @@ void loop(void)
         } else {
             // Serial.println("loop");
         }
+#endif
+#ifdef OTA_UPDATE
+        ArduinoOTA.handle();
 #endif
         return;
     }
