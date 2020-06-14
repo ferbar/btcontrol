@@ -1,6 +1,9 @@
 ibeacon auflisten (txPower + RSSI)
 https://github.com/pwldp/iBeacon-Scanner-
 
+RDDI => distance formel
+https://iotandelectronics.wordpress.com/2016/10/07/how-to-calculate-distance-from-the-rssi-value-of-the-ble-beacon/
+
 
 https://raw.githubusercontent.com/RadiusNetworks/altbeacon-reference/master/altbeacon_transmit
 http://altbeacon.org/examples/
