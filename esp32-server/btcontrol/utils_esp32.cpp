@@ -1,8 +1,10 @@
+#include <EEPROM.h>
 #include <Arduino.h>
 // für esp_stack_ptr_is_sane
 #include <esp_panic.h>
 #include "utils.h"
 #include "config.h"
+#include "utils_esp32.h"
 
 // https://github.com/espressif/esp-idf/blob/23b6d40c537bec674537d52fdea34857a4892dc9/components/esp32/panic.c
 void putBacktraceEntryESP32(uint32_t pc, uint32_t sp) {
@@ -55,7 +57,38 @@ std::string readFile(std::string filename)
 		#include "protocol.h"
 		return protocol_dat;
 	} else if(filename == "conf/lokdef.csv") {
-		return "3,  F_DEFAULT," lok_name ",                    ,   9,sPfeife,sDurchsage,,,,,,,mMotor Boost\n";
+		return "3,  F_DEFAULT," lok_name ",                    ,   9,sPfeife,,,,,,,,mMotor Boost\n";
 	}
 	abort();
 }
+
+
+bool eeprom_started=false;
+
+uint8_t readEEPROM(int addr) {
+  if(!eeprom_started) {
+    EEPROM.begin(EEPROM_VALUES);
+  }
+  return EEPROM.read(addr);
+}
+
+void writeEEPROM(int addr1, uint8_t data1, int addr2, uint8_t data2) {
+  if(!eeprom_started) {
+    EEPROM.begin(EEPROM_VALUES);
+  }
+  uint8_t existing_data1=EEPROM.read(addr1);
+  uint8_t existing_data2;
+  if(addr2 >= 0) {
+    existing_data2=EEPROM.read(addr2);
+  } else {
+    existing_data2=data2;
+  }
+  if(existing_data1 != data1 || existing_data2 != data2) {
+    printf("EEPROM.write %d:%d (=%d) %d:%d (=%d) ******************************\n", addr1, data1, existing_data1, addr2, data2, existing_data2);
+    EEPROM.write(addr1, data1);
+    if(addr2 >= 0)
+      EEPROM.write(addr2, data2);
+    EEPROM.commit();
+  }
+}
+
