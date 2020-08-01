@@ -35,7 +35,6 @@ void Audio_Player(void *ptr) {
 }
 
 void ESP32_MAS::run() {
-  int loop=0;
   int file_buf_len;
 //  int8_t out_buf_8[64];
   int8_t out_buf_8[1024];
