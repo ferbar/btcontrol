@@ -51,6 +51,27 @@ int inBpin[MOTOR_OUTPUTS] = {12}; // INB + PWM
 #define MOTOR_NR 0
 #define MOTOR_IN_BRAKE HIGH
 
+#elif defined LOLIN_I2C_MOTOR_SHIELD
+// motor shield v2.0.0
+// https://github.com/wemos/LOLIN_I2C_MOTOR_Library
+#include <LOLIN_I2C_MOTOR.h>
+
+#define MOTOR_FREQUENCY 16000
+#define MOTOR_NR 0
+LOLIN_I2C_MOTOR motor; //I2C address 0x30
+#error untested
+
+#elif defined WEMOS_I2C_MOTOR_SHIELD
+// motor shield v1.0.0
+// https://github.com/wemos/WEMOS_Motor_Shield_Arduino_Library
+#include <WEMOS_Motor.h>
+#define MOTOR_NR 0
+//Motor shiled I2C Address: 0x30
+//PWM frequency: default: 1000Hz(1kHz)
+// WEMOS_Motor.cpp    Wire.write(((byte)(freq >> 24)) & (byte)0x0f); !!!!!!!!!! richten !!!!!!!!!!
+// https://github.com/pbugalski/wemos_motor_shield/issues/9 => 10kHz geht ned mit der default firmware .........
+Motor motor(0x30,_MOTOR_A, 1000);//Motor A
+
 #else
 #error No motor board defined!
 #endif
@@ -170,15 +191,76 @@ void ESP32_MAS_Speed::setVolume(uint8_t volume) {
 ESP32_MAS_Speed Audio;
 #endif
 
+void i2c_scan_bus(TwoWire &i2c){
+  Serial.println("Scanning I2C Addresses Channel 1");
+  uint8_t cnt=0;
+  for(uint8_t i=0;i<128;i++){
+    i2c.beginTransmission(i);
+    uint8_t ec=i2c.endTransmission(true);
+    if(ec==0){
+      if(i<16)Serial.print('0');
+      Serial.print(i,HEX);
+      cnt++;
+    }
+    else Serial.print("..");
+    Serial.print(' ');
+    if ((i&0x0f)==0x0f)Serial.println();
+  }
+  Serial.print("Scan Completed, ");
+  Serial.print(cnt);
+  Serial.println(" I2C Devices found.");
+}
+
+
+void i2c_scan() {
+  // D2
+#define SDA1 21
+  // D1
+#define SCL1 22
+
+#define SDA2 17
+#define SCL2 16
+
+  TwoWire I2Cone = TwoWire(0);
+  I2Cone.begin(SDA1,SCL1,400000); // SDA pin 21, SCL pin 22 TTGO TQ
+  while(true) {
+    i2c_scan_bus(I2Cone);
+    Serial.println();
+    delay(100);
+  }
+  /*
+  TwoWire I2Ctwo = TwoWire(1);
+I2Ctwo.begin(SDA2,SCL2,400000); // SDA2 pin 17, SCL2 pin 16 
+  i2c_scan_bus(I2Cone);
+Serial.println();
+delay(100);
+*/
+}
+
+
 /**
  * wird mit new im btcontrol::setup() gestartet
  */
-ESP32PWM::ESP32PWM() : USBPlatine(false), dir(0), pwm(0), motorStart(40), motorFullSpeed(255),ledToggle(0) {
-
+ESP32PWM::ESP32PWM() : USBPlatine(false), dir(0), pwm(0), motorStart(40), motorFullSpeed(255), ledToggle(0) {
+#ifdef LOLIN_I2C_MOTOR_SHIELD
+//   DEBUGF("start i2c scan");
+//   i2c_scan();
+  DEBUGF("waiting for LOLIN I2C motor shield");
+  while (motor.PRODUCT_ID != PRODUCT_ID_I2C_MOTOR) //wait motor shield ready.
+  {
+    unsigned char result=motor.getInfo();
+    DEBUGF("product_id: %ud version: %ud, result: %ud", motor.PRODUCT_ID, motor.VERSION, result);
+  }
+  DEBUGF("setting frequency to %d", MOTOR_FREQUENCY);
+  motor.changeFreq(MOTOR_CH_A /*MOTOR_CH_BOTH*/, MOTOR_FREQUENCY);
+#elif defined WEMOS_I2C_MOTOR_SHIELD
+  // default WEMOS firmware never has any return checks ...
+  DEBUGF("WEMOS I2C motor shield");
+#else
 	for (int i=0; i<MOTOR_OUTPUTS; i++) {
 		pinMode(inApin[i], OUTPUT);
 		pinMode(inBpin[i], OUTPUT);
-#ifdef HAVE_PWM_PIN   
+#ifdef HAVE_PWM_PIN
 		pinMode(pwmpin[i], OUTPUT);
     pinMode(enpin[i], INPUT);
 #endif
@@ -208,6 +290,7 @@ ESP32PWM::ESP32PWM() : USBPlatine(false), dir(0), pwm(0), motorStart(40), motorF
 		DEBUGF("en[%d]=%d", i, digitalRead(enpin[i]));
 #endif
 	}
+#endif // else LOLIN_I2C_MOTOR_SHIELD
 #ifdef INFO_LED_PIN
   pinMode(INFO_LED_PIN, OUTPUT);
 #endif
@@ -227,12 +310,17 @@ void ESP32PWM::setPWM(int f_speed) {
     pwm = f_speed*((double)this->motorFullSpeed - this->motorStart)/255 + this->motorStart;
   }
 
+
 #if MOTOR_IN_BRAKE==HIGH
   pwm=255-pwm;
 #endif
 
   DEBUGF("ESP32PWM::setPWM set pwm=%d", pwm);
-#ifdef HAVE_PWM_PIN
+#ifdef LOLIN_I2C_MOTOR_SHIELD
+  motor.changeDuty(MOTOR_CH_A, pwm*100/256);
+#elif defined WEMOS_I2C_MOTOR_SHIELD
+  motor.setmotor(this->dir==0 ? _CW : _CCW, pwm*100/256);
+#elif defined HAVE_PWM_PIN
   // analogWrite(pwmpin[motor], f_speed);
 	ledcWrite(MOTOR_NR, pwm);
 #else
@@ -242,6 +330,7 @@ void ESP32PWM::setPWM(int f_speed) {
     ledcWrite(1, pwm);
   }
 #endif
+
 #ifdef HAVE_SOUND
   Audio.setFahrstufe(ceil(f_speed/(255./5.)));
 #endif
@@ -253,19 +342,34 @@ void ESP32PWM::setPWM(int f_speed) {
 }
 
 void ESP32PWM::setDir(unsigned char dir) {
+  DEBUGF("ESP32PWM::setDir dir=%d", dir);
+// ????????????? 20200731: warum is da ein fullstop beim setDir? setDir wir bei sendLoco aufgerufen
+  if(this->dir != dir) {
+    this->fullstop(true, true);
+  }
   this->dir=dir;
-  this->fullstop(true, true);
+#ifdef LOLIN_I2C_MOTOR_SHIELD
+  motor.changeStatus(MOTOR_CH_A, dir ? MOTOR_STATUS_CW : MOTOR_STATUS_CCW);
+#else
 #ifdef HAVE_PWM_PIN
 	motorGo(MOTOR_NR, dir ? CW : CCW);
+#endif
 #endif
 }
 
 void ESP32PWM::fullstop(bool stopAll, bool emergencyStop) {
+  DEBUGF("ESP32PWM::fullstop %d %d", stopAll, emergencyStop);
+#ifdef LOLIN_I2C_MOTOR_SHIELD
+  motor.changeStatus(MOTOR_CH_A, MOTOR_STATUS_SHORT_BRAKE);
+#elif defined WEMOS_I2C_MOTOR_SHIELD
+  motor.setmotor(_STOP);
+#else
 #ifdef HAVE_PWM_PIN
 	ledcWrite(MOTOR_NR, 0);
 #else
   ledcWrite(0,255);
   ledcWrite(1,255);
+#endif
 #endif
 }
 
@@ -298,6 +402,7 @@ int ESP32PWM::sendPOM(int addr, int cv, int value) {
         #endif
 }
 
+#ifdef MOTOR_OUTPUTS
 /**
  * Function that controls the variables:
  * @param motor(0 ou 1)
@@ -324,4 +429,4 @@ if (motor <= MOTOR_OUTPUTS)
         }
     }
 }
-
+#endif
