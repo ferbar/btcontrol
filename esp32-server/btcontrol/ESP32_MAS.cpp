@@ -108,7 +108,7 @@ void ESP32_MAS::run() {
       Serial.println("invalid channel format");
       abort();
     }
-     
+    
     //i2s_set_clk(mas->I2S_PORT, i2s_config_noDAC.sample_rate, i2s_config_noDAC.bits_per_sample, (i2s_channel_t) 1);
     //i2s_set_sample_rates(mas->I2S_PORT, 22050);
     Serial.println("init noDAC done");
