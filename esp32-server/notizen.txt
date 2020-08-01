@@ -17,6 +17,11 @@ muss ma vorher im menuconfig panic handler -> GDBStub aktivieren
 Fehlermeldungen:
 https://github.com/espressif/esp-idf/blob/master/docs/en/api-guides/fatal-errors.rst
 
+===== ESP32 - IDF
+die IDF ist die lib von extensia. mit esp_get_idf_version() kann man die lib version abfragen
+ist unter ~/Arduino/hardware/espressiv/tools/sdk/
+unter https://github.com/espressif/arduino-esp32/branches gibt es ein idf-release/v4.0 - 20200801: not yet stable
+
 
 exportierte funktionen anzeigen:
 nm -C libfreertos.a
@@ -36,7 +41,7 @@ ENa vom Monster Shield wird beim ESP32 auf 0 gezogen, damit schaltet sich bridge
 
 2k2 R zwischen +5V und PWM vom VNH2SP30
 
-========= Audio: ============== ***TODO***
+========= Audio: ==============
 der ESP32 hat einen DAC drinnen, braucht nur einen audio verstärker
 https://github.com/bitluni/AudioVideoExample/tree/master/AudioVideoExample
 beschreibung: http://bitluni.net/esp32-composite-audio/
@@ -50,5 +55,28 @@ https://www.hackster.io/julianfschroeter/stream-your-audio-on-the-esp32-2e4661
 ========= Bluetooth: =========== ***TODO***
 SDP und SPP sollte funktionieren:
 https://techtutorialsx.com/2017/07/17/esp32-bluetooth-advertising-a-spp-service-with-sdp/
+
+TODO: bt client für nokia handies
+https://techtutorialsx.com/2018/12/09/esp32-arduino-serial-over-bluetooth-client-connection-event/
+
+gamepad:
+TODO: BLE gamepad:
+https://github.com/nkolban/esp32-snippets/blob/master/Documentation/BLE%20C%2B%2B%20Guide.pdf
+TODO: mocute BT gamepad (nicht BLE)
+vielleicht geht BTstack lib:
+https://github.com/bluekitchen/btstack
+https://www.dfrobot.com/blog-945.html
+
+BTSTACK (statt bluedroid)
+HID host: https://github.com/bluekitchen/btstack/blob/e034024d16933df0720cab3582d625294e26c667/test/pts/hid_host_test.c
+          https://github.com/bluekitchen/btstack/blob/master/example/hid_host_demo.c
+
+http://eleccelerator.com/wiki/index.php?title=DualShock_4#Report_Structure
+
+****************** ab IDF 4.? kann der ESP HID HOST *******************
+https://github.com/espressif/esp-idf/tree/release/v4.2/examples/bluetooth/esp_hid_host
+20200801: arduino IDF version ist noch bei 3.3
+
+https://www.instructables.com/id/ESP32-Bluetooth-BLE-Remote-Control/
 
 

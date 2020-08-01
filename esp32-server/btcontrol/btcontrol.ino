@@ -13,6 +13,8 @@
     optionally define SOUND FILES
        -> upload SPIFFS with arduino-esp32fs-plugin
           F-F-1.raw F0.raw F0-F-1.raw F0-F1.raw F1.raw .... horn.raw
+          at the moment only internal DAC + pam is supporded - GPIO25
+          TODO: sound with i2s / MAX98357A
        
   - Flash the sketch to the ESP32 board
   - Install host software:
@@ -21,20 +23,7 @@
     - For Mac OSX and iOS support is built in through Bonjour already.
   - Open the btclient app on your phone
 
-TODO: bt client für nokia handies
-https://techtutorialsx.com/2018/12/09/esp32-arduino-serial-over-bluetooth-client-connection-event/
 
-TODO: BLE gamepad:
-https://github.com/nkolban/esp32-snippets/blob/master/Documentation/BLE%20C%2B%2B%20Guide.pdf
-
-TODO: mocute BT gamepad (nicht BLE)
-vielleicht geht BTstack lib:
-https://github.com/bluekitchen/btstack
-https://www.dfrobot.com/blog-945.html
-
-HID host: https://github.com/bluekitchen/btstack/blob/e034024d16933df0720cab3582d625294e26c667/test/pts/hid_host_test.c
-
-TODO: sound mit MAX98357A (semaf)
 
 
  */
@@ -147,6 +136,9 @@ void setup(void)
 
 
     Serial.println("init wifi");
+#ifdef RESET_INFO_PIN
+    pinMode(RESET_INFO_PIN, OUTPUT);
+#endif
 #ifdef SOFTAP
     if(strlen(wifi_password) < 8) {
         Serial.println("Setting Access Point");
@@ -154,9 +146,6 @@ void setup(void)
     } else {
         Serial.printf("Setting Access Point ssid:%s password:%s\n", wifi_ssid, wifi_password);
     }
-#ifdef RESET_INFO_PIN
-    pinMode(RESET_INFO_PIN, OUTPUT);
-#endif
     WiFi.persistent(false);
     WiFi.mode(WIFI_AP);
     //delay(2000); // VERY IMPORTANT  https://github.com/espressif/arduino-esp32/issues/2025
@@ -170,12 +159,9 @@ void setup(void)
     }
     WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
     WiFi.softAP(wifi_ssid, wifi_password);
-    Serial.print("softAPmacAddress:");
+    Serial.print("softAPmacAddress: ");
     Serial.println(WiFi.softAPmacAddress());
     IPAddress IP = WiFi.softAPIP();
-#ifdef RESET_INFO_PIN
-    pinMode(RESET_INFO_PIN, INPUT);
-#endif
 
     // if DNSServer is started with "*" for domain name, it will reply with
     // provided IP to all DNS request
@@ -189,7 +175,7 @@ void setup(void)
         HTTPServer.begin();
 #endif
 
-#else
+#else // SOFTAP
     // Connect to WiFi network
     WiFi.begin(wifi_ssid, wifi_password);
     Serial.printf("connecting to wifi %s...\r\n", wifi_ssid);
@@ -198,11 +184,19 @@ void setup(void)
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
         Serial.print(".");
+#ifdef RESET_INFO_PIN
+      digitalWrite(RESET_INFO_PIN, 1);
+      delay(10);
+      digitalWrite(RESET_INFO_PIN, 0);
+#endif
     }
     IPAddress IP = WiFi.localIP();
     Serial.print("Connected to ");
     Serial.println(wifi_ssid);
-#endif    
+#endif // SOFTAP
+#ifdef RESET_INFO_PIN
+    pinMode(RESET_INFO_PIN, INPUT);
+#endif
     Serial.print("IP address: ");
     Serial.println(IP);
 
@@ -212,18 +206,18 @@ void setup(void)
     // - second argument is the IP address to advertise
     //   we send our IP address on the WiFi network
     if (!MDNS.begin(lok_name)) {
-        Serial.println("Error setting up MDNS responder!");
+        DEBUGF("Error setting up MDNS responder!");
         while(1) {
             delay(1000);
         }
     }
-    Serial.println("btcontrol responder started");
+    DEBUGF("btcontrol MDNS started [%s]", lok_name);
 
     // Add service to MDNS-SD
     MDNS.addService("_btcontrol", "_tcp", 3030);
 
     hardware=new ESP32PWM(); //muss nach wifi connect sein wegen RESET_INFO_PIN
-    Serial.println("init monstershield done");
+    DEBUGF("init monstershield done");
 
     Serial.println("loading message layouts");
     messageLayouts.load();
