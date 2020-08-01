@@ -38,6 +38,7 @@
 #include <esp_wifi.h>
 // #include <freertos/task.h>
 #include "ESP32PWM.h"
+#include "ESP32_MAS_Speed.h"
 #include "clientthread.h"
 #include "utils.h"
 #include "lokdef.h"
