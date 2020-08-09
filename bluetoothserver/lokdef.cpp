@@ -57,6 +57,7 @@ int getAddrIndex(int addr)
 /**
  * tut spaces am ende weg
  */
+#warning das gehört ins utils!!!!!
 void strtrim(char *s)
 {
 	char *pos=s+strlen(s);
