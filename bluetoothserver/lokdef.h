@@ -20,7 +20,7 @@ struct lokdef_t {
 	char name[20];
 	int nFunc;
 	func_t func[MAX_NFUNC]; // 16+1 0=licht, 1=F1, 2=F2
-	int currspeed;
+	int currspeed;          // 255 = max
 	int currdir;
 	bool initDone;
 	char imgname[32];
