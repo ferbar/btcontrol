@@ -26,6 +26,7 @@ public:
 	virtual ~ClientThread();
 	virtual void run();
 	void sendMessage(const FBTCtlMessage &msg);
+	FBTCtlMessage readMessage();
 	void setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus);
 	void sendStatusReply(lastStatus_t *lastStatus);
 
