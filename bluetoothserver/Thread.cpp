@@ -168,7 +168,6 @@ bool Condition::timeoutWait(int timeout) {
 	ts.tv_sec += timeout;
 
 	int rc = pthread_cond_timedwait(&this->cond, &this->mutex.m, &ts);
-    (void) pthread_mutex_unlock(&this->mutex.m);
 	if(rc == 0) {
 		return true;
 	}
