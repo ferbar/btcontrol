@@ -40,6 +40,7 @@ public:
 	void dump();
 	// ladet die protocol.dat @return hash von der protocol.dat
 	int load();
+	bool isLoaded() { return this->loaded; };
 private:
 	bool loaded;
 };
