@@ -1,7 +1,13 @@
+// sonst geht clock_gettime am ESP32 nicht
+#define _POSIX_TIMERS
+#include <time.h>
+
 #include <stdio.h>
 #include <stdexcept>
 #include <sys/errno.h>
 #include <stdlib.h>
+#include <cxxabi.h>
+#include <string.h>
 #include "utils.h"
 #include "Thread.h"
 
@@ -10,7 +16,22 @@ static const char *TAG="THREAD";
 void *Thread::startupThread(void *ptr) {
 	NOTICEF("Thread::startupThread()\n");
 	Thread *t=(Thread *) ptr;
-	t->run();
+	try {
+		t->run();
+	} catch(const char *e) {
+		ERRORF(ANSI_RED "?: exception %s - client thread killed\n" ANSI_DEFAULT, e);
+	} catch(std::RuntimeExceptionWithBacktrace &e) {
+		ERRORF(ANSI_RED "?: Runtime Exception %s - client thread killed\n" ANSI_DEFAULT, e.what());
+	} catch(std::exception &e) {
+		ERRORF(ANSI_RED "?: exception %s - client thread killed\n" ANSI_DEFAULT, e.what());
+	} catch (abi::__forced_unwind&) { // http://gcc.gnu.org/bugzilla/show_bug.cgi?id=28145
+		ERRORF(ANSI_RED "?: forced unwind exception - client thread killed\n" ANSI_DEFAULT);
+		// copy &paste:
+		// printf("%d:client exit\n",startupData->clientID);
+		// pthread_cleanup_pop(true);
+		throw; // rethrow exeption bis zum pthread_create, dort isses dann aus
+	}
+
 	NOTICEF("Thread::startupThread() done\n");
 	t->exited=true;
 	if(t->autodelete) {
@@ -20,9 +41,16 @@ void *Thread::startupThread(void *ptr) {
 }
 
 void Thread::start() {
-	int s = pthread_create(&this->thread, NULL, &Thread::startupThread, (void *) this);
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+#ifdef ESP32
+	DEBUGF("set stack size to 10000");
+	pthread_attr_setstacksize(&attr,10000);
+#endif
+	int s = pthread_create(&this->thread, &attr, &Thread::startupThread, (void *) this);
 	if (s != 0)
 		perror("pthread_create");
+	pthread_attr_destroy(&attr);
 }
 
 void *Thread::cancel() {
@@ -116,5 +144,45 @@ void ThreadSpecific::set(void *ptr) {
 
 void ThreadSpecific::del() {
 	pthread_setspecific(this->key, NULL);
+}
+
+Condition::Condition() {
+	pthread_cond_init(&this->cond, NULL);
+}
+
+void Condition::wait() {
+	Lock lock(this->mutex);
+}
+
+/**
+ * @param timeout
+ *     timeout in seconds
+ * rc
+ * true=signal, false=timeout
+ */
+bool Condition::timeoutWait(int timeout) {
+	Lock lock(this->mutex);
+
+	struct timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+	ts.tv_sec += timeout;
+
+	int rc = pthread_cond_timedwait(&this->cond, &this->mutex.m, &ts);
+    (void) pthread_mutex_unlock(&this->mutex.m);
+	if(rc == 0) {
+		return true;
+	}
+	if(rc == ETIMEDOUT) {
+		return false;
+	}
+	throw std::runtime_error(utils::format("Condition::timeoutWait() error %s", strerror(rc)));
+}
+
+void Condition::signal() {
+	Lock lock(this->mutex);
+	const int signal_rv = pthread_cond_signal(&(this->cond));
+    if (signal_rv) {
+		throw std::runtime_error(utils::format("Condition::signal() error %s", strerror(signal_rv)));
+	}
 }
 

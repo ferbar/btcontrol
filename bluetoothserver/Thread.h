@@ -22,6 +22,8 @@ private:
 	bool autodelete;
 };
 
+class Condition;
+
 class Mutex {
 public:
 	Mutex();
@@ -30,8 +32,10 @@ public:
 	void unlock();
 	/// @return true if lock is successful
 	bool tryLock();
+#warning fixme
 private:
 	pthread_mutex_t m;
+friend class Condition;
 };
 
 class Lock {
@@ -40,6 +44,18 @@ public:
 	~Lock() { m.unlock(); } ;
 private:
 	Mutex &m;
+};
+
+class Condition {
+public:
+	Condition();
+	void wait();
+	/// true=signal, false=timeout
+	bool timeoutWait(int timeout);
+	void signal();
+private:
+	Mutex mutex;
+	pthread_cond_t cond; // ESP32 bug - geht nicht: = PTHREAD_COND_INITIALIZER;
 };
 
 /**
