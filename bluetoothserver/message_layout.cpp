@@ -33,9 +33,10 @@ MessageLayouts messageLayouts;
  */
 const MessageLayout& getMessageLayout(MessageLayout::DataType type)
 {
+	assert(messageLayouts.isLoaded());
 	if(type <= MessageLayout::STRUCT) {
 		printf("getMessageLayout: non-struct (%d)\n", type);
-		throw "invalid type";
+		throw std::runtime_error("invalid type");
 	}
 
 	MessageLayout tmp;
@@ -45,7 +46,7 @@ const MessageLayout& getMessageLayout(MessageLayout::DataType type)
 		if(type == it->second.type)
 			return messageLayouts[it->first];
 	}
-	throw "invalid struct type";
+	throw std::runtime_error(utils::format("invalid struct type (%d)", type));
 }
 
 /**
@@ -201,7 +202,7 @@ void MessageLayouts::dump()
 std::string messageTypeName(MessageLayout::DataType type)
 {
 	switch(type) {
-		case MessageLayout::UNDEF: throw "undefined data type cant get type for this";
+		case MessageLayout::UNDEF: throw std::runtime_error("undefined data type cant get type for this (UNDEF)");
 		case MessageLayout::INT: return "(INT)";
 		case MessageLayout::STRING: return "(STRING)";
 		case MessageLayout::ARRAY: return "(ARRAY)";
@@ -234,7 +235,7 @@ MessageLayout::DataType messageTypeID(const std::string &name)
 {
 	MessageLayout::DataType type=messageLayouts[name].type;
 	if(type == MessageLayout::UNDEF)
-		throw std::string("invalid message name: \"") + name + "\"";
+		throw std::runtime_error(utils::format("invalid message name: \"%s\"", name.c_str()));
 	return type;
 	/*
 	MessageLayouts::const_iterator it;
