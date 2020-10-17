@@ -40,6 +40,8 @@
  * f["info"][0]["functions"]=50
  */
 
+#define NODEBUG
+
 #include <string.h>
 #include <stdio.h>
 #include "fbtctl_message.h"
@@ -64,7 +66,7 @@ void FBTCtlMessage::readMessage(InputReader &in, const MessageLayout *layout)
 
 	this->type=(MessageLayout::DataType) in.getByte();
 	if(cfg_debug) {
-		printf("datatype: %d\n",this->type);
+		DEBUGF("datatype: %d",this->type);
 	}
 
 	if(!layout && (this->type > MessageLayout::STRUCT)) {
@@ -87,14 +89,14 @@ void FBTCtlMessage::readMessage(InputReader &in, const MessageLayout *layout)
 		}
 		switch(it->type){
 			case MessageLayout::INT:
-				printf("read int\n");
+				DEBUGF("read int");
 				this->structVal[it->name] = FBTCtlMessage(in.getInt()); break;
 			case MessageLayout::STRING:
-				printf("read string\n");
+				DEBUGF("read string");
 				this->structVal[it->name] = FBTCtlMessage(in.getString()); break;
 			case MessageLayout::ARRAY: {
 				int n=in.getByte();
-				printf("read arraysize:%d\n",n);
+				DEBUGF("read arraysize:%d",n);
 				FBTCtlMessage tmparray(MessageLayout::ARRAY);
 				for(int i=0; i < n; i++) {
 					FBTCtlMessage tmp;
