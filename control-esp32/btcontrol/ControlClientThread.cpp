@@ -92,7 +92,7 @@ void ControlClientThread::run()
 					if(addr_index >=0) {
 						// DEBUGF("           index=%d:", addr_index);
 						lokdef[addr_index].currspeed=abs(speed);
-						lokdef[addr_index].currdir= (speed >= 0);
+						lokdef[addr_index].currdir= (speed >= 0) ? 1 : -1;
 						for(int i=0; i < MAX_NFUNC; i++) {
 							lokdef[addr_index].func[i].ison=(1 >> i) | functions ? true : false;
 						}
