@@ -111,6 +111,21 @@ bool utils::endsWith(const std::string &str, const char *with) {
 	return str.rfind(with) == str.length()-strlen(with);
 }
 
+/**
+ * tut spaces am ende weg
+ */
+void strtrim(char *s)
+{
+	char *pos=s+strlen(s);
+	while(pos > s) {
+		pos--;
+		if(isspace(*pos)) {
+			*pos='\0';
+		} else
+			break;
+	}
+}
+
 #ifdef HAVE_EXECINFO
 void utils::dumpBacktrace() {
 	void *array[10];

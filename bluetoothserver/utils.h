@@ -47,6 +47,8 @@ ssize_t myRead(int so, void *data, size_t size);
   #define ANSI_GREEN1 "\x1b[32m"
   #define ANSI_GREEN2 "\x1b[32;1m"
 
+void strtrim(char *s);
+
 extern const std::string NOT_SET;
 
 class Config {
@@ -102,8 +104,14 @@ namespace utils
 };
 
 // hint ## => ... kann auch leer sein! -> https://gcc.gnu.org/onlinedocs/cpp/Variadic-Macros.html
+#ifdef NODEBUG
+#define DEBUGF(fmt, ...)
+#define NOTICEF(fmt, ...)
+#define ERRORF(fmt, ...)
+#else
 #define DEBUGF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_DEBUG, __FILE__, __LINE__, fmt, ##__VA_ARGS__ )
 #define NOTICEF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_NOTICE, __FILE__, __LINE__, fmt, ##__VA_ARGS__ )
 #define ERRORF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_ERROR, __FILE__, __LINE__, fmt, ##__VA_ARGS__ )
-
 #endif
+
+#endif // utils.h
