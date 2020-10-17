@@ -3,7 +3,8 @@
 #include "Thread.h"
 #include "clientthread.h"
 
-typedef void (*CallbackCmdFunction) (FBTCtlMessage &);
+// c++11 muss das schon können
+typedef std::function<void(FBTCtlMessage &)> CallbackCmdFunction;
 
 
 class ControlClientThreadQueueElement {
