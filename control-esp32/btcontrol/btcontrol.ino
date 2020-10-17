@@ -10,14 +10,13 @@
 #include "bmp.h"
 #include "config.h"
 #include "utils.h"
-#include "ControlClientThread.h"
 #include "lokdef.h"
+#include "GuiView.h"
+#include "message_layout.h"
 
 #define TAG "btcontrol"
 bool cfg_debug=false;
 
-ControlClientThread controlClientThread;
-int selectedAddrIndex=0;
 
 #ifndef TFT_DISPOFF
 #define TFT_DISPOFF 0x28
@@ -38,12 +37,22 @@ int selectedAddrIndex=0;
 #define TFT_BL              4   // Display backlight control pin
 #define ADC_EN              14  //ADC_EN is the ADC detection enable port
 #define ADC_PIN             34
-#define BUTTON_1            35
-#define BUTTON_2            0
+
 
 TFT_eSPI tft = TFT_eSPI(135, 240); // Invoke custom library
 Button2 btn1(BUTTON_1); // left button
 Button2 btn2(BUTTON_2); // right
+
+
+
+
+
+
+
+
+
+
+
 long btn1Event=0;
 long btn2Event=0;
 
@@ -69,7 +78,7 @@ void showVoltage()
         uint16_t v = analogRead(ADC_PIN);
         float battery_voltage = ((float)v / 4095.0) * 2.0 * 3.3 * (vref / 1000.0);
         String voltage = "Voltage :" + String(battery_voltage) + "V";
-        Serial.println(voltage);
+        // Serial.println(voltage);
         tft.setTextDatum(TL_DATUM);
         tft.setTextColor(TFT_GREEN, TFT_BLACK);
         //tft.fillScreen(TFT_BLACK);
@@ -79,17 +88,11 @@ void showVoltage()
     }
 }
 
-void button_init_select_loco_mode()
-{
-    btn1.setPressedHandler(NULL); // TODO: up
-    btn2.setPressedHandler(NULL); // TODO: down
-    
-    tft.setTextDatum(BL_DATUM);
-    tft.drawString("^", 0, tft.height());
-    tft.setTextDatum(BR_DATUM);
-    tft.drawString("v", tft.width(), tft.height());
 
-}
+
+
+
+
 
 void button_init_control_mode()
 {
@@ -116,14 +119,12 @@ void button_init_control_mode()
         esp_deep_sleep_start();
     });
     */
+
+    /*
     btn1.setPressedHandler([](Button2 & b) {
         Serial.println("pressed handler btn1");
         btn1Event=millis();
-        if(controlClientThread.isRunning()) {
-          FBTCtlMessage cmd(messageTypeID("ACC"));
-          cmd["addr"]=3;
-          controlClientThread.query(cmd,[](FBTCtlMessage &reply) {} );
-        }
+        sendSpeed(SPEED_ACCEL);
     });
     btn1.setReleasedHandler([](Button2 & b) {
         Serial.println("released handler btn1");  
@@ -132,18 +133,18 @@ void button_init_control_mode()
     btn2.setPressedHandler([](Button2 & b) {
         Serial.println("pressed handler btn2");
         btn2Event=millis();
-        if(controlClientThread.isRunning()) {
-          FBTCtlMessage cmd(messageTypeID("BREAK"));
-          cmd["addr"]=3;
-          controlClientThread.query(cmd,[](FBTCtlMessage &reply) {} );
-        }      
+        sendSpeed(SPEED_BRAKE);
     });
+*/
     
     tft.setTextDatum(BL_DATUM);
     tft.drawString("-", 0, tft.height());
     tft.setTextDatum(BR_DATUM);
     tft.drawString("+", tft.width(), tft.height());
     tft.fillScreen(TFT_BLACK);
+
+
+
 }
 
 void button_loop()
@@ -152,38 +153,6 @@ void button_loop()
     btn2.loop();
 }
 
-void wifi_scan()
-{
-    tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    tft.fillScreen(TFT_BLACK);
-    tft.setTextDatum(MC_DATUM);
-    tft.setTextSize(1);
-
-    tft.drawString("Scan Network", tft.width() / 2, tft.height() / 2);
-
-    WiFi.mode(WIFI_STA);
-    WiFi.disconnect();
-    delay(100);
-
-    int16_t n = WiFi.scanNetworks();
-    tft.fillScreen(TFT_BLACK);
-    if (n == 0) {
-        tft.drawString("no networks found", tft.width() / 2, tft.height() / 2);
-    } else {
-        tft.setTextDatum(TL_DATUM);
-        tft.setCursor(0, 0);
-        Serial.printf("Found %d net\n", n);
-        for (int i = 0; i < n; ++i) {
-            sprintf(buff,
-                    "[%d]:%s(%d)",
-                    i + 1,
-                    WiFi.SSID(i).c_str(),
-                    WiFi.RSSI(i));
-            tft.println(buff);
-        }
-    }
-    WiFi.mode(WIFI_OFF);
-}
 
 void setup()
 {
@@ -198,6 +167,7 @@ void setup()
     pinMode(ADC_EN, OUTPUT);
     digitalWrite(ADC_EN, HIGH);
 
+    
     tft.init();
     tft.setRotation(1);
     tft.fillScreen(TFT_BLACK);
@@ -217,7 +187,7 @@ void setup()
     espDelay(5000);
 
 
-    tft.setRotation(0);
+    tft.setRotation(1);
     /*
     tft.fillScreen(TFT_RED);
     espDelay(1000);
@@ -255,9 +225,10 @@ void setup()
     tft.setTextDatum(TL_DATUM);
 */
 
+/*
     WiFi.begin(wifi_ssid, wifi_password);
     Serial.printf("connecting to wifi %s...\r\n", wifi_ssid);
-
+    */
     if (!MDNS.begin(device_name)) {
         DEBUGF("Error setting up MDNS responder!");
         while(1) {
@@ -266,45 +237,35 @@ void setup()
     }
     Serial.println("loading message layouts");
     messageLayouts.load();
+
+/*
+#warning fixme: test
+    DEBUGF("button 3 pull up");
+    // macht die Button2 lib schon: gpio_set_pull_mode(GPIO_NUM_12, GPIO_PULLUP_ONLY);
+    btn3.setPressedHandler([](Button2 & b) {
+      DEBUGF("button 3 pressed");
+    });
+    */
     
+/*
+    // switch:
+    pinMode(13, INPUT_PULLUP); */
+/* ************ rotary input 
+    pinMode(13, INPUT_PULLUP);
+    // pinMode(13, INPUT);
+    // digitalWrite(13, HIGH);       // turn on pull-up resistor
+    pinMode(15, INPUT_PULLUP);
+    // pinMode(15, INPUT);
+    // digitalWrite(15, HIGH);       // turn on pull-up resistor
+//attachInterrupt(13, isrGPIO13, CHANGE);
+ attachInterrupt(13, isrGPIO13, RISING);
+//attachInterrupt(15, isrGPIO13, RISING);
+
+//attachInterrupt(15, isrGPIO15, CHANGE);
+// attachInterrupt(15, isrGPIO15fall, FALLING);
+*/
 }
 
-bool refreshLokdef=false;
-
-void initLokdef(FBTCtlMessage reply)
-{
-    DEBUGF("initLokdef");
-    lokdef_t *tmplokdef=lokdef;
-    lokdef=NULL;
-    int nLocos=reply["info"].getArraySize();
-    DEBUGF("initLokdef n=%d", nLocos);
-    if(lokdef) {
-      tmplokdef = (lokdef_t *) realloc(tmplokdef, sizeof(lokdef_t)*(nLocos+1));
-    } else {
-      tmplokdef = (lokdef_t *) calloc(sizeof(lokdef_t),nLocos+1);
-    }
-    bzero(tmplokdef, sizeof(lokdef_t) * (nLocos+1)); // .addr = list ende
-    
-    
-    for(int i=0; i < nLocos; i++) {
-      DEBUGF("initLokdef %d\n", i);
-      tmplokdef[i].currdir=0;
-      tmplokdef[i].addr=reply["info"][i]["addr"].getIntVal();
-      strncpy(tmplokdef[i].name, reply["info"][i]["name"].getStringVal().c_str(), sizeof(lokdef[i].name));
-      strncpy(tmplokdef[i].imgname, reply["info"][i]["imgname"].getStringVal().c_str(), sizeof(lokdef[i].imgname));
-      int speed=reply["info"][i]["speed"].getIntVal();
-      tmplokdef[i].currspeed=abs(speed);
-      tmplokdef[i].currdir=speed >=0 ? true : false;
-      int functions = reply["info"][i]["functions"].getIntVal();
-      for(int f=0; f < MAX_NFUNC; f++) {
-        tmplokdef[i].func[f].ison=(1 >> f) | functions ? true : false;
-      }
-
-    }
-    lokdef=tmplokdef;
-    refreshLokdef=true;
-    Serial.println("init lokdef done");
-}
 
 int gui_connect_state=0;
 int gui_selected_loco=0;
@@ -312,130 +273,19 @@ int gui_selected_loco=0;
 void loop()
 {
   try {
-  static long last=millis();
-  if(millis() > last+1000) { // jede sekunde einmal checken:
-     last=millis();
-     if(WiFi.status() != WL_CONNECTED) {
-       tft.setTextColor(TFT_RED, TFT_BLACK);
-       tft.drawString(String("!!!: ") + wifi_ssid, 0, 0 );
-       tft.setTextColor(TFT_GREEN, TFT_BLACK);
-     } else {
-       if(controlClientThread.isRunning() == false) {
-         IPAddress IP = WiFi.localIP();
-         tft.drawString(String("connected to: ") + wifi_ssid + " " + IP, 0, 0 );
-         int nrOfServices = MDNS.queryService("btcontrol", "tcp");
-     
-         if (nrOfServices == 0) {
-           Serial.println("No services were found.");
-         } else {
-           Serial.print("Number of services found: ");
-           Serial.println(nrOfServices);
-           for (int i = 0; i < nrOfServices; i=i+1) {
-             Serial.print("Hostname: ");
-             Serial.println(MDNS.hostname(i));
-   
-             Serial.print("IP address: ");
-             Serial.println(MDNS.IP(i));
-   
-             Serial.print("Port: ");
-             Serial.println(MDNS.port(i));
-   
-             Serial.println("---------------");
+    GuiView::runLoop();
   
-           }
-           if( nrOfServices == 1) {
-             Serial.println("============= connecting");
-             controlClientThread.connect(MDNS.IP(0), MDNS.port(0));
-             controlClientThread.start();
-             gui_connect_state=1;
-           }
-         }
-       }
-     }
-  }
-  if(controlClientThread.isRunning()) {
-    // DEBUGF("gui_connect_state=%d", gui_connect_state);
-    switch (gui_connect_state) {
-      case 1: { // query server for locos
-        FBTCtlMessage cmd(messageTypeID("GETLOCOS"));
-        controlClientThread.query(cmd,[](FBTCtlMessage &reply) {
-          if(reply.isType("GETLOCOS_REPLY")) {
-            initLokdef(reply);
-          } else {
-            ERRORF("invalid reply received");
-            abort();
-          }
-        } );
-        gui_connect_state=2;
-        button_init_select_loco_mode();
-      }
-      break;
-      
-      case 2: // display select dialog
-        if(refreshLokdef) {
-          refreshLokdef=false;
-          int nLokdef=0;
-          while(lokdef[nLokdef].addr) {
-            if(nLokdef==gui_selected_loco) {
-              tft.setTextColor(TFT_BLACK, TFT_GREEN);
-            } else {
-              tft.setTextColor(TFT_GREEN, TFT_BLACK);
-            }
-            tft.drawString(String(" ") + lokdef[nLokdef].name, 0, (nLokdef+3) *16 );
-            nLokdef++;
-          }
-          if(nLokdef==1) { // FIXME: up down select loco + ok
-            gui_connect_state=3;
-            button_init_control_mode();      
-            delay(1000);
-            selectedAddrIndex=0;
-          }
-        } else {
-          DEBUGF("waiting for refreshLokdef");
-          delay(200);
-        }
-      break;
-      
-      case 3: // normal control mode
-        if(millis() > last+200) { // jede 0,2 refreshen
-          last=millis();
-          tft.setTextDatum(TL_DATUM);
-          tft.setTextColor(TFT_GREEN, TFT_BLACK);
-          if(WiFi.status() == WL_CONNECTED) {
-            tft.drawString(String("AP: ") + wifi_ssid, 0, 0 );
-          } else {
-            tft.setTextColor(TFT_RED, TFT_BLACK);
-            tft.drawString(String("!!!: ") + wifi_ssid, 0, 0 );
-            tft.setTextColor(TFT_GREEN, TFT_BLACK);
-          }
-          
-          tft.drawString(String("Lok: ") + lokdef[selectedAddrIndex].name + " ", 0, 16*1);
-          tft.drawString(String("Speed: ") + lokdef[selectedAddrIndex].currspeed + " ", 0, 16*2);
-          if(btn1.isPressed() && millis() > btn1Event + 500) {
-            btn1Event=millis();
-            FBTCtlMessage cmd(messageTypeID("ACC"));
-            cmd["addr"]=lokdef[selectedAddrIndex].addr;
-            controlClientThread.query(cmd,[](FBTCtlMessage &reply) {} );
-          }
-          if(btn2.isPressed() && millis() > btn2Event + 500) {
-            btn2Event=millis();
-            FBTCtlMessage cmd(messageTypeID("BREAK"));
-            cmd["addr"]=lokdef[selectedAddrIndex].addr;
-            controlClientThread.query(cmd,[](FBTCtlMessage &reply) {} );
-          }
-        }
-      break;
-      default:
-        ERRORF("invalid mode");
-        abort();
-    }
-    
-    
-  }
+    // unsigned long now = millis();
+ 
 
-      showVoltage();
-      button_loop();
 
+    showVoltage();
+    button_loop();
+
+      // DEBUGF("13: %lu %lu, 15: %lu %lu", isr13rise, isr13fall, isr15rise, isr15fall);
+      // DEBUGF("value:%d up down %d, up up %d, down down %d down up %d", rotaryValue, change13_up_15_down, change13_up_15_up, change13_down_15_down, change13_down_15_up);
+      
+      
     } catch(const char *e) {
         ERRORF(ANSI_RED "?: exception %s - client thread killed\n" ANSI_DEFAULT, e);
     } catch(std::RuntimeExceptionWithBacktrace &e) {
