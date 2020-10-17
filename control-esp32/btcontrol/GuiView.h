@@ -1,12 +1,13 @@
 #include <Button2.h>
 #include <vector>
+#include "lokdef.h"
 
 class GuiView {
 public:
   static GuiView currGuiView;
 
-  GuiView();
-  virtual ~GuiView();
+  GuiView() {};
+  virtual ~GuiView() {};
   virtual void loop();
   static void startGuiView(const GuiView &newGuiView);
   static void runLoop();
@@ -54,12 +55,39 @@ private:
   String ssid;
 };
 
-class GuiViewControlLoco : public GuiView {
+class GuiViewControl : public GuiView {
+public:
+  GuiViewControl(IPAddress host, int port) : host(host), port(port) {};
+  GuiViewControl() {};
+  void init();
+  void close();
+protected:
+  static int selectedAddrIndex;
+  static int nLokdef;
+  IPAddress host;
+  int port;
+};
+
+class GuiViewContolLocoSelectLoco : public GuiViewControl {
+public:
+	GuiViewContolLocoSelectLoco() {};
+	void init();
+	void close();
+	void loop();
+private:
+	static bool needUpdate;
+};
+
+class GuiViewControlLoco : public GuiViewControl {
 public:
   GuiViewControlLoco() {};
   void init();
+  void close();
   void loop();
-  const char * which() const { return "GuiViewControllLoco"; };
+  const char * which() const { return "GuiViewControlLoco"; };
+  static void onClick(Button2 &b);
+private:
+  void sendSpeed(int what);
+  static bool forceStop;
 };
-
 
