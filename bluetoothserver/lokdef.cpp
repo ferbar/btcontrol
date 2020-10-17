@@ -54,21 +54,6 @@ int getAddrIndex(int addr)
 		}
 
 
-/**
- * tut spaces am ende weg
- */
-#warning das gehört ins utils!!!!!
-void strtrim(char *s)
-{
-	char *pos=s+strlen(s);
-	while(pos > s) {
-		pos--;
-		if(isspace(*pos)) {
-			*pos='\0';
-		} else
-			break;
-	}
-}
 
 int str2decodertype(const char *pos)
 {
