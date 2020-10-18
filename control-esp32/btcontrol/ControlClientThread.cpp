@@ -24,6 +24,8 @@ void ControlClientThread::connect(const IPAddress &host, int port)
 		this->client = new ClientThread(0, *this->wifiClient);
 		return;
 	}
+	delete this->wifiClient;
+	this->wifiClient = NULL;
 	throw std::runtime_error("error connecting");
 }
 
