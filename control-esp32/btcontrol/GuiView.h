@@ -1,19 +1,21 @@
 #include <Button2.h>
 #include <vector>
 #include "lokdef.h"
+#include "utils.h"
 
 class GuiView {
 public:
-  static GuiView currGuiView;
+  static GuiView *currGuiView;
 
   GuiView() {};
   virtual ~GuiView() {};
   virtual void loop();
-  static void startGuiView(const GuiView &newGuiView);
+  // aufrufen mit new xyz !!! this-> wird dann ungültig !!!
+  static void startGuiView(GuiView *newGuiView);
   static void runLoop();
   virtual void close() {};
   virtual void init() {};
-  const char * which() const { return "GuiView" ; };
+  virtual const char * which() const { return "GuiView" ; };
 };
 
 
@@ -40,12 +42,12 @@ private:
   static std::vector <wifiEntry_t> wifiList;
   static int selectedWifi;
   static bool needUpdate;
-  static bool havePasswordForSSID(const String &ssid);
+  static const char *passwordForSSID(const String &ssid);
 };
 
 class GuiViewConnect : public GuiView {
 public:
-  GuiViewConnect(const String &ssid) : ssid(ssid) {};
+  GuiViewConnect(const String &ssid, const char *password) : ssid(ssid), password(password) {};
   void init();
   void close();
   void loop();
@@ -53,27 +55,30 @@ public:
 private:
   int lastWifiStatus;
   String ssid;
+  const char *password;
 };
 
 class GuiViewControl : public GuiView {
 public:
-  GuiViewControl(IPAddress host, int port) : host(host), port(port) {};
+  GuiViewControl(IPAddress host, int port) { this->host=host; this->port=port; };
   GuiViewControl() {};
   void init();
   void close();
+  const char * which() const { return "GuiViewControl"; };
 protected:
   static int selectedAddrIndex;
   static int nLokdef;
-  IPAddress host;
-  int port;
+  static IPAddress host;
+  static int port;
 };
 
 class GuiViewContolLocoSelectLoco : public GuiViewControl {
 public:
-	GuiViewContolLocoSelectLoco() {};
+	GuiViewContolLocoSelectLoco() {needUpdate=true; };
 	void init();
 	void close();
 	void loop();
+	const char * which() const { return "GuiViewContolLocoSelectLoco"; };
 private:
 	static bool needUpdate;
 };
@@ -91,3 +96,15 @@ private:
   static bool forceStop;
 };
 
+class GuiViewErrorMessage : public GuiView {
+public:
+	GuiViewErrorMessage(const String &errormessage) : errormessage(errormessage), needUpdate(true) { }
+	void init() {};
+	void close() {};
+	void loop();
+  const char * which() const { return "GuiViewErrorMessage"; };
+private:
+	String errormessage;
+	bool needUpdate;
+	static int retries;
+};
