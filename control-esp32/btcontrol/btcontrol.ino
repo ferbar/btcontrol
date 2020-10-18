@@ -60,8 +60,6 @@ char buff[512];
 int vref = 1100;
 int btnCick = false;
 
-void wifi_scan();
-
 //! Long time delay, it is recommended to use shallow sleep, which can effectively reduce the current consumption
 void espDelay(int ms)
 {
@@ -158,6 +156,8 @@ void setup()
 {
     Serial.begin(115200);
     Serial.println("Start");
+    
+    WiFi.persistent(false);
 
     /*
     ADC_EN is the ADC detection enable port
@@ -201,12 +201,12 @@ void setup()
     esp_adc_cal_value_t val_type = esp_adc_cal_characterize((adc_unit_t)ADC_UNIT_1, (adc_atten_t)ADC1_CHANNEL_6, (adc_bits_width_t)ADC_WIDTH_BIT_12, 1100, &adc_chars);
     //Check type of calibration value used to characterize ADC
     if (val_type == ESP_ADC_CAL_VAL_EFUSE_VREF) {
-        Serial.printf("eFuse Vref:%u mV", adc_chars.vref);
+        DEBUGF("eFuse Vref:%u mV", adc_chars.vref);
         vref = adc_chars.vref;
     } else if (val_type == ESP_ADC_CAL_VAL_EFUSE_TP) {
-        Serial.printf("Two Point --> coeff_a:%umV coeff_b:%umV\n", adc_chars.coeff_a, adc_chars.coeff_b);
+        DEBUGF("Two Point --> coeff_a:%umV coeff_b:%umV\n", adc_chars.coeff_a, adc_chars.coeff_b);
     } else {
-        Serial.println("Default Vref: 1100mV");
+        DEBUGF("Default Vref: 1100mV");
     }
 
 
@@ -235,7 +235,7 @@ void setup()
             delay(1000);
         }
     }
-    Serial.println("loading message layouts");
+    DEBUGF("loading message layouts");
     messageLayouts.load();
 
 /*
@@ -264,6 +264,8 @@ void setup()
 //attachInterrupt(15, isrGPIO15, CHANGE);
 // attachInterrupt(15, isrGPIO15fall, FALLING);
 */
+   GuiView::startGuiView(new GuiViewSelectWifi());
+
 }
 
 
@@ -272,15 +274,14 @@ int gui_selected_loco=0;
 
 void loop()
 {
-  try {
-    GuiView::runLoop();
+    try {
+    // DEBUGF("main::loop()");
+        button_loop();
+        GuiView::runLoop();
   
-    // unsigned long now = millis();
- 
 
-
-    showVoltage();
-    button_loop();
+        showVoltage();
+        
 
       // DEBUGF("13: %lu %lu, 15: %lu %lu", isr13rise, isr13fall, isr15rise, isr15fall);
       // DEBUGF("value:%d up down %d, up up %d, down down %d down up %d", rotaryValue, change13_up_15_down, change13_up_15_up, change13_down_15_down, change13_down_15_up);
@@ -301,5 +302,5 @@ void loop()
         throw; // rethrow exeption bis zum pthread_create, dort isses dann aus
         */
     }
-          
+    // delay(100);  <- reduziert den stromverbrauch nur ein bissl
 }
