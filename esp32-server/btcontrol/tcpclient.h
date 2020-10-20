@@ -9,6 +9,8 @@ public:
 	TCPClient(int id, WiFiClient &client) : clientID(id), client(client) {
 		numClients++; // sollte atomic sein
 		this->client.setTimeout(10); // in sekunden
+		// ohne dem hat man zwischen 2 esp32 einen ping von 200-500ms
+		this->client.setNoDelay(1);
 	};
 	virtual ~TCPClient();
 	virtual void run()=0;
