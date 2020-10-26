@@ -42,6 +42,8 @@
 #include "tcpclient.h"
 #include "BTUtils.h"
 
+#define TAG "TCPClient"
+
 int TCPClient::numClients=0;
 
 void TCPClient::prepareMessage()
@@ -70,7 +72,7 @@ void TCPClient::readSelect()
 		if(rc != 0) {
 			throw std::runtime_error("error select");
 		}
-		printf("ClientThread::readSelect error in select(%d) %s\n", this->so, strerror(errno));
+		ERRORF("ClientThread::readSelect error in select(%d) %s\n", this->so, strerror(errno));
 		throw std::runtime_error("timeout reading cmd");
 	}
 }

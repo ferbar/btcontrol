@@ -9,7 +9,6 @@ public:
 		numClients++; // sollte atomic sein
 	};
 	virtual ~TCPClient();
-	virtual void run()=0;
 	virtual void readSelect();
 	virtual void prepareMessage();
 	virtual void flushMessage();
