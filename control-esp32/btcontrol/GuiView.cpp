@@ -47,9 +47,10 @@ ControlClientThread controlClientThread;
 // ============================================================= GuiView ==========================
 GuiView *GuiView::currGuiView=NULL;
 void GuiView::loop() {
-	DEBUGF("GuiView::loop()");
-  };
-  
+	DEBUGF("%s::loop()", this->which());
+	delay(50); // ::loop() nicht überschrieben...
+}
+
 void GuiView::startGuiView(GuiView *newGuiView) {
 	if(currGuiView) {
 	    DEBUGF("startGuiView current: %s new: %s", currGuiView->which(), newGuiView->which());
@@ -95,6 +96,9 @@ void GuiViewSelectWifi::init() {
     for(int i=0; i < n; i++) {
       this->wifiList.push_back( { .ssid=WiFi.SSID(i), .rssi=WiFi.RSSI(i) } );
     }
+	if(this->selectedWifi > n-1) {
+		this->selectedWifi = n-1;
+	}
     // WiFi.mode(WIFI_OFF); => dürfte wifi hin machen
     DEBUGF("WiFi scan done found %d networks", n);
     btn1.setClickHandler(guiViewSelectWifiCallback1);
@@ -130,12 +134,23 @@ const char *GuiViewSelectWifi::passwordForSSID(const String &ssid) {
 
 void GuiViewSelectWifi::loop() {
 	// DEBUGF("GuiViewSelectWifi::loop()");
+	// update only if changed:
+	static long last=millis();
 	if(this->needUpdate) {
 		// DEBUGF("GuiViewSelectWifi::loop() needUpdate");
 		this->needUpdate=false;
-		// update only if changed:
-		tft.setTextColor(TFT_GREEN, TFT_BLACK);
+		last=millis();
+
 		tft.fillScreen(TFT_BLACK);
+
+		tft.setTextColor(TFT_BLACK, TFT_WHITE);
+		tft.setTextDatum(TR_DATUM);
+		tft.drawString(" ^",tft.width(),0);
+		tft.drawString(">>",tft.width(),tft.fontHeight());
+		tft.setTextDatum(BR_DATUM);
+		tft.drawString(" v",tft.width(),tft.height());
+
+		tft.setTextColor(TFT_GREEN, TFT_BLACK);
 		tft.setTextDatum(MC_DATUM);
 		tft.setTextSize(1);
 
@@ -165,6 +180,13 @@ void GuiViewSelectWifi::loop() {
 				n++;
 			}
 		}
+	} else {
+
+		if(millis() > last+10*1000) { // alle 10 sekunden refresehen wenn keine taste gedrückt wurde
+			DEBUGF("GuiViewSelectWifi::loop - refresh wifi");
+			last=millis();
+			GuiView::startGuiView(new GuiViewSelectWifi());
+		}
 	}
 }
 
@@ -182,7 +204,7 @@ void GuiViewSelectWifi::buttonCallbackLongPress(Button2 &b) {
 	String ssid=GuiViewSelectWifi::wifiList.at(GuiViewSelectWifi::selectedWifi).ssid;
 	const char *password=GuiViewSelectWifi::passwordForSSID(ssid);
     if(password) {
-      GuiView::startGuiView(new GuiViewConnect(ssid, password));
+		GuiView::startGuiView(new GuiViewConnect(ssid, password));
     }
 }
 
@@ -267,7 +289,8 @@ int GuiViewControl::port;
 void GuiViewControl::init() {
 	DEBUGF("GuiViewControl::init()");
 	try {
-		controlClientThread.connect(host, port);
+		assert(!controlClientThread.isRunning());
+		controlClientThread.connect(0, host, port);
 		controlClientThread.start();
 	} catch (std::runtime_error &e) {
 		DEBUGF("error connecting / starting client thread");
@@ -338,6 +361,7 @@ void GuiViewContolLocoSelectLoco::close() {
     btn2.reset();
 }
 
+// Vorsicht !!! in der theorie kann lokdef beim starten da noch nicht initialisiert sein weil die callback func noch nicht aufgerufen wurde.
 void GuiViewContolLocoSelectLoco::loop() {
 	if(this->needUpdate) {
 		tft.fillScreen(TFT_BLACK);
@@ -451,9 +475,7 @@ void GuiViewControlLoco::onClick(Button2 &b) {
 void GuiViewControlLoco::init() {
 	DEBUGF("GuiViewControlLoco::init()");
 	for(int i=0; i < buttonConfigSize; i++) {
-		DEBUGF("GuiViewControlLoco::init() %d %p", i, &buttonConfig[i]);
 		buttons[i]=new Button2Data<buttonConfig_t &>(buttonConfig[i].gpio, buttonConfig[i]);
-		DEBUGF("                  ptr: %p", &buttons[i]->data);
 
 		if(buttonConfig[i].when == on_off || buttonConfig[i].when == on) {
 			DEBUGF("set %i on handler", i);
@@ -469,7 +491,6 @@ void GuiViewControlLoco::init() {
 			GuiViewControlLoco::onClick(*buttons[i]);
 		}
 	}
-	// DEBUGF("GuiViewControlLoco::init() done");
 	tft.fillScreen(TFT_BLACK);
 }
 void GuiViewControlLoco::close() {
@@ -498,8 +519,8 @@ void GuiViewControlLoco::loop() {
         static int avg=0;
         if(now > last+200) { // jede 0,2 refreshen
           last=millis();
-          tft.setTextDatum(TL_DATUM);
           tft.setTextColor(TFT_GREEN, TFT_BLACK);
+          tft.setTextDatum(TL_DATUM);
           if(WiFi.status() == WL_CONNECTED) {
             tft.drawString(String("AP: ") + WiFi.SSID(), 0, 0 );
           } else {
@@ -540,6 +561,14 @@ void GuiViewControlLoco::loop() {
               tft.fillRect(width + 5, 51+10, w, 8, TFT_BLACK);
           }
           lastWidth=width;
+
+		  //char buf[100];
+		  //snprintf(buf,sizeof(buf), "ping: ~%4.2g (%4.2g)  ", ((float)controlClientThread.pingAvg)/controlClientThread.pingCount/1000.0, controlClientThread.pingMax/1000.0);
+          //tft.drawString( buf,
+
+          tft.drawString( utils::format( "ping: ~%4.2g (%4.2g)  ", ((float)controlClientThread.pingAvg)/controlClientThread.pingCount/1000.0, controlClientThread.pingMax/1000.0).c_str(),
+          	0, tft.height() - 16 );
+
         }
 		/*
         if(btn1.isPressed() && now > btn1Event + 250) {
@@ -553,7 +582,7 @@ void GuiViewControlLoco::loop() {
 		*/
         static int lastValues[10]={0,0,0,0,0,0,0,0};
         static long lastPotiCheck=0;
-        int poti=(analogRead(POTI_PIN)*255.0 /4096.0);
+        int poti=(analogRead(POTI_PIN)*255.0 /4095.0);
 
         if(now > lastPotiCheck + 200) {
           lastPotiCheck=now;
@@ -615,11 +644,18 @@ void GuiViewControlLoco::loop() {
           }
         }
 
-      }
+	} else { // controlClientThread.isRunning is not running
+		DEBUGF("GuiViewControlLoco::loop() controlClientThread.isRunning is not running");
+		GuiView::startGuiView(new GuiViewErrorMessage("lost connection ... reconnecting"));
+	}
 }
 
 // ============================================================= GuiViewErrorMessage ======================
 int GuiViewErrorMessage::retries=0;
+
+void GuiViewErrorMessage::init() {
+	DEBUGF("GuiViewErrorMessage::init message:%s", this->errormessage.c_str());
+}
 
 void GuiViewErrorMessage::loop() {
 	static long last=0;
@@ -638,6 +674,7 @@ void GuiViewErrorMessage::loop() {
 		last=millis();
 	}
 	if(millis() > last + 10*1000) { // 10 sekunden
+		last=millis();
 		DEBUGF("GuiViewErrorMessage::loop() restarting...");
 		if(WiFi.status() == WL_CONNECTED) {
 			retries++;
