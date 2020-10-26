@@ -64,6 +64,7 @@ public:
   GuiViewControl() {};
   void init();
   void close();
+  // void loop(); - default
   const char * which() const { return "GuiViewControl"; };
 protected:
   static int selectedAddrIndex;
@@ -99,7 +100,7 @@ private:
 class GuiViewErrorMessage : public GuiView {
 public:
 	GuiViewErrorMessage(const String &errormessage) : errormessage(errormessage), needUpdate(true) { }
-	void init() {};
+	void init();
 	void close() {};
 	void loop();
   const char * which() const { return "GuiViewErrorMessage"; };
