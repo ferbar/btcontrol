@@ -3,34 +3,27 @@
 
 #include "fbtctl_message.h"
 #include "tcpclient.h"
+#include "Thread.h"
 
 #define MAX_MESSAGE_SIZE 10000
 
-struct lastStatus_t {
-	int currspeed;
-	int func;
-	int dir;
-};
 
-
-class ClientThread : public TCPClient {
+class CommThread : public TCPClient, public Thread {
 public:
 #ifdef ESP_PLATFORM
-	ClientThread(int id, WiFiClient &client) : TCPClient(id, client), msgNum(0) {
+	CommThread() : TCPClient(), msgNum(0) {};
+	CommThread(int id, WiFiClient &client) : TCPClient(id, client), msgNum(0) {
 	};
+	void connect(int id, const IPAddress &host, int port ) { TCPClient::connect(id, host, port); msgNum=0; };
 #else
-	ClientThread(int id, int so) : TCPClient(id, so), msgNum(0) {
+	CommThread(int id, int so) : TCPClient(id, so), msgNum(0) {
 	};
 #endif
 	
-	virtual ~ClientThread();
-	virtual void run();
+	virtual ~CommThread();
+	virtual void run()=0;
 	void sendMessage(const FBTCtlMessage &msg);
 	FBTCtlMessage readMessage();
-	void setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus);
-	void sendStatusReply(lastStatus_t *lastStatus);
-
-	void sendClientUpdate();
 
 	int msgNum;
 };
