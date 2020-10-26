@@ -14,8 +14,9 @@
 static const char *TAG="THREAD";
 
 void *Thread::startupThread(void *ptr) {
-	NOTICEF("Thread::startupThread()\n");
+	NOTICEF("Thread::startupThread() ========================================");
 	Thread *t=(Thread *) ptr;
+	t->exited=false;
 	try {
 		t->run();
 	} catch(const char *e) {
@@ -32,7 +33,7 @@ void *Thread::startupThread(void *ptr) {
 		throw; // rethrow exeption bis zum pthread_create, dort isses dann aus
 	}
 
-	NOTICEF("Thread::startupThread() done\n");
+	NOTICEF("Thread::startupThread() done ====================================");
 	t->exited=true;
 	if(t->autodelete) {
 		delete t;
