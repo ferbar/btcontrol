@@ -6,6 +6,8 @@
 class ESP32_MAS_Speed : public ESP32_MAS {
   virtual void openFile(uint8_t channel, File &f);
 public:
+  ESP32_MAS_Speed();
+
 // -1 => stille
 // 0 => stand
   void setFahrstufe(int fahrstufe) {
