@@ -77,7 +77,7 @@ public:
 	bool isType(const char *);
 
 private:
-	int seqNum;
+//	int seqNum; -> wird nirgendwo verwendet
 
 	std::string name;
 
