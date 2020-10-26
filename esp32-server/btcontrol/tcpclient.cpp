@@ -14,6 +14,21 @@ int TCPClient::numClients=0;
 TCPClient::~TCPClient() {
 }
 
+void TCPClient::connect(int id, const IPAddress &host, int port)
+{
+	this->client.stop();
+	this->client.flush();
+	if(this->client.connect(host, port)) {
+		DEBUGF("ControlClientThread::connect - connected!");
+	} else {
+		throw std::runtime_error("error connecting");
+	}
+	this->clientID=id;
+	this->client.setTimeout(10); // in sekunden
+	// ohne dem hat man zwischen 2 esp32 einen ping von 200-500ms
+	this->client.setNoDelay(1);
+}
+
 void TCPClient::readSelect() {
 	if(!this->client.connected()) {
 		throw std::runtime_error("client not connected");
