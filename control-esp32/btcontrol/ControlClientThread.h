@@ -1,7 +1,7 @@
 #include <queue>
 #include <functional>
 #include "Thread.h"
-#include "clientthread.h"
+#include "CommThread.h"
 
 // c++11 muss das schon können
 typedef std::function<void(FBTCtlMessage &)> CallbackCmdFunction;
@@ -15,26 +15,23 @@ public:
 };
 
 
-class ControlClientThread : public Thread {
+class ControlClientThread : public CommThread {
 public:
 	ControlClientThread();
-	void connect(const IPAddress &hostname, int port);
-	void disconnect();
-	void run();
+	virtual void run();
 	// send command, exec callback wenn command received
 	void query(FBTCtlMessage cmd, CallbackCmdFunction callback);
 	// get ping stats
 	int getQueueLength();
 	void sendPing();
-private:
-	ClientThread *client=NULL;
-	WiFiClient *wifiClient=NULL;
-	bool waitForItemInQueueTimeout();
-	std::queue<ControlClientThreadQueueElement> cmdQueue;
+
 	int pingMax=0;
 	int pingMin=0;
 	int pingAvg=0;
 	int pingCount=0;
+private:
+	bool waitForItemInQueueTimeout();
+	std::queue<ControlClientThreadQueueElement> cmdQueue;
 
 	Condition condition;
 };
