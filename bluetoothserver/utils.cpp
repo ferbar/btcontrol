@@ -37,6 +37,8 @@
 #include <Arduino.h>
 #endif
 
+#define TAG "utils"
+
 namespace utils {
 	utils::Log log;
 };
@@ -253,16 +255,24 @@ std::string readFile(std::string filename)
 }
 #endif
 
+/* is template im utils.h
 std::string utils::format(const char *fmt, ...) {
 	size_t size = 0;
 	va_list ap;
 	char *buf=NULL;
 	va_start(ap, fmt);
 	size=vasprintf(&buf, fmt, ap );
-	printf("format result size:%zu string:%s\n", size, buf);
 	va_end(ap);
-	return std::string( buf, size ); // We don't want the '\0' inside
+	if(buf==NULL) {
+		DEBUGF("format failed: fmt:%s",fmt);
+		return std::string("format failed");
+	}
+	printf("format result size:%zu string:%s\n", size, buf);
+	std::string ret=std::string( buf, size ); // We don't want the '\0' inside
+	free(buf);
+	return ret;
 }
+*/
 
 /**
  * das muss am ende der Datei sein!!!
