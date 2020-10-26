@@ -259,16 +259,20 @@ void FBTCtlMessage::dump(int indent, const MessageLayout *layout) const
 		printf("dumpMessage\n");
 	}
 	INDENT();
-	printf("seqnum: %d, type:%d=%s\n",this->seqNum, this->type,  messageTypeName(this->type).c_str());
+	printf(/* "seqnum: %d, */ "type:%d=%s ", /* this->seqNum,*/ this->type,  messageTypeName(this->type).c_str());
 	switch(this->type) {
 		case MessageLayout::INT:
-			INDENT();
-			printf("(INT) %d\n",this->ival); break;
+			// INDENT();
+			// printf("(INT) %d\n",this->ival); break;
+			printf("value=%d\n",this->ival); break;
 		case MessageLayout::STRING:
-			INDENT();
-			printf("(STRING) %s\n",this->sval.c_str()); break;
+			// INDENT();
+			// printf("(STRING) %s\n",this->sval.c_str()); break;
+			printf("value=%s\n",this->sval.c_str()); break;
 		case MessageLayout::ARRAY: {
-			// INDENT(); printf("array\n");
+			// INDENT(); 
+			// printf("(ARRAY)\n");
+			printf("\n");
 			for(size_t i=0; i < arrayVal.size(); i++) {
 				INDENT();
 				printf("[%zu]:\n",i);
@@ -276,19 +280,22 @@ void FBTCtlMessage::dump(int indent, const MessageLayout *layout) const
 			}
 			break; }
 		default: { // struct + message type
-			// INDENT(); printf("struct\n");
+			// INDENT();
+			// printf("(STRUCT)\n");
+			printf("\n");
 			std::vector<MessageLayout>::const_iterator it;
 			std::map<std::string,bool> validEntries;
 			for(it=layout->childLayouts.begin(); it != layout->childLayouts.end(); ++it) {
 				INDENT();
-				printf("[%s]:\n",it->name.c_str());
+				printf("  [%s]:\n",it->name.c_str());
 				if(this->structVal.count(it->name) == 0) { // element gibts nicht
-					printf("NULL\n");
+					INDENT()
+					printf("  NULL\n");
 				} else {
 					// map::operator[] geht anscheinend nicht mit const keys grrr ...
 					FBTCtlMessage *sub=&(const_cast<FBTCtlMessage*>(this))->structVal[it->name];
 					if(sub->type == it->type) {
-						sub->dump(indent+1, &*it);
+						sub->dump(indent+2, &*it);
 						validEntries[it->name] = true;
 					} else {
 						try {
