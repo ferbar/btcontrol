@@ -86,26 +86,38 @@ private:
 
 class GuiViewControlLoco : public GuiViewControl {
 public:
-  GuiViewControlLoco() {};
-  void init();
-  void close();
-  void loop();
-  const char * which() const { return "GuiViewControlLoco"; };
-  static void onClick(Button2 &b);
+	GuiViewControlLoco() {};
+	void init();
+	void close();
+	void loop();
+	const char * which() const { return "GuiViewControlLoco"; };
+	static void onClick(Button2 &b);
 private:
-  void sendSpeed(int what);
-  static bool forceStop;
+	void sendSpeed(int what);
+	static bool forceStop;
 };
 
 class GuiViewErrorMessage : public GuiView {
 public:
-	GuiViewErrorMessage(const String &errormessage) : errormessage(errormessage), needUpdate(true) { }
+	GuiViewErrorMessage(const String &errormessage) : errormessage(errormessage), needUpdate(true) { };
 	void init();
 	void close() {};
 	void loop();
-  const char * which() const { return "GuiViewErrorMessage"; };
+	const char * which() const { return "GuiViewErrorMessage"; };
 private:
 	String errormessage;
 	bool needUpdate;
 	static int retries;
 };
+
+class GuiViewPowerDown : public GuiView {
+public:
+	GuiViewPowerDown() : startTime(millis()), done(false) {};
+	void init();
+	void loop();
+	const char * which() const { return "GuiViewPowerDown"; };
+private:
+	long startTime;
+	bool done;
+};
+

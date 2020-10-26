@@ -108,6 +108,7 @@ void GuiViewSelectWifi::init() {
 }
   
 void GuiViewSelectWifi::close() {
+	DEBUGF("GuiViewSelectWifi::close()");
     this->wifiList.clear();
     btn1.reset();
     btn2.reset();
@@ -223,6 +224,7 @@ void GuiViewConnect::init() {
 	WiFi.begin(this->ssid.c_str(), this->password);
 }
 void GuiViewConnect::close() {
+	DEBUGF("GuiViewConnect::close()");
     btn1.reset();
     btn2.reset();
 }
@@ -322,6 +324,7 @@ void GuiViewControl::init() {
 }
 
 void GuiViewControl::close() {
+	DEBUGF("GuiViewControl::close()");
 }
 // ============================================================= GuiViewContolLocoSelectLoco ======
 bool GuiViewContolLocoSelectLoco::needUpdate=false;
@@ -331,6 +334,7 @@ void GuiViewContolLocoSelectLoco::init() {
 	GuiViewContolLocoSelectLoco::selectedAddrIndex=0;
 	if(this->nLokdef==1) {
 		GuiView::startGuiView(new GuiViewControlLoco());
+		return;
 	}
     btn1.setClickHandler([](Button2& b) {
 		if(GuiViewContolLocoSelectLoco::selectedAddrIndex > 0) {
@@ -357,6 +361,7 @@ void GuiViewContolLocoSelectLoco::init() {
 }
 
 void GuiViewContolLocoSelectLoco::close() {
+	DEBUGF("GuiViewContolLocoSelectLoco::close()");
     btn1.reset();
     btn2.reset();
 }
@@ -450,7 +455,7 @@ void GuiViewControlLoco::onClick(Button2 &b) {
 	Button2Data<buttonConfig_t &> &button2Config=(Button2Data<buttonConfig_t &> &)b;
 	switch (button2Config.data.action) {
 		case sendFunc: {
-			DEBUGF("cb func %d #######################\n", button2Config.data.gpio);
+			DEBUGF("cb func %d #######################", button2Config.data.gpio);
 			if(controlClientThread.isRunning()) {
 				FBTCtlMessage cmd(messageTypeID("SETFUNC"));
 				cmd["addr"]=lokdef[selectedAddrIndex].addr;
@@ -460,12 +465,12 @@ void GuiViewControlLoco::onClick(Button2 &b) {
 			}
 			break; }
 		case sendFullStop: {
-			DEBUGF("cb fullstop %d #######################\n", button2Config.data.gpio);
+			DEBUGF("cb fullstop %d #######################", button2Config.data.gpio);
 			g->forceStop=true;
 			g->sendSpeed(SPEED_STOP);
 			break; }
 		case direction: {
-			DEBUGF("cb direction %d #######################\n", button2Config.data.gpio);
+			DEBUGF("cb direction %d #######################", button2Config.data.gpio);
 			dirSwitch=b.isPressed() ? 1 : -1 ;
 			break; }
 	}
@@ -492,12 +497,20 @@ void GuiViewControlLoco::init() {
 		}
 	}
 	tft.fillScreen(TFT_BLACK);
+	btn1.setLongClickHandler([](Button2&b) {
+		DEBUGF("GuiViewControlLoco::btn1.setLongClickHandler");
+		// off
+		GuiView::startGuiView(new GuiViewPowerDown());
+	}
+	);
 }
 void GuiViewControlLoco::close() {
+	DEBUGF("GuiViewControlLoco::close()");
 	for(int i=0; i < buttonConfigSize; i++) {
 		delete(buttons[i]);
 		buttons[i]=NULL;
 	}
+	btn1.reset();
 }
 void GuiViewControlLoco::loop() {
 	// DEBUGF("GuiViewControlLoco::loop()");
@@ -519,6 +532,14 @@ void GuiViewControlLoco::loop() {
         static int avg=0;
         if(now > last+200) { // jede 0,2 refreshen
           last=millis();
+
+			tft.setTextColor(TFT_BLACK, TFT_WHITE);
+			tft.setTextDatum(TR_DATUM);
+			//tft.drawString(" ^",tft.width(),0);
+			tft.drawString("off",tft.width(),tft.fontHeight());
+			tft.setTextDatum(BR_DATUM);
+			//tft.drawString(" v",tft.width(),tft.height());
+
           tft.setTextColor(TFT_GREEN, TFT_BLACK);
           tft.setTextDatum(TL_DATUM);
           if(WiFi.status() == WL_CONNECTED) {
@@ -688,3 +709,26 @@ void GuiViewErrorMessage::loop() {
 	}
 };
 
+// ============================================================= PowerDown ========================
+void GuiViewPowerDown::init() {
+	tft.fillScreen(TFT_BLACK);
+	tft.setTextDatum(MC_DATUM);
+	tft.setTextSize(2);
+	tft.println("power off - unplug batt!!!");
+}
+
+void GuiViewPowerDown::loop() {
+	if(millis() >  this->startTime + 10*1000 && ! this->done) { // 10 sekunden
+		this->done=true;
+		DEBUGF("GuiViewPowerDown::loop() power down...");
+        // digitalWrite(TFT_BL, !r);
+		digitalWrite(TFT_BL, ! TFT_BACKLIGHT_ON);
+
+        DEBUGF("TFT_DISPOFF");
+        tft.writecommand(TFT_DISPOFF);
+        tft.writecommand(TFT_SLPIN);
+		// esp_sleep_disable_wakeup_source(esp_sleep_disable_wakeup_source); => is im espDelay 
+		delay(200);
+		esp_deep_sleep_start();
+	}
+}
