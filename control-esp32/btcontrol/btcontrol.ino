@@ -1,3 +1,9 @@
+/*
+  btcontrol-controller ESP32 Arduino sketch
+  Instructions:
+  - creae config.h with (or copy config.h.sample)
+*/
+
 // example von https://github.com/Xinyuan-LilyGO/TTGO-T-Display
 // https://github.com/Bodmer/TFT_eSPI  => Setup siehe https://github.com/Xinyuan-LilyGO/TTGO-T-Display !!!!!!!!!!!
 #include <TFT_eSPI.h>
@@ -53,8 +59,8 @@ Button2 btn2(BUTTON_2); // right
 
 
 
-long btn1Event=0;
-long btn2Event=0;
+//long btn1Event=0;
+//long btn2Event=0;
 
 char buff[512];
 int vref = 1100;
@@ -238,6 +244,9 @@ void setup()
     DEBUGF("loading message layouts");
     messageLayouts.load();
 
+    // disable power saving: sonst gibts dauernd retransmitts beim empfangen
+    esp_wifi_set_ps(WIFI_PS_NONE);
+
 /*
 #warning fixme: test
     DEBUGF("button 3 pull up");
@@ -268,12 +277,22 @@ void setup()
 
 }
 
-
+#warning cleanup
+/*
 int gui_connect_state=0;
 int gui_selected_loco=0;
+*/
 
 void loop()
 {
+  /*
+    Serial.print("loop ");
+    Serial.print(ESP.getFreeHeap()); // ./cores/esp32/Esp.h
+    Serial.print("/");
+    Serial.print(ESP.getMinFreeHeap());
+    Serial.print("/");
+    Serial.println(ESP.getMaxAllocHeap());
+*/
     try {
     // DEBUGF("main::loop()");
         button_loop();
