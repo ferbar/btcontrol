@@ -1,10 +1,8 @@
-#ifndef CLIENTTHREAD_H
-#define CLIENTTHREAD_H
+#ifndef COMMTHREAD_H
+#define COMMTHREAD_H
 
-#include "fbtctl_message.h"
-#include "tcpclient.h"
+#include "CommThread.h"
 
-#define MAX_MESSAGE_SIZE 10000
 
 struct lastStatus_t {
 	int currspeed;
@@ -13,26 +11,22 @@ struct lastStatus_t {
 };
 
 
-class ClientThread : public TCPClient {
+class ClientThread : public CommThread {
 public:
 #ifdef ESP_PLATFORM
-	ClientThread(int id, WiFiClient &client) : TCPClient(id, client), msgNum(0) {
+	ClientThread(int id, WiFiClient &client) : CommThread(id, client) {
 	};
 #else
-	ClientThread(int id, int so) : TCPClient(id, so), msgNum(0) {
+	ClientThread(int id, int so) : CommThread(id, so) {
 	};
 #endif
 	
 	virtual ~ClientThread();
 	virtual void run();
-	void sendMessage(const FBTCtlMessage &msg);
-	FBTCtlMessage readMessage();
 	void setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus);
 	void sendStatusReply(lastStatus_t *lastStatus);
 
 	void sendClientUpdate();
-
-	int msgNum;
 };
 
 #endif

@@ -45,51 +45,6 @@
 
 static const char *TAG="clientthread";
 
-void ClientThread::sendMessage(const FBTCtlMessage &msg)
-{
-	std::string binMsg=msg.getBinaryMessage();
-	int msgsize=binMsg.size();
-	DEBUGF(":sendMessage size: %zu+4 %d=%s", binMsg.size(), msg.getType(), messageTypeName(msg.getType()).c_str());
-	this->prepareMessage();
-	this->write(&msgsize, 4);
-	this->write(binMsg.data(), binMsg.size());
-	this->flushMessage();
-}
-
-FBTCtlMessage ClientThread::readMessage()
-{
-	int msgsize=0;
-	int rc;
-	/*
-	struct timeval t,t0;
-	gettimeofday(&t0, NULL);
-	*/
-	this->readSelect(); // auf daten warten, macht exception wenn innerhalb vom timeout nix kommt
-	if((rc=this->read(&msgsize, 4)) != 4) {
-		throw std::runtime_error(utils::format("error reading cmd: %d", rc));
-	}
-	/*
-	gettimeofday(&t, NULL);
-	int us=(t.tv_sec - t0.tv_sec) * 1000000 + t.tv_usec - t0.tv_usec;
-	DEBUGF("select + read in %dµs",us);
-	*/
-	//  DEBUGF("%d:reading msg.size: %d bytes",this->clientID,msgsize);
-	if(msgsize < 0 || msgsize > MAX_MESSAGE_SIZE) {
-		throw std::runtime_error("invalid size msgsize 2big");
-	}
-	char buffer[msgsize];
-	this->readSelect();
-	if((rc=this->read(buffer, msgsize)) != msgsize) {
-		throw std::runtime_error(utils::format("error reading cmd.data: %d", rc));
-	}
-	// DEBUGF("%d:main loop - reader", this->clientID);
-	InputReader in(buffer,msgsize);
-	// DEBUGF("%d:parsing msg\n",this->clientID);
-	FBTCtlMessage cmd;
-	cmd.readMessage(in);
-	return cmd;
-}
-
 void ClientThread::setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus)
 {
 	// FBTCtlMessage test(messageTypeID("PING_REPLY"));
@@ -201,6 +156,7 @@ continue;
 		bool emergencyStop=false;
 
 		FBTCtlMessage cmd=this->readMessage();
+		long start=millis();
 		if(cfg_debug) {
 			DEBUGF("/%d: msg", this->msgNum);
 			cmd.dump();
@@ -497,14 +453,14 @@ continue;
 		// wegen X_MULTI könnten sich mehrere adressen geändert ham:
 		for(int i=0; i <= nLokdef; i++) {
 			if(changedAddrIndex[i]) {
-				// DEBUGF(" --- addr_index=%d\n", addr_index);
+				DEBUGF("clientthread changed addr_index=%d time since message received: %ldms", i, millis()-start);
 				changedAddrIndex[i]=false;
 				int addr_index=i;
 				lokdef[addr_index].lastClientID = this->clientID;
 				hardware->sendLoco(addr_index, emergencyStop);
-
 			}
 		}
+		DEBUGF("processing message done in %ldms", millis()-start);
 		msgNum++;
 	}
 	NOTICEF("%d:client exit\n",this->clientID);
