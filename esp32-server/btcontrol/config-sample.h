@@ -25,6 +25,8 @@
 // WEMOS v1.0.0
 #define WEMOS_I2C_MOTOR_SHIELD
 
+#define MOTOR_START 80
+
 // speaker/amplifier connected to internal DAC
 // mit Arduino -> Tools -> ES32 Sketch Data Upload die F*.raw files raufladen
 #define HAVE_SOUND

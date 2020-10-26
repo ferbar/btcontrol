@@ -71,6 +71,26 @@ LOLIN_I2C_MOTOR motor; //I2C address 0x30
 //PWM frequency: default: 1000Hz(1kHz)
 // WEMOS_Motor.cpp    Wire.write(((byte)(freq >> 24)) & (byte)0x0f); !!!!!!!!!! richten !!!!!!!!!!
 // https://github.com/pbugalski/wemos_motor_shield/issues/9 => 10kHz geht ned mit der default firmware .........
+/* Pathches an der wemos lib: WEMOS_Motor.cpp
+ void Motor::setfreq(uint32_t freq)
+ {
+        Wire.beginTransmission(_address);
+-       Wire.write(((byte)(freq >> 16)) & (byte)0x0f);
++// [chris]
++//     Wire.write(((byte)(freq >> 16)) & (byte)0x0f);
++       Wire.write(((byte)(freq >> 24)) & (byte)0x0f);
+        Wire.write((byte)(freq >> 16));
+        Wire.write((byte)(freq >> 8));
+        Wire.write((byte)freq);
+@@ -111,10 +113,11 @@ void Motor::setmotor(uint8_t dir, float pwm_val)
+        Wire.endTransmission();     // stop transmitting
+ 
+ 
+-       delay(100);
++#warning [chris] rauskommentiert
++//     delay(100);
+ }
+*/
 Motor motor(0x30,_MOTOR_A, 1000);//Motor A
 
 #else
@@ -135,7 +155,7 @@ delay(100);
 /**
  * wird mit new im btcontrol::setup() gestartet
  */
-ESP32PWM::ESP32PWM() : USBPlatine(false), dir(0), pwm(0), motorStart(40), motorFullSpeed(255), ledToggle(0) {
+ESP32PWM::ESP32PWM() : USBPlatine(false), dir(0), pwm(0), motorStart(MOTOR_START), motorFullSpeed(255), ledToggle(0) {
 #ifdef LOLIN_I2C_MOTOR_SHIELD
 //   DEBUGF("start i2c scan");
 //   i2c_scan();
@@ -199,6 +219,7 @@ ESP32PWM::~ESP32PWM() {
 }
 
 void ESP32PWM::setPWM(int f_speed) {
+  long start=millis();
   unsigned char pwm = 0;
   if(f_speed > 0) {
     pwm = f_speed*((double)this->motorFullSpeed - this->motorStart)/255 + this->motorStart;
@@ -233,10 +254,12 @@ void ESP32PWM::setPWM(int f_speed) {
     digitalWrite(INFO_LED_PIN, this->ledToggle & 0x1);
   this->ledToggle++;
 #endif
+  DEBUGF("ESP32PWM::setPWM done in %ldms",millis()-start);
 }
 
 void ESP32PWM::setDir(unsigned char dir) {
   DEBUGF("ESP32PWM::setDir dir=%d", dir);
+  long start=millis();
 // ????????????? 20200731: warum is da ein fullstop beim setDir? setDir wir bei sendLoco aufgerufen
   if(this->dir != dir) {
     this->fullstop(true, true);
@@ -249,6 +272,7 @@ void ESP32PWM::setDir(unsigned char dir) {
 	motorGo(MOTOR_NR, dir ? CW : CCW);
 #endif
 #endif
+  DEBUGF("ESP32PWM::setDir done in %ldms",millis()-start);
 }
 
 void ESP32PWM::fullstop(bool stopAll, bool emergencyStop) {
