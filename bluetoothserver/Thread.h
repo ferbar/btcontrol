@@ -32,7 +32,6 @@ public:
 	void unlock();
 	/// @return true if lock is successful
 	bool tryLock();
-#warning fixme
 private:
 	pthread_mutex_t m;
 friend class Condition;
