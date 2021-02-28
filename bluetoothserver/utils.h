@@ -123,4 +123,9 @@ namespace utils
 #define ERRORF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_ERROR, __FILE__, __LINE__, fmt, ##__VA_ARGS__ )
 #endif
 
+// arduino / wiring pi / utils.cpp
+extern "C" {
+extern unsigned int millis();
+}
+
 #endif // utils.h

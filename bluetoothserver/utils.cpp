@@ -365,3 +365,11 @@ void utils::Log::printf(const char *tag, int level, const char *file, int line, 
 	va_end(args);
 #endif
 }
+
+#if ! defined(ESP_PLATFORM) && ! defined(HAVE_RASPI_WIRINGPI)
+unsigned int millis() {
+	struct timespec ts;
+	clock_gettime(CLOCK_BOOTTIME, &ts);
+	return ts.tv_sec*1000 + ts.tv_nsec / 1000000;
+}
+#endif
