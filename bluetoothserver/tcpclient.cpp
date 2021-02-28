@@ -83,7 +83,12 @@ void TCPClient::readSelect()
  */
 TCPClient::~TCPClient()
 {
-	close(this->so);
+	this->close();
+}
+
+void TCPClient::close() {
+	::close(this->so);
+	this->so=0;
 }
 
 std::string TCPClient::getRemoteAddr() {
@@ -96,9 +101,19 @@ std::string TCPClient::getRemoteAddr() {
 }
 
 ssize_t TCPClient::read(void *buf, size_t count) {
-	return ::myRead(this->so, buf, count);
+	try {
+		return ::myRead(this->so, buf, count);
+	} catch(...) {
+		this->close();
+		throw;
+	}
 }
 
 ssize_t TCPClient::write(const void *buf, size_t count) {
-	return ::write(this->so, buf, count);
+	try {
+		return ::write(this->so, buf, count);
+	} catch(...) {
+		this->close();
+		throw;
+	}
 }
