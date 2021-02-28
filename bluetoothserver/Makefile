@@ -172,13 +172,17 @@ install:
 				else \
 					echo "!!! modification of /etc/systemd/system/dbus-org.bluez.service required !!!" ; \
 					echo "change ExecStart=/usr/lib/bluetooth/bluetoothd to ExecStart=/usr/lib/bluetooth/bluetoothd --compat" ; \
-					echo "reload systemd afterwards: systemctl daemon-reload" ; \
+					echo "reload systemd afterwards: systemctl daemon-reload; systemctl restart bluetooth" ; \
 					exit 1 ; \
 				fi ; \
 			fi ; \
 		else \
 			echo "Error finding bluez version!" ; \
 			exit 1 ; \
+		fi ; \
+		if [ ! -f ~/.bashrc-save-btcontrol -a ~/.bashrc ] ; then \
+			mv ~/.bashrc ~/.bashrc-save-btcontrol ; \
+			ln -s $$PWD/etc/bashrc ~/.bashrc ; \
 		fi ; \
 	else \
 		cp ../ussp-push-0.11/src/ussp-push \
