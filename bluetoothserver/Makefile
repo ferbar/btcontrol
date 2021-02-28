@@ -116,7 +116,7 @@ Makefile.config:
 	# gibts unter linux immer (am esp32 nicht)
 	@echo "CFLAGS+=-DHAVE_EXECINFO" >> Makefile.config
 
-btserver: fbtctl_message.o message_layout.o server.o tcpclient.o clientthread.o lokdef.o main.o srcp.o utils.o ParseExpr.o Thread.o USBPlatine.o BTUtils.o
+btserver: fbtctl_message.o CommThread.o message_layout.o server.o tcpclient.o clientthread.o lokdef.o main.o srcp.o utils.o ParseExpr.o Thread.o USBPlatine.o BTUtils.o
 	${CPP} ${LDFLAGS} $+ -o btserver
 
 digispark_test: USBDigispark.cpp utils.o
