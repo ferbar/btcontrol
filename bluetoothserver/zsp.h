@@ -3,7 +3,11 @@
 #include <map>
 #include <unordered_map>
 #include <string>
+#if __cplusplus >= 201103L
+#include <memory>
+#else
 #include <boost/shared_ptr.hpp>
+#endif
 #include "utils.h"
 #include <vector>
 
@@ -118,7 +122,11 @@ public:
 	SteamSoundType *parseDSet();
 	std::string getName();
 };
+#if __cplusplus >= 201103L
+typedef std::shared_ptr<SectionValues> SectionValuesPtr;
+#else
 typedef boost::shared_ptr<SectionValues> SectionValuesPtr;
+#endif
 typedef std::multimap<std::string, SectionValuesPtr > ZSPDataType;
 
 

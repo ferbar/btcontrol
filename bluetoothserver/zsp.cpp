@@ -6,11 +6,11 @@
 #include <map>
 #include <string>
 
+#include "zsp.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include "unquote.hpp"
 #include <boost/lexical_cast.hpp>
-#include <boost/shared_ptr.hpp>
 #include <boost/algorithm/string/replace.hpp>
 
 #include "sound.h"
