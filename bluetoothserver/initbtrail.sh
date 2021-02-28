@@ -33,6 +33,12 @@ else
 	exit 0
 fi
 
+out=$($SDPTOOL browse ff:ff:ff:00:00:00)
+if [ $? != 0 ] ; then
+	echo "[error] sdptool not working - see make install"
+	exit 1
+fi
+
 if $SDPTOOL browse ff:ff:ff:00:00:00 | grep -q btrail ; then
 	echo "[ok] sdp service schon registriert"
 else
