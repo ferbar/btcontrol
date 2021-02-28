@@ -46,10 +46,10 @@
 	#include "K8055.h"
 	#include "USBDigispark.h"
 
-	#ifdef HAVE_ALSA
-		#include "zsp.h"
-		#include "sound.h"
-	#endif
+#endif
+#ifdef HAVE_ALSA
+	#include "zsp.h"
+	#include "sound.h"
 #endif
 #ifdef HAVE_RASPI_WIRINGPI
 	#include "RaspiPWM.h"
