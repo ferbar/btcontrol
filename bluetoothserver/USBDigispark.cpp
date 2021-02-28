@@ -393,6 +393,7 @@ void USBDigispark::fullstop(bool stopAll, bool emergencyStop) {
 	struct timespec timeout;
 	setMSTimeout(timeout, 1000);
 	pthread_mutex_lock(&buffer_empty_mut);
+#warning TODO: auf Condition umbauen
 	int retcode = pthread_cond_timedwait(&buffer_empty_cond, &buffer_empty_mut, &timeout);
 	printf("USBDigispark::fullstop() retcode=%s\n",strerror(retcode));
 	pthread_mutex_unlock(&buffer_empty_mut);
