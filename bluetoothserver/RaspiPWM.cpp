@@ -15,6 +15,7 @@
 #include <softPwm.h>
 
 #include "ParseExpr.h"
+#define TAG "RaspiPWM"
 
 int cfg_pinPWM=1;
 
@@ -44,7 +45,7 @@ RaspiPWM::RaspiPWM(bool debug) :
 }
 
 RaspiPWM::~RaspiPWM() {
-	this->fullstop();
+	this->fullstop(true, true);
 	this->release();
 	delete(parseExpr); parseExpr=NULL;
 	this->funcThread.cancel();
@@ -150,8 +151,10 @@ void RaspiPWM::setPWM(int f_speed) {
 	}
 
 	if(this->fRaspiLed) {
-		if(this->raspiLedToggle & 0x1)
-			fwrite(this->raspiLedToggle & 0x2 ? "1\n" : "0\n", 1, 2, this->fRaspiLed); fflush(this->fRaspiLed);
+		if(this->raspiLedToggle & 0x1) {
+			fwrite(this->raspiLedToggle & 0x2 ? "1\n" : "0\n", 1, 2, this->fRaspiLed);
+			fflush(this->fRaspiLed);
+		}
 		this->raspiLedToggle++;
 	}
 }
@@ -176,7 +179,7 @@ void RaspiPWM::setFunction(int nFunc, bool *func) {
 	memcpy(&this->currentFunc, func, sizeof(this->currentFunc));
 }
 
-void RaspiPWM::fullstop() {
+void RaspiPWM::fullstop(bool stopAll, bool emergencyStop) {
 	this->setPWM(0);
 	printf("RaspiPWM::fullstop() done\n");
 }
@@ -193,24 +196,26 @@ void RaspiPWM::commit() {
 }
 
 void RaspiPWM::commit(bool force) {
-this->dumpPins();
+	const bool logPins=false;
+	if(logPins)
+		this->dumpPins();
 	Lock lock(this->funcMutex);
 	auto it=this->pins.begin();
 	while (it!=this->pins.end()) {
 		int pin=it->first;
-		printf("%d\n", pin);
+		if(logPins) DEBUGF("%d\n", pin);
 		PinCtl *pinCtl=&it->second;
 		bool value=false;
 		do {
 			if(parseExpr->getResult(it->second.function, this->dir, this->pwm, this->currentFunc)) {
-				printf("   %s [true, last:%d]\n", it->second.function.c_str(), it->second.lastState);
+				if(logPins) DEBUGF("   %s [true, last:%d]\n", it->second.function.c_str(), it->second.lastState);
 				value=true;
 				pinCtl=&it->second;
 			} else {
-				printf("   %s [false, last:%d]\n", it->second.function.c_str(), it->second.lastState);
+				if(logPins) DEBUGF("   %s [false, last:%d]\n", it->second.function.c_str(), it->second.lastState);
 				if(it->second.lastState) {
 					if(it->second.pwm != 100) {
-						printf("  soft pwm stop\n");
+						if(logPins) DEBUGF("  soft pwm stop\n");
 						softPwmStop(it->first);
 					} else {
 						digitalWrite(pin, value);
@@ -220,11 +225,11 @@ this->dumpPins();
 			}
 			++it;
 		} while((it != this->pins.end() ) && (it->first == pin));
-		printf("%d: %s =>%d (pwm:%d last:%d)\n", pin, pinCtl->function.c_str(),value,pinCtl->pwm,pinCtl->lastState);
+		if(logPins) DEBUGF("%d: %s =>%d (pwm:%d last:%d)\n", pin, pinCtl->function.c_str(),value,pinCtl->pwm,pinCtl->lastState);
 		if(force || value != pinCtl->lastState) {
 			if(pinCtl->pwm != 100) {
 				if(value) {
-					printf("  soft pwm create\n");
+					if(logPins) NOTICEF("  soft pwm create\n");
 					softPwmCreate(pin, pinCtl->pwm, 100);
 				}
 			} else {
@@ -232,11 +237,12 @@ this->dumpPins();
 			}
 			pinCtl->lastState=value;
 		} else {
-			printf("  commit: no force\n");
+			if(logPins) NOTICEF("  commit: no force\n");
 		}
 	}
 }
 
+#warning: muss man wirklich jede sekunde die func outs setzen??
 void RaspiPWMFuncThread::run() {
 	while(true) {
 		printf("RaspiPWMFuncThread::run()\n");
