@@ -158,15 +158,40 @@ loop:
 	done ;
 
 install:
-	cp ../ussp-push-0.11/src/ussp-push \
-		../MidpBluetoothExample2/MobileApplication/dist/btcontrol.jar \
-		btserver \
-		protocol.dat \
-		~/download/lgb/srcpd_trunk/srcpd/src/srcpd \
-		~/download/lgb/srcpd_trunk/srcpd/init.d.suse \
-		~/download/lgb/srcpd_trunk/clients/nmra-programmer/nmra-programmer \
-		initbtrail.sh \
-		~/bin/
+	# raspi setup or srcpd setup?
+	if grep -q ID=raspbian /etc/os-release ; then \
+		echo "Raspi install" ; \
+		btout=$$(bluetoothctl --version) ; \
+		regex='([0-9])\.[0-9]' ; \
+		if [[ "$$btout" =~ $$regex ]] ; then \
+			echo "blutoothctl version: $${BASH_REMATCH[1]}" ; \
+			v="$${BASH_REMATCH[1]}" ; \
+			if [ $$v -ge 5 ] ; then \
+				if grep -q -e '--compat' /etc/systemd/system/dbus-org.bluez.service ; then \
+					echo "bluez compat mode already enabled" ; \
+				else \
+					echo "!!! modification of /etc/systemd/system/dbus-org.bluez.service required !!!" ; \
+					echo "change ExecStart=/usr/lib/bluetooth/bluetoothd to ExecStart=/usr/lib/bluetooth/bluetoothd --compat" ; \
+					echo "reload systemd afterwards: systemctl daemon-reload" ; \
+					exit 1 ; \
+				fi ; \
+			fi ; \
+		else \
+			echo "Error finding bluez version!" ; \
+			exit 1 ; \
+		fi ; \
+	else \
+		cp ../ussp-push-0.11/src/ussp-push \
+			../MidpBluetoothExample2/MobileApplication/dist/btcontrol.jar \
+			btserver \
+			protocol.dat \
+			~/download/lgb/srcpd_trunk/srcpd/src/srcpd \
+			~/download/lgb/srcpd_trunk/srcpd/init.d.suse \
+			~/download/lgb/srcpd_trunk/clients/nmra-programmer/nmra-programmer \
+			initbtrail.sh \
+			~/bin/ ; \
+	fi
+	cp etc/avahi/services/btcontrol.service /etc/avahi/services/
 search-ibm-desktop:
 	nmap -sP 192.168.0.1-240
 	# for i in `seq 1 240` ; do (ping -W 1 -c 1 192.168.0.$$i 2>&1| grep -B 1 "transmitted, 1") & pid=$!; done
