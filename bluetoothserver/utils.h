@@ -83,12 +83,13 @@ namespace utils
 	// std::string format(const char *fmt, ...);
 	template< typename... argv >
 	std::string format( const char* format, argv... args ) {
-    	// const size_t SIZE = std::snprintf( NULL, 0, format, args... );
-    	const size_t SIZE = snprintf( NULL, 0, format, args... );
-	    std::string output;
-    	output.resize(SIZE+1);
-	    snprintf( &(output[0]), SIZE+1, format, args... );
-    	return std::move(output);
+		// const size_t SIZE = std::snprintf( NULL, 0, format, args... );
+		const size_t SIZE = snprintf( NULL, 0, format, args... );
+		std::string output;
+		output.reserve(SIZE+1);
+		output.resize(SIZE);
+		snprintf( &(output[0]), SIZE+1, format, args... );
+		return std::move(output);
 	}
 
 	bool isDir(const char *filename);
