@@ -17,6 +17,24 @@
 
 std::string baseFolder;
 
+const char *soundTypeToString(unsigned char soundType) {
+	switch(soundType) {
+		case 1: return "Pfeife kurz";
+		case 2: return "Pfeife lang";
+		case 3: return "Glocke";
+		case 4: return "Kohlenschaufeln";
+		case 5: return "Injektor";
+		case 6: return "Luftpumpe";
+		case 8: return "Schaffnerpfiff";
+		case 0xa: return "Kupplung";
+		case 0xb: return "Generator";
+		case 0x80: return "Sieden";
+		case 0x82: return "Bremsenquietschen";
+		case 0xff: return "Dampfschlag";
+		default: return "unknown";
+	}
+}
+
 static void write_wav_file(const std::string &wavData, const char *outfilename)
 {
 	// static float buffer [BUFFER_LEN] ;
@@ -102,29 +120,20 @@ int main(int argc, char *argv[]) {
 	std::fstream zspFile;
 	zspFile.exceptions ( std::ifstream::failbit | std::ifstream::badbit );
 	try {
-	zspFile.open(baseFolder + "/generated.zsp", std::ios_base::out);
+	std::string zspFilename=baseFolder + "/generated.zsp";
+	zspFile.open(zspFilename, std::ios_base::out);
 
 	std::string data=zpp.substr(headerSize);
-	// Ablauf einlesen
-	const char* ablNames[] = {"Sieden", "??", "Bremsquietschen", "??", "Entwässern", "Anfahrpfiff","??", "??", "??", "??"};
-	for(int i = 0; i < 10; i++) {
-		int offset=0xc40 + 3;
-		int address=offset+i*2;
-		// b5 => -3db
-		// 80 => -6db
-		// 5b => -9db
-		// 40 => -12db
-		printf("Abl: %02x %02x (%s)\n", (unsigned char) data[address], (unsigned char) data[address+1], ablNames[i] );
-	}
-	
-	// SAMPLE einlesen
+
+	// SAMPLE einlesen =========================================================================
 	for(int i = 0; i < 128; i++) {
 		// printf("%02x%02x:%02x%02x ", (unsigned char) data[i*4], (unsigned char) data[i*4+1], (unsigned char) data[i*4+2], (unsigned char) data[i*4+3]);
 		int address=(((unsigned char) data[i*4+1]) << 16) + 
 			(((unsigned char) data[i*4+2]) << 8) +
 			((unsigned char) data[i*4+3]);
+		unsigned char soundType=(unsigned char) data[i*4];
+		printf("[%02x] type: %02x (%s) address: %06x ", i+1, soundType, soundTypeToString(soundType),  address);
 		if(address > 0 && address < (signed) data.length()) {
-			printf("%02x address: %06x ", (unsigned char) data[i*4], address);
 			printf("data: %02x%02x:%02x%02x ", (unsigned char) data[address], (unsigned char) data[address+1], (unsigned char) data[address+2], (unsigned char) data[address+3]);
 			printf(" %02x%02x:%02x%02x ", (unsigned char) data[address+4], (unsigned char) data[address+5], (unsigned char) data[address+6], (unsigned char) data[address+7]);
 			printf(" %02x%02x:%02x%02x ", (unsigned char) data[address+8], (unsigned char) data[address+9], (unsigned char) data[address+10], (unsigned char) data[address+11]);
@@ -174,7 +183,7 @@ int main(int argc, char *argv[]) {
 				if(infoLen == 0) {
 					infoName=utils::format("%d",i);
 				}
-				printf("%s ", infoName.c_str());
+				printf("Info: '%s' ", infoName.c_str());
 			} else {
 				infoName=utils::format("no-name%d",i);
 			}
@@ -190,7 +199,7 @@ int main(int argc, char *argv[]) {
 				<< "\"NUMMER\"," << i << "\n"
 				<< "\"PFAD\",\"\"\n"
 				<< "\"NAME\",\"" << infoName << ".wav\"\n"
-				<< "\"ART\",255\n"
+				<< "\"ART\"," << soundType << "\n"
 				<< "\"SIZE\"," << wavLen << "\n"
 				<< "\"L1\"," << wavLoopStart << "\n"
 				<< "\"L2\"," << wavLoopEnd << "\n"
@@ -208,10 +217,157 @@ int main(int argc, char *argv[]) {
 				<< "\"/Sample\"\n" ;
 
 		} else if(address != 0) {
-			printf("address %06x out of range!\n", address);
+			// printf("[%02x] type: %02x (%s) address: %06x out of range!!!!", i, soundType, soundTypeToString(soundType), address);
+			printf("out of range!!!!\n");
+		} else {
+			printf("skipped\n");
 		}
 	}
+
+	// Ablauf einlesen ==================================================
+	/* pro Eintrag ein Objekt im ZSP, für jede lok eine Ablaufliste
+"Abl"
+"LOK",0
+"NUMMER",0
+"SAMPLE",2
+"LAUTST",7
+"/Abl"
+	*/
+
+	const char* ablNames[] = {"Sieden", "Glocke", "Bremsquietschen", "Entwässern", "Anfahrpfiff", "??", "E-Motor", "??", "Schaltwerk", "??", "??", "??", "??", "??",
+		"E Bremse", "Kurve", "??", "??", "??"};
+	int nablItems=sizeof(ablNames) / sizeof(char*);
+	for(int addrDampE=0; addrDampE <= 1; addrDampE++)   // dampf Abl fängt bei 920 an, E bei 960
+	for(int i = 0; i < 32; i++) {
+		printf("Abl Set %d\n",i);
+		int offset=(data[0x920-0x80+i*2+addrDampE*0x40] << 8) + data[0x920 - 0x80+i*2+addrDampE*0x40 + 1];
+//		int offset=(data[0x960-0x80+i*2] << 8) + data[0x960 - 0x80+i*2 + 1];
+		if(offset == 0)
+			break;
+		offset+=0x7b;
+		// for(int j=0; j < 42; j++) printf("[%d] %02x ", j, data[offset + j]); printf("\n");
+		for(int j = 0; j < nablItems; j++) {
+			int address=offset+j*2;
+			// printf("Abl Set %d [%d] Address: %#0x\n", i, j, address + 0x80);
+			// printf("Address: %#0x\n", address+0x80);
+		// b5 => -3db
+		// 80 => -6db
+		// 5b => -9db
+		// 40 => -12db
+		//
+		// 2E => -15db
+		// 17 => -21db
+			unsigned char id=(unsigned char) data[address];
+			unsigned char soundLevel=(unsigned char) data[address+1];
+			printf("Abl Set %d [%d] : id:%02x level:%02x (%s)\n", i, j, id, soundLevel, ablNames[j] );
+			zspFile
+				<< "\"Abl\"\n"
+				<< "\"LOK\"," << i << "\n"
+				<< "\"NUMMER\"," << j << "\n"
+				<< "\"SAMPLE\"," << id << "\n"
+				<< "\"LAUTST\"," << soundLevel << "\n"
+				<< "\"/Abl\"\n";
+		}
+	}
+
+	// Func: ==============================================================
+	// vielleicht addr pointer @920-0x80
+
+	// DiSets: =============================================================
+	for(int i = 0; i < 32; i++) {
+		printf("DiSet [%d]\n",i);
+		int offset=0x840;
+		int address=(data[offset+i*2] << 8) + data[offset+i*2+1];
+		printf("Address: %#0x\n", address + 0x80);
+		if(address == 0)
+			break;
+
+		for(int j=0; j < 42; j++) {
+			printf("[%d] %02x ", j, data[address + j]);
+		}
+		printf("\n");
+		int stufen=data[address+0]; // [0] oder [1]
+		int typ=data[address+1]; // [0] oder [1]
+		printf("stufen: %d, typ: %d, Mstart: %d, stand: %d, Mstop: %d\nstand->F1: %d, F1: %d, F1->stand: %d\n",
+			stufen, typ,
+			data[address+5], data[address+6], data[address+7],
+			data[address+8], data[address+9], data[address+10]);
+		if(stufen > 1) {
+			unsigned char schwelle=data[address+39];
+			printf("F2 Schwelle: %u, F1>F2: %d, F2: %d, F2->F1: %d\n",
+				schwelle,
+				data[address+11], data[address+12], data[address+13]);
+		}
+	}
+
+	// DSets: =============================================================
+	// laut programm 1 ... 32 Plätze, name dürfte nicht vorkommen
+	for(int i = 0; i < 32; i++) {
+		printf("DSet [%d]\n",i);
+		int offset=0x800;
+		int address=(data[offset] << 8) + data[offset+1];
+		printf("Address: %#0x\n", address + 0x80);
+		if(address == 0)
+			break;
+		int pos=0;
+		unsigned char schlaege=data[address + pos++];
+		printf("Schläge: %d\n", schlaege);
+		unsigned delay[11]; 
+		// 140=D7
+		// 150=D4 120=DD
+		int ndelay=0;
+		while(true) {
+			unsigned char d=data[address + pos++];
+			if(d==0xff) {
+				delay[ndelay]=0;
+				break;
+			}
+			printf("delay=%d\n", d);
+			delay[ndelay++]=d;
+			if(ndelay >=10) {
+				printf("too many anz stufen???\n"); // max im programm ist 10
+				abort();
+			}
+		}
+		printf("ndelay=%d\n", ndelay);
+		zspFile
+			<< "\"DSet\"\n"
+			<< "\"NUMMER\"," << i << "\n"
+			<< "\"NAME\",\"unknown-" << i << "\n"
+			<< "\"STUFEN\"," << (ndelay) << "\n"   // stufe 1 wird im programm mit '2' angezeigt
+			<< "\"SLOTS\"," << (schlaege) << "\n";  // schläge 3 wird im programm mit '4' angezeigt
+		for(int j=0; j <= ndelay; j++) {
+			unsigned char first_id_h=data[address + pos++];
+			unsigned char first_id_l=data[address + pos++];
+			unsigned char first_id_m=data[address + pos++];
+			
+			printf("h: %d m: %d l: %d\n", first_id_h, first_id_l, first_id_m);
+			for(int s=0; s <= schlaege; s++)
+				zspFile << (first_id_h+s) << "\n";
+			for(int s=0; s <= schlaege; s++)
+				zspFile << (first_id_m+s) << "\n";
+			for(int s=0; s <= schlaege; s++)
+				zspFile << (first_id_l+s) << "\n";
+			switch(delay[j]) {
+				case 0xDD: zspFile << "120\n"; break;
+				case 0xD7: zspFile << "140\n"; break;
+				case 0xD4: zspFile << "150\n"; break;
+				case 0: zspFile << "0\n"; break;
+				default: printf("unknown delay! (%d)\n",delay[j]); abort(); 
+			}
+		}
+		unsigned char n1=data[address + pos++];
+		unsigned char n2=data[address + pos++];
+		if((n1 != 0) || (n2 != 0)) { printf("error end not found: %#02x %#02x @%#02x\n",n1,n2,address + pos + 0x80 -2); abort(); }
+			
+		zspFile
+			<< "\"PANTOAUS\",0\n"
+			<< "\"/DSet\"\n";
+
+	}
+
 	zspFile.close();
+	printf("Written file %s\n", zspFilename.c_str());
 	} catch (const std::ifstream::failure& e) {
 		printf("Error: ifstream failure %s", strerror(errno));
 	}
