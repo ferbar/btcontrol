@@ -1,3 +1,13 @@
+/**
+ *
+ *
+ * 0x80 Bytes header
+ * pointer tables auf die eigentlichen infos (2 byte)
+ * pointer auf die sounds (3 bytes)
+ *
+ * zum binary files vergleichen: vbindiff
+ *
+ */
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
