@@ -214,7 +214,7 @@ int main(int argc, char *argv[]) {
 
 			zspFile 
 				<< "\"Sample\"\n"
-				<< "\"NUMMER\"," << i << "\n"
+				<< "\"NUMMER\"," << (i+1) << "\n"
 				<< "\"PFAD\",\"\"\n"
 				<< "\"NAME\",\"" << infoName << ".wav\"\n"
 				<< "\"ART\"," << (int) soundType << "\n"
