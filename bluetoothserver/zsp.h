@@ -50,13 +50,13 @@ class SoundType {
 
 class DiSoundStepType {
 public:
-	DiSoundStepType() : up(NOT_SET), down(NOT_SET), run(NOT_SET), limit(0) {};
+	DiSoundStepType() : up(NOT_SET), down(NOT_SET), run(NOT_SET), limit(255) {};
 	std::string up;
 	std::string down;
 	std::string run;
-	int limit;
+	int limit; // max speed für diese Stufe, wenn darüber => nächste stufe
 	void dump() {
-		printf("up: %s, down: %s, run: %s\n", this->up != NOT_SET ? this->up.c_str() : "", this->down != NOT_SET ? this->down.c_str() : "", this->run != NOT_SET ? this->run.c_str() : "");
+		printf("up: %s, down: %s, run: %s, limit: %d\n", this->up != NOT_SET ? this->up.c_str() : "", this->down != NOT_SET ? this->down.c_str() : "", this->run != NOT_SET ? this->run.c_str() : "", this->limit);
 	}
 };
 class DiSoundType : public SoundType {
@@ -69,7 +69,7 @@ public:
 	virtual void dump() {
 		for(int step=0; step < this->nsteps; step++) {
 			printf("Fahrstufe %d ",step);
-			this->steps->dump();
+			this->steps[step].dump();
 		}
 	};
 	virtual void loadSoundFiles();

@@ -316,11 +316,17 @@ void FahrSound::diOutloop() {
 	int lastFahrstufe=this->currFahrstufe;
 	this->currFahrstufe=0;
 	while(this->doRun || lastFahrstufe >= 0) {
+printf("FahrSound::diOutloop ####### %d %d\n", this->doRun, lastFahrstufe);
 		this->currSpeed=lokdef[0].currspeed;
-		for(int i=0; i < diSoundFiles->maxSteps; i++) {
-			if(this->currSpeed <= diSoundFiles->steps[i].limit) {
-				this->currFahrstufe=i;
-				printf("set fahrstufe: %d\n", i);
+		if(this->currSpeed == 0 && lastFahrstufe == 0 && ! this->doRun) {
+			this->currFahrstufe = -1;
+		} else {
+			for(int i=0; i < diSoundFiles->nsteps; i++) {
+				if(this->currSpeed < diSoundFiles->steps[i].limit) {
+					this->currFahrstufe=i;
+					printf("set fahrstufe: %d (limit %d)\n", i, diSoundFiles->steps[i].limit);
+					break;
+				}
 			}
 		}
 		printf("FahrSound::diOutloop() playing [%d/%d]\n",lastFahrstufe, this->currFahrstufe); fflush(stdout);
@@ -346,6 +352,7 @@ void FahrSound::diOutloop() {
 		// printf("Sound::outloop() - testcancel\n");
 		this->testcancel();
 	}
+	printf("Sound::outloop() done");
 }
 
 class BoilSteamOutLoop : public Thread {
@@ -390,6 +397,7 @@ void FahrSound::steamOutloop() {
 	int lastBrake=0;
 	int lastAcc=0;
 	printf(ANSI_RED2 "FahrSound::steamOutloop() %lu\n" ANSI_DEFAULT, tid);
+// ?????????? currFahrstufe umbaun auf 0 == stop ??????????????
 	while(this->doRun || this->currFahrstufe >= 0) {
 		this->currSpeed=lokdef[0].currspeed;
 		this->currFahrstufe=this->currSpeed/(256.0) * dSoundFiles->nsteps; // bei 3 fahrstufen:  0-90 => [0] ; -175 => [1] ; -255 => [2]

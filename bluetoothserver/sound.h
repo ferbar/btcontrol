@@ -107,7 +107,7 @@ public:
 	// static void loadWavFile(std::string filename, std::string &out);
 
 	bool doRun;
-	int currFahrstufe; // -1 aus, 0 stop
+	int currFahrstufe; // -1 aus, 0 stop, 1 ... n fahren
 	int currSpeed;
 private:
 

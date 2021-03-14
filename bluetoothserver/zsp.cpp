@@ -308,6 +308,7 @@ DiSoundType *SectionValues::parseDiSet() {
 				int n=atol(nr.c_str());
 				int fahrstufe=n/3;
 				assert(fahrstufe < soundFiles->nsteps);
+				printf(" -- Fahrstufe: %d/%d %s (curr limit %d) \n", fahrstufe,n%3, filename.c_str(), soundFiles->steps[fahrstufe].limit);
 				switch(n%3) {
 					case 0: soundFiles->steps[fahrstufe].up=filename; break;
 					case 1: soundFiles->steps[fahrstufe].run=filename; break;
@@ -318,7 +319,7 @@ DiSoundType *SectionValues::parseDiSet() {
 		if(it->first=="SCHWELLE") {
 			size_t komma=it->second.find_first_of(',');
 			int fahrstufe=atol(it->second.substr(0,komma).c_str());
-			if(fahrstufe < soundFiles->nsteps) {
+			if(fahrstufe < soundFiles->nsteps+1) {
 				size_t komma2=it->second.find_first_of(',',komma+1);
 				soundFiles->steps[fahrstufe].limit=atol(it->second.substr(komma+1,komma2).c_str());
 				printf("SCHWELLE: %d\n", soundFiles->steps[fahrstufe].limit);
@@ -327,6 +328,8 @@ DiSoundType *SectionValues::parseDiSet() {
 			}
 		}
 	}
+	// Workaround: Fahrstufe 0 hat keine Schwelle 
+	soundFiles->steps[0].limit=1;
 	return soundFiles;
 }
 /**
