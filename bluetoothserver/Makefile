@@ -126,7 +126,7 @@ zsptest: zsptest.cpp sound.cpp
 	${CPP} ${CFLAGS} ${LDFLAGS} -lasound $+ -g 
 
 zpp2zsp: zpp2zsp.cpp utils.o Thread.o
-	${CPP} ${CFLAGS} ${LDFLAGS} -lsndfile $+ -g -o zpp2zsp
+	${CPP} ${CFLAGS} ${LDFLAGS} -lsndfile -lboost_locale $+ -g -o zpp2zsp
 
 # !!! this is for esp32 only !!!
 protocol.h: protocol.dat
