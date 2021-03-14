@@ -132,7 +132,7 @@ SoundType *loadZSP() {
 	bool found=false;
 	std::string soundSetName=config.get("sound.name");
 	if(soundSetName == NOT_SET) {
-		printf("sound.name not set\n");
+		printf("sound.name not set in config file\n");
 		abort();
 	}
 	auto diSets=ZSPData.equal_range("DiSet");
@@ -188,6 +188,10 @@ SoundType *loadZSP() {
 		SectionValuesPtr sp = it->second;
 		if(utils::stoi(sp->operator[]("LOK")) == cfg_soundFiles->lok) {
 			int nummer=utils::stoi(sp->operator[]("NUMMER"));
+			if(nummer < 0 || nummer >= CFG_FUNC_SOUND_N) {
+				printf("Error: invalid Abl::NUMMER:%d\n", nummer);
+				abort();
+			}	
 			sp->dump();
 			std::string filename = getSampleFilename(sp->operator[]("SAMPLE"));
 			cfg_soundFiles->funcSound[nummer]=filename;
