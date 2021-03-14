@@ -26,6 +26,8 @@
 // strings sind immer in iso8859-1
 #include <boost/locale.hpp>
 
+#include "zsp.h"
+
 #define	BUFFER_LEN			4096
 
 std::string baseFolder;
@@ -250,9 +252,6 @@ int main(int argc, char *argv[]) {
 "/Abl"
 	*/
 
-	const char* ablNames[] = {"Sieden", "Glocke", "Bremsquietschen", "Entwässern", "Anfahrpfiff", "??", "E-Motor", "??", "Schaltwerk", "??", "??", "??", "??", "??",
-		"E Bremse", "Kurve", "??", "??", "??"};
-	int nablItems=sizeof(ablNames) / sizeof(char*);
 	for(int addrDampE=0; addrDampE <= 1; addrDampE++)   // dampf Abl fängt bei 920 an, E bei 960
 	for(int i = 0; i < 32; i++) {
 		printf("Abl Set %d\n",i);
@@ -262,7 +261,7 @@ int main(int argc, char *argv[]) {
 			break;
 		offset+=0x7b;
 		// for(int j=0; j < 42; j++) printf("[%d] %02x ", j, data[offset + j]); printf("\n");
-		for(int j = 0; j < nablItems; j++) {
+		for(int j = 0; j < CFG_FUNC_SOUND_N; j++) {
 			int address=offset+j*2;
 			// printf("Abl Set %d [%d] Address: %#0x\n", i, j, address + 0x80);
 			// printf("Address: %#0x\n", address+0x80);

@@ -18,6 +18,9 @@
 
 const char *overrideConfigNames[] = {"sound.boil", "sound.brake", "sound.entwaessern", "sound.abfahrt", "sound.horn", NULL };
 
+const char* ablNames[CFG_FUNC_SOUND_N] = {"Sieden", "Glocke", "Bremsquietschen", "Entwässern", "Anfahrpfiff", "??", "E-Motor", "??", "Schaltwerk",
+	"??", "??", "??", "??", "??", "E Bremse", "Kurve", "??", "??"};
+
 SoundType *cfg_soundFiles=NULL;
 //SteamSoundType cfg_steamSoundFiles;
 

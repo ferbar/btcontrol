@@ -19,7 +19,8 @@
 #define CFG_FUNC_SOUND_ABFAHRT 3
 
 #define CFG_FUNC_SOUND_HORN 4
-#define CFG_FUNC_SOUND_N 5
+#define CFG_FUNC_SOUND_N 18
+extern const char* ablNames[CFG_FUNC_SOUND_N];
 
 extern const char *overrideConfigNames[];
 

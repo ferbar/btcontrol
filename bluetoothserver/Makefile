@@ -125,7 +125,7 @@ digispark_test: USBDigispark.cpp utils.o
 zsptest: zsptest.cpp sound.cpp
 	${CPP} ${CFLAGS} ${LDFLAGS} -lasound $+ -g 
 
-zpp2zsp: zpp2zsp.cpp utils.o Thread.o
+zpp2zsp: zpp2zsp.cpp utils.o Thread.o zsp.o sound.o lokdef.o
 	${CPP} ${CFLAGS} ${LDFLAGS} -lsndfile -lboost_locale $+ -g -o zpp2zsp
 
 # !!! this is for esp32 only !!!
