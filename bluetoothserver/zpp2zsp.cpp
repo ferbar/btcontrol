@@ -274,14 +274,16 @@ int main(int argc, char *argv[]) {
 		// 17 => -21db
 			unsigned char id=(unsigned char) data[address];
 			unsigned char soundLevel=(unsigned char) data[address+1];
-			printf("Abl Set %d [%d] : id:%02x level:%02x (%s)\n", i, j, id, soundLevel, ablNames[j] );
-			zspFile
-				<< "\"Abl\"\n"
-				<< "\"LOK\"," << i << "\n"
-				<< "\"NUMMER\"," << j << "\n"
-				<< "\"SAMPLE\"," << (int) id << "\n"
-				<< "\"LAUTST\"," << (int) soundLevel << "\n"
-				<< "\"/Abl\"\n";
+			if(id != 0) {
+				printf("Abl Set %d [%d] : id:%02x level:%02x (%s)\n", i, j, id, soundLevel, ablNames[j] );
+				zspFile
+					<< "\"Abl\"\n"
+					<< "\"LOK\"," << i << "\n"
+					<< "\"NUMMER\"," << j << "\n"
+					<< "\"SAMPLE\"," << (int) id << "\n"
+					<< "\"LAUTST\"," << (int) soundLevel << "\n"
+					<< "\"/Abl\"\n";
+				}
 		}
 	}
 
