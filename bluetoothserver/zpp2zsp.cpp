@@ -23,6 +23,9 @@
 #include <fstream>
 #include <errno.h>
 
+// strings sind immer in iso8859-1
+#include <boost/locale.hpp>
+
 #define	BUFFER_LEN			4096
 
 std::string baseFolder;
@@ -192,6 +195,9 @@ int main(int argc, char *argv[]) {
 				*/
 				if(infoLen == 0) {
 					infoName=utils::format("%d",i);
+				} else {
+					// infoName in iso
+					infoName = boost::locale::conv::to_utf<char>(infoName,"Latin1");
 				}
 				printf("Info: '%s' ", infoName.c_str());
 			} else {
@@ -209,7 +215,7 @@ int main(int argc, char *argv[]) {
 				<< "\"NUMMER\"," << i << "\n"
 				<< "\"PFAD\",\"\"\n"
 				<< "\"NAME\",\"" << infoName << ".wav\"\n"
-				<< "\"ART\"," << soundType << "\n"
+				<< "\"ART\"," << (int) soundType << "\n"
 				<< "\"SIZE\"," << wavLen << "\n"
 				<< "\"L1\"," << wavLoopStart << "\n"
 				<< "\"L2\"," << wavLoopEnd << "\n"
@@ -274,8 +280,8 @@ int main(int argc, char *argv[]) {
 				<< "\"Abl\"\n"
 				<< "\"LOK\"," << i << "\n"
 				<< "\"NUMMER\"," << j << "\n"
-				<< "\"SAMPLE\"," << id << "\n"
-				<< "\"LAUTST\"," << soundLevel << "\n"
+				<< "\"SAMPLE\"," << (int) id << "\n"
+				<< "\"LAUTST\"," << (int) soundLevel << "\n"
 				<< "\"/Abl\"\n";
 		}
 	}
@@ -302,12 +308,57 @@ int main(int argc, char *argv[]) {
 			stufen, typ,
 			data[address+5], data[address+6], data[address+7],
 			data[address+8], data[address+9], data[address+10]);
+		zspFile
+			<< "\"DiSet\"\n"
+			<< "\"NUMMER\"," << i << "\n"
+			<< "\"NAME\",\"unknown-" << i << "\"\n"
+			<< "\"STUFEN\"," << stufen << "\n"   // stufe 1 wird im programm mit '2' angezeigt
+			<< "\"TYP\"," << typ << "\n"
+			<< "\"SAMPLE\",0," << (int) data[address+5] << "\n"
+			<< "\"SAMPLE\",1," << (int) data[address+6] << "\n"
+			<< "\"SAMPLE\",2," << (int) data[address+7] << "\n"
+			<< "\"SAMPLE\",3," << (int) data[address+8] << "\n"
+			<< "\"SAMPLE\",4," << (int) data[address+9] << "\n"
+			<< "\"SAMPLE\",5," << (int) data[address+10] << "\n";
+
+
+
 		if(stufen > 1) {
 			unsigned char schwelle=data[address+39];
 			printf("F2 Schwelle: %u, F1>F2: %d, F2: %d, F2->F1: %d\n",
 				schwelle,
 				data[address+11], data[address+12], data[address+13]);
+			zspFile
+				<< "\"SCHWELLE\",1," << (int) schwelle << ",64\n"
+				<< "\"SAMPLE\",6," << (int) data[address+11] << "\n"
+				<< "\"SAMPLE\",7," << (int) data[address+12] << "\n"
+				<< "\"SAMPLE\",8," << (int) data[address+13] << "\n";
 		}
+		if(stufen > 2) {
+			unsigned char schwelle=data[address+39];
+			printf("F3 Schwelle: %u, F2>F3: %d, F3: %d, F3->F2: %d\n",
+				schwelle,
+				data[address+14], data[address+15], data[address+16]);
+			zspFile
+			<< "\"SCHWELLE\",2," << (int) schwelle << ",32\n"
+				<< "\"SAMPLE\",9," << (int) data[address+14] << "\n"
+				<< "\"SAMPLE\",10," << (int) data[address+15] << "\n"
+				<< "\"SAMPLE\",11," << (int) data[address+16] << "\n";
+		}
+/*
+			<< "\"SCHWELLE\",3,255,21
+			<< "\"SCHWELLE\",4,255,16
+			<< "\"SCHWELLE\",5,255,13
+			<< "\"SCHWELLE\",6,255,11
+			<< "\"SCHWELLE\",7,255,9
+			<< "\"SCHWELLE\",8,255,8
+			<< "\"SCHWELLE\",9,255,7
+			<< "\"SCHWELLE\",10,255,6
+			*/
+		zspFile
+			<< "\"PANTOAUS\",0\n"
+			<< "\"HG_SCHALTWERK\",0\n"
+			<< "\"/DiSet\"\n";
 	}
 
 	// DSets: =============================================================
@@ -345,7 +396,7 @@ int main(int argc, char *argv[]) {
 			<< "\"NUMMER\"," << i << "\n"
 			<< "\"NAME\",\"unknown-" << i << "\n"
 			<< "\"STUFEN\"," << (ndelay) << "\n"   // stufe 1 wird im programm mit '2' angezeigt
-			<< "\"SLOTS\"," << (schlaege) << "\n";  // schläge 3 wird im programm mit '4' angezeigt
+			<< "\"SLOTS\"," << (int) (schlaege) << "\n";  // schläge 3 wird im programm mit '4' angezeigt
 		for(int j=0; j <= ndelay; j++) {
 			unsigned char first_id_h=data[address + pos++];
 			unsigned char first_id_l=data[address + pos++];
