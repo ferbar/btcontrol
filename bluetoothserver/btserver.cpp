@@ -122,6 +122,10 @@ int BTServer::accept()
 
 	socklen_t addrlen=sizeof(raddr);
 	int nsk = ::accept(this->bt_so, (struct sockaddr *) &raddr, &addrlen);
+	if(nsk < 0) {
+		perror("BTServer::accept error");
+		return -1;
+	}
 
 // da könnte die lokale bt addr drinnen stehn
 	if (getsockname(nsk, (struct sockaddr *)&laddr, &addrlen) < 0) {
