@@ -763,6 +763,7 @@ void PlayAsyncData::run() {
 	sound.writeSound(this->wav);
 	// warten bis sound fertig gespielt wurde:
 	sound.close(true);
+	this->done();
 }
 
 FahrSound::~FahrSound() {
