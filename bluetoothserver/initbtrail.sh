@@ -39,10 +39,10 @@ if [ $? != 0 ] ; then
 	exit 1
 fi
 
-if $SDPTOOL browse ff:ff:ff:00:00:00 | grep -q btrail ; then
+if echo "$out" | grep -q btrail ; then
 	echo "[ok] sdp service schon registriert"
 else
-	if $SDPTOOL add --channel=30 SP && $SDPTOOL setattr 0x10005 0x100 "btrail" ; then
+	if $SDPTOOL add --handle=0x10010 --channel=30 SP && $SDPTOOL setattr 0x10010 0x100 "btrail" ; then
 		echo "[ok] sdp registered"
 	else
 		echo "[error] error registering SDP" >&2
