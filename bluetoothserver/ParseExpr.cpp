@@ -19,7 +19,7 @@ int ParseExpr::getResult(const std::string &expr, int dir, int speed, bool *curr
 			throw std::runtime_error("invalid expressionA [" + expr + "]");
 		}
 		const std::string exprA=expr.substr(1,exprA_end-1);
-		printf("parseExpr::getResult A: %s\n", exprA.c_str());
+		// printf("parseExpr::getResult A: %s\n", exprA.c_str());
 		bool is_and=false;
 		if(expr.compare(exprA_end, 6, ") && (") == 0) {
 			is_and=true;
@@ -34,7 +34,7 @@ int ParseExpr::getResult(const std::string &expr, int dir, int speed, bool *curr
 		}
 
 		const std::string exprB=expr.substr(exprB_start,exprB_end - exprB_start);
-		printf("parseExpr::getResult B: %s\n", exprB.c_str());
+		// printf("parseExpr::getResult B: %s\n", exprB.c_str());
 		bool a=this->getResult(exprA, dir, speed, currentFunc);
 
 		bool b=this->getResult(exprB, dir, speed, currentFunc);
@@ -48,7 +48,7 @@ int ParseExpr::getResult(const std::string &expr, int dir, int speed, bool *curr
 
 	if(expr.length() == 2 && expr[0]=='F') {
 		if(expr[1] >= '0' && expr[1] <= '9') {
-			printf("parseExpr::getResult %s:%d\n",expr.c_str(), currentFunc[expr[1] - '0']);
+			// printf("parseExpr::getResult %s:%d\n",expr.c_str(), currentFunc[expr[1] - '0']);
 			return currentFunc[expr[1] - '0'];
 		}
 	}
