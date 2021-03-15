@@ -88,7 +88,7 @@ TCPClient::~TCPClient()
 
 void TCPClient::close() {
 	::close(this->so);
-	this->so=0;
+	this->so=-1;
 }
 
 std::string TCPClient::getRemoteAddr() {
