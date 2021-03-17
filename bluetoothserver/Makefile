@@ -200,6 +200,7 @@ install:
 	fi
 	cp etc/avahi/services/btcontrol.service /etc/avahi/services/
 	cp etc/systemd/system/btcontrol.service /etc/systemd/system/
+	cp etc/systemd/system/btcontrol-initbt.service /etc/systemd/system/
 
 search-ibm-desktop:
 	nmap -sP 192.168.0.1-240
