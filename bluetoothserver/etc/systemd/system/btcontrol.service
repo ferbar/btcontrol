@@ -1,13 +1,14 @@
 [Unit]
 Description=btcontrol
 # Order 1
-After=bluetooth.target
+#Requires=bluetooth.service
+After=bluetooth.service
 
 [Service]
 #Type=oneshot
-RemainAfterExit=yes
+#RemainAfterExit=yes
 WorkingDirectory=/root/dev/btcontrol/bluetoothserver/
-ExecStartPre=/root/dev/btcontrol/bluetoothserver/initbtrail.sh
+#ExecStartPre=/root/dev/btcontrol/bluetoothserver/initbtrail.sh
 ExecStart=//root/dev/btcontrol/bluetoothserver/btserver
 #ExecStop=/
 

@@ -1,0 +1,20 @@
+[Unit]
+Description=btcontrol-initbtrail, can be done after btserver is started
+# Order 1
+After=sys-subsystem-bluetooth-devices-hci0.device
+BindsTo=sys-subsystem-bluetooth-devices-hci0.device
+
+# checks only once
+#ConditionPathIsSymbolicLink=/sys/class/bluetooth/hci0
+
+[Service]
+Type=oneshot
+#ExecCondition=/sys/class/bluetooth/hci0
+RemainAfterExit=yes
+WorkingDirectory=/root/dev/btcontrol/bluetoothserver/
+ExecStart=/root/dev/btcontrol/bluetoothserver/initbtrail.sh
+#ExecStart=//root/dev/btcontrol/bluetoothserver/btserver
+#ExecStop=/
+
+[Install]
+WantedBy=multi-user.target
