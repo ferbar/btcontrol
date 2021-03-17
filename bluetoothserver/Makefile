@@ -180,9 +180,12 @@ install:
 			echo "Error finding bluez version!" ; \
 			exit 1 ; \
 		fi ; \
-		if [ ! -f ~/.bashrc-save-btcontrol -a ~/.bashrc ] ; then \
+		if [ ! -f ~/.bashrc-save-btcontrol -a -f ~/.bashrc ] ; then \
 			mv ~/.bashrc ~/.bashrc-save-btcontrol ; \
 			ln -s $$PWD/etc/bashrc ~/.bashrc ; \
+		fi ; \
+		if [ ! -f ~/.inputrc ] ; then \
+			ln -s $$PWD/etc/inputrc ~/.inputrc ; \
 		fi ; \
 	else \
 		cp ../ussp-push-0.11/src/ussp-push \
@@ -196,6 +199,8 @@ install:
 			~/bin/ ; \
 	fi
 	cp etc/avahi/services/btcontrol.service /etc/avahi/services/
+	cp etc/systemd/system/btcontrol.service /etc/systemd/system/
+
 search-ibm-desktop:
 	nmap -sP 192.168.0.1-240
 	# for i in `seq 1 240` ; do (ping -W 1 -c 1 192.168.0.$$i 2>&1| grep -B 1 "transmitted, 1") & pid=$!; done
