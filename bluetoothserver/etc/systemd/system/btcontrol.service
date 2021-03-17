@@ -1,0 +1,15 @@
+[Unit]
+Description=btcontrol
+# Order 1
+After=bluetooth.target
+
+[Service]
+#Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/root/dev/btcontrol/bluetoothserver/
+ExecStartPre=/root/dev/btcontrol/bluetoothserver/initbtrail.sh
+ExecStart=//root/dev/btcontrol/bluetoothserver/btserver
+#ExecStop=/
+
+[Install]
+WantedBy=multi-user.target
