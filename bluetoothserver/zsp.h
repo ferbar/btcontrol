@@ -43,8 +43,8 @@ public:
 	operator std::string() const = delete;
 	void load(int volumeLevel);
 
-	const std::string loopStart() { if( this->wav != NOT_SET ) return this->wav.substr(0, this->loopStartPos); throw std::runtime_error("file not loaded"); }
-	const std::string loop() { if( this->wav != NOT_SET ) return this->wav.substr(this->loopStartPos, this->loopEndPos - this->loopStartPos); throw std::runtime_error("file not loaded"); }
+	const std::string loopStart() { if( this->wav != NOT_SET ) return this->wav.substr(0, this->loopStartPos); throw std::runtime_error("file " + this->fileName + " not loaded"); }
+	const std::string loop() { if( this->wav != NOT_SET ) return this->wav.substr(this->loopStartPos, this->loopEndPos - this->loopStartPos); throw std::runtime_error("file " + this->wav + " not loaded"); }
 	const std::string loopEnd() { if( this->wav != NOT_SET ) return this->wav.substr(this->loopEndPos, this->wav.length() - this->loopEndPos); throw std::runtime_error("file not loaded"); }
 
 	std::string fileName{NOT_SET};
