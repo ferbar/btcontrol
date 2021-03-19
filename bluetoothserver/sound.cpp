@@ -24,6 +24,8 @@
 #include "reader.h"
 #include "lokdef.h"
 
+#define TAG "sound"
+
 FahrSound clientFahrSound;
 
 // typedef
@@ -85,8 +87,8 @@ void Sound::init(int mode)
 					this->sample_rate,					// rate
 					1,									// soft resample: allow
 					500000)) < 0) {   /* 0.5sec */
-		printf("Playback open error - error setting params %s\n", snd_strerror(err));
-		exit(EXIT_FAILURE);
+		ERRORF("Playback open error - error setting params %s", snd_strerror(err));
+		abort();
 	}
 
 	if(false) {
@@ -132,6 +134,7 @@ void Sound::close(bool waitDone) {
 }
 
 void Sound::loadSoundFiles(SoundType *soundFiles) {
+	DEBUGF("Sound::loadSoundFiles");
 	FahrSound::soundFiles=soundFiles;
 	if(FahrSound::soundFilesLoaded) {
 		return;
@@ -140,8 +143,10 @@ void Sound::loadSoundFiles(SoundType *soundFiles) {
 	FahrSound::soundFilesLoaded=true;
 
 	for(unsigned int i=0; i < countof(soundFiles->funcSound); i++) {
-		if(soundFiles->funcSound[i] != NOT_SET) {
-			Sound::loadSoundFile(soundFiles->funcSound[i], soundFiles->funcSound[i], soundFiles->funcSoundVolume[i]);
+		if(soundFiles->funcSound[i]) {
+			printf("loading CFG_FUNC_SOUND_%d = %s\n", i, soundFiles->funcSound[i].fileName.c_str());
+			soundFiles->funcSound[i].load(soundFiles->funcSoundVolume[i]);
+			DEBUGF("wav file length: %zuBytes", soundFiles->funcSound[i].wav.length());
 		} else {
 			printf("no CFG_FUNC_SOUND_%d\n",i);
 		}
@@ -307,12 +312,79 @@ void FahrSound::cancel() {
 	printf(ANSI_RED2 "FahrSound::cancel() %p\n" ANSI_DEFAULT, this);
 }
 
+class EMotorOutLoop : public Thread {
+public:
+	EMotorOutLoop(const FahrSound *fahrsound) {
+		this->fahrsound=fahrsound;
+	};
+	~EMotorOutLoop() {
+		this->cancel();
+	};
+	void run() {
+		if(! this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_EMOTOR]) {
+			NOTICEF("no EMotor sound (funcSound %d)", CFG_FUNC_SOUND_EMOTOR);
+			return;
+		}
+		std::string orgWav=this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_EMOTOR].loop();
+		// float currWavSpeed=0;
+		std::string wav;
+		printf("############################### EMotorOutLoop org.data=%p wav.data=%p\n", orgWav.data(), wav.data());
+		wav.append(orgWav);
+		printf("############################### EMotorOutLoop org.data=%p wav.data=%p\n", orgWav.data(), wav.data());
+
+		Sound sound;
+		sound.init();
+		sound.writeSound(this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_BOIL].loopStart());
+		unsigned int loopPlayPos=0;
+		while(true) {
+		
+			if(lokdef[0].currspeed < 5) {
+				DEBUGF("EMotorOutLoop in sleep mode");
+				sleep(1);
+				continue;
+			}
+			
+			float nextWavSpeed=lokdef[0].currspeed/255.0;
+//			printf("############################### EMotorOutLoop %f org.data=%p wav.data=%p loopPlayPos=%d out level=%d\n",
+//				nextWavSpeed, orgWav.data(), wav.data(),loopPlayPos, lokdef[0].currspeed/255);
+//			if(nextWavSpeed != currWavSpeed) {
+				int outPos=0;
+				float skip=0;
+				// immer nur 0.33s samples senden damit wir schneller auf geschwindigkeits änderung reagieren können
+				int inSamples=MIN(Sound::sample_rate/3, (int) (orgWav.length()-loopPlayPos));
+				wav.resize(inSamples); // maximal brauchen wir inSamples bytes
+				for(int i=0; i<inSamples; i++) {
+					if(skip >= 1) {
+						// skip
+						skip=skip-1;
+					} else {
+						unsigned char s=((int_fast16_t)((unsigned char) orgWav[loopPlayPos+i])-0x80) * lokdef[0].currspeed/255 + 0x80;
+						wav[outPos++]=s;
+						skip+=nextWavSpeed;
+					}
+				}
+				wav.resize(outPos-1);
+				loopPlayPos+=inSamples;
+				if(loopPlayPos >= orgWav.length())
+					loopPlayPos=0;
+//			}
+			sound.writeSound(wav);
+			this->testcancel();
+		}
+		sound.writeSound(this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_BOIL].loopEnd());
+	};
+private:
+	const FahrSound *fahrsound;
+};
+
 void FahrSound::diOutloop() {
 	printf("FahrSound::diOutloop() %d\n", this->currFahrstufe);
 	Sound sound;
 	sound.init();
 	DiSoundType *diSoundFiles = dynamic_cast<DiSoundType*>(this->soundFiles);
 	assert(diSoundFiles && "FahrSound::diOutloop() no di sound");
+	EMotorOutLoop emotor(this);
+	emotor.start();
 	int lastFahrstufe=this->currFahrstufe;
 	this->currFahrstufe=0;
 	while(this->doRun || lastFahrstufe >= 0) {
@@ -330,24 +402,26 @@ printf("FahrSound::diOutloop ####### %d %d\n", this->doRun, lastFahrstufe);
 			}
 		}
 		printf("FahrSound::diOutloop() playing [%d/%d]\n",lastFahrstufe, this->currFahrstufe); fflush(stdout);
-		std::string wav;
+		Sample sample;
 		if(this->currFahrstufe == lastFahrstufe) {
 			if(lastFahrstufe == -1) {
 				sleep(1);
 				continue;
 			}
-			wav=diSoundFiles->steps[lastFahrstufe].run;
+			sample=diSoundFiles->steps[lastFahrstufe].run;
 		} else if(this->currFahrstufe < lastFahrstufe) {
-			wav=diSoundFiles->steps[lastFahrstufe].down;
+			sample=diSoundFiles->steps[lastFahrstufe].down;
 			printf("v");
 			lastFahrstufe--;
 		} else {
 			lastFahrstufe++;
-			wav=diSoundFiles->steps[lastFahrstufe].up;
+			sample=diSoundFiles->steps[lastFahrstufe].up;
 			printf("^");
 		}
 
-		sound.writeSound(wav);
+		printf("FahrSound::diOutloop() playing %zu bytes (last byte: %d)\n", sample.wav.length(), 
+			sample.wav.length() > 0 ? (unsigned char) sample.wav[0] : 0);
+		sound.writeSound(sample.wav);
 
 		// printf("Sound::outloop() - testcancel\n");
 		this->testcancel();
@@ -364,16 +438,18 @@ public:
 		this->cancel();
 	};
 	void run() {
-		if(this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_BOIL] == NOT_SET) {
+		if(! this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_BOIL]) {
 			printf(ANSI_RED "no boiler sound");
 			return;
 		}
 		Sound sound;
 		sound.init();
+		sound.writeSound(this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_BOIL].loopStart());
 		while(true) {
-			sound.writeSound(this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_BOIL]);
+			sound.writeSound(this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_BOIL].loop());
 			this->testcancel();
 		}
+		sound.writeSound(this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_BOIL].loopEnd());
 	};
 private:
 	const FahrSound *fahrsound;
@@ -430,7 +506,7 @@ void FahrSound::steamOutloop() {
 		}
 		// printf("BoilSteamOutLoop:run -> lmh: %i #################################\n", lmh);
 			
-		const std::string &wav=dSoundFiles->steps[this->currFahrstufe].ch[lmh][(slot++)%dSoundFiles->nslots];
+		const std::string &wav=dSoundFiles->steps[this->currFahrstufe].ch[lmh][(slot++)%dSoundFiles->nslots].wav;
 		/*
 		if(this->currFahrstufe == lastFahrstufe) {
 			if(lastFahrstufe == -1) {
@@ -491,10 +567,24 @@ void Sound::playSingleSound(int index) {
 int Sound::writeSound(const std::string &data, int startpos) {
 	//printf("Sound::writeSound(len=%lu, start=%d) \n", data.length(), startpos);
 	assert(startpos >= 0);
-	assert(data.length() > (unsigned) startpos);
+	assert(data.length() >= (unsigned) startpos);
 	const char *wavData = data.data() + startpos;
 	size_t len = data.length() - startpos;
+/* ===================================== check clicks ==============================================================================
+	DEBUGF("Sound::writeSound checking data len=%zu, startpos=%d", data.length(), startpos);
+	if(len > 0) {
+		if((unsigned char) data[0] > this->lastSample +20 || (unsigned char) data[0] < this->lastSample-20) {
+			ERRORF("Sound::writeSound[0] differs %u -> %u", this->lastSample, (unsigned char) data[0]);
+		}
+		for(size_t i=1; i < len-1; i++) {
+			if((unsigned char) data[i] > (unsigned char) data[i+1]+20 || (unsigned char) data[i] < (unsigned char) data[i+1]-20) {
+				ERRORF("Sound::writeSound[%zu] differs %u -> %u", i, (unsigned char) data[i], (unsigned char) data[i+1]);
+			}
 
+		}
+		this->lastSample=(unsigned char) data[len-1];
+	}
+*/
 
 	snd_pcm_status_t *status;
 	snd_pcm_status_alloca(&status);
@@ -545,7 +635,7 @@ void Sound::setBlocking(bool blocking) {
 	printf("Sound::[%p]setBlocking %d\n", this->handle, blocking);	
 	int rc=snd_pcm_nonblock	(this->handle, blocking ? 0 : 1);
 	if(rc != 0) {
-		printf("error setting blocking mode\n");
+		ERRORF("error setting blocking mode\n");
 		abort();
 	}
 }
@@ -567,7 +657,7 @@ void Sound::setMasterVolume(int volume)
 	// snd_ctl_card_info_t *info;
 
     if((rc=snd_mixer_open(&handle, 0))) {
-		printf("snd_mixer_open: %s", snd_strerror(rc));
+		ERRORF("snd_mixer_open: %s", snd_strerror(rc));
 		abort();
 	}
 	printf("Sound::[%p]setMasterVolume(%d)\n", handle, volume);
@@ -674,8 +764,8 @@ static void async_callback(snd_async_handler_t *ahandler)
 }
 */
 
-PlayAsync::PlayAsync(const std::string &wav) : data(NULL) {
-	PlayAsyncData *data = new PlayAsyncData(wav, 0);
+PlayAsync::PlayAsync(const Sample &sample) : data(NULL) {
+	PlayAsyncData *data = new PlayAsyncData(sample, 0);
 	data->start();
 	data->setAutodelete();
 }
@@ -760,7 +850,7 @@ PlayAsync::PlayAsync(int index) {
 void PlayAsyncData::run() {
 	Sound sound;
 	sound.init();
-	sound.writeSound(this->wav);
+	sound.writeSound(this->sample.wav);
 	// warten bis sound fertig gespielt wurde:
 	sound.close(true);
 	this->done();
@@ -826,7 +916,7 @@ void FahrSound::startPlayFuncSound() {
 	// printf("FahrSound::startPlayFuncSound #####################################\n");
 	static PlayAsync horn;
 	static PlayAsync whistle;
-	if(lokdef[0].nFunc > 1 && lokdef[0].func[1].ison && ! horn.isPlaying() && (this->soundFiles->funcSound[CFG_FUNC_SOUND_HORN] != "" )) {
+	if(lokdef[0].nFunc > 1 && lokdef[0].func[1].ison && ! horn.isPlaying() && (this->soundFiles->funcSound[CFG_FUNC_SOUND_HORN] )) {
 		FahrSoundPlayFuncAsyncData *data=new FahrSoundPlayFuncAsyncData(this->soundFiles->funcSound[CFG_FUNC_SOUND_HORN], 1);
 		horn.play(data);
 		/*
@@ -837,7 +927,7 @@ void FahrSound::startPlayFuncSound() {
 		// horn.close(false);
 		*/
 	}
-	if(lokdef[0].nFunc > 2 && lokdef[0].func[2].ison && ! whistle.isPlaying() && this->soundFiles->funcSound[CFG_FUNC_SOUND_ABFAHRT] != "") {
+	if(lokdef[0].nFunc > 2 && lokdef[0].func[2].ison && ! whistle.isPlaying() && this->soundFiles->funcSound[CFG_FUNC_SOUND_ABFAHRT] ) {
 		FahrSoundPlayFuncAsyncData *data=new FahrSoundPlayFuncAsyncData(this->soundFiles->funcSound[CFG_FUNC_SOUND_ABFAHRT], 2);
 		whistle.play(data);
 	}
@@ -857,12 +947,12 @@ int main(int argc, char *argv[]) {
 
 void DiSoundType::loadSoundFiles() {
 	for(int step=0; step < this->nsteps; step++) {
-		if(this->steps[step].down != NOT_SET) {
-			Sound::loadWavFile(this->steps[step].down, this->steps[step].down, 0);
-			Sound::loadWavFile(this->steps[step].run,  this->steps[step].run, 0);
+		if(this->steps[step].down) {
+			this->steps[step].down.load(0);
+			this->steps[step].run.load(0);
 		}
-		if(this->steps[step].up != NOT_SET) { // bei der höchsten stufe gibts kein up
-			Sound::loadWavFile(this->steps[step].up,   this->steps[step].up, 0);
+		if(this->steps[step].up) { // bei der höchsten stufe gibts kein up
+			this->steps[step].up.load(0);
 		}
 	}
 }
@@ -871,7 +961,7 @@ void SteamSoundType::loadSoundFiles() {
 	for(int step=0; step < this->nsteps; step++) {
 		for(int hml=0; hml < 3; hml ++) {
 			for(int slot=0; slot < this->nslots; slot++) {
-				Sound::loadWavFile(this->steps[step].ch[hml][slot], this->steps[step].ch[hml][slot], 0);
+				this->steps[step].ch[hml][slot].load(0);
 			}
 		}
 	}

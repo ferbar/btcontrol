@@ -38,15 +38,17 @@ protected:
 	static snd_pcm_format_t bits;
 
 	friend class PlayAsync;
+	friend class Sample;
 	static void loadSoundFile(const std::string &fileName, std::string &dst, int volumeLevel);
 	static int soundObjects;
 	Mutex mutex;
+	int lastSample{0x79};
 };
 
 class PlayAsyncData : public Thread {
 public:
-	PlayAsyncData(const std::string &wav, int position) : wav(wav), position(position) {};
-	const std::string &wav;
+	PlayAsyncData(const Sample &sample, int position) : sample(sample), position(position) {};
+	const Sample &sample;
 	int position;
 	void run();
 	virtual void done() { printf("PlayAsyncData:done ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"); };
@@ -55,7 +57,7 @@ public:
 class PlayAsync {
 public:
 	//PlayAsync(int soundIndex);
-	PlayAsync(const std::string &wav);
+	PlayAsync(const Sample &sample);
 	/// *data wird nach abspielen deleted
 	PlayAsync(PlayAsyncData *data);
 	PlayAsync() : data(NULL) {};
@@ -77,7 +79,7 @@ private:
 
 class FahrSoundPlayFuncAsyncData : public PlayAsyncData {
 public:
-	FahrSoundPlayFuncAsyncData(const std::string &wav, int func) : PlayAsyncData(wav,0), func(func) {
+	FahrSoundPlayFuncAsyncData(const Sample &sample, int func) : PlayAsyncData(sample,0), func(func) {
 	//	printf("FahrSoundPlayFuncAsyncData::FahrSoundPlayFuncAsyncData =======================================\n");
 	};
 	virtual void done();
