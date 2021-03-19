@@ -334,7 +334,7 @@ public:
 
 		Sound sound;
 		sound.init();
-		sound.writeSound(this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_BOIL].loopStart());
+		sound.writeSound(this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_EMOTOR].loopStart());
 		unsigned int loopPlayPos=0;
 		while(true) {
 		
@@ -371,7 +371,7 @@ public:
 			sound.writeSound(wav);
 			this->testcancel();
 		}
-		sound.writeSound(this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_BOIL].loopEnd());
+		sound.writeSound(this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_EMOTOR].loopEnd());
 	};
 private:
 	const FahrSound *fahrsound;
