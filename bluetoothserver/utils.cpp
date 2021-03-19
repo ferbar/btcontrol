@@ -61,8 +61,8 @@ void Config::init(const std::string &confFilename) {
 		if(komma != std::string::npos) {
 			key=line.substr(0,komma);
 			value=line.substr(komma+1);
-			utils::trim(key);
-			utils::trim(value);
+			key=utils::trim(key);
+			value=utils::trim(value);
 		} else {
 			key=line;
 			value="";

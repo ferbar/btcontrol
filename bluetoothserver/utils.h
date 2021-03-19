@@ -43,6 +43,7 @@ ssize_t myRead(int so, void *data, size_t size);
   #define ANSI_DEFAULT "\x1b[0m"
   #define ANSI_RED "\x1b[31m"
   #define ANSI_RED2 "\x1b[31;1m"
+  #define ANSI_YELLOW "\x1b[33;1m"
 
   #define ANSI_GREEN1 "\x1b[32m"
   #define ANSI_GREEN2 "\x1b[32;1m"
@@ -98,8 +99,8 @@ namespace utils
 	void setThreadMessageID(int messageID);
 	int getThreadClientID();
 	int getThreadMessageID();
-	// ESP32 hat keine boost lib
-	std::string trim(const std::string &s);
+	// &s wird nicht verändert !!
+	std::string trim(const std::string &s)  __attribute__ ((warn_unused_result));
 
 	class Log {
 	public:
@@ -119,9 +120,9 @@ namespace utils
 #define NOTICEF(fmt, ...)
 #define ERRORF(fmt, ...)
 #else
-#define DEBUGF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_DEBUG, __FILE__, __LINE__, fmt "\n", ##__VA_ARGS__ )
-#define NOTICEF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_NOTICE, __FILE__, __LINE__, fmt "\n", ##__VA_ARGS__ )
-#define ERRORF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_ERROR, __FILE__, __LINE__, fmt "\n", ##__VA_ARGS__ )
+#define DEBUGF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_DEBUG, __FILE__, __LINE__, ANSI_GREEN1 fmt ANSI_DEFAULT "\n", ##__VA_ARGS__ )
+#define NOTICEF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_NOTICE, __FILE__, __LINE__, ANSI_YELLOW fmt ANSI_DEFAULT "\n", ##__VA_ARGS__ )
+#define ERRORF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_ERROR, __FILE__, __LINE__, ANSI_RED fmt ANSI_DEFAULT "\n", ##__VA_ARGS__ )
 #endif
 
 // arduino / wiring pi / utils.cpp
