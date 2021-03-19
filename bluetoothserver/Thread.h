@@ -12,7 +12,9 @@ public:
 	bool isRunning();
 	void testcancel();
 	// delete *this after run() exits
-	void setAutodelete() {this->autodelete=true; } ;
+	void setAutodelete() {this->autodelete=true; };
+
+	int getId() { return this->thread; };
 
 private:
 	virtual void run()=0;
@@ -20,6 +22,9 @@ private:
 	static void *startupThread(void *ptr);
 	bool exited;
 	bool autodelete;
+
+protected:
+	int getMyId() { return pthread_self(); };
 };
 
 class Condition;
