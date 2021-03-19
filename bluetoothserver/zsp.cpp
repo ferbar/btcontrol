@@ -16,7 +16,7 @@
 #include "sound.h"
 #include "utils.h"
 
-const char *overrideConfigNames[] = {"sound.boil", "sound.brake", "sound.entwaessern", "sound.abfahrt", "sound.horn", NULL };
+const char *overrideConfigNames[] = {"sound.boil", "sound.glocke", "sound.brake", "sound.entwaessern", "sound.abfahrt", "sound.horn", NULL };
 
 const char* ablNames[CFG_FUNC_SOUND_N] = {"Sieden", "Glocke", "Bremsquietschen", "Entwässern", "Anfahrpfiff", "??", "E-Motor", "??", "Schaltwerk",
 	"??", "??", "??", "??", "??", "E Bremse", "Kurve", "??", "??"};
@@ -33,7 +33,7 @@ std::string soundsetPath;
  * @param number
  * @return filename
  */
-std::string getSampleFilename(std::string number) {
+Sample getSample(std::string number) {
 	// printf(" ---- %s \n",number.c_str());
 	for(ZSPDataType::iterator it = ZSPData.find("Sample"); it!=ZSPData.end(); it++) {
 		// it->second->dump();
@@ -50,13 +50,21 @@ std::string getSampleFilename(std::string number) {
 				tmp = sp->operator[]("NAME");
 				std::string name=boost::algorithm::unquote(tmp,'"','\b');
 				// printf(" %s\n", name.c_str());
-				printf("getSampleFilename(%s) = '%s/%s'\n",number.c_str(), pfad.c_str(),name.c_str());
-				return soundsetPath+"/"+boost::replace_all_copy(pfad, "\\", "/") + name;
+				int loopStartPos=utils::stoi(sp->operator[]("L1"));
+				int loopEndPos=utils::stoi(sp->operator[]("L2"));
+				printf("getSample(%s) = '%s/%s' loop:%d-%d\n",number.c_str(), pfad.c_str(), name.c_str(), loopStartPos, loopEndPos);
+				return Sample(soundsetPath+"/"+boost::replace_all_copy(pfad, "\\", "/") + name, loopStartPos, loopEndPos);
 			}
 	}
 	throw std::runtime_error("invalid sample number ("+number+")");
 }
 
+void Sample::load(int volumeLevel) {
+	Sound::loadSoundFile(fileName, wav, volumeLevel);
+	if(this->loopEndPos==0) {
+		this->loopEndPos=this->wav.length();
+	}
+}
 
 SoundType *loadZSP() {
 	// std::multimap< int,std::string > map_data;
@@ -76,7 +84,8 @@ SoundType *loadZSP() {
 	}
 	FILE *f=fopen(soundsetFile.c_str(), "r");
 	if(!f) {
-		fprintf(stderr,"error loading sound fileset [%s]\n", soundsetFile.c_str());
+		fprintf(stderr,"error loading sound fileset [%s] %s\n", soundsetFile.c_str(), strerror(errno));
+		
 		abort();
 	}
 	char buffer[1024];
@@ -193,10 +202,11 @@ SoundType *loadZSP() {
 				abort();
 			}	
 			sp->dump();
-			std::string filename = getSampleFilename(sp->operator[]("SAMPLE"));
-			cfg_soundFiles->funcSound[nummer]=filename;
-			printf(" ----------------- Ablauf %i => %s --------------\n", nummer, filename.c_str());
+			cfg_soundFiles->funcSound[nummer] = getSample(sp->operator[]("SAMPLE"));
+			printf(" ----------------- Ablauf %i (%s) => %s --------------\n", nummer, ablNames[nummer], cfg_soundFiles->funcSound[nummer].fileName.c_str());
 			cfg_soundFiles->funcSoundVolume[nummer]=utils::stoi(sp->operator[]("LAUTST"));
+		} else {
+			printf(" ... skipping LOK=%s\n", sp->operator[]("LOK").c_str());
 		}
 	}
 	// Ablauf Sound overrides:
@@ -204,7 +214,7 @@ SoundType *loadZSP() {
 	for(size_t i = 0 ; overrideConfigNames[i] ; i++) {
 		std::string overrideConfig=config.get(overrideConfigNames[i]);
 		if(overrideConfig != NOT_SET) {
-			cfg_soundFiles->funcSound[i] = config.get(overrideConfigNames[i]);
+			cfg_soundFiles->funcSound[i].fileName = config.get(overrideConfigNames[i]);
 		}
 	}
 	cfg_soundFiles->dump();
@@ -291,12 +301,13 @@ std::string SectionValues::getName() {
 }
 
 /**
- * FIXME: das tut globale variablen setzen!!!!!!
+ * FIXME: das setzt globale variablen!!!!!!
  */
 DiSoundType *SectionValues::parseDiSet() {
 	assert(cfg_soundFiles == NULL);
 	DiSoundType *soundFiles=new DiSoundType();
 	printf("SectionValues::parseDiSet()\n");
+	soundFiles->lok=utils::stoi(this->operator[]("NUMMER"));
 	soundFiles->nsteps=utils::stoi(this->operator[]("STUFEN"))+1;
 	for(SectionValues::const_iterator it=this->begin(); it!=this->end(); it++) {
 		printf(" -- '%s' '%s'\n", it->first.c_str(), it->second.c_str());
@@ -304,15 +315,15 @@ DiSoundType *SectionValues::parseDiSet() {
 			size_t komma=it->second.find_first_of(',');
 			if(komma != std::string::npos) {
 				std::string nr = it->second.substr(0,komma);
-				std::string filename = getSampleFilename(it->second.substr(komma+1));
+				Sample sample = getSample(it->second.substr(komma+1));
 				int n=atol(nr.c_str());
 				int fahrstufe=n/3;
 				assert(fahrstufe < soundFiles->nsteps);
-				printf(" -- Fahrstufe: %d/%d %s (curr limit %d) \n", fahrstufe,n%3, filename.c_str(), soundFiles->steps[fahrstufe].limit);
+				printf(" -- Fahrstufe: %d/%d %s (curr limit %d) \n", fahrstufe,n%3, sample.fileName.c_str(), soundFiles->steps[fahrstufe].limit);
 				switch(n%3) {
-					case 0: soundFiles->steps[fahrstufe].up=filename; break;
-					case 1: soundFiles->steps[fahrstufe].run=filename; break;
-					case 2: soundFiles->steps[fahrstufe].down=filename; break;
+					case 0: soundFiles->steps[fahrstufe].up = sample; break;
+					case 1: soundFiles->steps[fahrstufe].run = sample; break;
+					case 2: soundFiles->steps[fahrstufe].down = sample; break;
 				}
 			}
 		}
@@ -372,8 +383,7 @@ SteamSoundType *SectionValues::parseDSet() {
 				try {
 					//check if it->first is an int
 					utils::stoi(it->first);
-					std::string filename = getSampleFilename(it->first);
-					soundFiles->steps[step].ch[hml][slot] = filename;
+					soundFiles->steps[step].ch[hml][slot] = getSample(it->first);
 				} catch(...) {
 					printf("<<< invalid sound\n");
 				}

@@ -11,14 +11,14 @@
 #include "utils.h"
 #include <vector>
 
-
 // zpr => ABL
 #define CFG_FUNC_SOUND_BOIL 0
-#define CFG_FUNC_SOUND_BRAKE 1
-#define CFG_FUNC_SOUND_ENTWAESSERN 2
-#define CFG_FUNC_SOUND_ABFAHRT 3
 
-#define CFG_FUNC_SOUND_HORN 4
+#define CFG_FUNC_SOUND_BRAKE 2
+#define CFG_FUNC_SOUND_ENTWAESSERN 3
+#define CFG_FUNC_SOUND_ABFAHRT 4
+#define CFG_FUNC_SOUND_HORN 5
+#define CFG_FUNC_SOUND_EMOTOR 6
 #define CFG_FUNC_SOUND_N 18
 extern const char* ablNames[CFG_FUNC_SOUND_N];
 
@@ -35,28 +35,50 @@ public:
 	void getDiSet(int number){};
 };
 
-std::string getSampleFilename(std::string number);
+class Sample {
+public:
+	Sample() {};
+	Sample(std::string fileName, int loopStartPos, int loopEndPos) : fileName(fileName), loopStartPos(loopStartPos), loopEndPos(loopEndPos) {};
+	operator bool() const { return this->fileName != NOT_SET; };
+	operator std::string() const = delete;
+	void load(int volumeLevel);
+
+	const std::string loopStart() { if( this->wav != NOT_SET ) return this->wav.substr(0, this->loopStartPos); throw std::runtime_error("file not loaded"); }
+	const std::string loop() { if( this->wav != NOT_SET ) return this->wav.substr(this->loopStartPos, this->loopEndPos - this->loopStartPos); throw std::runtime_error("file not loaded"); }
+	const std::string loopEnd() { if( this->wav != NOT_SET ) return this->wav.substr(this->loopEndPos, this->wav.length() - this->loopEndPos); throw std::runtime_error("file not loaded"); }
+
+	std::string fileName{NOT_SET};
+	std::string wav{NOT_SET};
+	int loopStartPos{0};
+	int loopEndPos{0};
+};
+
+Sample getSample(std::string number);
 
 class SoundType {
-	public:
-	SoundType() {for(int i =0; i < CFG_FUNC_SOUND_N; i++) { this->funcSound[i]=NOT_SET; this->funcSoundVolume[i]=0; }};
+public:
+	// SoundType() { for(int i =0; i < CFG_FUNC_SOUND_N; i++) { this->funcSound[i]=NOT_SET; this->funcSoundVolume[i]=0; }};
+	SoundType() {};
 	virtual void dump() {};
 	virtual void loadSoundFiles() {};
 	// ID vom soundset
 	int lok;
-	std::string funcSound[CFG_FUNC_SOUND_N];
+	Sample funcSound[CFG_FUNC_SOUND_N];
 	int funcSoundVolume[CFG_FUNC_SOUND_N];
 };
 
 class DiSoundStepType {
 public:
-	DiSoundStepType() : up(NOT_SET), down(NOT_SET), run(NOT_SET), limit(255) {};
-	std::string up;
-	std::string down;
-	std::string run;
+	DiSoundStepType() : limit(255) {};
+	Sample up;
+	Sample down;
+	Sample run;
 	int limit; // max speed für diese Stufe, wenn darüber => nächste stufe
 	void dump() {
-		printf("up: %s, down: %s, run: %s, limit: %d\n", this->up != NOT_SET ? this->up.c_str() : "", this->down != NOT_SET ? this->down.c_str() : "", this->run != NOT_SET ? this->run.c_str() : "", this->limit);
+		printf("up: %s, down: %s, run: %s, limit: %d\n",
+			this->up ? this->up.fileName.c_str() : "",
+			this->down ? this->down.fileName.c_str() : "",
+			this->run ? this->run.fileName.c_str() : "", this->limit);
 	}
 };
 class DiSoundType : public SoundType {
@@ -79,7 +101,7 @@ extern SoundType *cfg_soundFiles;
 
 struct SteamSoundStepType {
 	static const int maxSlots=6;
-	std::string ch[3][maxSlots]; // H M L
+	Sample ch[3][maxSlots]; // H M L
 	int ms;
 };
 
@@ -95,7 +117,7 @@ public:
 		for(int step=0; step < this->nsteps; step++) {
 			for(int hml=0; hml < 3; hml ++) {
 				for(int slot=0; slot < this->nslots; slot++) {
-					printf("ch: %s\n", this->steps[step].ch[hml][slot] != NOT_SET ? this->steps[step].ch[hml][slot].c_str() : "");
+					printf("ch: %s\n", this->steps[step].ch[hml][slot] ? this->steps[step].ch[hml][slot].fileName.c_str() : "");
 				}
 			}
 		}
