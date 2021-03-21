@@ -122,8 +122,8 @@ void RaspiPWM::init() {
 
 	pinMode(cfg_pinPWM, PWM_OUTPUT);
 	pwmSetMode(PWM_MODE_MS);
-	pwmSetClock(4);
-	pwmSetRange(256);
+	pwmSetClock(4); // => 19,2MHz base clock / 4 = 4,8MHz
+	pwmSetRange(256); // 4,8MHz / 256 = 18,75kHz
 	this->setPWM(0);
 	this->setDir(0); // default dir = 0
 	// test ob parsbar + bits initialisieren
