@@ -8,7 +8,7 @@ Als H-Brücke kann z.b. ein L6203 oder ein VNH5019A verwendet werden. FETs für 
 Raspberry PI PWM0 (GPIO18) kann auch ein digispark (Attiny85) verwendet werden. Sound kann über eine USB Soundkarte und
 Verstärker generiert werden.
 
-Setup siehe Setup-Akku-Lok.md
+Setup mit Raspbian (DietPI) siehe [Setup-Akku-Lok.md](Setup-Akku-Lok.md)
 
 ## Handy Steuerung für DCC Loks
 Mit SRCPD kann ein DCC Signal an eine Serielle Schnittstelle gelegt werden welches dann von einem Booster
@@ -28,14 +28,6 @@ git submodule update --init
   im server.cpp ist die Adresse vom SRCPD hardcoded auf 127.0.0.1
 
 
-### bluetoothserver starten:
-```
-./btserver --help liefert eine mini-hilfe
-```
-oder das init-script nach /etc/init.d kopieren und einschalten. **hint**: möchte man bluetooth zum steuern verwenden dann bei Required-Start: bluetooth: hinzufügen!
-```
-update-rc.d btcontrol defaults
-```
 
 
 ## Handy Steuerung für Analog Loks:
@@ -71,6 +63,23 @@ CSV Datei mit:
 
 Der Rest: funktionsnamen
 
+
+### bluetoothserver starten:
+```
+./btserver --help liefert eine mini-hilfe
+```
+
+oder das init-script nach /etc/init.d kopieren und einschalten. **hint**: möchte man bluetooth zum steuern verwenden dann bei Required-Start: bluetooth: hinzufügen!
+
+Neu:
+```
+systemctl enable btcontrol
+```
+
+Alt:
+```
+update-rc.d btcontrol defaults
+```
 
 
 
