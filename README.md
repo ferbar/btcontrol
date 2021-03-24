@@ -8,50 +8,12 @@ Diese Software ist meine private Spielerei, es sind jedoch alle herzlich willkom
 Project home: https://github.com/ferbar/btcontrol/
 
 ## bluetoothserver
-Vermittlungsstelle bluetooth -> srcpd
-cpp-programm, zum kompilieren wird benötigt:
-* suse 11.2: libusb-dev bzw libusb-compat-devel, bluez-devel
-* auf ubuntu: libbluetooth-dev, libusb-dev, libasound-dev, libboost-dev
-* am raspi: libusb-1.0-0-dev libbluetooth-dev libasound2-dev libboost-serialization-dev | für raspi pwm: wiringpi (seit jessie als paket, davor: git clone git://git.drogon.net/wiringPi)
-* k8055 git submodule downloaden:
-```
-git submodule update --init
-```
+Vermittlungsstelle bluetooth/Wlan -> Hardware
+Unterstütze Hardware:
+* SRCPD (mit MERG - Booster)
+* Raspberry PI PWM oder mit einer USB Platine
 
-  im server.cpp ist die Adresse vom SRCPD hardcoded auf 127.0.0.1
-
-### bluetoothserver/initbtrail.sh
-registriert das serial-profile Service damit das Handy weiss dass auf channel 30 der btserver rennt
-
-kurze Bluetooth Einführung: damit ein Service gefunden wird muss es zuerst mit sdptool registriert werden,damit der PC überhaupt gefunden wird muss PISCAN eingeschalten sein.
-Für Bluez 5 muss der bluetoothd mit --compat gestartet werden. Das muss im /etc/systemd/system/dbus-org.bluez.service extra hinzugefügt werden.
-
-### bluetoothserver/lokdef.csv
-cvs datei mit:
-
-1. spalte: adresse
-2. decoder typ
-3. name
-4. bildchen
-5. anzahl funktionen
-
-rest: funktionsnamen
-
-### bluetoothserver starten:
-```
-./btserver --help liefert eine mini-hilfe
-```
-oder das init-script nach /etc/init.d kopieren und einschalten. **hint**: möchte man bluetooth zum steuern verwenden dann bei Required-Start: bluetooth: hinzufügen!
-```
-update-rc.d btcontrol defaults
-```
-
-### Schnittstellen zum Motor:
-
-* Velleman k8055: uralt Variante um PWM direkt auf die Schienen zu legen
-* SRCPD: eine Software die über den Com Port DCC Commands an einen Booster schicken kann. Kann viele Loks auf einmal steuern.
-* Raspberry Pi + Digispark: kleine Attiny85 Platine und eine H - Brücke
-* Raspberry Pi ohne extra MC: H-Brücke hängt direkt am Raspberry Pi / PWM0 (hier ist leider kein Sound möglich da PWM + Sound die selbe Hardware verwenden) F9: MotorBoost
+Siehe bluetoothserver/README.md
 
 ## control-android
 

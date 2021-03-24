@@ -1,102 +1,81 @@
-### Bluetooth Server
+# Bluetooth Server
 🚂🚃🚃🚃
 
-- raspberry pi mit hardware
-- Linux PC mit SRCPD + Booster Board
+## Akku Lok
+Eine Einsatzmöglichkeit ist ein Raspberry PI Zero W mit einer H-Brücke und Mosfets zur Ansteuerung für Lichter.
+
+Als H-Brücke kann z.b. ein L6203 oder ein VNH5019A verwendet werden. FETs für Lampen: IRFML8244. Statt dem 
+Raspberry PI PWM0 (GPIO18) kann auch ein digispark (Attiny85) verwendet werden. Sound kann über eine USB Soundkarte und
+Verstärker generiert werden.
+
+Setup siehe Setup-Akku-Lok.md
+
+## Handy Steuerung für DCC Loks
+Mit SRCPD kann ein DCC Signal an eine Serielle Schnittstelle gelegt werden welches dann von einem Booster
+(z.B. von MERG) für die Schienen verstärkt wird. Kann mehrere Loks auf einem Gleis steuern.
+
+Setup siehe Setup-SRCPD.md
+
+cpp-programm, zum kompilieren wird benötigt:
+* suse 11.2: libusb-dev bzw libusb-compat-devel, bluez-devel
+* auf ubuntu: libbluetooth-dev, libusb-dev, libasound-dev, libboost-dev
+* am raspi: libusb-1.0-0-dev libbluetooth-dev libasound2-dev libboost-serialization-dev | für raspi pwm: wiringpi (seit jessie als paket, davor: git clone git://git.drogon.net/wiringPi)
+* k8055 git submodule downloaden:
+```
+git submodule update --init
+```
+
+  im server.cpp ist die Adresse vom SRCPD hardcoded auf 127.0.0.1
 
 
-## Setup mit dietpi (2021.02)
-
-dietpi image auf eine sdkarte kopieren (dd_rescue)
-in raspi, wlan konfigurieren
-dietpi-config:
-Network Options Adapters:
-	Wlan ein, key, country-code
-	IPv6 off
-    Wifi: Auto reconnect on
-Network Options Misc: Boot Net Wait: off
-Audio Options -> install alsa
-Advanced Options:
-	swap space weg
-	bluetooth on
-security options:
-	change hostname
-	
-
-apt-get install git build-essential pkg-config wiringpi libbluetooth-dev libasound2-dev \
-libboost-all-dev avahi-daemon
-Für Entwicklung:
-apt-get install vim less openssh-client lsof gdb
-
-mkdir -p /root/dev/
-git clone git@github.com:ferbar/btcontrol  oder mit https://
-
-optional:
-git config --global --replace-all core.pager ""
-
-make
-conf Verzeichnis anpassen
-make install
-
-./btserver
-
-app sollte jetzt die Lok finden
+### bluetoothserver starten:
+```
+./btserver --help liefert eine mini-hilfe
+```
+oder das init-script nach /etc/init.d kopieren und einschalten. **hint**: möchte man bluetooth zum steuern verwenden dann bei Required-Start: bluetooth: hinzufügen!
+```
+update-rc.d btcontrol defaults
+```
 
 
-dietpi-services:
-disable cron (haut ned hin)
-systemctl disable cron
-rm -rf /var/lib/dhcp
-ln -s /run/ /var/lib/dhcp
-ln -s /run /var/lib/run
-rm /etc/resolv.conf && ln -s /run/resolv.conf /etc/
-mv /var/tmp/ /var/tmp-org/ && ln -s /tmp /var/tmp
+## Handy Steuerung für Analog Loks:
+Velleman k8055: uralt Variante um PWM direkt auf die Schienen zu legen
 
-Anpassungen /lib/systemd/system/systemd-timesyncd.service
-#PrivateTmp=yes
-StateDirectory=run/timesync
-
-dietpi-drive_manager:
-root und /boot readonly mounten
-/ muss in der fstab auf ro gestellt werden
-!!!!!!! nicht vergessen: mit 0 am ende von / und /boot den fsck on boot disablen !!!!!!
-
-/boot/dietpi.txt
-CONFIG_CHECK_DIETPI_UPDATES=0
-CONFIG_CHECK_APT_UPDATES=0
-
-vi /etc/vim/vimrc.local
-" Explicitly source defaults.vim so you can override its settings
-source $VIMRUNTIME/defaults.vim
-" Prevent it from being loaded again later if the user doesn't have
-" a vimrc
-let skip_defaults_vim = 1
-" Disable the settings you don't like
-set mouse=
-
-fscheck on boot raus aus der config / cmdline.txt
-
-systemctl mask systemd-rfkill.service
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! sound config !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-=> usb soundkarte wird standardmässig nicht als default genommen
-Fehlermeldung:
-aplay: set_params:1339: Sample format non available
-
-aplay --dump-hw-params <wavfile>
-cat /etc/asound.conf 
-defaults.pcm.card 1
-defaults.ctl.card 1
+*********************** F9: MotorBoost
 
 
-dietpi-disable_rpi_camera.conf   => blacklist bcm2835_isp
+## Wichtige Programme:
 
-hdmi output abdrehen => hdmi-off.service >>>>>>>>>>>>>>>>>>>>>>>>> ins make install tun
+### bluetoothserver
+Der eigentliche Daemon Prozess, kompiliertes C++ Programm. 
+
+### bluetoothserver/initbtrail.sh
+registriert das serial-profile Service damit das Handy weiss dass auf channel 30 der btserver rennt
+
+kurze Bluetooth Einführung: damit ein Service gefunden wird muss es zuerst mit sdptool registriert werden,damit der PC überhaupt gefunden wird muss PISCAN eingeschalten sein.
+Für Bluez 5 muss der bluetoothd mit --compat gestartet werden. Das muss im /etc/systemd/system/dbus-org.bluez.service extra hinzugefügt werden.
+
+## Konfiguration
+Die .sample files unter bluetoothserver/conf können als Ausgangsbasis verwendet werden.
+
+### bluetoothserver/conf/lokdef.csv
+Wenn der SRCPD verwendet wird müssen hier sämtliche Lokomotiven eingetraen werden. Bei einer Akku Lok darf nur eine Lokomotive eingetragen sein.
+
+CSV Datei mit:
+
+1. Spalte: Adresse
+2. Decoder Typ
+3. Name
+4. Bildchen
+5. Anzahl Funktionen
+
+Der Rest: funktionsnamen
 
 
-btcontrol.service:
-requires network | bluetooth (!!!! nicht multiuser - wir brauchen keine ntpd zeit !!!!)
 
-ln -s /run/ /var/lib/bluetooth
 
-systemctl enable btcontrol
+
+## Setup auf OpenSuse & SRCPD
+
+
+
