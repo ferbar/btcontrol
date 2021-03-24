@@ -13,28 +13,28 @@ Unterstütze Hardware:
 * SRCPD (mit MERG - Booster)
 * Raspberry PI PWM oder mit einer USB Platine
 
-Siehe bluetoothserver/README.md
+Siehe [bluetoothserver/](bluetoothserver/)
 
 ## control-android
 
 Android App
-siehe [readme](control-android/).
+siehe [control-android/](control-android/).
 download [btcontrol.apk](../../raw/master/control-android/bin/btcontrol.apk)
 
 ## control-midp
-das MIDP - java Programm welches aufs Handy gehört
+Ein MIDP - java Programm welches aufs Handy (altes Nokia feature-phone) gehört
 
-siehe [readme](control-midp/README.md).
+Siehe [readme](control-midp/README.md).
 Die App ist unter /dist/btcontroll.jar
 
 ### midptestenv
 Emulator um MIDP Programme am PC rennen zu lassen (zum Testen ganz nett, hat aber bugs)
 
 ## NB1A_partlist.txt
-partlist für den http://merg.co.uk - booster
+Partlist für den http://merg.co.uk - booster
 
 ## usb k8055
-lib um eine Viessman - platine anzusteuern, früher für PWM verwendet (ohne DCC)
+Lib um eine Viessman - platine anzusteuern, früher für PWM verwendet (ohne DCC)
 
 ## ussp-push-0.11
 ussp-push -> ussp-push-0.11/src/ussp-push
