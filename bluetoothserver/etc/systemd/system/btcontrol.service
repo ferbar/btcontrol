@@ -3,6 +3,8 @@ Description=btcontrol
 # Order 1
 #Requires=bluetooth.service
 After=bluetooth.service
+StartLimitInterval=100
+StartLimitBurst=2
 
 [Service]
 #Type=oneshot
@@ -11,6 +13,8 @@ WorkingDirectory=/root/dev/btcontrol/bluetoothserver/
 #ExecStartPre=/root/dev/btcontrol/bluetoothserver/initbtrail.sh
 ExecStart=//root/dev/btcontrol/bluetoothserver/btserver
 #ExecStop=/
+Restart=on-failure
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
