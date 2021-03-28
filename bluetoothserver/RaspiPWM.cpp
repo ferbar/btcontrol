@@ -242,7 +242,7 @@ void RaspiPWM::commit(bool force) {
 	}
 }
 
-#warning: muss man wirklich jede sekunde die func outs setzen??
+#warning: muss man wirklich jede sekunde die func outs setzen?? "accel+10s" ???
 void RaspiPWMFuncThread::run() {
 	while(true) {
 		printf("RaspiPWMFuncThread::run()\n");
