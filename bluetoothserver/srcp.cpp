@@ -75,13 +75,10 @@ SRCP::SRCP()
 	socketAddr.sin_port= htons(cfg_port);
 	if ((so = socket(AF_INET, SOCK_STREAM, 0 )) == -1) {
 		perror("socket()");
-		exit(1);
+		throw std::runtime_error(utils::format("error creating socket (%s)", strerror(errno)));
 	}
 	if ( connect(so,  (struct sockaddr *)&socketAddr, sizeof(socketAddr))<0  ) {
-		fprintf(stderr,"\nDaemon srcpd not found on host %s on port %d.\n", 
-				cfg_hostname, cfg_port);
-		fprintf(stderr,"srcpd is not running or is running on another port.\n\n");
-		exit(1);
+		throw std::runtime_error(utils::format("Daemon srcpd not found on host %s on port %d.\n", cfg_hostname, cfg_port));
 	}
 
 	memset(servermsg,0,SERVMSGLEN);

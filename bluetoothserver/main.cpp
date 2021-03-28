@@ -66,6 +66,7 @@
 
 #include "qrcode.h"
 
+#define TAG "main"
 
 // mit -D `svnversion` übergeben
 #ifndef SVNVERSION
@@ -321,8 +322,11 @@ int main(int argc, char *argv[])
 			try {
 				hardware=new SRCP_Hardware();
 				printf("init erddcd\n");
-			} catch(const char *errormsg) {
-				fprintf(stderr,"error connecting to erddcd (%s)\n",errormsg);
+			} catch(std::runtime_error &e) {
+				fprintf(stderr,"error connecting to erddcd (%s)\n", e.what());
+				
+				ERRORF("No hardware found ... terminating");
+				abort();
 			}
 		}
 #ifdef INCL_X11
