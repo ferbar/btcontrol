@@ -139,9 +139,15 @@ bool readLokdef()
 		for(int i=1; i < lokdef[n].nFunc; i++) {
 			pos_end=getnext(&pos);
 			CHECKVAL("func i = %d, nfunc %d invalid? %d function names missing",i,lokdef[n].nFunc,lokdef[n].nFunc-i);
-			strncpy(lokdef[n].func[i].name, pos, MIN((signed)sizeof(lokdef[n].func[i].name), pos_end-pos));
+			// =1 suchen
+			int funcNameLen=pos_end-pos;
+			if(memmem(pos, funcNameLen, "=1", 2)) {
+				funcNameLen-=2;
+				lokdef[n].func[i].ison=true;
+			}
+			strncpy(lokdef[n].func[i].name, pos, MIN((signed)sizeof(lokdef[n].func[i].name), funcNameLen));
 			if(strchr(lokdef[n].func[i].name,'\n') != NULL) {
-				throw std::runtime_error(utils::format("%s:%d Error: newline in funcname (%s)- irgendwas hats da\n", LOKDEF_FILENAME, lineNo, lokdef[n].func[i].name));
+				throw std::runtime_error(utils::format("%s:%d Error: newline in funcname (%s) - error parsing lokdef\n", LOKDEF_FILENAME, lineNo, lokdef[n].func[i].name));
 			}
 		}
 		if(*pos_end != '\0') {
