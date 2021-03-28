@@ -4,6 +4,10 @@
 #include "zsp.h"
 #include "Thread.h"
 
+#define SOUND_FUNC_NUM_HORN     1
+#define SOUND_FUNC_NUM_WHISTLE  2
+#define SOUND_FUNC_NUM_ENABLE   8
+
 class PlayAsync;
 
 class Sound {

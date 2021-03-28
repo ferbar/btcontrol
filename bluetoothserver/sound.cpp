@@ -334,7 +334,8 @@ public:
 
 		Sound sound;
 		sound.init();
-		sound.writeSound(this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_EMOTOR].loopStart());
+		// start+stop muss nicht abgespielt werden, Sound sollte bei speed=0 = volume=0 anfangen
+		// sound.writeSound(this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_EMOTOR].loopStart());
 		unsigned int loopPlayPos=0;
 		while(true) {
 		
@@ -371,7 +372,7 @@ public:
 			sound.writeSound(wav);
 			this->testcancel();
 		}
-		sound.writeSound(this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_EMOTOR].loopEnd());
+		// sound.writeSound(this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_EMOTOR].loopEnd());
 	};
 private:
 	const FahrSound *fahrsound;
@@ -868,6 +869,12 @@ void FahrSound::start() {
 		printf("===== no sound files loaded ====\n");
 		return;
 	}
+	if(lokdef[0].nFunc <= SOUND_FUNC_NUM_HORN ||
+	  lokdef[0].nFunc <= SOUND_FUNC_NUM_WHISTLE ||
+	  lokdef[0].nFunc <= SOUND_FUNC_NUM_ENABLE) {
+		ERRORF("SOUND_FUNC_NUM_HORN / SOUND_FUNC_NUM_WHISTLE / SOUND_FUNC_NUM_ENABLE invalid!");
+		abort();
+	}
 	/*
 // FIXME: wenn thread rennt und doRun false is dann warten bis thread tot und neu starten
 	if(this->thread) {
@@ -916,22 +923,22 @@ void FahrSound::startPlayFuncSound() {
 	// printf("FahrSound::startPlayFuncSound #####################################\n");
 	static PlayAsync horn;
 	static PlayAsync whistle;
-	if(lokdef[0].nFunc > 1 && lokdef[0].func[1].ison && ! horn.isPlaying() && (this->soundFiles->funcSound[CFG_FUNC_SOUND_HORN] )) {
-		FahrSoundPlayFuncAsyncData *data=new FahrSoundPlayFuncAsyncData(this->soundFiles->funcSound[CFG_FUNC_SOUND_HORN], 1);
+	if(lokdef[0].func[SOUND_FUNC_NUM_HORN].ison && ! horn.isPlaying() && (this->soundFiles->funcSound[CFG_FUNC_SOUND_HORN] )) {
+		FahrSoundPlayFuncAsyncData *data=new FahrSoundPlayFuncAsyncData(this->soundFiles->funcSound[CFG_FUNC_SOUND_HORN], SOUND_FUNC_NUM_HORN);
 		horn.play(data);
-		/*
-			Sound horn;
-		horn.init(SND_PCM_NONBLOCK);
-		// horn.setBlocking(false);
-		horn.playSingleSound(CFG_FUNC_SOUND_HORN);
-		// horn.close(false);
-		*/
 	}
-	if(lokdef[0].nFunc > 2 && lokdef[0].func[2].ison && ! whistle.isPlaying() && this->soundFiles->funcSound[CFG_FUNC_SOUND_ABFAHRT] ) {
-		FahrSoundPlayFuncAsyncData *data=new FahrSoundPlayFuncAsyncData(this->soundFiles->funcSound[CFG_FUNC_SOUND_ABFAHRT], 2);
+	if(lokdef[0].func[SOUND_FUNC_NUM_WHISTLE].ison && ! whistle.isPlaying() && this->soundFiles->funcSound[CFG_FUNC_SOUND_ABFAHRT] ) {
+		FahrSoundPlayFuncAsyncData *data=new FahrSoundPlayFuncAsyncData(this->soundFiles->funcSound[CFG_FUNC_SOUND_ABFAHRT], SOUND_FUNC_NUM_WHISTLE);
 		whistle.play(data);
 	}
 
+	if(lokdef[0].func[SOUND_FUNC_NUM_ENABLE].ison != this->isRunning()) {
+		if(lokdef[0].func[SOUND_FUNC_NUM_ENABLE].ison) {
+			this->start();
+		} else {
+			this->cancel();
+		}
+	}
 }
 
 /*
