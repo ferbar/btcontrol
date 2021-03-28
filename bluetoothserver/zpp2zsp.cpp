@@ -252,13 +252,13 @@ int main(int argc, char *argv[]) {
 "/Abl"
 	*/
 
-	for(int addrDampE=0; addrDampE <= 1; addrDampE++)   // dampf Abl fängt bei 920 an, E bei 960
-	for(int i = 0; i < 32; i++) {
+//	for(int addrDampE=0; addrDampE <= 1; addrDampE++)   
+// dampf Abl fängt bei 920 an (0...31), E bei 960 (32..63)
+	for(int i = 0; i < 64; i++) {
 		printf("Abl Set %d\n",i);
-		int offset=(data[0x920-0x80+i*2+addrDampE*0x40] << 8) + data[0x920 - 0x80+i*2+addrDampE*0x40 + 1];
-//		int offset=(data[0x960-0x80+i*2] << 8) + data[0x960 - 0x80+i*2 + 1];
+		int offset=(data[0x920-0x80+i*2] << 8) + data[0x920 - 0x80+i*2 + 1];
 		if(offset == 0)
-			break;
+			continue;
 		offset+=0x7b;
 		// for(int j=0; j < 42; j++) printf("[%d] %02x ", j, data[offset + j]); printf("\n");
 		for(int j = 0; j < CFG_FUNC_SOUND_N; j++) {

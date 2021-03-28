@@ -195,7 +195,11 @@ SoundType *loadZSP() {
 		it->second->dump();
 		printf("Abl\n");
 		SectionValuesPtr sp = it->second;
-		if(utils::stoi(sp->operator[]("LOK")) == cfg_soundFiles->lok) {
+		int ablLok=utils::stoi(sp->operator[]("LOK"));
+		if(ablLok >= 32) { // 0...31 dampfloks, 32...63 e-lok
+			ablLok-=32;
+		}
+		if(ablLok == cfg_soundFiles->lok) {
 			int nummer=utils::stoi(sp->operator[]("NUMMER"));
 			if(nummer < 0 || nummer >= CFG_FUNC_SOUND_N) {
 				printf("Error: invalid Abl::NUMMER:%d\n", nummer);
@@ -206,7 +210,7 @@ SoundType *loadZSP() {
 			printf(" ----------------- Ablauf %i (%s) => %s --------------\n", nummer, ablNames[nummer], cfg_soundFiles->funcSound[nummer].fileName.c_str());
 			cfg_soundFiles->funcSoundVolume[nummer]=utils::stoi(sp->operator[]("LAUTST"));
 		} else {
-			printf(" ... skipping LOK=%s\n", sp->operator[]("LOK").c_str());
+			printf(" ... skipping LOK=%d\n", ablLok);
 		}
 	}
 	// Ablauf Sound overrides:
