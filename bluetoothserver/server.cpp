@@ -109,8 +109,8 @@ int Server::accept()
 #endif
 	FD_SET(this->tcp_so,&fd);
 	int rc=select(FD_SETSIZE, &fd, NULL, NULL, NULL);
-	printf("Server::accept - select rc=%d errno:%s\n",rc,strerror(errno));
-	if( rc == -1 ) {
+	printf("Server::accept - select rc=%d\n",rc);
+	if( rc < 0 ) {
 		perror("select/accept error");
 		return -1;
 	}
@@ -164,7 +164,7 @@ static void unregisterPhoneClient(void *data)
 static void *phoneClient(void *data)
 {
 	startupdata_t *startupData=(startupdata_t *)data;
-	printf("%d:new client\n",startupData->clientID);
+	printf("%d:new client (so:%d)\n",startupData->clientID, startupData->so);
 	pthread_cleanup_push(unregisterPhoneClient,data);
 
 	try {
@@ -175,6 +175,7 @@ static void *phoneClient(void *data)
 		} else 
 #endif
 		{
+#warning das auf Thread.start umstellen
 			ClientThread client(startupData->clientID, startupData->so);
 			client.run();
 		}
