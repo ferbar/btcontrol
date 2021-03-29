@@ -9,8 +9,19 @@
 # hciconfig sagt "down" hci0 up sagt das oben -> anderen dt dongle nehmen | anderen kernel nehmen
 # 
 # sdptool browse ff:ff:ff:00:00:00 -> port registrierungen anzeigen
+#           = sdptool browse local
 # port 30 als SerialProfile registrieren
-SDPTOOL="sudo sdptool"
+
+# some commands have to be called as root
+if [ -O / ] ; then
+	echo "running as root"
+	SUDO=""
+else
+	echo "no root, need sudo"
+	SUDO="sudo"
+fi
+
+SDPTOOL="$SUDO sdptool"
 HCICONFIG="hciconfig"
 BLUETOOTHNAME=""
 
@@ -55,11 +66,11 @@ fi
 # rfcomm -r listen /dev/rfcomm30 30
 
 if [ "$BLUETOOTHNAME" ] ; then
-	sudo $HCICONFIG hci0 name "$BLUETOOTHNAME"
+	$SUDO $HCICONFIG hci0 name "$BLUETOOTHNAME"
 fi
 
 # wenn pc master kann er bis zu 7 connections machen
-sudo $HCICONFIG hci0 lm master
+$SUDO $HCICONFIG hci0 lm master
 
 # verbindungen anzeigen
 # hcitool con
@@ -76,7 +87,7 @@ $HCICONFIG | grep ISCAN -q
 rc=$?
 if [ $rc != 0 ]; then
 	echo "bluetooth ISCAN noch nicht eingeschalten"
-	if sudo $HCICONFIG hci0 piscan ; then
+	if $SUDO $HCICONFIG hci0 piscan ; then
 		echo "[ok] ... eingeschalten"
 	else
 		echo "[error] '$HCICONFIG hci0 piscan'" >&2
