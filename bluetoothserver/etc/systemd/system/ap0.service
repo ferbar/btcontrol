@@ -1,0 +1,23 @@
+[Unit]
+Description=init soft ap
+# Order 1
+After=networking
+Requires=networking
+
+# checks only once
+#ConditionPathIsSymbolicLink=/sys/class/bluetooth/hci0
+#StartLimitInterval=100
+#StartLimitBurst=5
+
+[Service]
+Type=oneshot
+#ExecCondition=/sys/class/bluetooth/hci0
+RemainAfterExit=yes
+ExecStart=sleep 5 ; ifup ap0
+#ExecStart=//root/dev/btcontrol/bluetoothserver/btserver
+ExecStop=ifdown ap0
+#Restart=on-failure
+#RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
