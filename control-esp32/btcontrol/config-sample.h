@@ -1,7 +1,10 @@
 #define device_name "esp32-btcontrol"
+// all available ssids + password
+#define WIFI_CONFIG { \
+  { .ssid="ap2", .password="PASSWORD" },            \
+  { .ssid="esp32-diesel", .password="top-secret" },   \
+}
 
-#define wifi_ssid "esp32-playmobil"
-#define wifi_password "playmobil"
 
 // enable update OTA
 #define OTA_UPDATE
@@ -16,4 +19,20 @@
 // GPIO4 = flash led beim esp32-cam
 //#define RESET_INFO_PIN 4
 #define RESET_INFO_PIN 2
+
+// see buttonConfig_t
+#define BUTTON_CONFIG { \
+  { .when=on_off, .gpio=12, .action=sendFullStop },            \
+  { .when=on,     .gpio=13, .action=sendFunc, .funcNr=1},      \
+  { .when=on,     .gpio=15, .action=sendFunc, .funcNr=2 },     \
+  { .when=on_off, .gpio=2,  .action=direction },               \
+  { .when=on_off, .gpio=17, .action=sendFunc, .funcNr=0 },     \
+  { .when=on_off, .gpio=22, .action=sendFunc, .funcNr=3 },     \
+}
+
+// buttons für auf und ab
+#define BUTTON_1            35
+#define BUTTON_2            0
+// schieberegler / poti pin
+#define POTI_PIN            32
 
