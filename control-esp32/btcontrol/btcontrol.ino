@@ -11,7 +11,9 @@
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <Wire.h>
-#include <Button2.h>
+#include <Button2.h>        // !!!!!!!!!!!!!!!!!!!!!!!!!! version 1.6 hat nicht funktioniert => 1.2 nehmen !!!!!!!!!!!!!!!!!!!!!!!!!!!
+#include <esp_wifi.h>
+
 #include "esp_adc_cal.h"
 #include "bmp.h"
 #include "config.h"
@@ -82,14 +84,15 @@ void showVoltage()
         timeStamp = millis();
         uint16_t v = analogRead(ADC_PIN);
         float battery_voltage = ((float)v / 4095.0) * 2.0 * 3.3 * (vref / 1000.0);
-        String voltage = "Voltage :" + String(battery_voltage) + "V";
+        String voltage = "Bat: " + String(battery_voltage) + "V";
         // Serial.println(voltage);
-        tft.setTextDatum(TL_DATUM);
+        tft.setTextDatum(TR_DATUM);
         tft.setTextColor(TFT_GREEN, TFT_BLACK);
+        tft.setFreeFont(NULL);
         //tft.fillScreen(TFT_BLACK);
         //tft.setTextDatum(TL_DATUM);
         // tft.drawString(voltage,  tft.width() / 2, tft.height() / 2 );
-        tft.drawString(voltage,  0, tft.height() - 2*16 );
+        tft.drawString(voltage,  tft.width()-5 * 3, 0 );  // NULL = monospace font
     }
 }
 
