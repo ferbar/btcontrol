@@ -12,7 +12,7 @@ Type=oneshot
 #ExecCondition=/sys/class/bluetooth/hci0
 RemainAfterExit=yes
 WorkingDirectory=/root/dev/btcontrol/bluetoothserver/
-ExecStart=/root/dev/btcontrol/bluetoothserver/initbtrail.sh
+ExecStart=/root/dev/btcontrol/bluetoothserver/initbtrail.sh --wait-for-device
 #ExecStart=//root/dev/btcontrol/bluetoothserver/btserver
 #ExecStop=/
 
