@@ -6,6 +6,10 @@
 #include <map>
 #include "RuntimeExceptionWithBacktrace.h"
 
+#ifdef ESP32
+#include "utils_esp32.h"
+#endif
+
 std::string readFile(std::string filename);
 
 #define STREQ(s1,s2) (strcmp(s1,s2)==0)
@@ -127,7 +131,7 @@ namespace utils
 
 // arduino / wiring pi / utils.cpp
 extern "C" {
-extern unsigned int millis();
+extern unsigned long millis();
 }
 
 #endif // utils.h

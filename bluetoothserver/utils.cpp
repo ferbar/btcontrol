@@ -357,7 +357,6 @@ void utils::Log::printf(const char *tag, int level, const char *file, int line, 
 	Serial.print(data);
 	free(data);
 	va_end(args);
-	Serial.println();
 #else
 	va_list args;
 	va_start(args, fmt);
@@ -367,7 +366,7 @@ void utils::Log::printf(const char *tag, int level, const char *file, int line, 
 }
 
 #if ! defined(ESP_PLATFORM) && ! defined(HAVE_RASPI_WIRINGPI)
-unsigned int millis() {
+unsigned long millis() {
 	struct timespec ts;
 	clock_gettime(CLOCK_BOOTTIME, &ts);
 	return ts.tv_sec*1000 + ts.tv_nsec / 1000000;
