@@ -47,6 +47,7 @@ void Thread::start() {
 #ifdef ESP32
 	DEBUGF("set stack size to 10000");
 	pthread_attr_setstacksize(&attr,10000);
+	this->cancelstate=0;
 #endif
 	int s = pthread_create(&this->thread, &attr, &Thread::startupThread, (void *) this);
 	if (s != 0)
@@ -58,14 +59,19 @@ void *Thread::cancel() {
 	NOTICEF("Thread::cancel()\n");
 	void *ret;
 	if(this->thread) {
+#ifdef ESP32
+		this->cancelstate=1;
+#else
 		int s = pthread_cancel(this->thread);
 		if (s != 0)
 			perror("pthread_cancel");
+			throw std::runtime_error("error pthread_cancel");
 		int rc = pthread_join(this->thread, &ret);
 		if(rc != 0) {
 			// FIXME: memory leak wenn ret malloced ist
 			throw std::runtime_error("error pthread_join");
 		}
+#endif
 		this->thread=0;
 	} else {
 		// already killed/never started
@@ -79,7 +85,13 @@ bool Thread::isRunning() {
 }
 
 void Thread::testcancel() {
+#ifdef ESP32
+	if(this->cancelstate) {
+		throw std::runtime_error("thread canceled from testcancel()"); // pthread_testcancel macht auch nur exception
+	}
+#else
 	pthread_testcancel();
+#endif
 }
 
 int Thread::self() {

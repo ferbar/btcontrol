@@ -22,6 +22,9 @@ private:
 	static void *startupThread(void *ptr);
 	bool exited;
 	bool autodelete;
+#ifdef ESP32
+	int cancelstate; // hat die esp32 lib nicht
+#endif
 
 protected:
 	int getMyId() { return pthread_self(); };
