@@ -12,3 +12,4 @@ bluetoothserver/sound/
 bluetoothserver/tags
 bluetoothserver/protocol.h
 esp32-server/btcontrol/config.h
+control-esp32/btcontrol/config.h
