@@ -98,15 +98,16 @@ void ControlClientThread::run()
 					int speed=reply["info"][i]["speed"].getIntVal();
 					int functions=reply["info"][i]["functions"].getIntVal();
 					// AvailLocosListItem item=(AvailLocosListItem)ControlAction.availLocos.get(Integer.valueOf(addr));
-					DEBUGF("/%d: changed addr %i, speed: %d, functions: %d##################", this->msgNum, addr, speed, functions);
+					DEBUGF("/%d: changed addr %i, speed: %d, functions: %0x  lokdef:%p##################", this->msgNum, addr, speed, functions, lokdef);
 					if(lokdef) { // ist beim start NULL, wird erst mit GETLOCOS initialisiert
 						int addr_index=getAddrIndex(addr);
 						if(addr_index >=0) {
-							// DEBUGF("           index=%d:", addr_index);
+							// DEBUGF("           index=%d", addr_index);
 							lokdef[addr_index].currspeed=abs(speed);
 							lokdef[addr_index].currdir= (speed >= 0) ? 1 : -1;
 							for(int i=0; i < MAX_NFUNC; i++) {
-								lokdef[addr_index].func[i].ison=(1 >> i) | functions ? true : false;
+								// DEBUGF("       [%d] = %d", i, ( (1 << i) & functions )  ? true : false);
+								lokdef[addr_index].func[i].ison=( (1 << i) & functions )  ? true : false;
 							}
 						// changedAddrIndex[addr_index]=true;
 						}
@@ -115,6 +116,7 @@ void ControlClientThread::run()
 				}
 			}
 			this->msgNum++;
+			this->testcancel();
 		}
 	} catch(std::runtime_error &e) {
 		ERRORF("ControlClientThread::run exception. closing clientthread");
