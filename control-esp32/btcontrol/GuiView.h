@@ -1,7 +1,11 @@
+// !!! set LONGCLICK_MS to at least 800 [ms]
 #include <Button2.h>
 #include <vector>
 #include "lokdef.h"
 #include "utils.h"
+
+// nach 5min idle abdrehen
+#define POWER_DOWN_IDLE_TIMEOUT 300
 
 class GuiView {
 public:
@@ -42,6 +46,7 @@ private:
   static std::vector <wifiEntry_t> wifiList;
   static int selectedWifi;
   static bool needUpdate;
+  static long lastKeyPressed;         // power off after POWER_DOWN_IDLE_TIMEOUT, init mit 0 => system boot
   static const char *passwordForSSID(const String &ssid);
 };
 
@@ -95,6 +100,7 @@ public:
 private:
 	void sendSpeed(int what);
 	static bool forceStop;
+  static long lastKeyPressed;         // power off after POWER_DOWN_IDLE_TIMEOUT, init mit 0 => system boot
 };
 
 class GuiViewErrorMessage : public GuiView {
