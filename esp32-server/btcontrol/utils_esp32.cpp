@@ -100,3 +100,30 @@ void writeEEPROM(int addr1, uint8_t data1, int addr2, uint8_t data2) {
   }
 }
 
+/**
+ * memmem für ESP32
+ * Tests:
+Serial.printf("1.: %p\n", memmem("abcdefghi", 10, "abc", 3) );
+Serial.printf("2.: %p\n", memmem("abcdefghi", 10, "ghi", 3) );
+Serial.printf("3.: %p\n", memmem("abcdefghi", 10, "dghi", 3) );
+Serial.printf("4.: %p\n", memmem("abcdef", 3, "abcd", 4) );
+ */
+void *memmem(const void *haystack, size_t haystacklen,
+             const void *needle, size_t needlelen) {
+	const char *h=(const char *) haystack;
+	const char *n=(const char *) needle;
+	if(needlelen > haystacklen) {
+		return NULL;
+	}
+	for(int i=0; i < haystacklen-needlelen; i++) {
+		for(int j=0; j < needlelen; j++) {
+			if(h[i+j] != n[j]) {
+				goto not_found;
+			}
+		}
+		return &haystack+i;
+		not_found:
+		printf("test %d\n",i);
+	}
+	return NULL;
+}
