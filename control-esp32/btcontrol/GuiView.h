@@ -30,10 +30,6 @@ public:
     const char* ssid;
     const char* password;
   };
-  struct wifiEntry_t {
-    String ssid;
-    long rssi;
-  };
 
   GuiViewSelectWifi() { };
   void init();
@@ -43,7 +39,7 @@ public:
   static void buttonCallbackLongPress(Button2 &b);
   const char * which() const { return "GuiViewSelectWifi"; };
 private:
-  static std::vector <wifiEntry_t> wifiList;
+  static std::map <String, long> wifiList;
   static int selectedWifi;
   static bool needUpdate;
   static long lastKeyPressed;         // power off after POWER_DOWN_IDLE_TIMEOUT, init mit 0 => system boot

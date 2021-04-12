@@ -14,6 +14,11 @@
 #include <Button2.h>        // !!!!!!!!!!!!!!!!!!!!!!!!!! version 1.6 hat nicht funktioniert => 1.2 nehmen !!!!!!!!!!!!!!!!!!!!!!!!!!!
 #include <esp_wifi.h>
 
+#ifdef OTA_UPDATE
+// https://lastminuteengineers.com/esp32-ota-updates-arduino-ide/
+#include <ArduinoOTA.h>
+#endif
+
 #include "esp_adc_cal.h"
 #include "bmp.h"
 #include "config.h"
@@ -237,12 +242,10 @@ void setup()
     }
 
 
-    tft.fillScreen(TFT_BLACK);
-
-
-    tft.setTextDatum(TL_DATUM);
 
 /*
+    tft.fillScreen(TFT_BLACK);
+    tft.setTextDatum(TL_DATUM);
     tft.drawString("LeftButton:", tft.width() / 2, tft.height() / 2 - 16);
     tft.drawString("[WiFi Scan]", tft.width() / 2, tft.height() / 2 );
     tft.drawString("RightButton:", tft.width() / 2, tft.height() / 2 + 16);

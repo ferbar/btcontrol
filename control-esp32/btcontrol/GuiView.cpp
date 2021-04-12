@@ -94,7 +94,7 @@ void GuiView::runLoop() {
 int GuiViewSelectWifi::selectedWifi=0;
 bool GuiViewSelectWifi::needUpdate=false;
 long GuiViewSelectWifi::lastKeyPressed=0;
-std::vector <GuiViewSelectWifi::wifiEntry_t> GuiViewSelectWifi::wifiList;
+std::map <String, long> GuiViewSelectWifi::wifiList;
 
 void guiViewSelectWifiCallback1(Button2 &b);
 void guiViewSelectWifiCallback2(Button2 &b);
@@ -105,6 +105,13 @@ void guiViewSelectWifiLongPressedCallback(Button2 &b);
 void GuiViewSelectWifi::init() {    
 
   DEBUGF("WiFi Mode STA");
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextDatum(MC_DATUM);
+  tft.setTextColor(TFT_GREEN, TFT_BLACK);
+  tft.setTextSize(1);
+  tft.setFreeFont(FSSP7);
+  tft.drawString("Scanning...", 0, tft.fontHeight());
+
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
   delay(100);
@@ -112,7 +119,14 @@ void GuiViewSelectWifi::init() {
   int16_t n = WiFi.scanNetworks();
   this->wifiList.clear();
   for(int i=0; i < n; i++) {
-    this->wifiList.push_back( { .ssid=WiFi.SSID(i), .rssi=WiFi.RSSI(i) } );
+    auto it = this->wifiList.find(WiFi.SSID(i));
+    if(it != this->wifiList.end()) {
+      this->wifiList[WiFi.SSID(i)] = WiFi.RSSI(i) ;
+    } else {
+      // multiple APs for the same ssid found, use the lower rssi;
+      if(this->wifiList[WiFi.SSID(i)] > WiFi.RSSI(i))
+        this->wifiList[WiFi.SSID(i)] = WiFi.RSSI(i) ;
+    }
   }
 	if(this->selectedWifi > n-1) {
 		this->selectedWifi = n-1;
@@ -191,26 +205,31 @@ void GuiViewSelectWifi::loop() {
 			DEBUGF("Found %d wifi networks", this->wifiList.size());
 			int n=0;
 			char buff[50];
-			for(const auto& value: this->wifiList) {
-				const char *password=this->passwordForSSID(value.ssid);
-				DEBUGF("  wifi network %s have password: %s", value.ssid.c_str(), password ? "yes" : "no");
-				int foregroundColor = this->passwordForSSID(value.ssid) ? TFT_GREEN : TFT_RED;
-				int backgroundColor = TFT_BLACK;
-				if(n==this->selectedWifi) {
-					// backgroundColor=foregroundColor;
-          backgroundColor=TFT_BLUE;
-					// foregroundColor=TFT_BLACK;
-          // foregroundColor=TFT_YELLOW;
-				}
-				tft.setTextColor(foregroundColor, backgroundColor);
-				snprintf(buff,sizeof(buff),
-						"[%d] %s (%ld)",
-            n,
-						value.ssid.c_str(),
-						value.rssi);
-				//ft.println(buff); => println geht ned richtig mit custom fonts (baseline falsch, bg color geht ned)
-        tft.drawString(buff,0,tft.fontHeight()*n);
-				n++;
+      for(int i=0; i < 2; i++) {
+			  for(const auto& value: this->wifiList) {
+				  const String password=this->passwordForSSID(value.first);
+  				DEBUGF("  wifi network %s have password: %s", value.first.c_str(), password ? "yes" : "no");
+          // round 1: list APs with passwords
+          if((password && i==0) || (!password && i==1)) {
+	  			  int foregroundColor = password ? TFT_GREEN : TFT_RED;
+  		  		int backgroundColor = TFT_BLACK;
+	  		  	if(n==this->selectedWifi) {
+		  		  	// backgroundColor=foregroundColor;
+              backgroundColor=TFT_BLUE;
+  			  		// foregroundColor=TFT_BLACK;
+              // foregroundColor=TFT_YELLOW;
+  		  		}
+	  		  	tft.setTextColor(foregroundColor, backgroundColor);
+		  		  snprintf(buff,sizeof(buff),
+			  			"[%d] %s (%ld)",
+              n,
+					  	value.first.c_str(),
+						  value.second);
+  				//ft.println(buff); => println geht ned richtig mit custom fonts (baseline falsch, bg color geht ned)
+            tft.drawString(buff,0,tft.fontHeight()*n);
+	  	  		n++;
+          }
+			  }
 			}
 		}
 	} else {
@@ -237,13 +256,31 @@ void GuiViewSelectWifi::buttonCallback(Button2 &b, int which) {
   }
   GuiViewSelectWifi::needUpdate=true;
 }
+
 void GuiViewSelectWifi::buttonCallbackLongPress(Button2 &b) {
 	DEBUGF("GuiViewSelectWifi::buttonCallbackLongPress");
   GuiViewSelectWifi::lastKeyPressed=millis();
-	String ssid=GuiViewSelectWifi::wifiList.at(GuiViewSelectWifi::selectedWifi).ssid;
-	const char *password=GuiViewSelectWifi::passwordForSSID(ssid);
-  if(password) {
-		GuiView::startGuiView(new GuiViewConnect(ssid, password));
+	String ssid;
+  int n=0;
+	for(auto it=GuiViewSelectWifi::wifiList.begin(); it != GuiViewSelectWifi::wifiList.end(); ++it) {
+    if(GuiViewSelectWifi::passwordForSSID(it->first)) {
+      DEBUGF("have password for %s", it->first.c_str());
+      if(n==GuiViewSelectWifi::selectedWifi) {
+        ssid=it->first;
+        break;
+      }
+      n++;
+    }
+	}
+  if(ssid) {
+	  const char *password=GuiViewSelectWifi::passwordForSSID(ssid);
+    if(password) {
+		  GuiView::startGuiView(new GuiViewConnect(ssid, password));
+    } else {
+      DEBUGF("no password for %d", GuiViewSelectWifi::selectedWifi);
+    }
+  } else {
+    DEBUGF("no wifi selected");
   }
 }
 
