@@ -21,7 +21,7 @@ void TCPClient::connect(int id, const IPAddress &host, int port)
 	if(this->client.connect(host, port)) {
 		DEBUGF("ControlClientThread::connect - connected!");
 	} else {
-		throw std::runtime_error("error connecting");
+		throw std::runtime_error(strerror(errno));
 	}
 	this->clientID=id;
 	this->client.setTimeout(10); // in sekunden
