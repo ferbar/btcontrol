@@ -11,7 +11,7 @@
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <Wire.h>
-#include <Button2.h>        // !!!!!!!!!!!!!!!!!!!!!!!!!! version 1.6 hat nicht funktioniert => 1.2 nehmen !!!!!!!!!!!!!!!!!!!!!!!!!!!
+#include <Button2.h>        // works with version 1.6
 #include <esp_wifi.h>
 
 #ifdef OTA_UPDATE
