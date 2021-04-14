@@ -4,9 +4,6 @@
 #include "lokdef.h"
 #include "utils.h"
 
-// nach 5min idle abdrehen
-#define POWER_DOWN_IDLE_TIMEOUT 300
-
 class GuiView {
 public:
   static GuiView *currGuiView;
@@ -65,6 +62,7 @@ public:
   GuiViewControl() {};
   void init();
   void close();
+  void loop();
   // void loop(); - default
   const char * which() const { return "GuiViewControl"; };
 protected:
@@ -123,3 +121,4 @@ private:
 	bool done;
 };
 
+void resetButtons();

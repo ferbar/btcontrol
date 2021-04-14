@@ -61,6 +61,29 @@ Button2Data <buttonConfig_t&> *buttons[buttonConfigSize];
 
 ControlClientThread controlClientThread;
 
+// reset callback handler
+void resetButtons() {
+  btn1.setChangedHandler(NULL);
+  btn1.setPressedHandler(NULL);
+  btn1.setReleasedHandler(NULL);
+  btn1.setTapHandler(NULL);
+  btn1.setClickHandler(NULL);
+  btn1.setDoubleClickHandler(NULL);
+  btn1.setTripleClickHandler(NULL);
+  btn1.setLongClickHandler(NULL);
+  btn1.setLongClickDetectedHandler(NULL);
+
+  btn2.setChangedHandler(NULL);
+  btn2.setPressedHandler(NULL);
+  btn2.setReleasedHandler(NULL);
+  btn2.setTapHandler(NULL);
+  btn2.setClickHandler(NULL);
+  btn2.setDoubleClickHandler(NULL);
+  btn2.setTripleClickHandler(NULL);
+  btn2.setLongClickHandler(NULL);
+  btn2.setLongClickDetectedHandler(NULL);
+}
+
 // ============================================================= GuiView ==========================
 GuiView *GuiView::currGuiView=NULL;
 void GuiView::loop() {
@@ -69,15 +92,17 @@ void GuiView::loop() {
 }
 
 void GuiView::startGuiView(GuiView *newGuiView) {
-	if(currGuiView) {
-	    DEBUGF("startGuiView current: %s new: %s", currGuiView->which(), newGuiView->which());
-    	currGuiView->close();
-		delete(currGuiView);
-	} else {
-	    DEBUGF("startGuiView new: %s", newGuiView->which());
-	}
-    currGuiView=newGuiView;
-    currGuiView->init();
+  // DEBUGF("GuiView::startGuiView");
+  // utils::dumpBacktrace();
+  if(currGuiView) {
+    DEBUGF("startGuiView current: %s new: %s", currGuiView->which(), newGuiView->which());
+    currGuiView->close();
+    delete(currGuiView);
+  } else {
+    DEBUGF("startGuiView new: %s", newGuiView->which());
+  }
+  currGuiView=newGuiView;
+  currGuiView->init();
 }
 
 void GuiView::runLoop() {
@@ -135,21 +160,26 @@ void GuiViewSelectWifi::init() {
   DEBUGF("WiFi scan done found %d networks", n);
   btn1.setClickHandler(guiViewSelectWifiCallback1);
   btn2.setClickHandler(guiViewSelectWifiCallback2);
-  btn1.setLongClickHandler(guiViewSelectWifiLongPressedCallback);
-  btn2.setLongClickHandler([](Button2&b) {
+  btn1.setLongClickDetectedHandler(guiViewSelectWifiLongPressedCallback);
+  btn2.setLongClickDetectedHandler([](Button2&b) {
     DEBUGF("GuiViewSelectWifi::btn2.setLongClickHandler");
     // off
     GuiView::startGuiView(new GuiViewPowerDown());
   }
   );
+  btn1.setPressedHandler([](Button2&b) {
+    GuiViewSelectWifi::lastKeyPressed=millis();
+  });
+  btn2.setPressedHandler([](Button2&b) {
+    GuiViewSelectWifi::lastKeyPressed=millis();
+  });
   this->needUpdate=true;
 }
   
 void GuiViewSelectWifi::close() {
 	DEBUGF("GuiViewSelectWifi::close()");
   this->wifiList.clear();
-  btn1.reset();
-  btn2.reset();
+  resetButtons();
 }
   
 void guiViewSelectWifiLongPressedCallback(Button2 &b) {
@@ -182,7 +212,7 @@ void GuiViewSelectWifi::loop() {
 
 		tft.fillScreen(TFT_BLACK);
     tft.setTextDatum(MC_DATUM);
- tft.setFreeFont(NULL);
+    tft.setFreeFont(NULL);
 		tft.setTextColor(TFT_BLACK, TFT_WHITE);
 		tft.setTextDatum(TR_DATUM);
 		tft.drawString(" ^", tft.width(), 0);
@@ -284,15 +314,15 @@ void GuiViewSelectWifi::buttonCallbackLongPress(Button2 &b) {
   }
 }
 
-
 // ============================================================= Connect ==========================
 void GuiViewConnect::init() {
+  DEBUGF("GuiViewConnect::init() connecting to wifi %s %s", this->ssid.c_str(), this->password);
+  /* back button?
 	btn1.setClickHandler([](Button2&b) {
 		// back button
 		GuiView::startGuiView(new GuiViewSelectWifi());
 	}
-	);
-	DEBUGF("GuiViewConnect::init() connecting to wifi %s %s", this->ssid.c_str(), this->password);
+	);*/
 	this->lastWifiStatus=0;
 	WiFi.mode(WIFI_STA);
 	// WiFi.enableSTA(true);
@@ -302,11 +332,12 @@ void GuiViewConnect::init() {
     ERRORF("Error setting up mDNS");
     abort();
   }
+  WiFi.setAutoReconnect(true);
 }
+
 void GuiViewConnect::close() {
 	DEBUGF("GuiViewConnect::close()");
-    btn1.reset();
-    btn2.reset();
+  resetButtons();
 }
 
 void GuiViewConnect::loop() {
@@ -382,7 +413,7 @@ void GuiViewControl::init() {
 		controlClientThread.start();
 	} catch (std::runtime_error &e) {
 		DEBUGF("error connecting / starting client thread");
-		GuiView::startGuiView(new GuiViewErrorMessage(e.what()));
+		GuiView::startGuiView(new GuiViewErrorMessage(String("Error connecting to ") + host.toString() + ":\n" + e.what()));
 		return;
 	}
 
@@ -412,6 +443,11 @@ void GuiViewControl::init() {
 void GuiViewControl::close() {
 	DEBUGF("GuiViewControl::close()");
 }
+
+void GuiViewControl::loop() {
+  DEBUGF("GuiViewControl::loop() clientThread running: %d, wifi status: %d", controlClientThread.isRunning(), WiFi.status());
+  delay(100);
+}
 // ============================================================= GuiViewContolLocoSelectLoco ======
 bool GuiViewContolLocoSelectLoco::needUpdate=false;
 
@@ -436,7 +472,7 @@ void GuiViewContolLocoSelectLoco::init() {
 		}
 	}
 	);
-    btn1.setLongClickHandler([](Button2& b) {
+    btn1.setLongClickDetectedHandler([](Button2& b) {
 		if(nLokdef > 0) {
 			GuiView::startGuiView(new GuiViewControlLoco());
 		} else {
@@ -448,8 +484,7 @@ void GuiViewContolLocoSelectLoco::init() {
 
 void GuiViewContolLocoSelectLoco::close() {
 	DEBUGF("GuiViewContolLocoSelectLoco::close()");
-    btn1.reset();
-    btn2.reset();
+  resetButtons();
 }
 
 // Vorsicht !!! in der theorie kann lokdef beim starten da noch nicht initialisiert sein weil die callback func noch nicht aufgerufen wurde.
@@ -587,8 +622,8 @@ void GuiViewControlLoco::init() {
 		}
 	}
 	tft.fillScreen(TFT_BLACK);
-// 	btn2.setLongClickDetectedHandler([](Button2&b) {       // erst ab Button2 Version 1.5.0
-  btn2.setLongClickHandler([](Button2&b) {       // erst ab Button2 Version 1.5.0
+ 	btn2.setLongClickDetectedHandler([](Button2&b) {       // erst ab Button2 Version 1.5.0
+//  btn2.setLongClickHandler([](Button2&b) {
 		DEBUGF("GuiViewControlLoco::btn2.setLongClickHandler");
 		// off
 		GuiView::startGuiView(new GuiViewPowerDown());
@@ -614,7 +649,7 @@ void GuiViewControlLoco::close() {
 		delete(buttons[i]);
 		buttons[i]=NULL;
 	}
-	btn1.reset();
+	resetButtons();
 }
 
 void GuiViewControlLoco::loop() {
@@ -677,7 +712,13 @@ void GuiViewControlLoco::loop() {
           tft.setFreeFont(FSSP7);
 
           if(WiFi.status() == WL_CONNECTED) {
-            tft.drawString(String("AP: ") + WiFi.SSID(), 0, 0 );
+            int powerDownSec =  (this->lastKeyPressed+POWER_DOWN_IDLE_TIMEOUT*1000 - millis())/1000;
+            if(powerDownSec < 30) {
+              tft.setTextColor(TFT_BLACK, TFT_RED);
+              tft.drawString(String("Power down in ") + powerDownSec + "s", 0, 0 );
+              tft.setTextColor(TFT_WHITE, TFT_BLACK);
+            } else
+              tft.drawString(String("AP: ") + WiFi.SSID(), 0, 0 );
           } else {
             tft.setTextColor(TFT_RED, TFT_BLACK);
             tft.drawString(String("!!!: ") + WiFi.SSID(), 0, 0 );
@@ -724,16 +765,7 @@ void GuiViewControlLoco::loop() {
           lastWidth=width;
 
         }
-		/*
-        if(btn1.isPressed() && now > btn1Event + 250) {
-            btn1Event=now;
-            sendSpeed(SPEED_ACCEL);
-        }
-        if(btn2.isPressed() && now > btn2Event + 250) {
-            btn2Event=now;
-            sendSpeed(SPEED_BRAKE);
-        }
-		*/
+
         static int lastValues[10]={0,0,0,0,0,0,0,0};
         static long lastPotiCheck=0;
         int poti=(analogRead(POTI_PIN)*255.0 /4095.0);
@@ -823,13 +855,20 @@ void GuiViewErrorMessage::loop() {
 		tft.fillScreen(TFT_BLACK);
 		tft.setTextDatum(MC_DATUM);
 		tft.setTextSize(1);
-
-/*
-	tft.drawString("No wifi networks found", tft.width() / 2, tft.height() / 2);
-	tft.setTextDatum(TL_DATUM);
-	tft.setCursor(0, 0);
-	*/
-		tft.println(this->errormessage);
+    int pos=0;
+    int n=0;
+    while(pos < this->errormessage.length()) {
+      int oldpos=pos;
+      pos=this->errormessage.indexOf("\n", pos);
+      if(pos >= 0) {
+        tft.drawString(this->errormessage.substring(oldpos,pos), 0, tft.height()/2+tft.fontHeight()*n);
+      } else {
+        tft.drawString(this->errormessage.substring(oldpos), 0, tft.height()/2+tft.fontHeight()*n);
+        break;
+      }
+      pos++;
+      n++;
+    }
 		last=millis();
 	}
 	if(millis() > last + 10*1000) { // 10 sekunden

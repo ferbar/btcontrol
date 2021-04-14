@@ -155,9 +155,6 @@ void button_init_control_mode()
     tft.setTextDatum(BR_DATUM);
     tft.drawString("+", tft.width(), tft.height());
     tft.fillScreen(TFT_BLACK);
-
-
-
 }
 
 void button_loop()
@@ -297,8 +294,9 @@ void setup()
 //attachInterrupt(15, isrGPIO15, CHANGE);
 // attachInterrupt(15, isrGPIO15fall, FALLING);
 */
-   GuiView::startGuiView(new GuiViewSelectWifi());
-
+  GuiView::startGuiView(new GuiViewSelectWifi());
+  btn1.setLongClickTime(1000);
+  btn2.setLongClickTime(1000);
 }
 
 #warning cleanup
