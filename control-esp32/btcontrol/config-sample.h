@@ -5,6 +5,8 @@
   { .ssid="esp32-diesel", .password="top-secret" },   \
 }
 
+// power down after XYZs inactivity
+#define POWER_DOWN_IDLE_TIMEOUT 600
 
 // enable update OTA
 #define OTA_UPDATE
