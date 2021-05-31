@@ -86,7 +86,7 @@ void ControlClientThread::run()
 			this->pingCount++;
 
 			DEBUGF("/%d: received message in %ldms", this->msgNum, timetaken);
-			reply.dump();
+			// reply.dump();
 			if(callback) {
 				DEBUGF("/%d: callback", this->msgNum);
 				callback(reply);

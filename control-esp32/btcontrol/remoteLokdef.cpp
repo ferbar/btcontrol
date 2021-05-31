@@ -45,7 +45,7 @@ void initLokdefFunctions(lokdef_t *lokdef, int loknum, FBTCtlMessage &reply)
 	assert(nFunc < MAX_NFUNC);
 	lokdef[loknum].nFunc=nFunc;
 	for(int i=0; i < nFunc; i++) {
-		DEBUGF("initLokdefFunc %d\n", i);
+		DEBUGF("initLokdefFunc %d", i);
 		strncpy(lokdef[loknum].func[i].name,    reply["info"][i]["name"].getStringVal().c_str(), sizeof(lokdef[loknum].func[i].name));
 		strncpy(lokdef[loknum].func[i].imgname, reply["info"][i]["imgname"].getStringVal().c_str(), sizeof(lokdef[loknum].func[i].imgname));
 		int functions = reply["info"][i]["value"].getIntVal();

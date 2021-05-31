@@ -56,15 +56,15 @@ private:
   const char *password;
 };
 
-class GuiViewControl : public GuiView {
+class GuiViewConnectLoco : public GuiView {
 public:
-  GuiViewControl(IPAddress host, int port) { this->host=host; this->port=port; };
-  GuiViewControl() {};
+  GuiViewConnectLoco(IPAddress host, int port) { this->host=host; this->port=port; };
+  GuiViewConnectLoco() {};
   void init();
   void close();
   void loop();
   // void loop(); - default
-  const char * which() const { return "GuiViewControl"; };
+  const char * which() const { return "GuiViewConnectLoco"; };
 protected:
   static int selectedAddrIndex;
   static int nLokdef;
@@ -72,7 +72,7 @@ protected:
   static int port;
 };
 
-class GuiViewContolLocoSelectLoco : public GuiViewControl {
+class GuiViewContolLocoSelectLoco : public GuiViewConnectLoco {
 public:
 	GuiViewContolLocoSelectLoco() {needUpdate=true; };
 	void init();
@@ -83,7 +83,7 @@ private:
 	static bool needUpdate;
 };
 
-class GuiViewControlLoco : public GuiViewControl {
+class GuiViewControlLoco : public GuiViewConnectLoco {
 public:
 	GuiViewControlLoco() {};
 	void init();
@@ -114,6 +114,7 @@ class GuiViewPowerDown : public GuiView {
 public:
 	GuiViewPowerDown() : startTime(millis()), done(false) {};
 	void init();
+	void close();
 	void loop();
 	const char * which() const { return "GuiViewPowerDown"; };
 private:

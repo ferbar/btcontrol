@@ -158,6 +158,10 @@ void GuiViewSelectWifi::init() {
 	}
   // WiFi.mode(WIFI_OFF); => dürfte wifi hin machen
   DEBUGF("WiFi scan done found %d networks", n);
+  // don't start scan if btn1 pressed
+  btn1.setPressedHandler([](Button2&b) {
+    GuiViewSelectWifi::lastKeyPressed=millis();
+  });
   btn1.setClickHandler(guiViewSelectWifiCallback1);
   btn2.setClickHandler(guiViewSelectWifiCallback2);
   btn1.setLongClickDetectedHandler(guiViewSelectWifiLongPressedCallback);
@@ -202,7 +206,7 @@ const char *GuiViewSelectWifi::passwordForSSID(const String &ssid) {
 }
 
 void GuiViewSelectWifi::loop() {
-	// DEBUGF("GuiViewSelectWifi::loop()");
+	//DEBUGF("GuiViewSelectWifi::loop()");
 	// update only if changed:
 	static long last=millis();       // für refresh
 	if(this->needUpdate) {
@@ -263,7 +267,7 @@ void GuiViewSelectWifi::loop() {
 			}
 		}
 	} else {
-    if(millis() > this->lastKeyPressed+POWER_DOWN_IDLE_TIMEOUT*1000) { // nach 5min power down
+    if(millis() > GuiViewSelectWifi::lastKeyPressed+POWER_DOWN_IDLE_TIMEOUT*1000) { // nach 5min power down
       DEBUGF("GuiViewSelectWifi::loop() powerDown");
       GuiView::startGuiView(new GuiViewPowerDown());
     }
@@ -378,7 +382,7 @@ void GuiViewConnect::loop() {
 					}
 					if( nrOfServices == 1) {
 						DEBUGF("============= connecting to %s:%d", (MDNS.IP(0).toString()).c_str(), MDNS.port(0));
-						GuiView::startGuiView(new GuiViewControl(MDNS.IP(0), MDNS.port(0)));
+						GuiView::startGuiView(new GuiViewConnectLoco(MDNS.IP(0), MDNS.port(0)));
 					}
 
 				}
@@ -397,16 +401,16 @@ void GuiViewConnect::loop() {
 }
 
 // ============================================================= Control ==========================
-int GuiViewControl::selectedAddrIndex=0;
-int GuiViewControl::nLokdef=0;
+int GuiViewConnectLoco::selectedAddrIndex=0;
+int GuiViewConnectLoco::nLokdef=0;
 
 
-IPAddress GuiViewControl::host;
-int GuiViewControl::port;
+IPAddress GuiViewConnectLoco::host;
+int GuiViewConnectLoco::port;
 
 
-void GuiViewControl::init() {
-	DEBUGF("GuiViewControl::init()");
+void GuiViewConnectLoco::init() {
+	DEBUGF("GuiViewConnectLoco::init()");
 	try {
 		assert(!controlClientThread.isRunning());
 		controlClientThread.connect(0, host, port);
@@ -419,7 +423,7 @@ void GuiViewControl::init() {
 
 	FBTCtlMessage cmd(messageTypeID("GETLOCOS"));
 	controlClientThread.query(cmd,[this](FBTCtlMessage &reply) {
-		DEBUGF("GuiViewControl::init() GETLOCOS_REPLY");
+		DEBUGF("GuiViewConnectLoco::init() GETLOCOS_REPLY");
 		if(reply.isType("GETLOCOS_REPLY")) {
 			lokdef_t *orglokdef=lokdef;
 			nLokdef=0;
@@ -440,12 +444,12 @@ void GuiViewControl::init() {
 	);
 }
 
-void GuiViewControl::close() {
-	DEBUGF("GuiViewControl::close()");
+void GuiViewConnectLoco::close() {
+	DEBUGF("GuiViewConnectLoco::close()");
 }
 
-void GuiViewControl::loop() {
-  DEBUGF("GuiViewControl::loop() clientThread running: %d, wifi status: %d", controlClientThread.isRunning(), WiFi.status());
+void GuiViewConnectLoco::loop() {
+  DEBUGF("GuiViewConnectLoco::loop() clientThread running: %d, wifi status: %d", controlClientThread.isRunning(), WiFi.status());
   delay(100);
 }
 // ============================================================= GuiViewContolLocoSelectLoco ======
@@ -558,6 +562,7 @@ void GuiViewControlLoco::sendSpeed(int what) {
 		droppedCommands++;
 		return;
 	}
+  // DEBUGF(" GuiViewControlLoco::sendSpeed ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
 	FBTCtlMessage cmd(messageTypeID(cmdType));
 	cmd["addr"]=lokdef[this->selectedAddrIndex].addr;
 	if(what == SPEED_DIR_FORWARD || what == SPEED_DIR_BACK) {
@@ -565,7 +570,7 @@ void GuiViewControlLoco::sendSpeed(int what) {
 	}
 	controlClientThread.query(cmd,[](FBTCtlMessage &reply) {} );
 
-  this->lastKeyPressed=millis();  // poti geändert + taste gedrückt => wir kommen da her
+  GuiViewControlLoco::lastKeyPressed=millis();  // poti geändert oder notaus gedrückt => wir kommen da her
 }
 
 void GuiViewControlLoco::onClick(Button2 &b) {
@@ -577,7 +582,9 @@ void GuiViewControlLoco::onClick(Button2 &b) {
 	GuiViewControlLoco *g=(GuiViewControlLoco *)(currGuiView);
 	int selectedAddrIndex = g->selectedAddrIndex;
 
-	Button2Data<buttonConfig_t &> &button2Config=(Button2Data<buttonConfig_t &> &)b;
+  // dynamic_cast wäre schöner, geht aber nicht
+	Button2Data<buttonConfig_t &> &button2Config=(Button2Data<buttonConfig_t &> &) b;
+
 	switch (button2Config.data.action) {
 		case sendFunc: {
 			DEBUGF("cb func %d #######################", button2Config.data.gpio);
@@ -599,11 +606,13 @@ void GuiViewControlLoco::onClick(Button2 &b) {
 			dirSwitch=b.isPressed() ? 1 : -1 ;
 			break; }
 	}
+  GuiViewControlLoco::lastKeyPressed=millis();  // Taste gedrückt => wir kommen da her
 	// DEBUGF("GuiViewControlLoco::onClick done");
 }
 
 void GuiViewControlLoco::init() {
 	DEBUGF("GuiViewControlLoco::init()");
+  GuiViewControlLoco::lastKeyPressed=millis();
 	for(int i=0; i < buttonConfigSize; i++) {
 		buttons[i]=new Button2Data<buttonConfig_t &>(buttonConfig[i].gpio, buttonConfig[i]);
 
@@ -682,7 +691,7 @@ void GuiViewControlLoco::loop() {
           tft.drawString("off",tft.width(), tft.height() - tft.fontHeight());
           tft.setTextDatum(TL_DATUM);
           tft.setTextColor(TFT_GREEN, TFT_BLACK);
-
+#warning: vom roten balken bleibt was über wenn man eine taste drückt
           // ping stats:
           tft.drawString( utils::format( "ping: ~%4.2g (%4.2g) drop: %d ", ((float)controlClientThread.pingAvg)/controlClientThread.pingCount/1000.0, controlClientThread.pingMax/1000.0, droppedCommands).c_str(),
             0, tft.height() - tft.fontHeight() );
@@ -712,13 +721,19 @@ void GuiViewControlLoco::loop() {
           tft.setFreeFont(FSSP7);
 
           if(WiFi.status() == WL_CONNECTED) {
-            int powerDownSec =  (this->lastKeyPressed+POWER_DOWN_IDLE_TIMEOUT*1000 - millis())/1000;
+            int powerDownSec =  (GuiViewControlLoco::lastKeyPressed+POWER_DOWN_IDLE_TIMEOUT*1000 - millis())/1000;
+            static int lastWidth=0;
+            int width=0;
             if(powerDownSec < 30) {
               tft.setTextColor(TFT_BLACK, TFT_RED);
-              tft.drawString(String("Power down in ") + powerDownSec + "s", 0, 0 );
+              width=tft.drawString(String("Power down in ") + powerDownSec + "s", 0, 0 );
               tft.setTextColor(TFT_WHITE, TFT_BLACK);
             } else
-              tft.drawString(String("AP: ") + WiFi.SSID(), 0, 0 );
+              width=tft.drawString(String("AP: ") + WiFi.SSID(), 0, 0 );
+            if(width < lastWidth) {
+              tft.fillRect(width-1, 0, lastWidth-width, tft.fontHeight(), TFT_BLACK);
+            }
+            lastWidth=width;
           } else {
             tft.setTextColor(TFT_RED, TFT_BLACK);
             tft.drawString(String("!!!: ") + WiFi.SSID(), 0, 0 );
@@ -833,11 +848,13 @@ void GuiViewControlLoco::loop() {
 	} else { // controlClientThread.isRunning is not running
 		DEBUGF("GuiViewControlLoco::loop() controlClientThread.isRunning is not running");
 		GuiView::startGuiView(new GuiViewErrorMessage("lost connection ... reconnecting"));
+    return;
 	}
  
-  if(millis() > this->lastKeyPressed+POWER_DOWN_IDLE_TIMEOUT*1000) { // nach 5min power down
-    DEBUGF("GuiViewSelectWifi::loop() powerDown");
+  if(millis() > GuiViewControlLoco::lastKeyPressed+POWER_DOWN_IDLE_TIMEOUT*1000) { // nach 5min power down
+    DEBUGF("GuiViewControlLoco::loop() powerDown");
     GuiView::startGuiView(new GuiViewPowerDown());
+    return;
   }
 }
 
@@ -845,7 +862,7 @@ void GuiViewControlLoco::loop() {
 int GuiViewErrorMessage::retries=0;
 
 void GuiViewErrorMessage::init() {
-	DEBUGF("GuiViewErrorMessage::init message:%s", this->errormessage.c_str());
+	DEBUGF("GuiViewErrorMessage::init message:\"%s\"", this->errormessage.c_str());
 }
 
 void GuiViewErrorMessage::loop() {
@@ -877,7 +894,7 @@ void GuiViewErrorMessage::loop() {
 		if(WiFi.status() == WL_CONNECTED) {
 			retries++;
 			if(retries < 5) {
-				GuiView::startGuiView(new GuiViewControl());
+				GuiView::startGuiView(new GuiViewConnectLoco());
 			} else {
 				retries=0;
 				GuiView::startGuiView(new GuiViewSelectWifi() );
@@ -887,28 +904,68 @@ void GuiViewErrorMessage::loop() {
 };
 
 // ============================================================= PowerDown ========================
+void guiViewPowerDownBackToControl(Button2 &b) {
+  DEBUGF("guiViewPowerDownBackToControl() changed: %d, pressed:%d", b.getAttachPin(), b.isPressed() );
+  GuiView::startGuiView(new GuiViewControlLoco());
+}
+
 void GuiViewPowerDown::init() {
 	tft.fillScreen(TFT_BLACK);
 	tft.setTextDatum(MC_DATUM);
 	tft.setTextSize(2);
-	tft.drawString("power off - unplug batt!!!", 0, tft.fontHeight());
+	tft.drawString("power off", 0,tft.fontHeight());
+	tft.drawString("unplug batt!!!", 0, tft.fontHeight()*2);
   tft.setTextSize(1);
   DEBUGF("GuiViewPowerDown::init()");
-  controlClientThread.cancel();
+  #warning erst im echten power down machen, da ein force stop
+  controlClientThread.fullstop
+
+  btn1.setClickHandler(guiViewPowerDownBackToControl);
+  btn2.setClickHandler(guiViewPowerDownBackToControl);
+  
+  for(int i=0; i < buttonConfigSize; i++) {
+    assert(buttons[i]==NULL);
+    #warning des geht ned ----- btn1+2 geht
+    DEBUGF("GuiViewPowerDown::init button %d => pin %d", i, buttonConfig[i].gpio);
+    buttons[i]=new Button2Data<buttonConfig_t &>(buttonConfig[i].gpio, buttonConfig[i]);
+    // bug: ist ein button vor init '1', wird initialisiert mit setChangedHandler wird der handler aufgerufen .....
+    if(buttons[i]->isPressedRaw() )
+      buttons[i]->setReleasedHandler(guiViewPowerDownBackToControl);
+    else
+      buttons[i]->setPressedHandler(guiViewPowerDownBackToControl);
+  }
+  GuiViewPowerDown::startTime=millis();
+}
+
+void GuiViewPowerDown::close() {
+  DEBUGF("GuiViewPowerDown::close()");
+  for(int i=0; i < buttonConfigSize; i++) {
+    delete(buttons[i]);
+    buttons[i]=NULL;
+  }
 }
 
 void GuiViewPowerDown::loop() {
-	if(millis() >  this->startTime + 10*1000 && ! this->done) { // 10 sekunden
+    // DEBUGF("GuiViewControlLoco::loop()");
+    for(int i=0; i < buttonConfigSize; i++) {
+        if(buttons[i]) {
+          buttons[i]->loop();
+        } else {
+          // Serial.printf("Button[%d] not initialized\n", i);
+        }
+    }
+	if(millis() >  GuiViewPowerDown::startTime + 10*1000 && ! this->done) { // 10 sekunden
 		this->done=true;
-		DEBUGF("GuiViewPowerDown::loop() power down...");
+    controlClientThread.cancel();
+		DEBUGF("GuiViewPowerDown::loop() power down ******************************************************************************");
         // digitalWrite(TFT_BL, !r);
 		digitalWrite(TFT_BL, ! TFT_BACKLIGHT_ON);
 
-        DEBUGF("TFT_DISPOFF");
-        tft.writecommand(TFT_DISPOFF);
-        tft.writecommand(TFT_SLPIN);
+    DEBUGF("TFT_DISPOFF");
+    tft.writecommand(TFT_DISPOFF);
+    tft.writecommand(TFT_SLPIN);
 		// esp_sleep_disable_wakeup_source(esp_sleep_disable_wakeup_source); => is im espDelay 
-		delay(200);
+		delay(500);
 		esp_deep_sleep_start();
 	}
 }
