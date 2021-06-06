@@ -12,28 +12,6 @@ ControlClientThread::ControlClientThread()
 {
 }
 
-#warning cleanup 
-/*
-void ControlClientThread::connect(const IPAddress &host, int port)
-{
-	
-	this->wifiClient = new WiFiClient;
-	if(this->wifiClient->connect(host, port)) {
-		DEBUGF("ControlClientThread::connect - connected!");
-		this->client = new ClientThread(0, *this->wifiClient);
-		return;
-	}
-	delete this->wifiClient;
-	this->wifiClient = NULL;
-	throw std::runtime_error("error connecting");
-}
-void ControlClientThread::disconnect()
-{
-	DEBUGF("ControlClientThread::disconnect()");
-	abort();
-}
-*/
-
 lokdef_t &ControlClientThread::getCurrLok()
 {
   if(this->selectedAddrIndex < 0)

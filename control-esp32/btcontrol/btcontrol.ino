@@ -299,12 +299,6 @@ void setup()
   btn2.setLongClickTime(1000);
 }
 
-#warning cleanup
-/*
-int gui_connect_state=0;
-int gui_selected_loco=0;
-*/
-
 void loop()
 {
   /*
