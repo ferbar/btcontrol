@@ -278,7 +278,7 @@ void ESP32PWM::setPWM(int f_speed) {
 void ESP32PWM::setDir(unsigned char dir) {
   DEBUGF("ESP32PWM::setDir dir=%d", dir);
   long start=millis();
-  // abrubpter richtungs wechsel??
+  // abrubpter richtungs wechsel?
   if(this->dir != dir) {
     this->fullstop(true, true);
   }
