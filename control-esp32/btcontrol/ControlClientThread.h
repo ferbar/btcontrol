@@ -2,6 +2,7 @@
 #include <functional>
 #include "Thread.h"
 #include "CommThread.h"
+#include "lokdef.h"
 
 // c++11 muss das schon können
 typedef std::function<void(FBTCtlMessage &)> CallbackCmdFunction;
@@ -25,10 +26,23 @@ public:
 	int getQueueLength();
 	void sendPing();
 
+  void sendAcc();                    // drop command if queue full
+  void sendBrake();
+  
+  void sendStop();
+  void sendDir(bool forward);
+  void sendFunc(int funcNr, bool enable);
+
 	int pingMax=0;
 	int pingMin=0;
 	int pingAvg=0;
 	int pingCount=0;
+
+  int selectedAddrIndex=0;
+
+  void setCurrLok(int index) { this->selectedAddrIndex=index; };
+  lokdef_t &getCurrLok();
+
 private:
 	bool waitForItemInQueueTimeout();
 	std::queue<ControlClientThreadQueueElement> cmdQueue;

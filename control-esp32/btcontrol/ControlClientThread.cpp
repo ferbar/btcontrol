@@ -34,12 +34,50 @@ void ControlClientThread::disconnect()
 }
 */
 
+lokdef_t &ControlClientThread::getCurrLok()
+{
+  if(this->selectedAddrIndex < 0)
+    throw std::runtime_error("ControlClientThread::getCurrLok() invalid selectedAddrIndex");
+  int i=0;
+  while(lokdef[i].addr) {
+    if(this->selectedAddrIndex == i) {
+      return lokdef[this->selectedAddrIndex];
+    }
+    i++;
+  }
+  throw std::runtime_error("ControlClientThread::getCurrLok() invalid selectedAddrIndex");
+}
+
 
 void ControlClientThread::sendPing()
 {
 	DEBUGF("ControlClientThread::sendPing()");
 	FBTCtlMessage ping(messageTypeID("PING"));
 	this->sendMessage(ping);
+}
+
+void ControlClientThread::sendFunc(int funcNr, bool enable)
+{
+  FBTCtlMessage cmd(messageTypeID("SETFUNC"));
+  cmd["addr"]=lokdef[this->selectedAddrIndex].addr;
+  cmd["funcnr"]=funcNr;
+  cmd["value"]=enable;
+  this->query(cmd,[](FBTCtlMessage &reply) {} );
+}
+
+void ControlClientThread::sendStop()
+{
+  FBTCtlMessage cmd(messageTypeID("STOP"));
+  cmd["addr"]=this->getCurrLok().addr;
+  this->query(cmd,[](FBTCtlMessage &reply) {} );
+}
+
+void ControlClientThread::sendDir(bool forward)
+{
+  FBTCtlMessage cmd(messageTypeID("DIR"));
+  cmd["addr"]=this->getCurrLok().addr;
+  cmd["dir"]= forward ? 1 : -1;
+  this->query(cmd,[](FBTCtlMessage &reply) {} );
 }
 
 void ControlClientThread::run()
