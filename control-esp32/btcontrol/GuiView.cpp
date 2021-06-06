@@ -116,6 +116,25 @@ void GuiView::runLoop() {
 	}
 }
 
+void GuiView::drawButtons() {
+  tft.setTextDatum(MC_DATUM);
+  tft.setFreeFont(NULL);
+  tft.setTextColor(TFT_BLACK, TFT_WHITE);
+  tft.setTextDatum(TR_DATUM);
+  tft.drawString(" ^", tft.width(), 0);
+  tft.drawString(">>", tft.width(), tft.fontHeight());
+  tft.setTextDatum(BR_DATUM);
+  tft.drawString(" v", tft.width(), tft.height());
+  tft.drawString("off", tft.width(), tft.height() - tft.fontHeight());
+
+  tft.setTextColor(TFT_GREEN, TFT_BLACK);
+  tft.setTextSize(1);
+  tft.setFreeFont(FSSP7);
+  tft.setTextDatum(TL_DATUM);
+     /*
+      tft.setCursor(0, tft.fontHeight()); // freeFont malt immer mit baseline
+     */
+}
 
 // ============================================================= SelectWifi =============================
 int GuiViewSelectWifi::selectedWifi=0;
@@ -216,29 +235,14 @@ void GuiViewSelectWifi::loop() {
 		this->needUpdate=false;
 		last=millis();
 
-		tft.fillScreen(TFT_BLACK);
-    tft.setTextDatum(MC_DATUM);
-    tft.setFreeFont(NULL);
-		tft.setTextColor(TFT_BLACK, TFT_WHITE);
-		tft.setTextDatum(TR_DATUM);
-		tft.drawString(" ^", tft.width(), 0);
-		tft.drawString(">>", tft.width(), tft.fontHeight());
-		tft.setTextDatum(BR_DATUM);
-		tft.drawString(" v", tft.width(), tft.height());
-    tft.drawString("off", tft.width(), tft.height() - tft.fontHeight());
-
-		tft.setTextColor(TFT_GREEN, TFT_BLACK);
-		tft.setTextSize(1);
-    tft.setFreeFont(FSSP7);
-   
+		this->drawButtons();   
 
 		if (this->wifiList.size() == 0) {
       tft.setTextDatum(MC_DATUM);
 			tft.drawString("No wifi networks found", tft.width() / 2, tft.height() / 2);
 		} else {
-      tft.setTextDatum(TL_DATUM);
-			tft.setCursor(0, tft.fontHeight()); // freeFont malt immer mit baseline
 			DEBUGF("Found %d wifi networks", this->wifiList.size());
+      tft.fillScreen(TFT_BLACK);
 			int n=0;
 			char buff[50];
       for(int i=0; i < 2; i++) {
@@ -356,7 +360,7 @@ void GuiViewConnectWifi::init() {
   });
     
   btn1.setLongClickDetectedHandler([](Button2&b) {
-    GuiView::startGuiView(new GuiViewConnectLoco(MDNS.IP(GuiViewConnectWifi::selectedServer), MDNS.port(GuiViewConnectWifi::selectedServer)));
+    GuiView::startGuiView(new GuiViewConnectServer(MDNS.IP(GuiViewConnectWifi::selectedServer), MDNS.port(GuiViewConnectWifi::selectedServer)));
   } );
   btn2.setLongClickDetectedHandler([](Button2&b) {
     DEBUGF("GuiViewSelectWifi::btn2.setLongClickHandler");
@@ -415,7 +419,7 @@ void GuiViewConnectWifi::loop() {
 					if( this->mdnsResults == 1) {
 						DEBUGF("============= connecting to %s:%d", (MDNS.IP(0).toString()).c_str(), MDNS.port(0));
             tft.println(String("Hostname: ") + MDNS.hostname(0) + "IP address: " + MDNS.IP(0).toString() + "Port: " + MDNS.port(0));
-						GuiView::startGuiView(new GuiViewConnectLoco(MDNS.IP(0), MDNS.port(0)));
+						GuiView::startGuiView(new GuiViewConnectServer(MDNS.IP(0), MDNS.port(0)));
 					} else {
             this->displaySelectServer();
 					}
@@ -445,20 +449,7 @@ void GuiViewConnectWifi::loop() {
 void GuiViewConnectWifi::displaySelectServer() {
   DEBUGF("GuiViewConnectWifi::displaySelectServer() selected:%d", GuiViewConnectWifi::selectedServer);
 
-  // tft.fillScreen(TFT_BLACK);
-  tft.setTextDatum(MC_DATUM);
-  tft.setFreeFont(NULL);
-  tft.setTextColor(TFT_BLACK, TFT_WHITE);
-  tft.setTextDatum(TR_DATUM);
-  tft.drawString(" ^", tft.width(), 0);
-  tft.drawString(">>", tft.width(), tft.fontHeight());
-  tft.setTextDatum(BR_DATUM);
-  tft.drawString(" v", tft.width(), tft.height());
-  tft.drawString("off", tft.width(), tft.height() - tft.fontHeight());
-
-  tft.setTextColor(TFT_GREEN, TFT_BLACK);
-  tft.setTextSize(1);
-  tft.setFreeFont(FSSP7);
+  this->drawButtons();
 
   for(int i=0; i < this->mdnsResults; i++) {
     if(i==GuiViewConnectWifi::selectedServer) {
@@ -466,21 +457,19 @@ void GuiViewConnectWifi::displaySelectServer() {
     } else {
       tft.setTextColor(TFT_GREEN, TFT_BLACK);
     }
-    tft.drawString(String(" ") + MDNS.hostname(i) + "(" + MDNS.IP(i).toString() + ":" + MDNS.port(i) + ")", 0, (i+3) *16 );
+    tft.drawString(String(" ") + MDNS.hostname(i) + " (" + MDNS.IP(i).toString() + ":" + MDNS.port(i) + ")", 0, i * tft.fontHeight() );
   }
 }
 
-// ============================================================= ConnectLoco ==========================
-#warning rename to ConnectServer
-int GuiViewConnectLoco::nLokdef=0;
+// ============================================================= ConnectServer ==========================
+int GuiViewConnectServer::nLokdef=0;
+
+IPAddress GuiViewConnectServer::host;
+int GuiViewConnectServer::port;
 
 
-IPAddress GuiViewConnectLoco::host;
-int GuiViewConnectLoco::port;
-
-
-void GuiViewConnectLoco::init() {
-	DEBUGF("GuiViewConnectLoco::init()");
+void GuiViewConnectServer::init() {
+	DEBUGF("GuiViewConnectServer::init()");
 	try {
 		assert(!controlClientThread.isRunning());
 		controlClientThread.connect(0, host, port);
@@ -493,7 +482,7 @@ void GuiViewConnectLoco::init() {
 
 	FBTCtlMessage cmd(messageTypeID("GETLOCOS"));
 	controlClientThread.query(cmd,[this](FBTCtlMessage &reply) {
-		DEBUGF("GuiViewConnectLoco::init() GETLOCOS_REPLY");
+		DEBUGF("GuiViewConnectServer::init() GETLOCOS_REPLY");
 		if(reply.isType("GETLOCOS_REPLY")) {
 			lokdef_t *orglokdef=lokdef;
 			nLokdef=0;
@@ -514,46 +503,47 @@ void GuiViewConnectLoco::init() {
 	);
 }
 
-void GuiViewConnectLoco::close() {
-	DEBUGF("GuiViewConnectLoco::close()");
+void GuiViewConnectServer::close() {
+	DEBUGF("GuiViewConnectServer::close()");
 }
 
-void GuiViewConnectLoco::loop() {
-  DEBUGF("GuiViewConnectLoco::loop() clientThread running: %d, wifi status: %d", controlClientThread.isRunning(), WiFi.status());
+void GuiViewConnectServer::loop() {
+  DEBUGF("GuiViewConnectServer::loop() clientThread running: %d, wifi status: %d", controlClientThread.isRunning(), WiFi.status());
   delay(100);
 }
 // ============================================================= GuiViewContolLocoSelectLoco ======
 bool GuiViewContolLocoSelectLoco::needUpdate=false;
 
 void GuiViewContolLocoSelectLoco::init() {
-	DEBUGF("GuiViewContolLocoSelectLoco::init() nLokdef=%d", this->nLokdef);
+	DEBUGF("GuiViewContolLocoSelectLoco::init()");
 	controlClientThread.selectedAddrIndex=0;
-	if(this->nLokdef==1) {
+	if(lokdef[0].addr && ! lokdef[1].addr) {  // only one loco in list
 		GuiView::startGuiView(new GuiViewControlLoco());
 		return;
 	}
-    btn1.setClickHandler([](Button2& b) {
+  btn1.setClickHandler([](Button2& b) {
 		if(controlClientThread.selectedAddrIndex > 0) {
 			controlClientThread.selectedAddrIndex--;
-    		GuiViewContolLocoSelectLoco::needUpdate=true;
+   		GuiViewContolLocoSelectLoco::needUpdate=true;
 		}
 	}
 	);
-    btn2.setClickHandler([](Button2& b) {
-		if(controlClientThread.selectedAddrIndex < nLokdef  -1) {
+  btn2.setClickHandler([](Button2& b) {
+		if(lokdef[controlClientThread.selectedAddrIndex].addr && lokdef[controlClientThread.selectedAddrIndex+1].addr) {
 			controlClientThread.selectedAddrIndex++;
-    		needUpdate=true;
+   		needUpdate=true;
 		}
 	}
 	);
     btn1.setLongClickDetectedHandler([](Button2& b) {
-		if(nLokdef > 0) {
+		if(lokdef[0].addr) { // only if we have locos in list
 			GuiView::startGuiView(new GuiViewControlLoco());
 		} else {
 			ERRORF("no locos");
 		}
 	}
 	);
+  tft.fillScreen(TFT_BLACK);
 }
 
 void GuiViewContolLocoSelectLoco::close() {
@@ -563,19 +553,21 @@ void GuiViewContolLocoSelectLoco::close() {
 
 // Vorsicht !!! in der theorie kann lokdef beim starten da noch nicht initialisiert sein weil die callback func noch nicht aufgerufen wurde.
 void GuiViewContolLocoSelectLoco::loop() {
+  
 	if(this->needUpdate) {
-		tft.fillScreen(TFT_BLACK);
+    this->drawButtons();
 		DEBUGF("GuiViewContolLocoSelectLoco::loop needUpdate");
 		int n=0;
 		while(lokdef[n].addr) {
-			if(nLokdef==controlClientThread.selectedAddrIndex) {
+			if(n==controlClientThread.selectedAddrIndex) {
 				tft.setTextColor(TFT_BLACK, TFT_GREEN);
 			} else {
 				tft.setTextColor(TFT_GREEN, TFT_BLACK);
 			}
-			tft.drawString(String(" ") + lokdef[n].name, 0, (n+3) *16 );
+			tft.drawString(String(" ") + lokdef[n].name, 0, n * tft.fontHeight() );
 			n++;
 		}
+    this->needUpdate=false;
 	}
 }
 
@@ -956,7 +948,7 @@ void GuiViewErrorMessage::loop() {
 		if(WiFi.status() == WL_CONNECTED) {
 			retries++;
 			if(retries < 5) {
-				GuiView::startGuiView(new GuiViewConnectLoco());
+				GuiView::startGuiView(new GuiViewConnectServer());
 			} else {
 				retries=0;
 				GuiView::startGuiView(new GuiViewSelectWifi() );

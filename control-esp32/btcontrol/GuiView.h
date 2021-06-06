@@ -19,6 +19,7 @@ public:
   virtual const char * which() const { return "GuiView" ; };
 protected:
   static long lastKeyPressed;         // power off after POWER_DOWN_IDLE_TIMEOUT, init mit 0 => system boot
+  void drawButtons();
 };
 
 
@@ -50,7 +51,7 @@ public:
   void init();
   void close();
   void loop();
-  const char * which() const { return "guiViewConnect"; };
+  const char * which() const { return "guiViewConnectWifi"; };
 private:
   void displaySelectServer();
   int lastWifiStatus;
@@ -61,33 +62,33 @@ private:
   static int selectedServer; // muss wegen callback static sein
 };
 
-class GuiViewConnectLoco : public GuiView {
+class GuiViewConnectServer : public GuiView {
 public:
-  GuiViewConnectLoco(IPAddress host, int port) { this->host=host; this->port=port; };
-  GuiViewConnectLoco() {};
+  GuiViewConnectServer(IPAddress host, int port) { this->host=host; this->port=port; };
+  GuiViewConnectServer() {};
   void init();
   void close();
   void loop();
   // void loop(); - default
-  const char * which() const { return "GuiViewConnectLoco"; };
+  const char * which() const { return "GuiViewConnectServer"; };
 protected:
   static int nLokdef;
   static IPAddress host;
   static int port;
 };
 
-class GuiViewContolLocoSelectLoco : public GuiViewConnectLoco {
+class GuiViewContolLocoSelectLoco : public GuiView { // GuiViewConnectServer ???
 public:
 	GuiViewContolLocoSelectLoco() {needUpdate=true; };
 	void init();
 	void close();
 	void loop();
-	const char * which() const { return "GuiViewContolLocoSelectLoco"; };
+	const char * which() const { return "GuiViewControlLocoSelectLoco"; };
 private:
 	static bool needUpdate;
 };
 
-class GuiViewControlLoco : public GuiViewConnectLoco {
+class GuiViewControlLoco : public GuiView { // GuiViewConnectServer ???
 public:
 	GuiViewControlLoco() {};
 	void init();
