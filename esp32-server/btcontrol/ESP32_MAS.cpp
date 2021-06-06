@@ -287,10 +287,20 @@ void ESP32_MAS::run() {
     vTaskDelay(10);
   }//                                                                         AUDIO PLAYER LOOP
   i2s_driver_uninstall(this->I2S_PORT); //stop & destroy i2s driver
+  if (this->I2S_noDAC) {
+    #warning FIXME: nach stop den ausgang auf irgendwas setzen damit der ned floatet
+    Serial.println("stop noDAC done");
+//    dacWrite(25,0x80);
+  }
 }//                                                                           VOID AUDIO PLAYER
 
 ESP32_MAS::ESP32_MAS() {
-
+  // !!!!!!!!!!!!!!!!!!!!!!!! serial noch nicht initialisiert !!!!!!!!!!!!!!!!
+  // Serial.println("ESP32_MAS::ESP32_MAS() DAC 0x80");
+  #warning fixme - machts knacksen noch schlechter:
+  // pinMode(25, OUTPUT);
+  // dacWrite(25,0x80);
+  // digitalWrite(25,0);
 };
 
 void ESP32_MAS::setPort(i2s_port_t port) {

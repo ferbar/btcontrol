@@ -1,5 +1,5 @@
 /*
-  btcontrol ESP32 Arduino sketch
+  esp32-server btcontrol ESP32 Arduino sketch
 
   Instructions:
   - creae config.h with (or copy config.h.sample)
@@ -172,29 +172,51 @@ void setup(void)
 #endif
 
 #ifdef HTTPSERVER
-        Serial.println("starting HTTP server");
+        NOTICEF("starting HTTP server");
         HTTPServer.begin();
 #endif
 
 #else // SOFTAP
+    RETRY_WIFI_CONNECT:
     // Connect to WiFi network
+    int APConnectedWait=0;
     WiFi.begin(wifi_ssid, wifi_password);
-    Serial.printf("connecting to wifi %s...\r\n", wifi_ssid);
+    NOTICEF("connecting to wifi %s with mac:%s", wifi_ssid, WiFi.macAddress().c_str());
 
     // Wait for connection
     while (WiFi.status() != WL_CONNECTED) {
+    
         delay(500);
         Serial.print(".");
 #ifdef RESET_INFO_PIN
+        digitalWrite(RESET_INFO_PIN, 1);
+        delay(10);
+        digitalWrite(RESET_INFO_PIN, 0);
+#endif
+        APConnectedWait++;
+        if(APConnectedWait > 40) {
+          ERRORF("unable to connect to wifi, disconnecting");
+          WiFi.disconnect();
+#ifdef RESET_INFO_PIN
+          digitalWrite(RESET_INFO_PIN, 1);
+          delay(1000);
+          digitalWrite(RESET_INFO_PIN, 0);
+#endif
+          goto RETRY_WIFI_CONNECT;
+        }
+    }
+#ifdef RESET_INFO_PIN
+    for(int i=0; i < 10; i++) {
+      delay(10);
       digitalWrite(RESET_INFO_PIN, 1);
       delay(10);
       digitalWrite(RESET_INFO_PIN, 0);
-#endif
     }
+#endif
     IPAddress IP = WiFi.localIP();
-    Serial.print("Connected to ");
-    Serial.println(wifi_ssid);
-#endif // SOFTAP
+    long rssi = WiFi.RSSI();
+    NOTICEF("Connected to %s: %s, rssi: %ld", wifi_ssid, IP.toString().c_str(), rssi);
+#endif // else SOFTAP
 #ifdef RESET_INFO_PIN
     pinMode(RESET_INFO_PIN, INPUT);
 #endif
@@ -288,7 +310,7 @@ public:
 // https://www.freertos.org/a00125.html
 int clientID_counter=1;
 void startClientThread(void *s) {
-    printf("client thread\n");
+    printf("==============client thread======================\n");
     int clientID=clientID_counter++;
     const char *taskname=pcTaskGetTaskName(NULL);
     printf("task name: %s\n", taskname);
@@ -307,7 +329,7 @@ void startClientThread(void *s) {
     */                 
 
 #if not defined SOFTAP
-    // disable wifi power saving
+    DEBUGF("disable wifi power saving");
     esp_wifi_set_ps(WIFI_PS_NONE);
 #endif
 #ifdef HAVE_SOUND
@@ -337,6 +359,7 @@ void startClientThread(void *s) {
     printf("%d: ============= client thread done =============\n", clientID);
 #if not defined SOFTAP
     if(TCPClient::numClients == 0) {
+        DEBUGF("enable wifi power saving");
         esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
     }
 #endif
@@ -417,6 +440,7 @@ void loop(void)
 */
 
     Serial.println("creating thread");
+#warning das auf thread.run umstellen
     StartupData *startupData=new StartupData;
     startupData->client=client;
     //pthread_t thread;

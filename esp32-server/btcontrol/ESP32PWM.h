@@ -26,7 +26,12 @@ private:
 	int motorFullSpeed;
   unsigned int ledToggle;
   bool horn=false;
+#ifdef HEADLIGHT_PIN
   bool headlight=false;
+#endif
+#ifdef PUTZLOK
+  bool doPutz=false;
+#endif
 };
 
 #define BRAKEVCC 0

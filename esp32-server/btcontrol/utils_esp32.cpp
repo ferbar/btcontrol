@@ -64,7 +64,15 @@ std::string readFile(std::string filename)
 		return protocol_dat;
 #ifdef lok_name
 	} else if(filename == "conf/lokdef.csv") {
-		return "3,  F_DEFAULT," lok_name ",                    ,   9,sPfeife,,,,,,,,mMotor Boost\n";
+		return "3,  F_DEFAULT," lok_name ",                    ,   9,"
+#ifdef HAVE_SOUND
+		"sPfeife"
+#endif
+		",,"
+#ifdef PUTZLOK
+		"mPutzmotor"
+#endif
+		",,,,,,mMotor Boost\n";
 #endif
 	}
 	abort();
@@ -122,8 +130,8 @@ void *memmem(const void *haystack, size_t haystacklen,
 			}
 		}
 		return &haystack+i;
-		not_found:
-		printf("test %d\n",i);
+		not_found: {}
+		// printf("test %d\n",i);
 	}
 	return NULL;
 }
