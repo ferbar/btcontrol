@@ -44,3 +44,7 @@
 
 // pwm 30% esp32-cam flash light gets too hot otherwise
 #define HEADLIGHT_PIN 4
+#define HEADLIGHT_PWM_DUTY 20
+
+// F3 == putzmotor, geht nur mit VNH5019, immer motor #1 (am board als 2 bezeichnet)
+#define PUTZLOK
