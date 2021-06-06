@@ -55,11 +55,11 @@ void Thread::start() {
 	pthread_attr_destroy(&attr);
 }
 
-void *Thread::cancel() {
+void Thread::cancel() {
 	NOTICEF("Thread::cancel()\n");
-	void *ret;
 	if(this->thread) {
 #ifdef ESP32
+    // ESP lib kennt kein pthread_cancel
 		this->cancelstate=1;
 #else
 		int s = pthread_cancel(this->thread);
@@ -77,7 +77,6 @@ void *Thread::cancel() {
 		// already killed/never started
 		throw std::runtime_error("thread not started");
 	}
-	return ret;
 }
 
 bool Thread::isRunning() {

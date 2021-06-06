@@ -8,7 +8,7 @@ public:
 	virtual ~Thread() {};
 	void start();
 	int self();
-    void *cancel();
+  void cancel();
 	bool isRunning();
 	void testcancel();
 	// delete *this after run() exits
