@@ -66,7 +66,6 @@ public:
   // void loop(); - default
   const char * which() const { return "GuiViewConnectLoco"; };
 protected:
-  static int selectedAddrIndex;
   static int nLokdef;
   static IPAddress host;
   static int port;
@@ -93,7 +92,7 @@ public:
 	static void onClick(Button2 &b);
 private:
 	void sendSpeed(int what);
-	static bool forceStop;
+	static bool forceStop;              // Speed schieber muss auf 0 geschoben werden, bis dahin 'stop'
   static long lastKeyPressed;         // power off after POWER_DOWN_IDLE_TIMEOUT, init mit 0 => system boot
 };
 

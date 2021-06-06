@@ -319,6 +319,7 @@ void GuiViewSelectWifi::buttonCallbackLongPress(Button2 &b) {
 }
 
 // ============================================================= Connect ==========================
+#warning TODO: rename to ConnectWifi
 void GuiViewConnect::init() {
   DEBUGF("GuiViewConnect::init() connecting to wifi %s %s", this->ssid.c_str(), this->password);
   /* back button?
@@ -380,6 +381,7 @@ void GuiViewConnect::loop() {
 					for (int i = 0; i < nrOfServices; i=i+1) {
 						tft.println(String("Hostname: ") + MDNS.hostname(i) + "IP address: " + MDNS.IP(i).toString() + "Port: " + MDNS.port(i));
 					}
+         #warning TODO: display loco select if more than 1 found
 					if( nrOfServices == 1) {
 						DEBUGF("============= connecting to %s:%d", (MDNS.IP(0).toString()).c_str(), MDNS.port(0));
 						GuiView::startGuiView(new GuiViewConnectLoco(MDNS.IP(0), MDNS.port(0)));
@@ -400,8 +402,7 @@ void GuiViewConnect::loop() {
 	
 }
 
-// ============================================================= Control ==========================
-int GuiViewConnectLoco::selectedAddrIndex=0;
+// ============================================================= ConnectLoco ==========================
 int GuiViewConnectLoco::nLokdef=0;
 
 
@@ -457,21 +458,21 @@ bool GuiViewContolLocoSelectLoco::needUpdate=false;
 
 void GuiViewContolLocoSelectLoco::init() {
 	DEBUGF("GuiViewContolLocoSelectLoco::init() nLokdef=%d", this->nLokdef);
-	GuiViewContolLocoSelectLoco::selectedAddrIndex=0;
+	controlClientThread.selectedAddrIndex=0;
 	if(this->nLokdef==1) {
 		GuiView::startGuiView(new GuiViewControlLoco());
 		return;
 	}
     btn1.setClickHandler([](Button2& b) {
-		if(GuiViewContolLocoSelectLoco::selectedAddrIndex > 0) {
-			GuiViewContolLocoSelectLoco::selectedAddrIndex--;
+		if(controlClientThread.selectedAddrIndex > 0) {
+			controlClientThread.selectedAddrIndex--;
     		GuiViewContolLocoSelectLoco::needUpdate=true;
 		}
 	}
 	);
     btn2.setClickHandler([](Button2& b) {
-		if(selectedAddrIndex < nLokdef  -1) {
-			selectedAddrIndex++;
+		if(controlClientThread.selectedAddrIndex < nLokdef  -1) {
+			controlClientThread.selectedAddrIndex++;
     		needUpdate=true;
 		}
 	}
@@ -498,7 +499,7 @@ void GuiViewContolLocoSelectLoco::loop() {
 		DEBUGF("GuiViewContolLocoSelectLoco::loop needUpdate");
 		int n=0;
 		while(lokdef[n].addr) {
-			if(nLokdef==this->selectedAddrIndex) {
+			if(nLokdef==controlClientThread.selectedAddrIndex) {
 				tft.setTextColor(TFT_BLACK, TFT_GREEN);
 			} else {
 				tft.setTextColor(TFT_GREEN, TFT_BLACK);
@@ -513,10 +514,6 @@ void GuiViewContolLocoSelectLoco::loop() {
 bool GuiViewControlLoco::forceStop=false;
 #define SPEED_ACCEL 10
 #define SPEED_BRAKE 11
-#define SPEED_STOP  12
-#define SPEED_DIR_FORWARD   14          // sendet nicht wenn queue voll => resend machen
-#define SPEED_DIR_BACK      15
-#define SPEED_FULLSTOP      16
 void sendSpeed(int what);
 int droppedCommands=0;
 
@@ -540,6 +537,7 @@ void GuiViewControlLoco::sendSpeed(int what) {
 		case SPEED_BRAKE:
 			cmdType="BREAK";
 			break;
+      /*
 		case SPEED_STOP:
 			cmdType="STOP";
 			force=true;
@@ -548,12 +546,14 @@ void GuiViewControlLoco::sendSpeed(int what) {
 			cmdType="STOP";
 			force=true;
 			break;
+      
 		case SPEED_DIR_FORWARD:
 			cmdType="DIR";
 			break;
 		case SPEED_DIR_BACK:
 			cmdType="DIR";
 			break;
+      */
 		default:
 			throw std::runtime_error("sendSpeed invalid what");
 	}
@@ -564,10 +564,7 @@ void GuiViewControlLoco::sendSpeed(int what) {
 	}
   // DEBUGF(" GuiViewControlLoco::sendSpeed ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
 	FBTCtlMessage cmd(messageTypeID(cmdType));
-	cmd["addr"]=lokdef[this->selectedAddrIndex].addr;
-	if(what == SPEED_DIR_FORWARD || what == SPEED_DIR_BACK) {
-		cmd["dir"]= what == SPEED_DIR_FORWARD ? 1 : -1;
-	}
+	cmd["addr"]=controlClientThread.getCurrLok().addr;
 	controlClientThread.query(cmd,[](FBTCtlMessage &reply) {} );
 
   GuiViewControlLoco::lastKeyPressed=millis();  // poti geändert oder notaus gedrückt => wir kommen da her
@@ -580,7 +577,6 @@ void GuiViewControlLoco::onClick(Button2 &b) {
 		return;
 	}
 	GuiViewControlLoco *g=(GuiViewControlLoco *)(currGuiView);
-	int selectedAddrIndex = g->selectedAddrIndex;
 
   // dynamic_cast wäre schöner, geht aber nicht
 	Button2Data<buttonConfig_t &> &button2Config=(Button2Data<buttonConfig_t &> &) b;
@@ -589,17 +585,15 @@ void GuiViewControlLoco::onClick(Button2 &b) {
 		case sendFunc: {
 			DEBUGF("cb func %d #######################", button2Config.data.gpio);
 			if(controlClientThread.isRunning()) {
-				FBTCtlMessage cmd(messageTypeID("SETFUNC"));
-				cmd["addr"]=lokdef[selectedAddrIndex].addr;
-				cmd["funcnr"]=button2Config.data.funcNr;
-				cmd["value"]=b.isPressed();
-				controlClientThread.query(cmd,[](FBTCtlMessage &reply) {} );
+        controlClientThread.sendFunc(button2Config.data.funcNr, b.isPressed() );
 			}
 			break; }
 		case sendFullStop: {
 			DEBUGF("cb fullstop %d #######################", button2Config.data.gpio);
 			g->forceStop=true;
-			g->sendSpeed(SPEED_STOP);
+      if(controlClientThread.isRunning()) {
+        controlClientThread.sendStop();
+      }
 			break; }
 		case direction: {
 			DEBUGF("cb direction %d #######################", button2Config.data.gpio);
@@ -640,11 +634,11 @@ void GuiViewControlLoco::init() {
 	);
   // load functions:
   FBTCtlMessage cmd(messageTypeID("GETFUNCTIONS"));
-  cmd["addr"]=lokdef[selectedAddrIndex].addr;
+  cmd["addr"]=controlClientThread.getCurrLok().addr;
   controlClientThread.query(cmd,[this](FBTCtlMessage &reply) {
     DEBUGF("GuiViewControlLoco::init() GETFUNCTIONS_REPLY");
     if(reply.isType("GETFUNCTIONS_REPLY")) {
-      initLokdefFunctions(lokdef, this->selectedAddrIndex, reply);
+      initLokdefFunctions(lokdef, controlClientThread.selectedAddrIndex, reply);
     } else {
       ERRORF("invalid reply received");
       abort();
@@ -691,7 +685,6 @@ void GuiViewControlLoco::loop() {
           tft.drawString("off",tft.width(), tft.height() - tft.fontHeight());
           tft.setTextDatum(TL_DATUM);
           tft.setTextColor(TFT_GREEN, TFT_BLACK);
-#warning: vom roten balken bleibt was über wenn man eine taste drückt
           // ping stats:
           tft.drawString( utils::format( "ping: ~%4.2g (%4.2g) drop: %d ", ((float)controlClientThread.pingAvg)/controlClientThread.pingCount/1000.0, controlClientThread.pingMax/1000.0, droppedCommands).c_str(),
             0, tft.height() - tft.fontHeight() );
@@ -701,16 +694,16 @@ void GuiViewControlLoco::loop() {
           if(lokdef) {
             String func;
             int x_pos=0;
-            // func+=lokdef[this->selectedAddrIndex].nFunc; func+=" ";
-            for(int i=0; i < lokdef[this->selectedAddrIndex].nFunc; i++) {
-              if(lokdef[this->selectedAddrIndex].func[i].name[0]) {
-                if(lokdef[this->selectedAddrIndex].func[i].ison) {
+            // func+=controlClientThread.getCurrLok().nFunc; func+=" ";
+            for(int i=0; i < controlClientThread.getCurrLok().nFunc; i++) {
+              if(controlClientThread.getCurrLok().func[i].name[0]) {
+                if(controlClientThread.getCurrLok().func[i].ison) {
                   tft.setTextColor(TFT_BLACK, TFT_WHITE);
                 } else {
                   tft.setTextColor(TFT_WHITE, TFT_BLACK);
                 }
               
-                func=(char) toupper(lokdef[this->selectedAddrIndex].func[i].name[0]);
+                func=(char) toupper(controlClientThread.getCurrLok().func[i].name[0]);
                 x_pos+=tft.drawString(func, x_pos, tft.height() - tft.fontHeight()*2 )*2;
               }
             }
@@ -740,21 +733,21 @@ void GuiViewControlLoco::loop() {
             tft.setTextColor(TFT_GREEN, TFT_BLACK);
           }
 
-          tft.drawString(String("Lok: ") + lokdef[this->selectedAddrIndex].name + "   ", 0, tft.fontHeight());
-          tft.drawString(String("Speed: ") + lokdef[this->selectedAddrIndex].currspeed + "    ", 0, tft.fontHeight()*2);
-          tft.drawString(lokdef[this->selectedAddrIndex].currdir > 0 ? ">" : "<", tft.width()/2, tft.fontHeight()*2);
+          tft.drawString(String("Lok: ") + controlClientThread.getCurrLok().name + "   ", 0, tft.fontHeight());
+          tft.drawString(String("Speed: ") + controlClientThread.getCurrLok().currspeed + "    ", 0, tft.fontHeight()*2);
+          tft.drawString(controlClientThread.getCurrLok().currdir > 0 ? ">" : "<", tft.width()/2, tft.fontHeight()*2);
 
 
           // ############# speed-bar:
           int color=TFT_GREEN;
-          if(lokdef[selectedAddrIndex].currspeed > avg+5 || lokdef[this->selectedAddrIndex].currspeed < avg-5)
+          if(controlClientThread.getCurrLok().currspeed > avg+5 || controlClientThread.getCurrLok().currspeed < avg-5)
             color=TFT_RED;
           if(this->forceStop)
             color=TFT_YELLOW;
           // Line
           tft.drawFastHLine(0, 50, tft.width(), color);
           // Speed-Bar
-          int width=tft.width()* (long) lokdef[this->selectedAddrIndex].currspeed/255;
+          int width=tft.width()* (long) controlClientThread.getCurrLok().currspeed/255;
           tft.fillRect(0, 51, width, 10, color);
           tft.fillRect(width, 51, tft.width() - width, 10, TFT_BLACK);
           // ^          => fixme: braucht zuviel höhe
@@ -804,7 +797,7 @@ void GuiViewControlLoco::loop() {
               this->forceStop=false;
             }
           } else {
-            if(avg >= lokdef[selectedAddrIndex].currspeed + 5 && lokdef[selectedAddrIndex].currspeed <= 255-5) {
+            if(avg >= controlClientThread.getCurrLok().currspeed + 5 && controlClientThread.getCurrLok().currspeed <= 255-5) {
               sendSpeed(SPEED_ACCEL);
               /*
               FBTCtlMessage cmd(messageTypeID("ACC"));
@@ -813,7 +806,7 @@ void GuiViewControlLoco::loop() {
               lokdef[selectedAddrIndex].currspeed+=5;
               */
             }
-            if(avg <= lokdef[selectedAddrIndex].currspeed - 5 && lokdef[selectedAddrIndex].currspeed >= 5) {
+            if(avg <= controlClientThread.getCurrLok().currspeed - 5 && controlClientThread.getCurrLok().currspeed >= 5) {
               sendSpeed(SPEED_BRAKE);
               /*
               FBTCtlMessage cmd(messageTypeID("BREAK"));
@@ -823,18 +816,20 @@ void GuiViewControlLoco::loop() {
               */
             }
           }
-          if(dirSwitch != lokdef[selectedAddrIndex].currdir) {
+          if(dirSwitch != controlClientThread.getCurrLok().currdir) {
             DEBUGF("================== sending new dir ================== %d", dirSwitch);
-            if(abs(lokdef[selectedAddrIndex].currspeed) > 1) {
+            if(abs(controlClientThread.getCurrLok().currspeed) > 1) {
               this->forceStop=true;
-              sendSpeed(SPEED_STOP);
+              if(controlClientThread.isRunning()) {
+                controlClientThread.sendStop();
+              }
               /*
               FBTCtlMessage cmd(messageTypeID("STOP"));
               cmd["addr"]=lokdef[selectedAddrIndex].addr;
               controlClientThread.query(cmd,[](FBTCtlMessage &reply) {} );
               */
             } else {
-              sendSpeed(dirSwitch > 0 ? SPEED_DIR_FORWARD : SPEED_DIR_BACK);
+              controlClientThread.sendDir(dirSwitch > 0);
               /*
               FBTCtlMessage cmd(messageTypeID("DIR"));
               cmd["addr"]=lokdef[selectedAddrIndex].addr;
@@ -917,15 +912,15 @@ void GuiViewPowerDown::init() {
 	tft.drawString("unplug batt!!!", 0, tft.fontHeight()*2);
   tft.setTextSize(1);
   DEBUGF("GuiViewPowerDown::init()");
-  #warning erst im echten power down machen, da ein force stop
-  controlClientThread.fullstop
+  if(controlClientThread.isRunning()) {
+    controlClientThread.sendStop();
+  }
 
   btn1.setClickHandler(guiViewPowerDownBackToControl);
   btn2.setClickHandler(guiViewPowerDownBackToControl);
   
   for(int i=0; i < buttonConfigSize; i++) {
     assert(buttons[i]==NULL);
-    #warning des geht ned ----- btn1+2 geht
     DEBUGF("GuiViewPowerDown::init button %d => pin %d", i, buttonConfig[i].gpio);
     buttons[i]=new Button2Data<buttonConfig_t &>(buttonConfig[i].gpio, buttonConfig[i]);
     // bug: ist ein button vor init '1', wird initialisiert mit setChangedHandler wird der handler aufgerufen .....
@@ -956,7 +951,9 @@ void GuiViewPowerDown::loop() {
     }
 	if(millis() >  GuiViewPowerDown::startTime + 10*1000 && ! this->done) { // 10 sekunden
 		this->done=true;
-    controlClientThread.cancel();
+    if(controlClientThread.isRunning()) {
+      controlClientThread.cancel();
+    }
 		DEBUGF("GuiViewPowerDown::loop() power down ******************************************************************************");
         // digitalWrite(TFT_BL, !r);
 		digitalWrite(TFT_BL, ! TFT_BACKLIGHT_ON);
