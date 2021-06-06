@@ -40,6 +40,7 @@ GuiViewSelectWifi::wifiConfigEntry_t wifiConfig[] = WIFI_CONFIG ;
 const int wifiConfigSize=countof(wifiConfig);
 
 
+
 // on_off => callback wird beim starten einmal aufgerufen, sind derzeit nur die switches, damit wird der status festgelegt
 enum when_t { on_off, on, off};
 enum action_t { sendFunc, sendFullStop, direction };
@@ -85,6 +86,7 @@ void resetButtons() {
 }
 
 // ============================================================= GuiView ==========================
+long GuiView::lastKeyPressed=0;
 GuiView *GuiView::currGuiView=NULL;
 void GuiView::loop() {
 	DEBUGF("%s::loop()", this->which());
@@ -118,7 +120,7 @@ void GuiView::runLoop() {
 // ============================================================= SelectWifi =============================
 int GuiViewSelectWifi::selectedWifi=0;
 bool GuiViewSelectWifi::needUpdate=false;
-long GuiViewSelectWifi::lastKeyPressed=0;
+
 std::map <String, long> GuiViewSelectWifi::wifiList;
 
 void guiViewSelectWifiCallback1(Button2 &b);
@@ -309,7 +311,7 @@ void GuiViewSelectWifi::buttonCallbackLongPress(Button2 &b) {
   if(ssid) {
 	  const char *password=GuiViewSelectWifi::passwordForSSID(ssid);
     if(password) {
-		  GuiView::startGuiView(new GuiViewConnect(ssid, password));
+		  GuiView::startGuiView(new GuiViewConnectWifi(ssid, password));
     } else {
       DEBUGF("no password for %d", GuiViewSelectWifi::selectedWifi);
     }
@@ -318,10 +320,13 @@ void GuiViewSelectWifi::buttonCallbackLongPress(Button2 &b) {
   }
 }
 
-// ============================================================= Connect ==========================
-#warning TODO: rename to ConnectWifi
-void GuiViewConnect::init() {
-  DEBUGF("GuiViewConnect::init() connecting to wifi %s %s", this->ssid.c_str(), this->password);
+// ============================================================= GuiViewConnectWifi ==========================
+int GuiViewConnectWifi::mdnsResults=0;
+int GuiViewConnectWifi::selectedServer=0;
+bool GuiViewConnectWifi::needUpdate=0;
+
+void GuiViewConnectWifi::init() {
+  DEBUGF("GuiViewConnectWifi::init() connecting to wifi %s %s", this->ssid.c_str(), this->password);
   /* back button?
 	btn1.setClickHandler([](Button2&b) {
 		// back button
@@ -338,18 +343,44 @@ void GuiViewConnect::init() {
     abort();
   }
   WiFi.setAutoReconnect(true);
+
+  btn1.setClickHandler([](Button2&b) {
+    if(GuiViewConnectWifi::selectedServer > 0)
+      GuiViewConnectWifi::selectedServer--;
+    GuiViewConnectWifi::needUpdate=true;
+  });
+  btn2.setClickHandler([](Button2&b) {
+    if(GuiViewConnectWifi::selectedServer < (GuiViewConnectWifi::mdnsResults-1))
+      GuiViewConnectWifi::selectedServer++;
+    GuiViewConnectWifi::needUpdate=true;
+  });
+    
+  btn1.setLongClickDetectedHandler([](Button2&b) {
+    GuiView::startGuiView(new GuiViewConnectLoco(MDNS.IP(GuiViewConnectWifi::selectedServer), MDNS.port(GuiViewConnectWifi::selectedServer)));
+  } );
+  btn2.setLongClickDetectedHandler([](Button2&b) {
+    DEBUGF("GuiViewSelectWifi::btn2.setLongClickHandler");
+    // off
+    GuiView::startGuiView(new GuiViewPowerDown());
+  } );
+  btn1.setPressedHandler([](Button2&b) {
+    GuiView::lastKeyPressed=millis();
+  });
+  btn2.setPressedHandler([](Button2&b) {
+    GuiView::lastKeyPressed=millis();
+  });
+  GuiViewConnectWifi::needUpdate=true;
 }
 
-void GuiViewConnect::close() {
-	DEBUGF("GuiViewConnect::close()");
+void GuiViewConnectWifi::close() {
+	DEBUGF("GuiViewConnectWifi::close()");
   resetButtons();
 }
 
-void GuiViewConnect::loop() {
-  static long last=millis();
-	if(WiFi.status() != this->lastWifiStatus || (last+10*1000) < millis() ) { // refresh alle 10 sekunden
-    DEBUGF("GuiViewConnect::loop() WifiStatus:%d (old:%d), WifiMode: %d, last: %ld, curr:%ld", WiFi.status(), this->lastWifiStatus, WiFi.getMode(), last, millis());
-    last=millis();
+void GuiViewConnectWifi::loop() {
+  static long last;
+	if(WiFi.status() != this->lastWifiStatus || this->needUpdate) {
+    DEBUGF("GuiViewConnectWifi::loop() WifiStatus:%d (old:%d), WifiMode: %d", WiFi.status(), this->lastWifiStatus, WiFi.getMode());
 		tft.setTextColor(TFT_GREEN, TFT_BLACK);
 		tft.fillScreen(TFT_BLACK);
 		tft.setTextDatum(MC_DATUM);
@@ -370,21 +401,23 @@ void GuiViewConnect::loop() {
 			} else {
 				IPAddress ip = WiFi.localIP();
 				tft.drawString(String("connected to: ") + this->ssid + " " + ip.toString(), 0, 0 );
-				int nrOfServices = MDNS.queryService("btcontrol", "tcp");
+        static long lastRefresh=0;
+        if(lastRefresh + 10*1000 < millis()) {
+  				GuiViewConnectWifi::mdnsResults = MDNS.queryService("btcontrol", "tcp");
+          lastRefresh=millis();
+        }
 
-        DEBUGF("nrOfServices: %d", nrOfServices);
-				if (nrOfServices == 0) {
+        DEBUGF("nrOfServices: %d", GuiViewConnectWifi::mdnsResults);
+				if (this->mdnsResults == 0) {
 					tft.println("No MDNS services were found.");
           tft.println("Check accesspoint. MDNS works with IDF v 3.3!");
 				} else {
-					tft.println(String("Found ")+nrOfServices+" services");
-					for (int i = 0; i < nrOfServices; i=i+1) {
-						tft.println(String("Hostname: ") + MDNS.hostname(i) + "IP address: " + MDNS.IP(i).toString() + "Port: " + MDNS.port(i));
-					}
-         #warning TODO: display loco select if more than 1 found
-					if( nrOfServices == 1) {
+					if( this->mdnsResults == 1) {
 						DEBUGF("============= connecting to %s:%d", (MDNS.IP(0).toString()).c_str(), MDNS.port(0));
+            tft.println(String("Hostname: ") + MDNS.hostname(0) + "IP address: " + MDNS.IP(0).toString() + "Port: " + MDNS.port(0));
 						GuiView::startGuiView(new GuiViewConnectLoco(MDNS.IP(0), MDNS.port(0)));
+					} else {
+            this->displaySelectServer();
 					}
 
 				}
@@ -396,13 +429,49 @@ void GuiViewConnect::loop() {
 			tft.setTextColor(TFT_GREEN, TFT_BLACK);
 			DEBUGF("waiting for wifi %s", this->ssid.c_str());
 		}
+    GuiViewConnectWifi::needUpdate=false;
+    last=millis();
 	} else {
 		// DEBUGF("wifi connected");
+    if(millis() > last+10*1000) { // alle 10 sekunden refresehen wenn keine taste gedrückt wurde
+      DEBUGF("##############GuiViewSelectWifi::loop - restart SelectWifi for rescan");
+      last=millis();
+      GuiViewConnectWifi::needUpdate=true;
+    }
 	}
 	
 }
 
+void GuiViewConnectWifi::displaySelectServer() {
+  DEBUGF("GuiViewConnectWifi::displaySelectServer() selected:%d", GuiViewConnectWifi::selectedServer);
+
+  // tft.fillScreen(TFT_BLACK);
+  tft.setTextDatum(MC_DATUM);
+  tft.setFreeFont(NULL);
+  tft.setTextColor(TFT_BLACK, TFT_WHITE);
+  tft.setTextDatum(TR_DATUM);
+  tft.drawString(" ^", tft.width(), 0);
+  tft.drawString(">>", tft.width(), tft.fontHeight());
+  tft.setTextDatum(BR_DATUM);
+  tft.drawString(" v", tft.width(), tft.height());
+  tft.drawString("off", tft.width(), tft.height() - tft.fontHeight());
+
+  tft.setTextColor(TFT_GREEN, TFT_BLACK);
+  tft.setTextSize(1);
+  tft.setFreeFont(FSSP7);
+
+  for(int i=0; i < this->mdnsResults; i++) {
+    if(i==GuiViewConnectWifi::selectedServer) {
+      tft.setTextColor(TFT_BLACK, TFT_GREEN);
+    } else {
+      tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    }
+    tft.drawString(String(" ") + MDNS.hostname(i) + "(" + MDNS.IP(i).toString() + ":" + MDNS.port(i) + ")", 0, (i+3) *16 );
+  }
+}
+
 // ============================================================= ConnectLoco ==========================
+#warning rename to ConnectServer
 int GuiViewConnectLoco::nLokdef=0;
 
 
@@ -516,8 +585,6 @@ bool GuiViewControlLoco::forceStop=false;
 #define SPEED_BRAKE 11
 void sendSpeed(int what);
 int droppedCommands=0;
-
-long GuiViewControlLoco::lastKeyPressed=0;
 
 // 1 oder -1
 int dirSwitch=1;

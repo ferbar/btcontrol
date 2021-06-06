@@ -17,6 +17,8 @@ public:
   virtual void close() {};
   virtual void init() {};
   virtual const char * which() const { return "GuiView" ; };
+protected:
+  static long lastKeyPressed;         // power off after POWER_DOWN_IDLE_TIMEOUT, init mit 0 => system boot
 };
 
 
@@ -37,23 +39,26 @@ public:
   const char * which() const { return "GuiViewSelectWifi"; };
 private:
   static std::map <String, long> wifiList;
-  static int selectedWifi;
+  static int selectedWifi; // muss wegen callback static sein
   static bool needUpdate;
-  static long lastKeyPressed;         // power off after POWER_DOWN_IDLE_TIMEOUT, init mit 0 => system boot
   static const char *passwordForSSID(const String &ssid);
 };
 
-class GuiViewConnect : public GuiView {
+class GuiViewConnectWifi : public GuiView {
 public:
-  GuiViewConnect(const String &ssid, const char *password) : ssid(ssid), password(password) {};
+  GuiViewConnectWifi(const String &ssid, const char *password) : ssid(ssid), password(password) {};
   void init();
   void close();
   void loop();
   const char * which() const { return "guiViewConnect"; };
 private:
+  void displaySelectServer();
   int lastWifiStatus;
   String ssid;
   const char *password;
+  static bool needUpdate;
+  static int mdnsResults;
+  static int selectedServer; // muss wegen callback static sein
 };
 
 class GuiViewConnectLoco : public GuiView {
@@ -93,7 +98,6 @@ public:
 private:
 	void sendSpeed(int what);
 	static bool forceStop;              // Speed schieber muss auf 0 geschoben werden, bis dahin 'stop'
-  static long lastKeyPressed;         // power off after POWER_DOWN_IDLE_TIMEOUT, init mit 0 => system boot
 };
 
 class GuiViewErrorMessage : public GuiView {
