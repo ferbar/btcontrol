@@ -51,7 +51,12 @@ ssize_t myRead(int so, void *data, size_t size);
 
   #define ANSI_GREEN1 "\x1b[32m"
   #define ANSI_GREEN2 "\x1b[32;1m"
-
+#ifdef ESP32
+// ESP32 gibt alles übern com port aus, minicom erwartet \r\n
+#define NEWLINE "\r\n"
+#else
+#define NEWLINE "\n"
+#endif
 void strtrim(char *s);
 
 extern const std::string NOT_SET;
@@ -124,9 +129,9 @@ namespace utils
 #define NOTICEF(fmt, ...)
 #define ERRORF(fmt, ...)
 #else
-#define DEBUGF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_DEBUG, __FILE__, __LINE__, ANSI_GREEN1 fmt ANSI_DEFAULT "\n", ##__VA_ARGS__ )
-#define NOTICEF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_NOTICE, __FILE__, __LINE__, ANSI_YELLOW fmt ANSI_DEFAULT "\n", ##__VA_ARGS__ )
-#define ERRORF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_ERROR, __FILE__, __LINE__, ANSI_RED2 fmt ANSI_DEFAULT "\n", ##__VA_ARGS__ )
+#define DEBUGF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_DEBUG, __FILE__, __LINE__, ANSI_GREEN1 fmt ANSI_DEFAULT NEWLINE, ##__VA_ARGS__ )
+#define NOTICEF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_NOTICE, __FILE__, __LINE__, ANSI_YELLOW fmt ANSI_DEFAULT NEWLINE, ##__VA_ARGS__ )
+#define ERRORF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_ERROR, __FILE__, __LINE__, ANSI_RED2 fmt ANSI_DEFAULT NEWLINE, ##__VA_ARGS__ )
 #endif
 
 // arduino / wiring pi / utils.cpp
