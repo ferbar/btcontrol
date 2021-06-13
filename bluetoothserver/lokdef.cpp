@@ -29,6 +29,7 @@
 #include <stdexcept>
 
 lokdef_t *lokdef=NULL; 
+#define TAG "lokdef"
 
 /**
  * liefert den index
@@ -118,14 +119,19 @@ bool readLokdef()
 		}
 		lokdef[n].flags=str2decodertype(pos);
 		pos_end=getnext(&pos);
+		strncpy(lokdef[n].name, pos,  MIN((signed)sizeof(lokdef[n].name)-1, pos_end-pos));
 		if(pos_end-pos >= (signed)sizeof(lokdef[n].name)) {
-			printf("readLokdef warning line %d: lokdef.name > size \"%.*s\"\n", lineNo, (int)(pos_end-pos),pos);
+			ERRORF("readLokdef warning line %d: lokdef.name > size: \"%.*s\", allowed max:%d", lineNo, (int)(pos_end-pos),pos, (int) sizeof(lokdef[n].name));
+			lokdef[n].name[sizeof(lokdef[n].name)-1]='\0';
 		}
-		strncpy(lokdef[n].name, pos,  MIN((signed)sizeof(lokdef[n].name), pos_end-pos));
 		strtrim(lokdef[n].name);
 		pos_end=getnext(&pos);
-		//TODO: trim
-		strncpy(lokdef[n].imgname, pos, MIN((signed)sizeof(lokdef[n].imgname), pos_end-pos));
+
+		strncpy(lokdef[n].imgname, pos, MIN((signed)sizeof(lokdef[n].imgname)-1, pos_end-pos));
+		if(pos_end-pos >= (signed)sizeof(lokdef[n].imgname)) {
+			ERRORF("readLokdef warning line %d: lokdef.imgname > size: \"%.*s\", allowed max:%d", lineNo, (int)(pos_end-pos),pos, (int) sizeof(lokdef[n].imgname));
+			lokdef[n].imgname[sizeof(lokdef[n].imgname)-1]='\0';
+		}
 		strtrim(lokdef[n].imgname);
 		pos_end=getnext(&pos);
 		CHECKVAL("error reading nfunc");
