@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <cxxabi.h>
 #include <string.h>
+#include <assert.h>
 #include "utils.h"
 #include "Thread.h"
 
@@ -63,10 +64,13 @@ void Thread::cancel() {
 		this->cancelstate=1;
 #else
 		int s = pthread_cancel(this->thread);
-		if (s != 0)
+		if (s != 0) {
 			perror("pthread_cancel");
 			throw std::runtime_error("error pthread_cancel");
+		}
+		void *ret;
 		int rc = pthread_join(this->thread, &ret);
+		assert(ret == NULL); // if this is malloced value we create a memory leak
 		if(rc != 0) {
 			// FIXME: memory leak wenn ret malloced ist
 			throw std::runtime_error("error pthread_join");
