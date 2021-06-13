@@ -18,7 +18,7 @@ lokdef_t *initLokdef(FBTCtlMessage &reply)
 	tmplokdef = (lokdef_t *) calloc(sizeof(lokdef_t),nLocos+1);
 
 	for(int i=0; i < nLocos; i++) {
-		DEBUGF("initLokdef %d", i);
+		DEBUGF("initLokdef %d, name: %s", i, reply["info"][i]["name"].getStringVal().c_str());
 		tmplokdef[i].currdir=0;
 		tmplokdef[i].addr=reply["info"][i]["addr"].getIntVal();
 		strncpy(tmplokdef[i].name, reply["info"][i]["name"].getStringVal().c_str(), sizeof(lokdef[i].name));
