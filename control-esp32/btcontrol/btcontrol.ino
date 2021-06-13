@@ -89,7 +89,6 @@ void showVoltage()
         timeStamp = millis();
         uint16_t v = analogRead(ADC_PIN);
         float battery_voltage = ((float)v / 4095.0) * 2.0 * 3.3 * (vref / 1000.0);
-        String voltage = "Bat: " + String(battery_voltage) + "V";
         // Serial.println(voltage);
         tft.setTextDatum(TR_DATUM);
         tft.setTextColor(TFT_GREEN, TFT_BLACK);
@@ -97,7 +96,12 @@ void showVoltage()
         //tft.fillScreen(TFT_BLACK);
         //tft.setTextDatum(TL_DATUM);
         // tft.drawString(voltage,  tft.width() / 2, tft.height() / 2 );
-        tft.drawString(voltage,  tft.width()-5 * 3, 0 );  // NULL = monospace font
+        int rssi=0;
+        wifi_ap_record_t ap_info;
+        if(esp_wifi_sta_get_ap_info(&ap_info) == ESP_OK) {
+          rssi=ap_info.rssi;
+        }
+        tft.drawString(" W:" + String(rssi) + " B:" + String(battery_voltage) + "V",  tft.width()-5 * 3, 0 );  // NULL = monospace font
     }
 }
 
@@ -175,7 +179,7 @@ void print_wakeup_reason(){
     case ESP_SLEEP_WAKEUP_TIMER : Serial.println("Wakeup caused by timer"); break;
     case ESP_SLEEP_WAKEUP_TOUCHPAD : Serial.println("Wakeup caused by touchpad"); break;
     case ESP_SLEEP_WAKEUP_ULP : Serial.println("Wakeup caused by ULP program"); break;
-    default : Serial.printf("Wakeup was not caused by deep sleep: %d\n",wakeup_reason); break;
+    default : Serial.printf("Wakeup was not caused by deep sleep: %d" NEWLINE,wakeup_reason); break;
   }
 }
 
