@@ -39,7 +39,8 @@ public:
   static void buttonCallbackLongPress(Button2 &b);
   const char * which() const { return "GuiViewSelectWifi"; };
 private:
-  static std::map <String, long> wifiList;
+  struct WifiEntry {int rssi; bool have_LR; }; 
+  static std::map <String, WifiEntry > wifiList;
   static int selectedWifi; // muss wegen callback static sein
   static bool needUpdate;
   static const char *passwordForSSID(const String &ssid);
@@ -47,7 +48,7 @@ private:
 
 class GuiViewConnectWifi : public GuiView {
 public:
-  GuiViewConnectWifi(const String &ssid, const char *password) : ssid(ssid), password(password) {};
+  GuiViewConnectWifi(const String &ssid, const char *password, bool LR) : ssid(ssid), password(password), LR(LR) {};
   void init();
   void close();
   void loop();
@@ -57,6 +58,7 @@ private:
   int lastWifiStatus;
   String ssid;
   const char *password;
+  bool LR;
   static bool needUpdate;
   static int mdnsResults;
   static int selectedServer; // muss wegen callback static sein

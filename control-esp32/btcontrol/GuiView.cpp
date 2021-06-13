@@ -19,6 +19,8 @@
 #include <SPI.h>
 #include <WiFi.h>
 #include <ESPmDNS.h>
+#include <esp_wifi.h>
+
 #include "GuiView.h"
 #include "config.h"
 #include "utils.h"
@@ -140,7 +142,7 @@ void GuiView::drawButtons() {
 int GuiViewSelectWifi::selectedWifi=0;
 bool GuiViewSelectWifi::needUpdate=false;
 
-std::map <String, long> GuiViewSelectWifi::wifiList;
+std::map <String, GuiViewSelectWifi::WifiEntry> GuiViewSelectWifi::wifiList;
 
 void guiViewSelectWifiCallback1(Button2 &b);
 void guiViewSelectWifiCallback2(Button2 &b);
@@ -158,20 +160,28 @@ void GuiViewSelectWifi::init() {
   tft.setFreeFont(FSSP7);
   tft.drawString("Scanning...", 0, tft.fontHeight());
 
+  WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
+  if(esp_wifi_set_protocol( WIFI_IF_STA, WIFI_PROTOCOL_11B| WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_LR ) != ESP_OK ) {
+    tft.drawString("  esp_wifi_set_protocol failed", 0, tft.fontHeight()*2);
+  }
   WiFi.disconnect();
   delay(100);
 
   int16_t n = WiFi.scanNetworks();
   this->wifiList.clear();
   for(int i=0; i < n; i++) {
+    wifi_ap_record_t *scanResult=(wifi_ap_record_t *)WiFi.getScanInfoByIndex(i);
+    NOTICEF("  - found wifi %s rssi:%d, chan:%d, %d %d %d %d", scanResult->ssid, scanResult->rssi, scanResult->primary, scanResult->phy_11b, scanResult->phy_11g, scanResult->phy_11n, scanResult->phy_lr);
+
     auto it = this->wifiList.find(WiFi.SSID(i));
-    if(it != this->wifiList.end()) {
-      this->wifiList[WiFi.SSID(i)] = WiFi.RSSI(i) ;
+    if(it == this->wifiList.end()) {
+      this->wifiList[WiFi.SSID(i)] = { scanResult->rssi, scanResult->phy_lr? true : false };
     } else {
+      DEBUGF("  found duplicate SSID: %s (old:%d, new:%d)", WiFi.SSID(i).c_str(), it->second.rssi, WiFi.RSSI(i));
       // multiple APs for the same ssid found, use the lower rssi;
-      if(this->wifiList[WiFi.SSID(i)] > WiFi.RSSI(i))
-        this->wifiList[WiFi.SSID(i)] = WiFi.RSSI(i) ;
+      if(this->wifiList[WiFi.SSID(i)].rssi < WiFi.RSSI(i)) // rssi is always negative!! -40 is better than -90!
+        this->wifiList[WiFi.SSID(i)].rssi = WiFi.RSSI(i) ;
     }
   }
 	if(this->selectedWifi > n-1) {
@@ -199,6 +209,7 @@ void GuiViewSelectWifi::init() {
     GuiViewSelectWifi::lastKeyPressed=millis();
   });
   this->needUpdate=true;
+  tft.fillScreen(TFT_BLACK);
 }
   
 void GuiViewSelectWifi::close() {
@@ -242,7 +253,8 @@ void GuiViewSelectWifi::loop() {
 			tft.drawString("No wifi networks found", tft.width() / 2, tft.height() / 2);
 		} else {
 			DEBUGF("Found %d wifi networks", this->wifiList.size());
-      tft.fillScreen(TFT_BLACK);
+      // tft.fillScreen(TFT_BLACK); text inhalt ändert sich nicht
+      this->drawButtons();
 			int n=0;
 			char buff[50];
       for(int i=0; i < 2; i++) {
@@ -261,10 +273,11 @@ void GuiViewSelectWifi::loop() {
   		  		}
 	  		  	tft.setTextColor(foregroundColor, backgroundColor);
 		  		  snprintf(buff,sizeof(buff),
-			  			"[%d] %s (%ld)",
+			  			"[%d] %s (%d%s)",
               n,
 					  	value.first.c_str(),
-						  value.second);
+						  value.second.rssi,
+						  value.second.have_LR ? " LR" : "");
   				//ft.println(buff); => println geht ned richtig mit custom fonts (baseline falsch, bg color geht ned)
             tft.drawString(buff,0,tft.fontHeight()*n);
 	  	  		n++;
@@ -302,11 +315,13 @@ void GuiViewSelectWifi::buttonCallbackLongPress(Button2 &b) {
   GuiViewSelectWifi::lastKeyPressed=millis();
 	String ssid;
   int n=0;
+  bool LR=false;
 	for(auto it=GuiViewSelectWifi::wifiList.begin(); it != GuiViewSelectWifi::wifiList.end(); ++it) {
     if(GuiViewSelectWifi::passwordForSSID(it->first)) {
       DEBUGF("have password for %s", it->first.c_str());
       if(n==GuiViewSelectWifi::selectedWifi) {
         ssid=it->first;
+        LR=it->second.have_LR;
         break;
       }
       n++;
@@ -315,7 +330,7 @@ void GuiViewSelectWifi::buttonCallbackLongPress(Button2 &b) {
   if(ssid) {
 	  const char *password=GuiViewSelectWifi::passwordForSSID(ssid);
     if(password) {
-		  GuiView::startGuiView(new GuiViewConnectWifi(ssid, password));
+		  GuiView::startGuiView(new GuiViewConnectWifi(ssid, password, LR));
     } else {
       DEBUGF("no password for %d", GuiViewSelectWifi::selectedWifi);
     }
@@ -339,6 +354,10 @@ void GuiViewConnectWifi::init() {
 	);*/
 	this->lastWifiStatus=0;
 	WiFi.mode(WIFI_STA);
+
+  if(this->LR) {
+    esp_wifi_set_protocol (WIFI_IF_STA, WIFI_PROTOCOL_LR);
+  } // else im scanner wird BGN LE aktiviert
 	// WiFi.enableSTA(true);
 	WiFi.begin(this->ssid.c_str(), this->password);
  
@@ -405,6 +424,17 @@ void GuiViewConnectWifi::loop() {
 			} else {
 				IPAddress ip = WiFi.localIP();
 				tft.drawString(String("connected to: ") + this->ssid + " " + ip.toString(), 0, 0 );
+        wifi_power_t txpower=WiFi.getTxPower();
+        
+        tft.drawString(String("   txpower: ") + txpower, 0, tft.fontHeight());
+        uint8_t protocolBitmap;
+        if(esp_wifi_get_protocol(WIFI_IF_STA, &protocolBitmap) == ESP_OK) {
+          tft.drawString(String("   protocol: ") + (protocolBitmap & WIFI_PROTOCOL_11B ? "B" : "") +
+            (protocolBitmap & WIFI_PROTOCOL_11G ? "G" : "") +
+            (protocolBitmap & WIFI_PROTOCOL_11N ? "N" : "") +
+            (protocolBitmap & WIFI_PROTOCOL_LR ? "LR" : ""), 0, tft.fontHeight() * 2);
+        }
+
         static long lastRefresh=0;
         if(lastRefresh + 10*1000 < millis()) {
   				GuiViewConnectWifi::mdnsResults = MDNS.queryService("btcontrol", "tcp");
@@ -780,10 +810,15 @@ void GuiViewControlLoco::loop() {
               tft.setTextColor(TFT_BLACK, TFT_RED);
               width=tft.drawString(String("Power down in ") + powerDownSec + "s", 0, 0 );
               tft.setTextColor(TFT_WHITE, TFT_BLACK);
-            } else
-              width=tft.drawString(String("AP: ") + WiFi.SSID(), 0, 0 );
+            } else {
+              if( WiFi.SSID() != controlClientThread.getCurrLok().name) {  // AP nur anzeigen wenn lokname != AP
+                width=tft.drawString(String("AP: ") + WiFi.SSID(), 0, 0 );
+              } else {
+                width=0;
+              }
+            }
             if(width < lastWidth) {
-              tft.fillRect(width-1, 0, lastWidth-width, tft.fontHeight(), TFT_BLACK);
+              tft.fillRect(width-1, 0, lastWidth-width, tft.fontHeight(), TFT_BLUE); // TFT_BLACK);
             }
             lastWidth=width;
           } else {
@@ -835,9 +870,9 @@ void GuiViewControlLoco::loop() {
 
         static int lastValues[10]={0,0,0,0,0,0,0,0};
         static long lastPotiCheck=0;
-        int poti=(analogRead(POTI_PIN)*255.0 /4095.0);
-
         if(now > lastPotiCheck + 200) {
+          int analog=analogRead(POTI_PIN);
+          int poti=(analog*255.0 /4095.0);
           lastPotiCheck=now;
           for(int i=0; i < 9; i++) {
             lastValues[i]=lastValues[i+1];
