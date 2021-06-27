@@ -101,7 +101,7 @@ WiFiServer BTServer(3030);
 void setup(void)
 {  
     Serial.begin(115200);
-    Serial.println("starting esp32 btcontrol");
+    NOTICEF("starting esp32 btcontrol version " __DATE__ " " __TIME__ "====================================");
 
     // uint32_t realSize = ESP.getFlashChipRealSize();
     uint32_t ideSize = ESP.getFlashChipSize();
@@ -136,20 +136,36 @@ void setup(void)
     printf("ESP_IDF Version: %s\n", esp_get_idf_version());
 
 
-    Serial.println("init wifi");
 #ifdef RESET_INFO_PIN
     pinMode(RESET_INFO_PIN, OUTPUT);
 #endif
 #ifdef SOFTAP
+    NOTICEF("Setting Access Point=====================================================");
     if(strlen(wifi_password) < 8) {
-        Serial.println("Setting Access Point");
-        Serial.println("ERROR: password < 8 characters, fallback to unencrypted");      
+        ERRORF("ERROR: password < 8 characters, fallback to unencrypted");      
     } else {
-        Serial.printf("Setting Access Point ssid:%s password:%s\n", wifi_ssid, wifi_password);
+        NOTICEF("Setting Access Point ssid:%s password:%s", wifi_ssid, wifi_password);
     }
     WiFi.persistent(false);
-    WiFi.mode(WIFI_AP);
+    // WiFi.mode(WIFI_AP);
+    
+//    Serial.println("esp_wifi_set_protocol()"); Serial.flush(); delay(200);
+// mit LR wirds von normalen geräten nicht mehr gefunden
+/*
+//     if(esp_wifi_set_protocol( WIFI_IF_AP, WIFI_PROTOCOL_11B| WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_LR ) != ESP_OK ) {
+    if(esp_wifi_set_protocol( WIFI_IF_AP, WIFI_PROTOCOL_11B| WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N ) != ESP_OK ) {
+      Serial.println("************ esp_wifi_set_protocol failed ************");
+    }
+    Serial.println("esp_wifi_set_protocol() done");
+  */  
     //delay(2000); // VERY IMPORTANT  https://github.com/espressif/arduino-esp32/issues/2025
+    WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
+    // bool softAP(const char* ssid, const char* passphrase = NULL, int channel = 1, int ssid_hidden = 0, int max_connection = 4);
+    WiFi.softAP(wifi_ssid, wifi_password);
+    Serial.print("softAPmacAddress: ");
+    Serial.println(WiFi.softAPmacAddress());
+    IPAddress IP = WiFi.softAPIP();
+
     for(int i=0; i < 20; i++) {
       delay(200);
 #ifdef RESET_INFO_PIN
@@ -158,11 +174,6 @@ void setup(void)
       digitalWrite(RESET_INFO_PIN, 0);
 #endif
     }
-    WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
-    WiFi.softAP(wifi_ssid, wifi_password);
-    Serial.print("softAPmacAddress: ");
-    Serial.println(WiFi.softAPmacAddress());
-    IPAddress IP = WiFi.softAPIP();
 
     // if DNSServer is started with "*" for domain name, it will reply with
     // provided IP to all DNS request
@@ -177,11 +188,11 @@ void setup(void)
 #endif
 
 #else // SOFTAP
+    NOTICEF("connecting to wifi %s with mac:%s", wifi_ssid, WiFi.macAddress().c_str());
     RETRY_WIFI_CONNECT:
     // Connect to WiFi network
     int APConnectedWait=0;
     WiFi.begin(wifi_ssid, wifi_password);
-    NOTICEF("connecting to wifi %s with mac:%s", wifi_ssid, WiFi.macAddress().c_str());
 
     // Wait for connection
     while (WiFi.status() != WL_CONNECTED) {
