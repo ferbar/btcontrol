@@ -48,7 +48,7 @@ private:
 
 class GuiViewConnectWifi : public GuiView {
 public:
-  GuiViewConnectWifi(const String &ssid, const char *password, bool LR) : ssid(ssid), password(password), LR(LR) {};
+  GuiViewConnectWifi(const String &ssid, const char *password, bool LR) : ssid(ssid), password(password), LR(LR), connectingStartedAt(millis()) {};
   void init();
   void close();
   void loop();
@@ -59,6 +59,7 @@ private:
   String ssid;
   const char *password;
   bool LR;
+  long connectingStartedAt;
   static bool needUpdate;
   static int mdnsResults;
   static int selectedServer; // muss wegen callback static sein

@@ -458,10 +458,15 @@ void GuiViewConnectWifi::loop() {
 
 			}
 		} else {
-			tft.setTextColor(TFT_RED, TFT_BLACK);
-			tft.drawString(String("connecting to wifi ") + this->ssid + "...", 0, 0 );
-			tft.setTextColor(TFT_GREEN, TFT_BLACK);
-			DEBUGF("waiting for wifi %s", this->ssid.c_str());
+      if(this->connectingStartedAt + 10000 < millis()) {
+        DEBUGF("unable to connect within 10s...");
+        GuiView::startGuiView(new GuiViewSelectWifi() );
+        return;
+      }
+      tft.setTextColor(TFT_RED, TFT_BLACK);
+      tft.drawString(String("connecting to wifi ") + this->ssid + "...", 0, 0 );
+      tft.setTextColor(TFT_GREEN, TFT_BLACK);
+      DEBUGF("waiting for wifi %s", this->ssid.c_str());
 		}
     GuiViewConnectWifi::needUpdate=false;
     last=millis();
@@ -975,20 +980,33 @@ void GuiViewErrorMessage::loop() {
       pos++;
       n++;
     }
+    if(WiFi.status() != WL_CONNECTED) {
+      tft.drawString(String("lost wifi connection, retries=")+retries, 0, tft.height()/2+tft.fontHeight()*n);
+    }
 		last=millis();
 	}
-	if(millis() > last + 10*1000) { // 10 sekunden
+	if(millis() > last + 1*1000) { // 1 sekunden
 		last=millis();
-		DEBUGF("GuiViewErrorMessage::loop() restarting...");
+		DEBUGF("GuiViewErrorMessage::loop() restarting, retries=%d wifi status=%d...", retries, WiFi.status());
 		if(WiFi.status() == WL_CONNECTED) {
-			retries++;
-			if(retries < 5) {
+			if(retries < 10) {
+        retries++;
 				GuiView::startGuiView(new GuiViewConnectServer());
+        return;
 			} else {
 				retries=0;
 				GuiView::startGuiView(new GuiViewSelectWifi() );
+        return;
 			}
+		} else {
+      if(retries >= 10) {
+        retries=0;
+        GuiView::startGuiView(new GuiViewSelectWifi() );
+        return;
+      }
 		}
+    retries++;
+    this->needUpdate=true;
 	}
 };
 
