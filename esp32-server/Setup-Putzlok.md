@@ -12,9 +12,9 @@ Kurze Docu zum Umbau einer LGB Putzlok in eine Akku Lok mit einem ESP32
 * Polymorph Plastik kugerln
 * Kleinzeug für die Beleuchtung
   * Lochrasterplatine
-  * FETs
-  * Widerstände
-  * LEDs
+  * FETs (z.B. irfml8244)
+  * Widerstände (smd 100Ohm, 150 Ohm für die gelben LEDs, 75Ohm für die Weissen LEDs)
+  * LEDs (2 Gelbe / rundstrahlend, led1.de oder diffus , 4 Weisse)
 
 ## Zusammenbau
 
@@ -26,7 +26,44 @@ Stecker in die Akkus, obern Teil, dort wo der Stecker von den Akkus ist mit Kleb
 
 ### ESP32 + Motor Shield
 
-Zusammenstecken ist soweit eh klar. Wichtig: vom Motor Shield den +5V pin *NICHT* einstecken!!! Es funktioniert sonst das WLAN so gut wie nicht !!!
+Software übers Android Studio einspielen, eh klar. Zusammenstecken ist soweit auch klar. Aber wichtig: vom Motor Shield den +5V pin *NICHT* einstecken!!! Es funktioniert sonst das WLAN so gut wie nicht !!!
 
-Optional: grössere WLAN Antenne anlöten.
+Optional: grössere WLAN Antenne anlöten (fummelig)
 
+### Pinbelegung
+
+Für das Motor Shield:
+
+* VOUT => Schaltregler am ESPDuino Board
+
+#### BridgeA
+* IO26 -> M1INA
+* IO17 -> M1INB
+* IO27 -> M1ENA/B (Vorsicht: pull up auf 5V)
+* IO12 -> M1PWM
+
+* IO02 [ADC2_2] -> M1CS
+
+#### BridgeB
+* IO14 -> M2INA
+* IO12 -> M2INB
+* IO19 -> M2ENA/B (Vorsicht: pull up auf 5V)
+* IO05 -> M2PWM
+
+* IO04 [ADC2_0]-> M2CS
+
+#### Freie Pins (für LEDs z.b.)
+* IO03 RX0
+* IO01 TX0
+* IO25 DAC1
+* IO16 RX2
+* IO23 
+* IO18 
+* IO35 ADC1_7
+* IO34 ADC1_6
+* IO36 ADC1_0
+* IO39 ADC1_3
+
+### Beleuchtung
+
+Nachdem wir mit Akkus fahren und LEDs nur ein Zehntel an Energie brauchen gegenüber einer Glühbirne würde ich alle Lämpchen gegen LEDs tauschen. 
