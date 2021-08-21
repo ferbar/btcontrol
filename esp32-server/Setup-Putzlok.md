@@ -18,15 +18,28 @@ Kurze Docu zum Umbau einer LGB Putzlok in eine Akku Lok mit einem ESP32
 
 ## Zusammenbau
 
+### Lokführer
+
+Sry, der muss raus, kein Platz mehr für den Kollegen.
+
 ### Akkus
 
-Die 2 Akkus müssen in Serie geschalten werden damit wir 14V - 16V bekommen. Kabel anlöten, auf die Polung achten, und dann kommt die Patzerei:
-Stecker in die Akkus, obern Teil, dort wo der Stecker von den Akkus ist mit Klebeband abkleben (eventuell mit Vaseline noch einfetten???), das Polymorph Plastik mit kochendem Wasser erhitzen und drauf patzen damit der Stecker nicht mehr rausfallen kann.
+Die 2 Akkus müssen in Serie geschalten werden damit wir 14V - 16V bekommen. Kabel (optional mit Schalter) anlöten, auf die Polung achten, und dann kommt die Patzerei:
+Stecker in die Akkus, obern Teil, dort wo der Stecker von den Akkus ist mit Klebeband abkleben (eventuell mit Vaseline noch einfetten???).
+
+<img src="img_akku.jpg" alt="Ikea Braunit & Pins" width="300"/>
+
+Das Polymorph Plastik mit kochendem Wasser erhitzen und drauf patzen damit der Stecker nicht mehr rausfallen kann.
 10 Minuten warten, die Akkus werden etwas mühsamer rausgehen da das Polymorph Plastik etwas geschrumpft ist.
+
+<img src="img_akku_done.jpg" alt="Ikea Braunit & Pins" width="300"/>
+
 
 ### ESP32 + Motor Shield
 
 Software übers Android Studio einspielen, eh klar. Zusammenstecken ist soweit auch klar. Aber wichtig: vom Motor Shield den +5V pin *NICHT* einstecken!!! Es funktioniert sonst das WLAN so gut wie nicht !!!
+
+<img src="img_espduino_motorshield.jpg" alt="Ikea Braunit & Pins" width="300"/>
 
 Optional: grössere WLAN Antenne anlöten (fummelig)
 
