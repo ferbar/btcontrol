@@ -54,7 +54,6 @@ Für das Motor Shield:
 * IO17 -> M1INB
 * IO27 -> M1ENA/B (Vorsicht: pull up auf 5V)
 * IO13 -> M1PWM
-
 * IO02 [ADC2_2] -> M1CS
 
 #### BridgeB
@@ -62,7 +61,6 @@ Für das Motor Shield:
 * IO12 -> M2INB
 * IO19 -> M2ENA/B (Vorsicht: pull up auf 5V)
 * IO05 -> M2PWM
-
 * IO04 [ADC2_0]-> M2CS
 
 #### Freie Pins (für LEDs z.b.)
