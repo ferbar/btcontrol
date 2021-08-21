@@ -53,7 +53,7 @@ Für das Motor Shield:
 * IO26 -> M1INA
 * IO17 -> M1INB
 * IO27 -> M1ENA/B (Vorsicht: pull up auf 5V)
-* IO12 -> M1PWM
+* IO13 -> M1PWM
 
 * IO02 [ADC2_2] -> M1CS
 
@@ -76,6 +76,14 @@ Für das Motor Shield:
 * IO34 ADC1_6
 * IO36 ADC1_0
 * IO39 ADC1_3
+
+3 Pin Header
+* IO15
+* IO33
+* IO32
+
+6 Pin Header:
+Nur Flash ROM Pins
 
 ### Beleuchtung
 
