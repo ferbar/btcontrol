@@ -14,9 +14,14 @@ Kurze Docu zum Umbau einer LGB Putzlok in eine Akku Lok mit einem ESP32
   * Lochrasterplatine
   * FETs (z.B. irfml8244)
   * Widerstände (smd 100Ohm, 150 Ohm für die gelben LEDs, 75Ohm für die Weissen LEDs)
-  * LEDs (2 Gelbe / rundstrahlend, led1.de oder diffus , 4 Weisse)
+  * 2 gelbe 5mm LEDs: Warnlichter fürs Dach, rundstrahlend oder diffus z.b. von led1.de. Wenn keine verfügbar kann auch mit einem Drehmel ein Loch in die Linse gefräst werden.
+  * 4 Weisse als Scheinwerfer
 
 ## Zusammenbau
+
+### Vorbereitungen Arduino + ESP32 Libs + config
+
+Siehe: [btcontrol/btcontrol.ino](btcontrol/btcontrol.ino)
 
 ### Lokführer
 
@@ -67,7 +72,7 @@ Für das Motor Shield:
 * IO03 RX0
 * IO01 TX0
 * IO25 DAC1
-* IO16 RX2
+* IO16 RX2 -> Scheinwerfer hinten
 * IO23 
 * IO18 
 * IO35 ADC1_7
@@ -76,13 +81,34 @@ Für das Motor Shield:
 * IO39 ADC1_3
 
 3 Pin Header
-* IO15
-* IO33
-* IO32
+* IO15 -> Scheinwerfer vorne
+* IO33 -> Warnlicht1
+* IO32 -> Warnlicht2
 
 6 Pin Header:
-Nur Flash ROM Pins
+N/A, nur Flash ROM Pins
 
 ### Beleuchtung
 
-Nachdem wir mit Akkus fahren und LEDs nur ein Zehntel an Energie brauchen gegenüber einer Glühbirne würde ich alle Lämpchen gegen LEDs tauschen. 
+Nachdem wir mit Akkus fahren und LEDs nur ein Zehntel an Energie brauchen gegenüber einer Glühbirne würde ich alle Lämpchen gegen LEDs tauschen. Gelbe LEDs können wir direkt an den ESP32 hängen, aber für die Weissen brauchen wir auf jeden fall einen kleinen Verstärker:
+
+<img src="img_led_amp_sch.png" alt="Putzlok LED Verstärker Schaltung" width="300"/>
+
+Zuerst auf einer Lochrasterplatine (ich bevorzuge die durchkontaktieren) die Locher verzinnen, dann Rs + FETs mit einem kleinen Schraubenzieher fixieren und anlöten. Drei der Eingänge werden an den 3 Pin Header angelötet, #4 an einem Pin den wir in IO16 stecken, +5V ebenfalls mit Pin in +5V.
+
+<img src="img_led_amp.jpg" alt="Putzlok LED Verstärker Platine" width="300"/>
+
+Widerstände im Führerhaus Dach:
+* für die gelben LEDs 150 Ohm (bedrahtet oder SMD)
+* für die Weisse LED 68 Ohm
+
+<img src="img_led_dach.jpg" alt="Putzlok Dach Innenleben" width="300"/>
+
+Bei den LEDs natürlich immer auf die Polung achten. *Hint:* der grosse Topf in der LED ist Minus. 
+
+### Ergebnis
+
+<img src="img_putzlok_done.jpg" alt="Putzlok" width="300"/>
+
+
+
