@@ -32,19 +32,19 @@ Sry, der muss raus, kein Platz mehr für den Kollegen.
 Die 2 Akkus müssen in Serie geschalten werden damit wir 14V - 16V bekommen. Kabel (optional mit Schalter) anlöten, auf die Polung achten, und dann kommt die Patzerei:
 Stecker in die Akkus, obern Teil, dort wo der Stecker von den Akkus ist mit Klebeband abkleben (eventuell mit Vaseline noch einfetten???).
 
-<img src="img_akku.jpg" alt="Ikea Braunit & Pins" width="300"/>
+<img src="img_putz_akku.jpg" alt="Ikea Braunit & Pins" width="300"/>
 
 Das Polymorph Plastik mit kochendem Wasser erhitzen und drauf patzen damit der Stecker nicht mehr rausfallen kann.
 10 Minuten warten, die Akkus werden etwas mühsamer rausgehen da das Polymorph Plastik etwas geschrumpft ist.
 
-<img src="img_akku_done.jpg" alt="Ikea Braunit & Pins" width="300"/>
+<img src="img_putz_akku_done.jpg" alt="Ikea Braunit & Pins" width="300"/>
 
 
 ### ESP32 + Motor Shield
 
 Software übers Android Studio einspielen, eh klar. Zusammenstecken ist soweit auch klar. Aber wichtig: vom Motor Shield den +5V pin *NICHT* einstecken!!! Es funktioniert sonst das WLAN so gut wie nicht !!!
 
-<img src="img_espduino_motorshield.jpg" alt="Ikea Braunit & Pins" width="300"/>
+<img src="img_putz_espduino_motorshield.jpg" alt="Ikea Braunit & Pins" width="300"/>
 
 Optional: grössere WLAN Antenne anlöten (fummelig)
 
@@ -92,23 +92,23 @@ N/A, nur Flash ROM Pins
 
 Nachdem wir mit Akkus fahren und LEDs nur ein Zehntel an Energie brauchen gegenüber einer Glühbirne würde ich alle Lämpchen gegen LEDs tauschen. Gelbe LEDs können wir direkt an den ESP32 hängen, aber für die Weissen brauchen wir auf jeden fall einen kleinen Verstärker:
 
-<img src="img_led_amp_sch.png" alt="Putzlok LED Verstärker Schaltung" width="300"/>
+<img src="img_putz_led_amp_sch.png" alt="Putzlok LED Verstärker Schaltung" width="300"/>
 
 Zuerst auf einer Lochrasterplatine (ich bevorzuge die durchkontaktieren) die Locher verzinnen, dann Rs + FETs mit einem kleinen Schraubenzieher fixieren und anlöten. Drei der Eingänge werden an den 3 Pin Header angelötet, #4 an einem Pin den wir in IO16 stecken, +5V ebenfalls mit Pin in +5V.
 
-<img src="img_led_amp.jpg" alt="Putzlok LED Verstärker Platine" width="300"/>
+<img src="img_putz_led_amp.jpg" alt="Putzlok LED Verstärker Platine" width="300"/>
 
 Widerstände im Führerhaus Dach:
 * für die gelben LEDs 150 Ohm (bedrahtet oder SMD)
 * für die Weisse LED 68 Ohm
 
-<img src="img_led_dach.jpg" alt="Putzlok Dach Innenleben" width="300"/>
+<img src="img_putz_led_dach.jpg" alt="Putzlok Dach Innenleben" width="300"/>
 
 Bei den LEDs natürlich immer auf die Polung achten. *Hint:* der grosse Topf in der LED ist Minus. 
 
 ### Ergebnis
 
-<img src="img_putzlok_done.jpg" alt="Putzlok" width="300"/>
+<img src="img_putz_done.jpg" alt="Putzlok" width="300"/>
 
 
 
