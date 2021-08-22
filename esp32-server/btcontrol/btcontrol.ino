@@ -2,6 +2,9 @@
   esp32-server btcontrol ESP32 Arduino sketch
 
   Instructions:
+  - setup Arduino + ESP32 support (and test it with a simple led bink + wifi sample)
+    Modify hardware/espressif/esp32/tools/sdk/include/config/sdkconfig.h:
+       set CONFIG_LWIP_MAX_SOCKETS to 20
   - creae config.h with (or copy config.h.sample)
       #define wifi_ssid "wifiname"
       #define wifi_password (***password must be at least 8 characters ***) "password"
@@ -147,10 +150,12 @@ void setup(void)
         NOTICEF("Setting Access Point ssid:%s password:%s", wifi_ssid, wifi_password);
     }
     WiFi.persistent(false);
-    // WiFi.mode(WIFI_AP);
+    // WiFi.mode(WIFI_AP); // 20210627: softAP setzt das, nicht notwendig
     
 //    Serial.println("esp_wifi_set_protocol()"); Serial.flush(); delay(200);
-// mit LR wirds von normalen geräten nicht mehr gefunden
+// mit LR wirds von normalen Geräten nicht mehr gefunden
+// 20210627: ich finde keine Möglichkeit 802.11n beacon + LR damit ein handy auch verwendet werden kann
+// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/wifi.html
 /*
 //     if(esp_wifi_set_protocol( WIFI_IF_AP, WIFI_PROTOCOL_11B| WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_LR ) != ESP_OK ) {
     if(esp_wifi_set_protocol( WIFI_IF_AP, WIFI_PROTOCOL_11B| WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N ) != ESP_OK ) {
@@ -158,7 +163,7 @@ void setup(void)
     }
     Serial.println("esp_wifi_set_protocol() done");
   */  
-    //delay(2000); // VERY IMPORTANT  https://github.com/espressif/arduino-esp32/issues/2025
+    //delay(2000); // VERY IMPORTANT  https://github.com/espressif/arduino-esp32/issues/2025 --- 20210627: nicht notwendig
     WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
     // bool softAP(const char* ssid, const char* passphrase = NULL, int channel = 1, int ssid_hidden = 0, int max_connection = 4);
     WiFi.softAP(wifi_ssid, wifi_password);
@@ -250,9 +255,6 @@ void setup(void)
     // Add service to MDNS-SD
     MDNS.addService("_btcontrol", "_tcp", 3030);
 
-    hardware=new ESP32PWM(); //muss nach wifi connect sein wegen RESET_INFO_PIN
-    DEBUGF("init monstershield done");
-
     Serial.println("loading message layouts");
     messageLayouts.load();
     Serial.println("loading message layouts - done");
@@ -260,6 +262,10 @@ void setup(void)
     Serial.println("loading lokdef");
     readLokdef();
     Serial.println("loading lokdef done");
+
+    DEBUGF("init hardware");
+    hardware=new ESP32PWM(); //muss nach wifi connect sein wegen RESET_INFO_PIN, muss nach readLokdef sein
+    DEBUGF("init hardware done");
 
     // Start TCP server
     BTServer.begin();
@@ -422,6 +428,10 @@ void loop(void)
     Serial.print("/");
     Serial.println(ESP.getMaxAllocHeap());
 */
+    if(hardware) {
+      ESP32PWM *esp32pwm=(ESP32PWM *) hardware;
+      esp32pwm->loop();
+    }
     // Check if a client has connected
     WiFiClient client = BTServer.available();
     if (!client) {
