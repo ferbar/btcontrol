@@ -9,7 +9,7 @@ Kurze Docu zum Umbau einer LGB Putzlok in eine Akku Lok mit einem ESP32
 * VNH5019 Motor Shield
 * 2* Ikea Braunit Akku Packs
 * Pins für die Akkus (aliexpress: https://de.aliexpress.com/item/4000332107587.html?spm=a2g0s.9042311.0.0.27424c4dFLLeEG 10 Pairs Pitch 2.5 mm 4 Positions Female Blade Receptacle 5.8 mm Male Header Battery Connector Right Angle Through Holes 7A /pin)
-* Polymorph Plastik kugerln
+* Polymorph Plastik Kugerln
 * Kleinzeug für die Beleuchtung
   * Lochrasterplatine
   * FETs (z.B. irfml8244)
