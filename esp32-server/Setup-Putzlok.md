@@ -15,7 +15,7 @@ Kurze Docu zum Umbau einer LGB Putzlok in eine Akku Lok mit einem ESP32
   * FETs (z.B. irfml8244)
   * Widerstände (smd 100Ohm, 150 Ohm für die gelben LEDs, 75Ohm für die Weissen LEDs)
   * 2 gelbe 5mm LEDs: Warnlichter fürs Dach, rundstrahlend oder diffus z.b. von led1.de. Wenn keine verfügbar kann auch mit einem Drehmel ein Loch in die Linse gefräst werden.
-  * 4 Weisse als Scheinwerfer
+  * 4 Weisse als Scheinwerfer (3mm)
 
 ## Zusammenbau
 
@@ -100,9 +100,13 @@ Zuerst auf einer Lochrasterplatine (ich bevorzuge die durchkontaktieren) die Loc
 
 Widerstände im Führerhaus Dach:
 * für die gelben LEDs 150 Ohm (bedrahtet oder SMD)
-* für die Weisse LED 68 Ohm
+* für die Weisse LED 68 Ohm, Drähte 15mm lang lassen
 
 <img src="img_putz_led_dach.jpg" alt="Putzlok Dach Innenleben" width="300"/>
+
+An den eingezeichneten Stellen die Leiterbahnen durchtrennen und die 150 Ohm R für die gelben LEDs einbauen, für die Weisse der 68 Ohm R.
+
+
 
 Bei den LEDs natürlich immer auf die Polung achten. *Hint:* der grosse Topf in der LED ist Minus. 
 
