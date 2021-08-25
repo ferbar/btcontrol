@@ -48,7 +48,7 @@ Software übers Android Studio einspielen, eh klar. Zusammenstecken ist soweit a
 
 Optional: grössere WLAN Antenne anlöten (fummelig)
 
-### Pinbelegung
+### Pinbelegung ESP32
 
 Für das Motor Shield:
 
