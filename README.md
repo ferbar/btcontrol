@@ -8,7 +8,7 @@ Diese Software ist meine private Spielerei, es sind jedoch alle herzlich willkom
 Project home: https://github.com/ferbar/btcontrol/
 
 ## bluetoothserver
-Vermittlungsstelle bluetooth/Wlan -> Hardware
+Vermittlungsstelle Bluetooth/Wlan -> Hardware
 Unterstütze Hardware:
 * SRCPD (mit MERG - Booster)
 * Raspberry PI PWM oder mit einer USB Platine
@@ -29,6 +29,9 @@ Die App ist unter /dist/btcontroll.jar
 
 ### midptestenv
 Emulator um MIDP Programme am PC rennen zu lassen (zum Testen ganz nett, hat aber bugs)
+
+## ESP32 Lok - Elektronik
+Für Akku Loks mit einem ESP32, siehe [esp32-server](esp32-server)
 
 ## NB1A_partlist.txt
 Partlist für den http://merg.co.uk - booster
