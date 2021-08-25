@@ -98,6 +98,8 @@ Zuerst auf einer Lochrasterplatine (ich bevorzuge die durchkontaktieren) die Loc
 
 <img src="img_putz_led_amp.jpg" alt="Putzlok LED Verstärker Platine" width="300"/>
 
+Einen großen Schrumpfschlauch drüber und die Kabel, optional mit Dupont Stecker verlöten
+
 Widerstände im Führerhaus Dach:
 * für die gelben LEDs 150 Ohm (bedrahtet oder SMD)
 * für die Weisse LED 68 Ohm, Drähte 15mm lang lassen
@@ -115,4 +117,6 @@ Bei den LEDs natürlich immer auf die Polung achten. *Hint:* der grosse Topf in 
 <img src="img_putz_done.jpg" alt="Putzlok" width="300"/>
 
 
-
+### Offen
+* haben die Ikea Akkus einen Tiefentladeschutz?
+* Akkuladestand messen, an die Fernsteuerung melden, Startgeschwindigkeit abhängig von der Akkuspannung
