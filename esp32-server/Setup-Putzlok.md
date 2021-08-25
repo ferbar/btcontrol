@@ -42,7 +42,7 @@ Das Polymorph Plastik mit kochendem Wasser erhitzen und drauf patzen damit der S
 
 ### ESP32 + Motor Shield
 
-Software übers Android Studio einspielen, eh klar. Zusammenstecken ist soweit auch klar. Aber wichtig: vom Motor Shield den +5V pin *NICHT* einstecken!!! Es funktioniert sonst das WLAN so gut wie nicht !!!
+Software übers Android Studio einspielen, eh klar. Zusammenstecken ist soweit auch klar. Aber wichtig: vom Motor Shield den +5V pin *NICHT* einstecken!!! Es funktioniert sonst das WLAN so gut wie nicht !!! GPIO16 wird für _Scheinwerfer hinten_ verwendet, daher ebenfalls nicht reinstecken (wird mit einem Pin zur Verstärkerplatine gehen)
 
 <img src="img_putz_espduino_motorshield.jpg" alt="Ikea Braunit & Pins" width="300"/>
 
