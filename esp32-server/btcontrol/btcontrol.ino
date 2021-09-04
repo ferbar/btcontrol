@@ -10,7 +10,7 @@
       #define wifi_password (***password must be at least 8 characters ***) "password"
       #define lok_name "esp32-lok"
       #define SOFTAP (softap or client wifi)
-      #define CHINA_MONSTER_SHIELD ---or--- KEYES_SHIELD ---or--- DRV8871
+      #define CHINA_MONSTER_SHIELD ---or--- VNH5019_DUAL_SHIELD ---or--- DRV8871
       
     optionally define SOFTAP
     optionally define SOUND FILES

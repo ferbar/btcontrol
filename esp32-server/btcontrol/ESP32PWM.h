@@ -1,5 +1,6 @@
 #include "USBPlatine.h"
 #include "config.h"
+#include "lokdef.h"
 
 
 class ESP32PWM : public USBPlatine {
@@ -10,10 +11,12 @@ public:
 	virtual void setPWM(int f_speed);
 	virtual void setDir(unsigned char dir);
 	// brauch ma da ned:
-	virtual void commit() {};
+	virtual void commit();
 	virtual void fullstop(bool stopAll, bool emergencyStop);
   virtual void setFunction(int nFunc, bool *func);
   int sendPOM(int addr, int cv, int value);
+
+  void loop();
   
 private:
 	void init(int devnr);
@@ -26,12 +29,15 @@ private:
 	int motorFullSpeed;
   unsigned int ledToggle;
   bool horn=false;
-#ifdef HEADLIGHT_PIN
+#ifdef HEADLIGHT_1_PIN
   bool headlight=false;
 #endif
 #ifdef PUTZLOK
   bool doPutz=false;
 #endif
+  int nFunc;
+  bool currentFunc[MAX_NFUNC];
+  bool changedDir=false;
 };
 
 #define BRAKEVCC 0

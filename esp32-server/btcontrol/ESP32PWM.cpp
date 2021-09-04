@@ -27,15 +27,15 @@ int enpin[MOTOR_OUTPUTS] = {2, 4}; // open drain output vom VNH2SP30, 2 hat eine
 #define MOTOR_FREQUENCY 16000
 #define MOTOR_IN_BRAKE LOW
 
-#elif defined KEYES_SHIELD
-// =============================================================================================================================== KEYES VNH5019 shield
+#elif defined VNH5019_DUAL_SHIELD
+// =============================================================================================================================== Pololu / Aliexpress dual VNH5019 shield
 #define MOTOR_OUTPUTS 2
 int inApin[MOTOR_OUTPUTS] = {26, 14}; // INA: Clockwise Direction Motor0 and Motor1 (Check:"1.2 Hardware Monster Motor Shield").
 int inBpin[MOTOR_OUTPUTS] = {17, 12}; // INB: Counterlockwise Direction Motor0 and Motor1 (Check: "1.2 Hardware Monster Motor Shield").
-int pwmpin[MOTOR_OUTPUTS] = {13, 05}; // PWM's input
-int cspin[MOTOR_OUTPUTS] = {02, 04};  // Current's sensor input !!! ADC2 nicht mit Wlan verwendbar !!!
+int pwmpin[MOTOR_OUTPUTS] = {13, 5}; // PWM's input
+int cspin[MOTOR_OUTPUTS] = {2, 4};  // Current's sensor input !!! ADC2 nicht mit Wlan verwendbar !!!
 
-int enpin[MOTOR_OUTPUTS] = {27, 23}; // open drain output vom VNH5019, board verbindet en/diag A+B,
+int enpin[MOTOR_OUTPUTS] = {27, 19}; // open drain output vom VNH5019, board verbindet en/diag A+B,
 // The DIAGA/ENA or DIAGB/ENB, when connected to an external pull-up resistor, enable one leg of the bridge. They also provide a feedback digital diagnostic signal.
 
 
@@ -162,7 +162,12 @@ delay(100);
 /**
  * wird mit new im btcontrol::setup() gestartet
  */
-ESP32PWM::ESP32PWM() : USBPlatine(false), dir(0), pwm(0), motorStart(MOTOR_START), motorFullSpeed(255), ledToggle(0) {
+ESP32PWM::ESP32PWM() : USBPlatine(false), dir(0), pwm(0), motorStart(MOTOR_START), motorFullSpeed(255), ledToggle(0), nFunc(0) {
+  this->currentFunc[0]=1; // F0 beim booten ein
+  for(int i=1; i < MAX_NFUNC; i++) {
+    this->currentFunc[i]=0;
+  }
+
 #ifdef LOLIN_I2C_MOTOR_SHIELD
 //   DEBUGF("start i2c scan");
 //   i2c_scan();
@@ -215,15 +220,47 @@ ESP32PWM::ESP32PWM() : USBPlatine(false), dir(0), pwm(0), motorStart(MOTOR_START
 #ifdef INFO_LED_PIN
   pinMode(INFO_LED_PIN, OUTPUT);
 #endif
-#ifdef HEADLIGHT_PIN
+#ifdef HEADLIGHT_1_PIN
   ledcSetup(2, 5000, 8);
-  ledcAttachPin(HEADLIGHT_PIN, 2);
+  ledcAttachPin(HEADLIGHT_1_PIN, 2);
 #endif
+#ifdef HEADLIGHT_2_PIN
+  ledcSetup(3, 5000, 8);
+  ledcAttachPin(HEADLIGHT_2_PIN, 3);
+#endif
+#ifdef PUTZLOK_BLINK_1_PIN
+  pinMode(PUTZLOK_BLINK_1_PIN, OUTPUT);
+#endif
+#ifdef PUTZLOK_BLINK_2_PIN
+  pinMode(PUTZLOK_BLINK_2_PIN, OUTPUT);
+#endif
+
+#warning ------------------------------- gut ???????????????????????????????????????ß
+  this->sendLoco(0, false);
 }
 
 ESP32PWM::~ESP32PWM() {
 	fullstop(true, true);
 }
+
+void ESP32PWM::loop() {
+#ifdef PUTZLOK
+   static bool putzBlink=false;
+   static long last=0;
+   if( last + 1000 < millis() ) {
+     if(this->doPutz) {
+       digitalWrite(PUTZLOK_BLINK_1_PIN,putzBlink);
+       digitalWrite(PUTZLOK_BLINK_2_PIN,!putzBlink);
+       putzBlink=!putzBlink;
+     } else {
+       digitalWrite(PUTZLOK_BLINK_1_PIN,0);
+       digitalWrite(PUTZLOK_BLINK_2_PIN,0);
+     }
+     last=millis();
+   }
+#endif
+}
+
 
 void ESP32PWM::setPWM(int f_speed) {
   long start=millis();
@@ -248,10 +285,11 @@ void ESP32PWM::setPWM(int f_speed) {
 	ledcWrite(MOTOR_NR, this->pwm);
 #ifdef PUTZLOK
 #if MOTOR_OUTPUTS == 2
-   if(this->doPutz)
+   if(this->doPutz) {
      ledcWrite(1, this->pwm);
-   else
+   } else {
      ledcWrite(1, this->pwm/3);
+   }
 #else
    #warning Puttzlok braucht 2 Motor outputs
 #endif // outputs
@@ -280,6 +318,7 @@ void ESP32PWM::setDir(unsigned char dir) {
   long start=millis();
   // abrubpter richtungs wechsel?
   if(this->dir != dir) {
+    this->changedDir=true;
     this->fullstop(true, true);
   }
   this->dir=dir;
@@ -318,26 +357,16 @@ void ESP32PWM::fullstop(bool stopAll, bool emergencyStop) {
 #endif
   lokdef[0].currspeed=0;
 }
-
 void ESP32PWM::setFunction(int nFunc, bool *func) {
-// Print func values:
-    Serial.print("=================setFunction ");
-    for(int i=0; i < nFunc; i++) {
-      Serial.printf("[%d]=%d, ",i, func[i]);
-    }
-    Serial.println("~~~~~~~~~~~~~~~~~~~~~");
+  DEBUGF("=================setFunction ");
 
+  this->nFunc=nFunc;
+  memcpy(&this->currentFunc, func, sizeof(this->currentFunc));
+  
 #ifdef HAVE_SOUND
     Audio.startPlayFuncSound();
 #endif
   if(nFunc > 0 ) {
-#ifdef HEADLIGHT_PIN
-    if(this->headlight != func[0]) {
-      printf("set LEDC headlight %d\n", func[0]);
-      ledcWrite(2, func[0] ? HEADLIGHT_PWM_DUTY : 0);
-      this->headlight = func[0];
-    }
-#endif
 #ifdef PUTZLOK
   // Putzlok ein/aus ist immer auf F3
    if(nFunc > 3 ) {
@@ -354,6 +383,38 @@ void ESP32PWM::setFunction(int nFunc, bool *func) {
    }
 #endif
   }
+}
+
+void ESP32PWM::commit() {
+// Print func values:
+  DEBUGF("=================commit ");
+    for(int i=0; i < nFunc; i++) {
+      Serial.printf("[%d]=%d, ",i, this->currentFunc[i]);
+    }
+    Serial.println("~~~~~~~~~~~~~~~~~~~~~");
+
+  if(nFunc > 0 ) {
+    // ================== headlight abhängig von setFunc + setDir
+#ifdef HEADLIGHT_1_PIN
+    if(this->headlight != this->currentFunc[0] || this->changedDir) {
+      DEBUGF("set LEDC headlight %d\n", this->currentFunc[0]);
+#ifdef HEADLIGHT_2_PIN
+      DEBUGF("********************** set headlight dir=%d, func[0]=%d pins: (%d %d)", this->dir, this->currentFunc[0], HEADLIGHT_1_PIN, HEADLIGHT_2_PIN);
+      if(this->dir) {
+        ledcWrite(2, this->currentFunc[0] ? HEADLIGHT_1_PWM_DUTY : 0);
+        ledcWrite(3, 0);
+      } else {
+        ledcWrite(2, 0);
+        ledcWrite(3, this->currentFunc[0] ? HEADLIGHT_2_PWM_DUTY : 0);
+      }
+#else
+      ledcWrite(2, func[0] ? HEADLIGHT_1_PWM_DUTY : 0);
+#endif
+      this->headlight = this->currentFunc[0];
+    }
+#endif
+  }
+  this->changedDir=false;
 }
 
 int ESP32PWM::sendPOM(int addr, int cv, int value) {
