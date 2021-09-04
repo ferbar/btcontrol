@@ -1,4 +1,6 @@
 #define lok_name "esp32-playmobil"
+#include <config-wifi.h>
+// ======= Put you wifi config in config-wifi.h
 #if false
 // dev-mode, connect to your AP
 // password for wifi client
@@ -12,6 +14,7 @@
   // SOFTAP => create own wifi
   #define SOFTAP
 #endif
+// ======== end
 
 // enable update OTA
 #define OTA_UPDATE
