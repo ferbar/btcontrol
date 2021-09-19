@@ -65,7 +65,7 @@ int USBPlatine::sendPOM(int addr, int cv, int value) {
 						return 1;
 					} else {
 				#endif
-						return 0;
+						return -1;
 				#ifdef HAVE_ALSA
 					}
 				#endif

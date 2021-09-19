@@ -13,6 +13,7 @@ public:
 	virtual void pwrOff()=0;
 	virtual bool getPowerState()=0;
 
+	// @return: -1 => Fehler, 0..255 current CV Value
 	virtual int sendPOM(int addr, int cv, int value)=0;
 	virtual int sendPOMBit(int addr, int cv, int bitNr, bool value)=0;
 };
