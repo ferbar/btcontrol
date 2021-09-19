@@ -78,7 +78,7 @@ SRCP::SRCP()
 		throw std::runtime_error(utils::format("error creating socket (%s)", strerror(errno)));
 	}
 	if ( connect(so,  (struct sockaddr *)&socketAddr, sizeof(socketAddr))<0  ) {
-		throw std::runtime_error(utils::format("Daemon srcpd not found on host %s on port %d.\n", cfg_hostname, cfg_port));
+		throw std::runtime_error(utils::format("Daemon srcpd not found on host %s on port %d.", cfg_hostname, cfg_port));
 	}
 
 	memset(servermsg,0,SERVMSGLEN);

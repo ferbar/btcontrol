@@ -12,7 +12,7 @@
 #include "utils.h"
 #include "Thread.h"
 
-static const char *TAG="THREAD";
+#define TAG "THREAD"
 
 void *Thread::startupThread(void *ptr) {
 	NOTICEF("Thread::startupThread() ========================================");

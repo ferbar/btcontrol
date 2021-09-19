@@ -36,7 +36,7 @@
 
 #include "utils.h"
 
-static const char *TAG="CommThread";
+#define TAG "CommThread"
 
 void CommThread::sendMessage(const FBTCtlMessage &msg)
 {

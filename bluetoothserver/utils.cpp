@@ -375,7 +375,7 @@ void utils::Log::init(bool softAP) {
 #endif
 }
 
-void utils::Log::printf(const char *tag, int level, const char *file, int line, const char *fmt, ...) {
+void utils::Log::printf(int level, const char *file, int line, const char *fmt, ...) {
 #ifdef ESP_PLATFORM
 	Serial.printf("%d: ", utils::getThreadClientID());
 	va_list args;
@@ -384,7 +384,12 @@ void utils::Log::printf(const char *tag, int level, const char *file, int line, 
 	vasprintf(&data, fmt, args);
 	Serial.print(data);
 #ifdef SYSLOG_SERVER
-  if(!syslog.log(LOG_INFO, data)) {
+  int l=LOG_DEBUG;
+  if(level == LEVEL_NOTICE)
+    l=LOG_NOTICE;
+  else if(level == LEVEL_ERROR)
+    l=LOG_ERR;
+  if(!syslog.log(l, data)) {
     // Serial.println("Error sending data to syslog server!");
   }
 #endif

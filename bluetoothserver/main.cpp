@@ -92,14 +92,14 @@ void initPlatine()
 {
 #ifdef HAVE_LIBUSB
 	assert(!hardware);
-	printf("init platine\n");
+	DEBUGF("init platine");
 	try {
 		hardware=new K8055(1,cfg_debug);
 		// FIXME:
 		strncpy(lokdef[0].name,"K8055", sizeof(lokdef[0].name));
 		lokdef[1].addr=0;
 	} catch(std::exception &errormsg) {
-		printf("K8055: error: %s\n",errormsg.what());
+		ERRORF("K8055: error: %s",errormsg.what());
 	}
 	try {
 		hardware=new USBDigispark(1,cfg_debug);
@@ -107,9 +107,9 @@ void initPlatine()
 		//strncpy(lokdef[0].name,"USBDigispark", sizeof(lokdef[0].name));
 		lokdef[1].addr=0;
 	} catch(std::exception &errormsg) {
-		printf("USBDigispark init: error: %s\n",errormsg.what());
+		ERRORF("USBDigispark init: error: %s",errormsg.what());
 	}
-	printf("... done\n");
+	DEBUGF("... done");
 #endif
 #ifdef HAVE_RASPI_WIRINGPI
 	if(!hardware) {
@@ -119,7 +119,7 @@ void initPlatine()
 			//strncpy(lokdef[0].name,"RaspiPWM", sizeof(lokdef[0].name));
 			lokdef[1].addr=0;
 		} catch(std::exception &errormsg) {
-			printf("RaspiPWM: error: %s\n",errormsg.what());
+			ERRORF("RaspiPWM: error: %s",errormsg.what());
 		}
 	}
 #endif
@@ -127,7 +127,7 @@ void initPlatine()
 	if(hardware) {
 		std::string samplerate=config.get("sound.samplerate");
 		if(samplerate != NOT_SET) {
-			printf("new samplerate:%s\n",samplerate.c_str());
+			NOTICEF("new samplerate:%s",samplerate.c_str());
 			Sound::sample_rate=utils::stoi(samplerate);
 		}
 
@@ -145,7 +145,7 @@ void initPlatine()
 
 void deletePlatine()
 {
-	printf("delete Platine\n");
+	NOTICEF("delete Platine");
 	delete hardware;
 }
 
@@ -259,8 +259,8 @@ int main(int argc, char *argv[])
 	try {
 		config.init("conf/btserver.conf");
 		messageLayouts.load();
-		printf("---------------protohash = %d\n",messageLayouts.protocolHash);
-		printf("TCP RX Timeout = %d\n",cfg_tcpTimeout);
+		DEBUGF("---------------protohash = %d",messageLayouts.protocolHash);
+		DEBUGF("TCP RX Timeout = %d",cfg_tcpTimeout);
 /*
 		FBTCtlMessage test(messageTypeID("PING_REPLY"));
 		test["info"][0]["addr"]=1;
@@ -285,10 +285,10 @@ int main(int argc, char *argv[])
 		exit(1);
 	*/
 	} catch(const char *e) {
-		printf("exception %s\n",e);
+		ERRORF("exception %s",e);
 		exit(1);
 	} catch(std::runtime_error &e) {
-		printf("exception %s\n",e.what());
+		ERRORF("exception %s",e.what());
 	}
 
 	if( ! readLokdef() ) {
@@ -307,7 +307,7 @@ int main(int argc, char *argv[])
 	sigaction(SIGINT,&sa,NULL);
 	sigaction(SIGTERM,&sa,NULL);
 #endif
-	printf("btserver starting...\n");
+	NOTICEF("btserver starting...");
 
 #ifdef INCL_X11
 	if(!cfg_X11) {
@@ -320,8 +320,8 @@ int main(int argc, char *argv[])
 
 		if(!hardware) {
 			try {
+				DEBUGF("init SRCP");
 				hardware=new SRCP_Hardware();
-				printf("init erddcd\n");
 			} catch(std::runtime_error &e) {
 				fprintf(stderr,"error connecting to erddcd (%s)\n", e.what());
 				
@@ -338,7 +338,7 @@ int main(int argc, char *argv[])
 	try {
 		server.run();
 	} catch(std::runtime_error &e) {
-		printf("exception: %s\n", e.what());
+		ERRORF("exception: %s", e.what());
 	}
 
 	server.waitExit();

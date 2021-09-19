@@ -113,8 +113,8 @@ namespace utils
 
 	class Log {
 	public:
-		void printf(const char *tag, int level, const char *file, int line, const char *fmt, ...)
-			__attribute__ ((format (printf, 6, 7)));
+		void printf(int level, const char *file, int line, const char *fmt, ...)
+			__attribute__ ((format (printf, 5, 6)));
 		static const int LEVEL_DEBUG=1;
 		static const int LEVEL_NOTICE=2;
 		static const int LEVEL_ERROR=3;
@@ -125,14 +125,15 @@ namespace utils
 };
 
 // hint ## => ... kann auch leer sein! -> https://gcc.gnu.org/onlinedocs/cpp/Variadic-Macros.html
+#define LOG_SEP ": "
 #ifdef NODEBUG
 #define DEBUGF(fmt, ...)
 #define NOTICEF(fmt, ...)
 #define ERRORF(fmt, ...)
 #else
-#define DEBUGF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_DEBUG, __FILE__, __LINE__, ANSI_GREEN1 fmt ANSI_DEFAULT NEWLINE, ##__VA_ARGS__ )
-#define NOTICEF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_NOTICE, __FILE__, __LINE__, ANSI_YELLOW fmt ANSI_DEFAULT NEWLINE, ##__VA_ARGS__ )
-#define ERRORF(fmt, ...) utils::log.printf(TAG, utils::Log::LEVEL_ERROR, __FILE__, __LINE__, ANSI_RED2 fmt ANSI_DEFAULT NEWLINE, ##__VA_ARGS__ )
+#define DEBUGF(fmt, ...) utils::log.printf(utils::Log::LEVEL_DEBUG, __FILE__, __LINE__, TAG LOG_SEP ANSI_GREEN1 fmt ANSI_DEFAULT NEWLINE, ##__VA_ARGS__ )
+#define NOTICEF(fmt, ...) utils::log.printf(utils::Log::LEVEL_NOTICE, __FILE__, __LINE__, TAG LOG_SEP ANSI_YELLOW fmt ANSI_DEFAULT NEWLINE, ##__VA_ARGS__ )
+#define ERRORF(fmt, ...) utils::log.printf(utils::Log::LEVEL_ERROR, __FILE__, __LINE__, TAG LOG_SEP ANSI_RED2 fmt ANSI_DEFAULT NEWLINE, ##__VA_ARGS__ )
 #endif
 
 // arduino / wiring pi / utils.cpp

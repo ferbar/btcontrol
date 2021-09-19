@@ -43,7 +43,7 @@
 
 #include "utils.h"
 
-static const char *TAG="clientthread";
+#define TAG "clientthread"
 
 void ClientThread::setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus)
 {
@@ -118,7 +118,7 @@ void ClientThread::run()
 	}
 #endif
 	utils::setThreadClientID(this->clientID);
-	NOTICEF("%d:socket accepted sending welcome msg\n",this->clientID);
+	NOTICEF("%d:socket accepted sending welcome msg",this->clientID);
 	FBTCtlMessage heloReply(messageTypeID("HELO"));
 	heloReply["name"]="my bt server";
 	heloReply["version"]="0.9";
@@ -136,7 +136,7 @@ void ClientThread::run()
 	for(int i=0; i <= nLokdef; i++) { changedAddrIndex[i] = false; }
 
 
-	NOTICEF("%d:hello done, enter main loop\n",this->clientID);
+	NOTICEF("%d:hello done, enter main loop",this->clientID);
 	// int speed=0;
 	// int addr=3;
 // int sleepTime=0; -> velleman platine test
@@ -156,7 +156,7 @@ continue;
 		bool emergencyStop=false;
 
 		FBTCtlMessage cmd=this->readMessage();
-		long start=millis();
+		// long start=millis();
 		if(cfg_debug) {
 			DEBUGF("/%d: msg", this->msgNum);
 			cmd.dump();
@@ -453,17 +453,17 @@ continue;
 		// wegen X_MULTI könnten sich mehrere adressen geändert ham:
 		for(int i=0; i <= nLokdef; i++) {
 			if(changedAddrIndex[i]) {
-				DEBUGF("clientthread changed addr_index=%d time since message received: %ldms", i, millis()-start);
+				// DEBUGF("clientthread changed addr_index=%d time since message received: %ldms", i, millis()-start);
 				changedAddrIndex[i]=false;
 				int addr_index=i;
 				lokdef[addr_index].lastClientID = this->clientID;
 				hardware->sendLoco(addr_index, emergencyStop);
 			}
 		}
-		DEBUGF("processing message done in %ldms", millis()-start);
+		// DEBUGF("processing message done in %ldms", millis()-start);
 		msgNum++;
 	}
-	NOTICEF("%d:client exit\n",this->clientID);
+	NOTICEF("%d:client exit",this->clientID);
 }
 
 /**
