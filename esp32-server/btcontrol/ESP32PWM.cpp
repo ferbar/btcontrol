@@ -6,7 +6,7 @@
 #include "utils_esp32.h"
 #include "ESP32_MAS_Speed.h"
 
-static const char *TAG="ESP32PWM";
+#define TAG "ESP32PWM"
 
 // Pins for bridge1 and bridge2
 #ifdef CHINA_MONSTER_SHIELD
@@ -235,7 +235,7 @@ ESP32PWM::ESP32PWM() : USBPlatine(false), dir(0), pwm(0), motorStart(MOTOR_START
   pinMode(PUTZLOK_BLINK_2_PIN, OUTPUT);
 #endif
 
-#warning ------------------------------- gut ???????????????????????????????????????ß
+// func, dir, pwm, sound initen
   this->sendLoco(0, false);
 }
 
@@ -291,7 +291,7 @@ void ESP32PWM::setPWM(int f_speed) {
      ledcWrite(1, this->pwm/3);
    }
 #else
-   #warning Puttzlok braucht 2 Motor outputs
+   #error Puttzlok braucht 2 Motor outputs
 #endif // outputs
 #endif // Putzlok
 #else
@@ -389,15 +389,15 @@ void ESP32PWM::commit() {
 // Print func values:
   DEBUGF("=================commit ");
     for(int i=0; i < nFunc; i++) {
-      Serial.printf("[%d]=%d, ",i, this->currentFunc[i]);
+      DEBUGF("[%d]=%d, ",i, this->currentFunc[i]);
     }
-    Serial.println("~~~~~~~~~~~~~~~~~~~~~");
+    DEBUGF("~~~~~~~~~~~~~~~~~~~~~");
 
   if(nFunc > 0 ) {
     // ================== headlight abhängig von setFunc + setDir
 #ifdef HEADLIGHT_1_PIN
     if(this->headlight != this->currentFunc[0] || this->changedDir) {
-      DEBUGF("set LEDC headlight %d\n", this->currentFunc[0]);
+      DEBUGF("set LEDC headlight %d", this->currentFunc[0]);
 #ifdef HEADLIGHT_2_PIN
       DEBUGF("********************** set headlight dir=%d, func[0]=%d pins: (%d %d)", this->dir, this->currentFunc[0], HEADLIGHT_1_PIN, HEADLIGHT_2_PIN);
       if(this->dir) {
@@ -417,18 +417,54 @@ void ESP32PWM::commit() {
   this->changedDir=false;
 }
 
+
+void init_wifi();
+
 int ESP32PWM::sendPOM(int addr, int cv, int value) {
 
-        #ifdef HAVE_SOUND
-          if(cv==266) {
-              Audio.setVolume(value);
-            return 1;
-          } else {
-        #endif
-            return 0;
-        #ifdef HAVE_SOUND
-          }
-        #endif
+#ifdef HAVE_SOUND
+    if(cv==266) {
+        Audio.setVolume(value);
+        return 1;
+    }
+#endif
+#ifdef BAT_ADC_PIN1
+// ladestand in 1/255
+    if(cv==500) {
+        long readStart=millis();
+        int a=analogRead(BAT_ADC_PIN1); // => keine korrektur, wir messen einfach 12V und 16,4V
+        // a=b/2;
+        // b-=a;
+        // 5,7:1 R teiler => input u /5,7/3,3*4095 = adc wert
+        // input u = input adc/4095*5,7*3,3
+        // 100% == 8,2V == 255
+        // 0% == 6V == 0
+        DEBUGF("took %ld ms to read battery voltage, results: a:%d", millis() - readStart, a);
+        //int teiler=6;
+        //float uref=3.3;
+        int startV_ADC=BAT_ADC_MAX;
+        int endV_ADC=BAT_ADC_MIN;
+        int a_p=(a-endV_ADC)*255/(startV_ADC-endV_ADC);
+        if(a_p > 255) a_p = 255;
+        if(a_p < 0) a_p = 0;
+        // int b_p=(b-endV_ADC)*255/(startV_ADC-endV_ADC);
+        DEBUGF("############# Battery voltage: took %ld ms result:%d/255", millis() - readStart, a_p);
+        // return (a_p < b_p) ? ( a_p ) : ( b_p );
+        return a_p;
+    }
+#endif
+// wifi client/master switch
+    if(cv==510) {
+        DEBUGF("############# switch Wifi AP / client mode ###########################");
+        if(value >= 0) {
+          writeEEPROM(EEPROM_WIFI_AP_CLIENT, value);
+          init_wifi();
+          return value;
+        } else {
+          return readEEPROM(EEPROM_WIFI_AP_CLIENT);
+        }
+    }
+    return -1;
 }
 
 #ifdef MOTOR_OUTPUTS

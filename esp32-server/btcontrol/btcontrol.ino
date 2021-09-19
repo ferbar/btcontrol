@@ -6,13 +6,11 @@
     Modify hardware/espressif/esp32/tools/sdk/include/config/sdkconfig.h:
        set CONFIG_LWIP_MAX_SOCKETS to 20
   - creae config.h with (or copy config.h.sample)
-      #define wifi_ssid "wifiname"
-      #define wifi_password (***password must be at least 8 characters ***) "password"
+      #define wifi_ap_ssid "wifiname"
+      #define wifi_ap_password (***password must be at least 8 characters ***) "password"
       #define lok_name "esp32-lok"
-      #define SOFTAP (softap or client wifi)
       #define CHINA_MONSTER_SHIELD ---or--- VNH5019_DUAL_SHIELD ---or--- DRV8871
       
-    optionally define SOFTAP
     optionally define SOUND FILES
        -> upload SPIFFS with arduino-esp32fs-plugin
           F-F-1.raw F0.raw F0-F-1.raw F0-F1.raw F1.raw .... horn.raw
@@ -58,7 +56,7 @@
 #endif
 
 // https://github.com/espressif/arduino-esp32/blob/master/libraries/DNSServer/examples/CaptivePortal/CaptivePortal.ino
-#ifdef SOFTAP
+#ifdef wifi_ap_ssid
 
 // => haut irgendwas zam
  #define DNSSERVER
@@ -93,7 +91,7 @@ String responseHTML = ""
   "</body></html>";
 #endif
 
-static const char *TAG="main";
+#define TAG "main"
 
 Hardware *hardware=NULL;
 bool cfg_debug=false;
@@ -101,55 +99,131 @@ bool cfg_debug=false;
 // TCP server at port 80 will respond to HTTP requests
 WiFiServer BTServer(3030);
 
-void setup(void)
-{  
-    Serial.begin(115200);
-    NOTICEF("starting esp32 btcontrol version " __DATE__ " " __TIME__ "====================================");
-
-    // uint32_t realSize = ESP.getFlashChipRealSize();
-    uint32_t ideSize = ESP.getFlashChipSize();
-    FlashMode_t ideMode = ESP.getFlashChipMode();
-
-    Serial.printf("ChipRevision:   %02X\r\n", ESP.getChipRevision());
-    Serial.printf("SketchSize:     %0d\r\n", ESP.getSketchSize());
-    Serial.printf("FreeSketchSpace:%d\r\n", ESP.getFreeSketchSpace());
-
-    Serial.printf("Flash ide  size: %u bytes\r\n", ideSize);
-    Serial.printf("Flash ide speed: %u Hz\r\n", ESP.getFlashChipSpeed());
-    Serial.printf("Flash ide mode:  %s\r\n", (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN"));
-      
-        /* Print chip information */
-    esp_chip_info_t chip_info;
-    esp_chip_info(&chip_info);
-
-    printf("This is %s chip with %d CPU cores (%s) , WiFi%s%s, ",
-            CONFIG_IDF_TARGET,
-            chip_info.cores,
-            chip_info.model==CHIP_ESP32 ? "ESP32" :
-#if ESP_IDF_VERSION_MAJOR >= 4        
-            chip_info.model==CHIP_ESP32S2 ? "ESP32-S2" :
-#endif
-            "unknown",
-            (chip_info.features & CHIP_FEATURE_BT) ? "/BT" : "",
-            (chip_info.features & CHIP_FEATURE_BLE) ? "/BLE" : "");
-    printf("silicon revision %d, ", chip_info.revision);
-
-    printf("%dMB %s flash\n", spi_flash_get_chip_size() / (1024 * 1024),
-            (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
-    printf("ESP_IDF Version: %s\n", esp_get_idf_version());
-
-
+void init_wifi_start() {
 #ifdef RESET_INFO_PIN
     pinMode(RESET_INFO_PIN, OUTPUT);
 #endif
-#ifdef SOFTAP
+
+    WiFi.persistent(false);
+
+#ifdef DNSSERVER
+    DEBUGF("cleanup dnsserver");
+    dnsServer.stop();
+#endif
+#ifdef HTTPSERVER
+    DEBUGF("cleanup HTTPServer");
+    HTTPServer.end();
+#endif
+
+#ifdef wifi_ap_ssid
+    WiFi.enableAP(false);
+    WiFi.softAPdisconnect();
+#endif
+
+
+#ifdef OTA_UPDATE
+    DEBUGF("cleanup update OTA");
+    ArduinoOTA.end();
+#endif
+
+    DEBUGF("cleanup mdns");
+    MDNS.end();
+
+    DEBUGF("disconnect wifi");
+    WiFi.disconnect();
+
+    WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE);
+    WiFi.setHostname(lok_name);
+}
+
+void init_wifi_done(bool softAP) {
+#ifdef RESET_INFO_PIN
+    pinMode(RESET_INFO_PIN, INPUT);
+#endif
+
+    utils::log.init(softAP);
+    // Set up mDNS responder:
+    // - first argument is the domain name, in this example
+    //   the fully-qualified domain name is "esp8266.local"
+    // - second argument is the IP address to advertise
+    //   we send our IP address on the WiFi network
+    NOTICEF("Setting up MDNS responder. Hostname: %s", lok_name);
+    if (!MDNS.begin(lok_name)) {
+        ERRORF("Error setting up MDNS responder!");
+        while(1) {
+            delay(1000);
+        }
+    }
+
+    // Add service to MDNS-SD
+    MDNS.addService("_btcontrol", "_tcp", 3030);
+    DEBUGF("btcontrol MDNS started [%s]", lok_name);
+
+  
+#ifdef OTA_UPDATE
+  // Port defaults to 3232
+  // ArduinoOTA.setPort(3232);
+
+  // Hostname defaults to esp3232-[MAC]
+  // ArduinoOTA.setHostname("myesp32");
+
+  // No authentication by default
+  // ArduinoOTA.setPassword("admin");
+
+  // Password can be set with it's md5 value as well
+  // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
+  // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
+
+  NOTICEF("Setting up ArduinoOTA");
+  ArduinoOTA
+    .onStart([]() {
+      const char *type="unknown";
+      if (ArduinoOTA.getCommand() == U_FLASH)
+        type = "sketch";
+      else // U_SPIFFS
+        type = "filesystem";
+
+      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+      NOTICEF("Start updating %s", type);
+#ifdef HAVE_SOUND
+      Audio.stop();
+#endif
+    })
+    .onEnd([]() {
+      NOTICEF("Update done");
+    })
+    .onProgress([](unsigned int progress, unsigned int total) {
+      DEBUGF("Progress: %u%%", (progress / (total / 100)));
+    })
+    .onError([](ota_error_t error) {
+      const char *e="unknown";
+      if (error == OTA_AUTH_ERROR) e="Auth Failed";
+      else if (error == OTA_BEGIN_ERROR) e="Begin Failed";
+      else if (error == OTA_CONNECT_ERROR) e="Connect Failed";
+      else if (error == OTA_RECEIVE_ERROR) e="Receive Failed";
+      else if (error == OTA_END_ERROR) e="End Failed";
+      ERRORF("Error[%u]: %s", error, e);
+    });
+
+  // ArduinoOTA.begin startet sonst mdns mit default hostname
+  // ArduinoOTA.setHostname(lok_name);
+  ArduinoOTA.setMdnsEnabled(false);
+  ArduinoOTA.begin();
+  MDNS.enableArduino(3232, "");
+#endif
+
+}
+
+#ifdef wifi_ap_ssid
+void init_wifi_softap() {
+    init_wifi_start();
+    
     NOTICEF("Setting Access Point=====================================================");
-    if(strlen(wifi_password) < 8) {
+    if(strlen(wifi_ap_password) < 8) {
         ERRORF("ERROR: password < 8 characters, fallback to unencrypted");      
     } else {
-        NOTICEF("Setting Access Point ssid:%s password:%s", wifi_ssid, wifi_password);
+        NOTICEF("Setting Access Point ssid:%s password:%s", wifi_ap_ssid, wifi_ap_password);
     }
-    WiFi.persistent(false);
     // WiFi.mode(WIFI_AP); // 20210627: softAP setzt das, nicht notwendig
     
 //    Serial.println("esp_wifi_set_protocol()"); Serial.flush(); delay(200);
@@ -166,7 +240,7 @@ void setup(void)
     //delay(2000); // VERY IMPORTANT  https://github.com/espressif/arduino-esp32/issues/2025 --- 20210627: nicht notwendig
     WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
     // bool softAP(const char* ssid, const char* passphrase = NULL, int channel = 1, int ssid_hidden = 0, int max_connection = 4);
-    WiFi.softAP(wifi_ssid, wifi_password);
+    WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
     Serial.print("softAPmacAddress: ");
     Serial.println(WiFi.softAPmacAddress());
     IPAddress IP = WiFi.softAPIP();
@@ -183,7 +257,7 @@ void setup(void)
     // if DNSServer is started with "*" for domain name, it will reply with
     // provided IP to all DNS request
 #ifdef DNSSERVER
-        Serial.println("starting DNS server");
+        NOTICEF("starting DNS server");
         dnsServer.start(DNS_PORT, "*", apIP);
 #endif
 
@@ -191,13 +265,23 @@ void setup(void)
         NOTICEF("starting HTTP server");
         HTTPServer.begin();
 #endif
+    NOTICEF("IP address: %s",IP.toString().c_str());
 
-#else // SOFTAP
-    NOTICEF("connecting to wifi %s with mac:%s", wifi_ssid, WiFi.macAddress().c_str());
+    init_wifi_done(true);
+}
+#endif
+
+
+#ifdef wifi_client_ssid
+void init_wifi_client() {
+    init_wifi_start();
+
+    NOTICEF("connecting to wifi %s with mac:%s", wifi_client_ssid, WiFi.macAddress().c_str());
     RETRY_WIFI_CONNECT:
     // Connect to WiFi network
     int APConnectedWait=0;
-    WiFi.begin(wifi_ssid, wifi_password);
+    WiFi.persistent(false);
+    WiFi.begin(wifi_client_ssid, wifi_client_password);
 
     // Wait for connection
     while (WiFi.status() != WL_CONNECTED) {
@@ -231,37 +315,83 @@ void setup(void)
 #endif
     IPAddress IP = WiFi.localIP();
     long rssi = WiFi.RSSI();
-    NOTICEF("Connected to %s: %s, rssi: %ld", wifi_ssid, IP.toString().c_str(), rssi);
-#endif // else SOFTAP
-#ifdef RESET_INFO_PIN
-    pinMode(RESET_INFO_PIN, INPUT);
+    NOTICEF("Connected to %s IP: %s, rssi: %ld", wifi_client_ssid, IP.toString().c_str(), rssi);
+    
+    init_wifi_done(false);
+}
 #endif
-    Serial.print("IP address: ");
-    Serial.println(IP);
 
-    // Set up mDNS responder:
-    // - first argument is the domain name, in this example
-    //   the fully-qualified domain name is "esp8266.local"
-    // - second argument is the IP address to advertise
-    //   we send our IP address on the WiFi network
-    if (!MDNS.begin(lok_name)) {
-        DEBUGF("Error setting up MDNS responder!");
-        while(1) {
-            delay(1000);
-        }
+void init_wifi() {
+#if defined wifi_ap_ssid && defined wifi_client_ssid
+    uint8_t ap_client = readEEPROM(EEPROM_WIFI_AP_CLIENT);
+    DEBUGF("############# switch Wifi AP / client mode: %d ###########################", ap_client);
+
+    if(ap_client == 0) {
+      init_wifi_softap();
+    } else {
+      init_wifi_client();
     }
-    DEBUGF("btcontrol MDNS started [%s]", lok_name);
+#elif defined wifi_ap_ssid
+    init_wifi_softap();
 
-    // Add service to MDNS-SD
-    MDNS.addService("_btcontrol", "_tcp", 3030);
+#elif defined wifi_client_ssid
+    init_wifi_client();
 
-    Serial.println("loading message layouts");
+#else
+#error neither wifi_ap_ssid nor wifi_client_ssid defined!
+#endif
+
+}
+
+
+void setup(void)
+{
+    Serial.begin(115200);
+    NOTICEF("starting esp32 btcontrol version " __DATE__ " " __TIME__ "====================================");
+
+    // uint32_t realSize = ESP.getFlashChipRealSize();
+    uint32_t ideSize = ESP.getFlashChipSize();
+    FlashMode_t ideMode = ESP.getFlashChipMode();
+
+    Serial.printf("ChipRevision:   %02X\r\n", ESP.getChipRevision());
+    Serial.printf("SketchSize:     %0d\r\n", ESP.getSketchSize());
+    Serial.printf("FreeSketchSpace:%d\r\n", ESP.getFreeSketchSpace());
+
+    Serial.printf("Flash ide  size: %u bytes\r\n", ideSize);
+    Serial.printf("Flash ide speed: %u Hz\r\n", ESP.getFlashChipSpeed());
+    Serial.printf("Flash ide mode:  %s\r\n", (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN"));
+
+        /* Print chip information */
+    esp_chip_info_t chip_info;
+    esp_chip_info(&chip_info);
+
+    printf("This is %s chip with %d CPU cores (%s) , WiFi%s%s, ",
+            CONFIG_IDF_TARGET,
+            chip_info.cores,
+            chip_info.model==CHIP_ESP32 ? "ESP32" :
+#if ESP_IDF_VERSION_MAJOR >= 4        
+            chip_info.model==CHIP_ESP32S2 ? "ESP32-S2" :
+#endif
+            "unknown",
+            (chip_info.features & CHIP_FEATURE_BT) ? "/BT" : "",
+            (chip_info.features & CHIP_FEATURE_BLE) ? "/BLE" : "");
+    printf("silicon revision %d, ", chip_info.revision);
+
+    printf("%dMB %s flash\n", spi_flash_get_chip_size() / (1024 * 1024),
+            (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
+    printf("ESP_IDF Version: %s\n", esp_get_idf_version());
+
+
+
+    init_wifi();
+
+    NOTICEF("loading message layouts");
     messageLayouts.load();
-    Serial.println("loading message layouts - done");
+    DEBUGF("loading message layouts - done");
 
-    Serial.println("loading lokdef");
+    NOTICEF("loading lokdef");
     readLokdef();
-    Serial.println("loading lokdef done");
+    DEBUGF("loading lokdef done");
 
     DEBUGF("init hardware");
     hardware=new ESP32PWM(); //muss nach wifi connect sein wegen RESET_INFO_PIN, muss nach readLokdef sein
@@ -269,54 +399,8 @@ void setup(void)
 
     // Start TCP server
     BTServer.begin();
-    Serial.println("TCP server started");
+    NOTICEF("TCP server started");
 
-
-#ifdef OTA_UPDATE
-  // Port defaults to 3232
-  // ArduinoOTA.setPort(3232);
-
-  // Hostname defaults to esp3232-[MAC]
-  // ArduinoOTA.setHostname("myesp32");
-
-  // No authentication by default
-  // ArduinoOTA.setPassword("admin");
-
-  // Password can be set with it's md5 value as well
-  // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
-  // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
-
-  ArduinoOTA
-    .onStart([]() {
-      String type;
-      if (ArduinoOTA.getCommand() == U_FLASH)
-        type = "sketch";
-      else // U_SPIFFS
-        type = "filesystem";
-
-      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-      Serial.println("Start updating " + type);
-#ifdef HAVE_SOUND
-      Audio.stop();
-#endif
-    })
-    .onEnd([]() {
-      Serial.println("\nEnd");
-    })
-    .onProgress([](unsigned int progress, unsigned int total) {
-      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-    })
-    .onError([](ota_error_t error) {
-      Serial.printf("Error[%u]: ", error);
-      if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-      else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-      else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-      else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-      else if (error == OTA_END_ERROR) Serial.println("End Failed");
-    });
-
-  ArduinoOTA.begin();
-#endif
 }
 
 class StartupData {
@@ -327,16 +411,16 @@ public:
 // https://www.freertos.org/a00125.html
 int clientID_counter=1;
 void startClientThread(void *s) {
-    printf("==============client thread======================\n");
+    DEBUGF("==============client thread======================");
     int clientID=clientID_counter++;
     const char *taskname=pcTaskGetTaskName(NULL);
-    printf("task name: %s\n", taskname);
+    DEBUGF("task name: %s", taskname);
     utils::setThreadClientID(clientID);
 
     // utils::dumpBacktrace();
-    
-    printf("local storage: clientID: %d\n", utils::getThreadClientID());
-    printf("Free HEAP: %d",ESP.getFreeHeap());
+
+    DEBUGF("local storage: clientID: %d", utils::getThreadClientID());
+    DEBUGF("Free HEAP: %d",ESP.getFreeHeap());
     StartupData *startupData=(StartupData *) s;
     /*
     UBaseType_t uxTaskGetSystemState(
@@ -357,23 +441,23 @@ void startClientThread(void *s) {
         clientThread = new ClientThread(clientID, startupData->client);
         clientThread->run();
     } catch(const char *e) {
-        ERRORF("%d: exception %s - client thread killed\n", clientID, e);
+        ERRORF("%d: exception %s - client thread killed", clientID, e);
     } catch(std::RuntimeExceptionWithBacktrace &e) {
-        ERRORF("%d: Runtime Exception [%s] - client thread killed\n", clientID, e.what());
+        ERRORF("%d: Runtime Exception [%s] - client thread killed", clientID, e.what());
     } catch(std::exception &e) {
-        ERRORF("%d: exception %s - client thread killed\n", clientID, e.what());
+        ERRORF("%d: exception %s - client thread killed", clientID, e.what());
         /*
     } catch (abi::__forced_unwind&) {
         Serial.printf("%d: exception unwind\n");
         throw; */
     } catch (...) {
-        printf("%d: unknown exception\n", clientID);
+        ERRORF("%d: unknown exception", clientID);
     }
     if(clientThread) {
         delete(clientThread);
     }
     delete(startupData);
-    printf("%d: ============= client thread done =============\n", clientID);
+    NOTICEF("%d: ============= client thread done =============", clientID);
 #if not defined SOFTAP
     if(TCPClient::numClients == 0) {
         DEBUGF("enable wifi power saving");
@@ -391,7 +475,7 @@ void startClientThread(void *s) {
 
 #ifdef HTTPSERVER
 void handleHTTPRequest(Client &client) {
-    Serial.println("handleHTTPRequest");
+    NOTICEF("handleHTTPRequest");
     String currentLine = "";
     while (client.connected()) {
       Serial.println("handleHTTPRequest connected");
@@ -414,7 +498,7 @@ void handleHTTPRequest(Client &client) {
       }
     }
     // client.stop();
-    Serial.println("handleHTTPRequest done");
+    DEBUGF("handleHTTPRequest done");
 }
 #endif
 
@@ -449,8 +533,8 @@ void loop(void)
 #endif
         return;
     }
-    Serial.println("");
-    Serial.println("New client");
+    DEBUGF("");
+    DEBUGF("New client");
 
 /*
     // Wait for data from client to become available
@@ -460,7 +544,7 @@ void loop(void)
     }
 */
 
-    Serial.println("creating thread");
+    DEBUGF("creating thread");
 #warning das auf thread.run umstellen
     StartupData *startupData=new StartupData;
     startupData->client=client;
@@ -478,9 +562,9 @@ void loop(void)
                     
     if( xReturned != pdPASS ) {
     // if (returnValue) {
-        Serial.println("error creating thread: An error has occurred");
+        ERRORF("error creating thread: An error has occurred");
     } else {
-        Serial.println("thread created");
+        DEBUGF("thread created");
     }
 
 

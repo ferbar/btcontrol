@@ -1,15 +1,16 @@
 #define lok_name "esp32-playmobil"
-#include <config-wifi.h>
-// ======= Put you wifi config in config-wifi.h
-#if false
+#include "config-wifi.h"
+// ======= Put yous wifi config in config-wifi.h:
+// switch with cv #510, default is create an softap, at least one of wifi_ap* and wifi_client* is required
+// password for AP
+// SOFTAP => create own wifi
+  #define wifi_ap_ssid lok_name
+  #define wifi_ap_password "btcontrol"
+
 // dev-mode, connect to your AP
 // password for wifi client
-  #define wifi_ssid "your-ap"
-  #define wifi_password "password"
-#else
-// password for AP
-  #define wifi_ssid lok_name
-  #define wifi_password "playmobil"
+  #define wifi_client_ssid "your-ap"
+  #define wifi_client_password "your-password"
 
   // SOFTAP => create own wifi
   #define SOFTAP
@@ -46,11 +47,11 @@
 #define RESET_INFO_PIN 2
 
 // pwm 30% esp32-cam flash light gets too hot otherwise
-# Playmobil Lok:
+// Playmobil Lok:
 #define HEADLIGHT_1_PIN 4
 #define HEADLIGHT__1PWM_DUTY 20
 
-# Putzlok:
+// Putzlok:
 // #define HEADLIGHT_1_PIN 15
 // #define HEADLIGHT_1_PWM_DUTY 20
 
@@ -62,4 +63,29 @@
 
 // #define PUTZLOK_BLINK_1_PIN 32
 // #define PUTZLOK_BLINK_2_PIN 33
+
+
+/* rsyslog config:
+  https://github.com/rsyslog/rsyslog-doc/blob/v8.33.1/source/configuration/templates.rst
+  
+$ModLoad imudp.so
+$UDPServerRun 514
+# security off für bunt
+$EscapeControlCharactersOnReceive off
+
+$template TraditionalFormat,"%timegenerated% %HOSTNAME% %syslogtag% %msg%\n"
+
+if ($app-name == 'btcontrol') then {
+  -/var/log/btcontrol.log;TraditionalFormat
+  stop
+}
+*/
+#define SYSLOG_SERVER "some-syslog-server"
+
+#define BAT_ADC_PIN1 39
+// #define BAT_ADC_PIN2 39
+// 12V ausgetestet
+#define BAT_ADC_MIN 2430
+// 16,4V   => ausgetestet!!!!!!!!!
+#define BAT_ADC_MAX 3507
 
