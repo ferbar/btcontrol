@@ -999,7 +999,7 @@ void GuiViewErrorMessage::loop() {
         return;
 			}
 		} else {
-      if(retries >= 10) {
+      if(retries >= 20) { // nach 20 sekunden zum select wifi
         retries=0;
         GuiView::startGuiView(new GuiViewSelectWifi() );
         return;
