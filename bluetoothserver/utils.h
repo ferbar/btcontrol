@@ -118,6 +118,7 @@ namespace utils
 		static const int LEVEL_DEBUG=1;
 		static const int LEVEL_NOTICE=2;
 		static const int LEVEL_ERROR=3;
+    void init(bool softAP);
 	};
 	extern utils::Log log;
 	void dumpBacktrace();

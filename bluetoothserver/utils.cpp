@@ -35,6 +35,17 @@
 #ifdef ESP_PLATFORM
 // fürs Serial
 #include <Arduino.h>
+#include "config.h"
+#endif
+
+#ifdef SYSLOG_SERVER
+#include <Syslog.h>
+#include <WiFiUdp.h>
+#if not defined SYSLOG_PORT
+#define SYSLOG_PORT 514
+#endif
+WiFiUDP udpClient;
+Syslog syslog(udpClient, SYSLOG_PROTO_IETF);
 #endif
 
 #define TAG "utils"
@@ -347,6 +358,23 @@ std::string utils::trim(const std::string &s)
 #endif
 }
 
+void utils::Log::init(bool softAP) {
+#ifdef SYSLOG_SERVER
+  DEBUGF("~~~~~~~~~~~~~~~ init syslog server @%s:%d", SYSLOG_SERVER, SYSLOG_PORT);
+  udpClient.stop();
+  if(softAP) {
+    NOTICEF("disabling syslog server @%s:%d - softAP ", SYSLOG_SERVER, SYSLOG_PORT);
+    syslog.server(NULL, SYSLOG_PORT);
+  } else {
+    NOTICEF("enabling syslog server @%s:%d", SYSLOG_SERVER, SYSLOG_PORT);
+    syslog.server(SYSLOG_SERVER, SYSLOG_PORT);
+    syslog.deviceHostname(lok_name);
+    syslog.appName("btcontrol");
+    syslog.defaultPriority(LOG_KERN);
+  }
+#endif
+}
+
 void utils::Log::printf(const char *tag, int level, const char *file, int line, const char *fmt, ...) {
 #ifdef ESP_PLATFORM
 	Serial.printf("%d: ", utils::getThreadClientID());
@@ -355,6 +383,11 @@ void utils::Log::printf(const char *tag, int level, const char *file, int line, 
 	char *data=NULL;
 	vasprintf(&data, fmt, args);
 	Serial.print(data);
+#ifdef SYSLOG_SERVER
+  if(!syslog.log(LOG_INFO, data)) {
+    // Serial.println("Error sending data to syslog server!");
+  }
+#endif
 	free(data);
 	va_end(args);
 #else
