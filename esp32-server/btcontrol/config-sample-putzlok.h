@@ -1,4 +1,7 @@
 #define lok_name "esp32-putzlok"
+// create a softlink under data/img - maybe from bluetoothserver/img/ and upload the SPIFFS image
+#define LOK_IMAGE "putzlok.png"
+
 #include "config-wifi.h"
 
 // enable update OTA

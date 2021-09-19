@@ -1,4 +1,7 @@
 #define lok_name "esp32-playmobil"
+// create a softlink under data/img - maybe from bluetoothserver/img/ and upload the SPIFFS image
+#define LOK_IMAGE "rangierlok.png"
+
 #include "config-wifi.h"
 // ======= Put yous wifi config in config-wifi.h:
 // switch with cv #510, default is create an softap, at least one of wifi_ap* and wifi_client* is required

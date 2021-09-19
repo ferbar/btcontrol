@@ -401,6 +401,8 @@ void setup(void)
     BTServer.begin();
     NOTICEF("TCP server started");
 
+    DEBUGF("spi filesystem files:");
+    printDirectory();
 }
 
 class StartupData {

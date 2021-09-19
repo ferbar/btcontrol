@@ -2,9 +2,14 @@
 #include <Arduino.h>
 // für esp_stack_ptr_is_sane
 #include <esp_panic.h>
+#include <FS.h>
+#include <SPIFFS.h>
+
 #include "utils.h"
 #include "config.h"
 #include "utils_esp32.h"
+
+#define TAG "utils_esp32"
 
 /*
  * stack max used:
@@ -56,6 +61,46 @@ void utils::dumpBacktrace() {
 	Serial.println();
 }
 
+void printDirectory()
+{
+	File root = SPIFFS.open("/");
+	int levels=0;
+	if(!root) {
+		ERRORF("- failed to open directory");
+		if (!SPIFFS.begin()) {
+			ERRORF("SPIFFS Mount Failed");
+			return;
+		}
+		DEBUGF("mounting filesystem done");
+		root = SPIFFS.open("/");
+		if(!root) {
+			ERRORF("- failed to open directory");
+			return;
+		}
+	}
+	if (!root.isDirectory()) {  // kein Verzeichnis, sondern Datei
+		ERRORF("− not a directory");
+		return;
+	}
+
+	File file = root.openNextFile();
+	// in einer Schleife durch die Liste aller vorhandenen
+	// Einträge gehen
+	while (file) {
+		if (file.isDirectory()) {
+			DEBUGF("  DIR : %s", file.name());
+			// ist der Eintrag ein Verz., dann dessen Inhalt rekursiv
+			// anzeigen, wenn maximale Tiefe noch nicht erreicht ist
+			if (levels) {
+				// listDir(fs, file.name(), levels-1);
+			}
+		} else {
+			DEBUGF("  FILE: %s (%dB)", file.name(), file.size());
+		}
+		file = root.openNextFile();
+	}
+}
+
 std::string readFile(std::string filename)
 {
 	if(filename == "protocol.dat") {
@@ -64,7 +109,7 @@ std::string readFile(std::string filename)
 		return protocol_dat;
 #ifdef lok_name
 	} else if(filename == "conf/lokdef.csv") {
-		return "3,  F_DEFAULT," lok_name ",                    ,   9,"
+		return "3,  F_DEFAULT," lok_name "," LOK_IMAGE ",   9,"
 #ifdef HAVE_SOUND
 		"sPfeife"
 #endif
@@ -74,6 +119,31 @@ std::string readFile(std::string filename)
 #endif
 		",,,,,,mMotor Boost\n";
 #endif
+	} else if(filename == "conf/decoder_esp32.csv") {
+		return
+#ifdef HAVE_SOUND
+		"266, sound volume,\n"
+#endif
+		"500, battery level,\n"
+		"510, wifi AP switch\n";
+	} else {
+		if(filename.at(0) != '/') {
+			filename="/" + filename;
+		}
+		File f = SPIFFS.open(filename.c_str(), "r");
+		size_t size=f.size();
+		DEBUGF("file:%s size:%d", filename.c_str(), size);
+		if(size < 10000) {
+			std::string ret;
+			ret.resize(size);
+			// wir schreiben direkt in den string buffer!
+			int dataRead=f.read((uint8_t *) &ret[0], size);
+			if(dataRead != size) {
+				ERRORF("error reading %s", filename.c_str());
+				return "";
+			}
+			return ret;
+		}
 	}
 	abort();
 }

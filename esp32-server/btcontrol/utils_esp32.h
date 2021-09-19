@@ -13,5 +13,6 @@ void writeEEPROM(int addr1, uint8_t data1, int addr2 = -1, uint8_t data2 = 0);
 void *memmem(const void *haystack, size_t haystacklen,
                     const void *needle, size_t needlelen);
 
+void printDirectory();
 
 #endif
