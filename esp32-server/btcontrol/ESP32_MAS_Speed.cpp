@@ -38,13 +38,13 @@ void ESP32_MAS_Speed::openFile(uint8_t channel, File &f) {
       this->stopDAC();
       DEBUGF("DAC stopped");
     } else if(this->curr_fahrstufe == this->target_fahrstufe) {
-      filename=String("/F") + this->curr_fahrstufe + ".raw";
+      filename=String("/sounds/F") + this->curr_fahrstufe + ".raw";
     } else {
       if(this->curr_fahrstufe > this->target_fahrstufe) {
-        filename=String("/F")+this->curr_fahrstufe+"-F"+(this->curr_fahrstufe-1)+".raw";
+        filename=String("/sounds/F")+this->curr_fahrstufe+"-F"+(this->curr_fahrstufe-1)+".raw";
         this->curr_fahrstufe--;
       } else {
-        filename=String("/F")+this->curr_fahrstufe+"-F"+(this->curr_fahrstufe+1)+".raw";        
+        filename=String("/sounds/F")+this->curr_fahrstufe+"-F"+(this->curr_fahrstufe+1)+".raw";
         this->curr_fahrstufe++;
       }
     }
@@ -107,7 +107,7 @@ void ESP32_MAS_Speed::startPlayFuncSound() {
   DEBUGF(":startPlayFuncSound() func1 = %d", lokdef[0].func[1].ison);
   if(lokdef[0].nFunc > 1 && lokdef[0].func[1].ison && this->Channel[1] == 0 ) {
     DEBUGF("play!");
-    Audio.playFile(1,"/horn.raw");
+    Audio.playFile(1,"/sounds/horn.raw");
   }
 }
 
