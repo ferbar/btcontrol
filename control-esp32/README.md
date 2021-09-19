@@ -10,4 +10,4 @@
 * Ein paar Taster
 * Ein paar Schalter
 * Lochrasterplatine
-* Akku mit passendem Stecker für das T-display JST-PH 1,25mm
+* Akku mit passendem Stecker für das T-Display JST-PH 1,25mm
