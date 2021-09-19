@@ -1,1 +1,12 @@
 # ESP32 Control Pad
+
+<img src="img_control_pad.jpg" alt="Putzlok" width="300"/>
+
+## Partlist
+
+* Lilygo esp32 T-Display
+* Schiebepotentiometer 70mm Gehäuse, 45mm Schiebeweg
+* Ein paar Taster
+* Ein paar Schalter
+* Lochrasterplatine
+* Akku mit passendem Stecker für das T-display JST-PH 1,25mm
