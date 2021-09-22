@@ -27,11 +27,22 @@ Ein MIDP - java Programm welches aufs Handy (altes Nokia feature-phone) gehört
 Siehe [readme](control-midp/README.md).
 Die App ist unter /dist/btcontroll.jar
 
+<img src="control-midp/img_control_midp.jpg" alt="Putzlok" width="300"/>
+
+
+## control-esp32
+Control Pad Hardware mit einem ESP32. siehe [control-esp32](control-esp32)
+
+<img src="control-esp32/img_control_pad.jpg" alt="Control Pad" width="300"/>
+
+
 ### midptestenv
 Emulator um MIDP Programme am PC rennen zu lassen (zum Testen ganz nett, hat aber bugs)
 
 ## ESP32 Lok - Elektronik
 Für Akku Loks mit einem ESP32, siehe [esp32-server](esp32-server)
+
+<img src="esp32-server/img_putz_done.jpg" alt="Putzlok" width="300"/>
 
 ## NB1A_partlist.txt
 Partlist für den http://merg.co.uk - booster
