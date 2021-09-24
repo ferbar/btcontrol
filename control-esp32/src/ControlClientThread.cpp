@@ -1,9 +1,11 @@
+
+#define NODEBUG
+
 #include "ControlClientThread.h"
 #include "utils.h"
 #include "message_layout.h"
 #include "Thread.h"
 #include "lokdef.h"
-
 
 #define TAG "ControlClientThread"
 
