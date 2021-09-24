@@ -34,6 +34,8 @@
 #include "BTUtils.h"
 #endif
 
+#define NODEBUG
+
 #include "utils.h"
 
 #define TAG "CommThread"
