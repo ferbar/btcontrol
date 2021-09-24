@@ -1,3 +1,5 @@
+#define NODEBUG
+
 #include "Arduino.h"
 #include <lwip/sockets.h>
 #include <lwip/netdb.h>
@@ -9,6 +11,7 @@
 // https://github.com/espressif/arduino-esp32/blob/master/libraries/WiFi/src/WiFiClient.h
 
 #define TAG "tcpclient"
+
 int TCPClient::numClients=0;
 
 TCPClient::~TCPClient() {
@@ -39,7 +42,9 @@ void TCPClient::readSelect() {
 		return;
 	}
 
+#ifndef NODEBUG
 	long start=millis();
+#endif
 	const int timeout=5 * 1000 ; // 5 sekunden
 
 	int sockfd= this->client.fd();
@@ -120,7 +125,22 @@ std::string TCPClient::getRemoteAddr() {
 }
 
 ssize_t TCPClient::read(void *buf, size_t count) {
-	return this->client.read((uint8_t *) buf, count);
+	int read=0;
+    
+    while(read < (int) count) {
+        // printf("read: %zd\n",size-read);
+        int rc=this->client.read(((uint8_t *) buf)+read,count-read);
+        // printf("rc: %d\n",rc);
+        if(rc < 0) {
+            throw std::runtime_error("error reading data");
+        } else if(rc == 0) { // stream is blocking -> sollt nie vorkommen
+            throw std::runtime_error("nothing to read");
+        }
+        read+=rc;
+    }
+    return read;
+
+	// returns max data of one tcp packet (~ 1432 bytes) return this->client.read((uint8_t *) buf, count);
 }
 
 ssize_t TCPClient::write(const void *buf, size_t count) {
