@@ -1,6 +1,7 @@
 #include <TFT_eSPI.h>
 // #include <Fonts/GFXFF/FreeSans9pt7b.h>
 // #define FONT9PT &FreeSans9pt7bBitmaps
+/*
 #define FSB9 &FreeSerifBold9pt7b
 #define FSB12 &FreeSerifBold12pt7b
 #define FSB18 &FreeSerifBold18pt7b
@@ -12,7 +13,7 @@
 #include "fonts/sourcesanspro5pt7b.h"
 #define FSSP5 &SourceSansPro_Regular5pt7b
 #include "fonts/sourcesanspro6pt7b.h"
-#define FSSP6 &SourceSansPro_Regular6pt7b
+#define FSSP6 &SourceSansPro_Regular6pt7b */
 #include "fonts/sourcesanspro7pt7b.h"
 #define FSSP7 &SourceSansPro_Regular7pt7b
 
@@ -31,6 +32,10 @@
 
 
 #define TAG "GuiView"
+
+// PNG Functions
+#include "support_functions.h"
+
 
 // is im btcontrol
 extern TFT_eSPI tft;
@@ -63,6 +68,18 @@ Button2Data <buttonConfig_t&> *buttons[buttonConfigSize];
 
 
 ControlClientThread controlClientThread;
+
+// ^
+uint8_t arrowBitmap[]= {
+  0,128,
+  1,128+64,
+  1+2,128+64+32,
+  1+2+4,128+64+32+16,
+  1+2+4+8,128+64+32+16+8,
+  1+2+4+8+16,128+64+32+16+8+4,
+  1+2+4+8+16+32,128+64+32+16+8+4+2,
+  1+2+4+8+16+32+64,128+64+32+16+8+4+2+1
+};
 
 // reset callback handler
 void resetButtons() {
@@ -158,7 +175,8 @@ void GuiViewSelectWifi::init() {
   tft.setTextColor(TFT_GREEN, TFT_BLACK);
   tft.setTextSize(1);
   tft.setFreeFont(FSSP7);
-  tft.drawString("Scanning...", 0, tft.fontHeight());
+  // 20210922 setTextDatum(MC) scheint die 0 pos vom string in die mitte vom string zu setzen. Koordinaten 0/0 sind trozdem links oben
+  tft.drawString("Scanning...", tft.width()/2, tft.height()/2);
 
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
@@ -406,7 +424,7 @@ void GuiViewConnectWifi::loop() {
     DEBUGF("GuiViewConnectWifi::loop() WifiStatus:%d (old:%d), WifiMode: %d", WiFi.status(), this->lastWifiStatus, WiFi.getMode());
 		tft.setTextColor(TFT_GREEN, TFT_BLACK);
 		tft.fillScreen(TFT_BLACK);
-		tft.setTextDatum(MC_DATUM);
+    tft.setTextDatum(TL_DATUM);
 		tft.setTextSize(1);
     tft.setCursor(0, 0);
 
@@ -419,6 +437,7 @@ void GuiViewConnectWifi::loop() {
 		// grad mitn wlan verbunden:
 		if(this->lastWifiStatus == WL_CONNECTED) {
 			if(controlClientThread.isRunning() ) {
+        tft.setTextDatum(MC_DATUM);
 				tft.drawString("client thread running!!!", tft.width() / 2, tft.height() / 2);
 				ERRORF("we connected to a wifi, controlClientThread should not be running");
 			} else {
@@ -548,6 +567,7 @@ void GuiViewConnectServer::loop() {
 }
 // ============================================================= GuiViewContolLocoSelectLoco ======
 bool GuiViewContolLocoSelectLoco::needUpdate=false;
+int GuiViewContolLocoSelectLoco::firstLocoDisplayed=0;
 
 void GuiViewContolLocoSelectLoco::init() {
 	DEBUGF("GuiViewContolLocoSelectLoco::init()");
@@ -556,21 +576,37 @@ void GuiViewContolLocoSelectLoco::init() {
 		GuiView::startGuiView(new GuiViewControlLoco());
 		return;
 	}
+  // Up
   btn1.setClickHandler([](Button2& b) {
 		if(controlClientThread.selectedAddrIndex > 0) {
 			controlClientThread.selectedAddrIndex--;
+		if(controlClientThread.selectedAddrIndex < GuiViewContolLocoSelectLoco::firstLocoDisplayed)
+			GuiViewContolLocoSelectLoco::firstLocoDisplayed--;
+
    		GuiViewContolLocoSelectLoco::needUpdate=true;
 		}
 	}
 	);
+  // Down
   btn2.setClickHandler([](Button2& b) {
 		if(lokdef[controlClientThread.selectedAddrIndex].addr && lokdef[controlClientThread.selectedAddrIndex+1].addr) {
 			controlClientThread.selectedAddrIndex++;
+      int fontHeight=17;
+      
+      DEBUGF("btn2.setClickHandler first:%d, selected: %d, fontheight:%d, height:%d",
+        GuiViewContolLocoSelectLoco::firstLocoDisplayed,
+        controlClientThread.selectedAddrIndex,
+        fontHeight,
+        tft.height());
+      if((controlClientThread.selectedAddrIndex - GuiViewContolLocoSelectLoco::firstLocoDisplayed)*fontHeight >= tft.height())
+        GuiViewContolLocoSelectLoco::firstLocoDisplayed++;
+
    		needUpdate=true;
 		}
 	}
 	);
-    btn1.setLongClickDetectedHandler([](Button2& b) {
+  // Select Loco
+  btn1.setLongClickDetectedHandler([](Button2& b) {
 		if(lokdef[0].addr) { // only if we have locos in list
 			GuiView::startGuiView(new GuiViewControlLoco());
 		} else {
@@ -578,6 +614,12 @@ void GuiViewContolLocoSelectLoco::init() {
 		}
 	}
 	);
+  // Power down
+  btn2.setLongClickDetectedHandler([](Button2& b) {
+    DEBUGF("GuiViewSelectWifi::btn2.setLongClickHandler");
+    GuiView::startGuiView(new GuiViewPowerDown());
+  }
+  );
   tft.fillScreen(TFT_BLACK);
 }
 
@@ -586,22 +628,91 @@ void GuiViewContolLocoSelectLoco::close() {
   resetButtons();
 }
 
+std::map<const std::string, TFT_eSprite> imgCache;
+Mutex imgCacheMutex;
+void drawCachedImage(const char*imgname, int x, int y) {
+  if(strlen(imgname) == 0) {
+    DEBUGF("drawCachedImage no imgname - ignored");
+    return;
+  }
+  // DEBUGF("drawCachedImage %s", imgname);
+  Lock lock(imgCacheMutex);
+  auto imgPair=imgCache.find(imgname);
+  if(imgPair == imgCache.end()) {
+    DEBUGF("requesting image [%s]",imgname);
+	  FBTCtlMessage cmd(messageTypeID("GETIMAGE"));
+	  cmd["imgname"]=imgname;
+	  controlClientThread.query(cmd,[imgname](FBTCtlMessage &reply) { 
+      if(reply.isType("GETIMAGE_REPLY")) {
+        // reply.dump();
+        Lock lock(imgCacheMutex);
+        std::string data=reply["img"].getStringVal();
+        NOTICEF("got getimage reply for %s - length:%dB",imgname, data.length());
+        std::pair<const std::string, TFT_eSprite> pair(imgname, TFT_eSprite(&tft));
+        imgCache.insert(pair); // das sollte gehen weil zu dem Zeitpunkt spr kopiert werden kann (pointer alle null)
+        auto it=imgCache.find(imgname);
+        TFT_eSprite &spr=it->second;
+        // imgPair.second;
+        if(data.length() > 5000) {
+          ERRORF("image %s too big (%d)",imgname, data.length());
+          spr.createSprite(0,0);
+          return;
+        }
+        long startms=millis();
+        // TFT_eSprite spr = TFT_eSprite(&tft);
+        TFT_eSPI_PngSprite png(spr);
+        png.setPngPosition(0, 0);
+        spr.createSprite(20,20);
+        png.load_data(data);
+        DEBUGF("image decoded in %ldms",millis()-startms);
+
+        GuiViewContolLocoSelectLoco::needUpdate=true;
+      } else {
+        ERRORF("didn't receive getimage_reply");
+      }
+      } 
+    );
+    return; // beim ersten run nur request aufs img machen, img nicht anzeigen
+  }
+  /*
+  if(imgCache[imgname] == "invalid") {
+    DEBUGF("image invalid");
+    return;
+  }
+  */
+  // long startms=millis();
+  // NOTICEF("drawing image @%d:%d",x,y);
+  TFT_eSprite &spr=imgPair->second;
+  spr.pushSprite(x,y);
+  // DEBUGF("rendered image in %ldms", millis()-startms);
+}
+
 // Vorsicht !!! in der theorie kann lokdef beim starten da noch nicht initialisiert sein weil die callback func noch nicht aufgerufen wurde.
 void GuiViewContolLocoSelectLoco::loop() {
-  
+
 	if(this->needUpdate) {
     this->drawButtons();
-		DEBUGF("GuiViewContolLocoSelectLoco::loop needUpdate");
+		DEBUGF("GuiViewContolLocoSelectLoco::loop needUpdate - firstLoco:%d fontheight:%d", this->firstLocoDisplayed, tft.fontHeight());
 		int n=0;
+    // -20 damit wir die up down buttons nicht auch noch löschen
+		tft.setTextPadding(tft.width()-18-20);
 		while(lokdef[n].addr) {
 			if(n==controlClientThread.selectedAddrIndex) {
 				tft.setTextColor(TFT_BLACK, TFT_GREEN);
 			} else {
 				tft.setTextColor(TFT_GREEN, TFT_BLACK);
 			}
-			tft.drawString(String(" ") + lokdef[n].name, 0, n * tft.fontHeight() );
+			int sumx=tft.drawString(String(" ") + lokdef[n].name+"", 18 , (n-this->firstLocoDisplayed) * tft.fontHeight() );
+      // bug: sumx stimmt nicht ganz
+      sumx-=1;
+      // clear rest:
+      // -20 damit wir die up down buttons nicht auch noch löschen
+      // NOTICEF("[%d] draw loco sumx:%d", n, sumx);
+      //tft.fillRect(18+sumx, (n-this->firstLocoDisplayed) * tft.fontHeight(), tft.width()-sumx-18-20, tft.fontHeight(), TFT_BLACK /* n%2 ? TFT_RED : TFT_CYAN */);
+      drawCachedImage(lokdef[n].imgname, 0, (n-this->firstLocoDisplayed) * tft.fontHeight() );
 			n++;
 		}
+    tft.setTextPadding(0);
     this->needUpdate=false;
 	}
 }
@@ -772,10 +883,6 @@ void GuiViewControlLoco::loop() {
 
           tft.setFreeFont(NULL);
           tft.setTextColor(TFT_BLACK, TFT_WHITE);
-          tft.setTextDatum(TR_DATUM);
-			//tft.drawString(" ^",tft.width(),0);
-          tft.setTextDatum(BR_DATUM);
-			//tft.drawString(" v",tft.width(), tft.height());
           tft.drawString("off",tft.width(), tft.height() - tft.fontHeight());
           tft.setTextDatum(TL_DATUM);
           tft.setTextColor(TFT_GREEN, TFT_BLACK);
@@ -832,7 +939,9 @@ void GuiViewControlLoco::loop() {
             tft.setTextColor(TFT_GREEN, TFT_BLACK);
           }
 
-          tft.drawString(String("Lok: ") + controlClientThread.getCurrLok().name + "   ", 0, tft.fontHeight());
+          drawCachedImage(controlClientThread.getCurrLok().imgname, 0, tft.fontHeight() );
+
+          tft.drawString(String() + controlClientThread.getCurrLok().name + "   ", 20, tft.fontHeight());
           tft.drawString(String("Speed: ") + controlClientThread.getCurrLok().currspeed + "    ", 0, tft.fontHeight()*2);
           tft.drawString(controlClientThread.getCurrLok().currdir > 0 ? ">" : "<", tft.width()/2, tft.fontHeight()*2);
 
@@ -852,22 +961,20 @@ void GuiViewControlLoco::loop() {
           // ^          => fixme: braucht zuviel höhe
           width=tft.width()* (long) avg/255;
           static int lastWidth=0;
-          // tft.drawFastHLine(0, 51+20, tft.width(), TFT_RED);
-          tft.setTextColor(TFT_RED, TFT_BLACK);
-          tft.setTextSize(2);
-          int v_width=tft.drawString("^", width - 5, 51+10, 2);  // drawChar hat eine ander Baseline!
-          tft.setTextSize(1);
+          // DEBUGF("drawing ^ @%d:%d",width-5, 51+10);
+          int v_width=16;
+          tft.drawBitmap(width-8,51+10,arrowBitmap,16,8,TFT_WHITE, TFT_BLACK);
           // DEBUGF("******************** lastWidth:%d, width:%d",lastWidth,width);
           if(lastWidth < width) {
             int w = width - lastWidth;
             if(w > 0)
-              tft.fillRect(lastWidth - 5, 51+10, w, tft.fontHeight()*2, TFT_BLACK);
+              tft.fillRect(lastWidth - 8, 51+10, w, tft.fontHeight()*2, TFT_BLACK);
           }
           if(lastWidth > width) {
             int w = lastWidth - width;
             // DEBUGF("******************** w: %d", w);
             if(w > 0)
-              tft.fillRect(width - 5 + v_width, 51+10, w, tft.fontHeight()*2, TFT_BLACK);
+              tft.fillRect(width - 8 + v_width, 51+10, w, tft.fontHeight()*2, TFT_BLACK);
           }
           lastWidth=width;
 
@@ -972,9 +1079,9 @@ void GuiViewErrorMessage::loop() {
       int oldpos=pos;
       pos=this->errormessage.indexOf("\n", pos);
       if(pos >= 0) {
-        tft.drawString(this->errormessage.substring(oldpos,pos), 0, tft.height()/2+tft.fontHeight()*n);
+        tft.drawString(this->errormessage.substring(oldpos,pos), tft.width()/2, tft.height()/2+tft.fontHeight()*n);
       } else {
-        tft.drawString(this->errormessage.substring(oldpos), 0, tft.height()/2+tft.fontHeight()*n);
+        tft.drawString(this->errormessage.substring(oldpos), tft.width()/2, tft.height()/2+tft.fontHeight()*n);
         break;
       }
       pos++;
@@ -1020,8 +1127,8 @@ void GuiViewPowerDown::init() {
 	tft.fillScreen(TFT_BLACK);
 	tft.setTextDatum(MC_DATUM);
 	tft.setTextSize(2);
-	tft.drawString("power off", 0,tft.fontHeight());
-	tft.drawString("unplug batt!!!", 0, tft.fontHeight()*2);
+	tft.drawString("power off", tft.width()/2,tft.height()/2);
+	tft.drawString("unplug batt!!!", tft.width()/2, tft.height()/2 + tft.fontHeight());
   tft.setTextSize(1);
   DEBUGF("GuiViewPowerDown::init()");
   if(controlClientThread.isRunning()) {

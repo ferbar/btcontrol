@@ -87,8 +87,9 @@ public:
 	void close();
 	void loop();
 	const char * which() const { return "GuiViewControlLocoSelectLoco"; };
-private:
-	static bool needUpdate;
+
+	static bool needUpdate; // einfacher wegen callbacks wenn public
+  static int firstLocoDisplayed;
 };
 
 class GuiViewControlLoco : public GuiView { // GuiViewConnectServer ???
