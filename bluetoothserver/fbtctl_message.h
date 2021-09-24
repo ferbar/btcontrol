@@ -32,7 +32,7 @@ public:
 		if(this->pos > this->len) throw std::runtime_error("getInt übers ende gelesen");
 		return ret; };
 	std::string getString() {
-		unsigned char len=this->getByte() | (this->getByte() << 8);
+		int len=this->getByte() | (this->getByte() << 8);
 		std::string ret=std::string(&this->data[this->pos],len); this->pos +=len;
 		// printf("getString %s\n",ret.c_str());
 		if(this->pos > this->len) { throw std::runtime_error("getString übers ende gelesen"); } return ret; };

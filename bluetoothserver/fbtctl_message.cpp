@@ -47,6 +47,8 @@
 #include "fbtctl_message.h"
 #include "utils.h"
 
+#define TAG "FBTCtlMessage"
+
 /**
  * parst eine message
  * pointer muss auf 1. byte nach len zeigen
@@ -210,6 +212,9 @@ std::string FBTCtlMessage::getBinaryMessage(const MessageLayout *layout) const
 			break;
 		case MessageLayout::STRING: {
 			int tmp=this->sval.size();
+			if(tmp > 0x10000) {
+				throw std::runtime_error("string too big");
+			}
 			ret += std::string((char *) &tmp, 2);
 			ret += this->sval;
 			break; }
@@ -268,7 +273,7 @@ void FBTCtlMessage::dump(int indent, const MessageLayout *layout) const
 		case MessageLayout::STRING:
 			// INDENT();
 			// printf("(STRING) %s\n",this->sval.c_str()); break;
-			printf("value=%s\n",this->sval.c_str()); break;
+			printf("len=%d value=%s\n", this->sval.length(), this->sval.c_str()); break;
 		case MessageLayout::ARRAY: {
 			// INDENT(); 
 			// printf("(ARRAY)\n");
