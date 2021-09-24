@@ -6,6 +6,7 @@
 
 // example von https://github.com/Xinyuan-LilyGO/TTGO-T-Display
 // https://github.com/Bodmer/TFT_eSPI  => Setup siehe https://github.com/Xinyuan-LilyGO/TTGO-T-Display !!!!!!!!!!!
+// https://hoeser-medien.de/2021/01/esp32-ttgo-mit-platformio-vscode/#codesyntax_2
 #include <TFT_eSPI.h>
 #include <SPI.h>
 #include <WiFi.h>
