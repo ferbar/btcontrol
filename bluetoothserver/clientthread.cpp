@@ -365,7 +365,12 @@ continue;
 			} else if(cmd.isType("GETIMAGE")) {
 				std::string imageName=cmd["imgname"].getStringVal();
 				FBTCtlMessage reply(messageTypeID("GETIMAGE_REPLY"));
-				reply["img"]=readFile("img/"+imageName);
+				if(imageName == "") {
+					ERRORF("requesting null file");
+					reply["img"]="";
+				} else {
+					reply["img"]=readFile("img/"+imageName);
+				}
 				sendMessage(reply);
 			} else if(cmd.isType("HELO_ERR")) {
 				ERRORF("/%d: client proto error", this->msgNum);
