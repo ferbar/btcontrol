@@ -34,7 +34,7 @@
 #define TAG "GuiView"
 
 // PNG Functions
-#include "support_functions.h"
+#include "TFT_eSPI_PNG.h"
 
 
 // is im btcontrol
