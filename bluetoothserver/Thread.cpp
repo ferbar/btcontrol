@@ -12,7 +12,7 @@
 #include "utils.h"
 #include "Thread.h"
 
-#define TAG "THREAD"
+#define TAG "Thread"
 
 void *Thread::startupThread(void *ptr) {
 	NOTICEF("Thread::startupThread() ========================================");
@@ -57,7 +57,7 @@ void Thread::start() {
 }
 
 void Thread::cancel() {
-	NOTICEF("Thread::cancel()\n");
+	NOTICEF("Thread::cancel()");
 	if(this->thread) {
 #ifdef ESP32
     // ESP lib kennt kein pthread_cancel
