@@ -665,6 +665,7 @@ void drawCachedImage(const char*imgname, int x, int y) {
         // TFT_eSprite spr = TFT_eSprite(&tft);
         TFT_eSPI_PngSprite png(spr);
         png.setPngPosition(0, 0);
+        png.setTransparentColor(TFT_WHITE);
         spr.createSprite(20,20);
         png.load_data(data);
         DEBUGF("image decoded in %ldms",millis()-startms);

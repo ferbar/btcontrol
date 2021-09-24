@@ -20,6 +20,7 @@ private:
   uint32_t pc=0;
 
   int16_t png_dx=0, png_dy=0;
+  uint32_t transparentColor=TFT_TRANSPARENT;
 
 public:
   TFT_eSPI_PngSprite(TFT_eSprite &spr) : spr(spr)  {
@@ -32,6 +33,11 @@ void setPngPosition(int16_t x, int16_t y)
   png_dx = x;
   png_dy = y;
 };
+
+void setTransparentColor(uint32_t color)
+{
+  this->transparentColor=color;
+}
 
 // Draw pixel - called by pngle
 void static pngle_on_draw(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t rgba[4])
@@ -57,8 +63,8 @@ void static pngle_on_draw(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, ui
     ptr->spr.drawPixel(ptr->png_dx + (int32_t)x, ptr->png_dy + (int32_t)y, color);
   #endif
   } else {
-    // [chris] white background...
-    ptr->spr.drawPixel(ptr->png_dx + (int32_t)x, ptr->png_dy + (int32_t)y, 0xffffff);
+    if(ptr->transparentColor != TFT_TRANSPARENT)
+      ptr->spr.drawPixel(ptr->png_dx + (int32_t)x, ptr->png_dy + (int32_t)y, ptr->transparentColor);
   }
 };
 
