@@ -1,4 +1,4 @@
-// Created by Bodmer 5/11/19
+// Created by Bodmer 5/11/19 https://github.com/Bodmer/PNG_TEST_ONLY/blob/master/png_to_sprite/support_functions.h
 // https://github.com/kikuchan/pngle
 
 #include <math.h>
