@@ -1,5 +1,6 @@
-# Eclipse Projekt -- btcontrol Android Steuerung
+# Eclipse Projekt - btcontrol Android Steuerung
 
+<img src="img_android_lokauswahl.png" alt="Android Steuerung" width="300"/>
 <img src="img_android_steuerung.png" alt="Android Steuerung" width="300"/>
 
 JmDNS von
