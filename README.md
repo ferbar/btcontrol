@@ -18,6 +18,9 @@ Siehe [bluetoothserver/](bluetoothserver/)
 ## control-android
 
 Android App
+
+<img src="control-android/img_android_steuerung.png" alt="Android Steuerung" width="200"/>
+
 siehe [control-android/](control-android/).
 download [btcontrol.apk](../../raw/master/control-android/bin/btcontrol.apk)
 
