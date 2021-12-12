@@ -121,6 +121,6 @@ Bei den LEDs natürlich immer auf die Polung achten. *Hint:* der grosse Topf in 
 ### Offen
 * haben die Ikea Akkus einen Tiefentladeschutz?
 * Akkuladestand messen, an die Fernsteuerung melden, Startgeschwindigkeit abhängig von der Akkuspannung
-  Akkuspannung direkt mit Stromteiler messen, für die Spannung nach 2 Akkus brauchen wir ein extra Kabel
-  a) mit 2 poligem Schalter mit ein/ausschalten
-  b) mit einem Inverter einen P-Kanal MOSFET ansteuern - IRLML6402 dürfte für alles gut sein.
+  - Akkuspannung direkt mit Stromteiler messen, für die Spannung nach 2 Akkus brauchen wir ein extra Kabel - mit 2 poligem Schalter mit ein/ausschalten
+  - mit einem Inverter einen P-Kanal MOSFET ansteuern - IRLML6402 dürfte für alles gut sein.
+  - INA219 I2C Strom/Spannungs IC
