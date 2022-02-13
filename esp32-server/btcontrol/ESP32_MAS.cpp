@@ -25,6 +25,12 @@
 
 #define CHANNELS 3
 
+// #define DEBUG_MAS
+
+#ifdef DEBUG_MAS
+#warning !!!!!! DEBUG_MAS enabled - expect i2s buffer underruns thru Serial.printf
+#endif
+
 void Audio_Player(void *ptr) {
   Serial.println("Audio Player started");
 
@@ -35,6 +41,7 @@ void Audio_Player(void *ptr) {
 }
 
 void ESP32_MAS::run() {
+  Serial.println("ESP32_MAS::run()");
   int file_buf_len;
 //  int8_t out_buf_8[64];
   int8_t out_buf_8[1024];
@@ -46,8 +53,13 @@ void ESP32_MAS::run() {
   float pitch_loc;
   bool end_file = false;
   File aiff_file[3];
+
+#ifdef DEBUG_MAS
+  Serial.println("!!!! DEBUG_MAS enabled, may result in buffer underruns!");
+#endif
+
   //-------------------------------------------------------------------------I2S-configuration
-  //--------------------------------------------------------------------------I2S-interlal DAC
+  //--------------------------------------------------------------------------I2S-internal DAC
   i2s_config_t i2s_config_noDAC = {
     .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_DAC_BUILT_IN),
     .sample_rate = 22050,
@@ -65,7 +77,7 @@ void ESP32_MAS::run() {
 //    .dma_buf_len = 64,              // => bei loop gibts "tssiiit" bei 64Byte buffer
     .dma_buf_len = sizeof(out_buf_8),
     .use_apll  =  false,        // 20200611 idl 3.3: apll enabled only works with samplerate < 22kHz
-    .tx_desc_auto_clear = true, // send zeros if buffer underrun
+    .tx_desc_auto_clear = false, // true: send zeros if buffer underrun; false: replay buffer; false dürfte besser wegen knacksern sein, verschleiert fehler.
     .fixed_mclk = 0 // calculate by the driver
   };
   //----------------------------------------------------------------------------I2S-extern DAC
@@ -79,7 +91,7 @@ void ESP32_MAS::run() {
     .dma_buf_count = 8,
     .dma_buf_len = 64,
     .use_apll  =  true,
-    .tx_desc_auto_clear = true, // [chris] keine ahnung
+    .tx_desc_auto_clear = false, // see above
 	.fixed_mclk = 0 // calculate by the driver
   };
   //-----------------------------------------------------------------------------I2S-pin-config
@@ -128,9 +140,25 @@ void ESP32_MAS::run() {
         pitch_loc = this->Pitch[h];
         //---------------------------------------------------------------------------------play
         if (!aiff_file[h].available()) {
+#ifdef DEBUG_MAS
           printf("[%d] open file\n", h);
+#endif
           //--------------------------------------------------------------------------open file
           this->openFile(h, aiff_file[h]);
+          if(! aiff_file[h]) {
+            printf("[%d] Error opening file! in state %d\n", h, this->Channel[h]);
+            this->stopDAC();
+            break;
+          } else {
+#ifdef DEBUG_MAS
+            printf("[%d] open successful, %d available bytes\n", h, aiff_file[h].available());
+#endif
+            if(aiff_file[h].available() == 0) {
+              printf("[%d] Error: open successful, %d available bytes\n", h, aiff_file[h].available());
+              this->stopDAC();
+              break;
+            }
+          }
         }//                                                                           open file
         //------------------------------------------------------------------read file to buffer
         
@@ -141,7 +169,9 @@ void ESP32_MAS::run() {
           end_file = false;
         }
         else {
-          printf("[%d] end file reached (%d)\n", h, file_buf_len);
+#ifdef DEBUG_MAS
+          printf("[%d] file end reached (%d)\n", h, file_buf_len);
+#endif
           end_file = true;
         }
         for (int i = 0; i < file_buf_len; i++) {
@@ -158,16 +188,24 @@ void ESP32_MAS::run() {
             //--------------------------------------------------------------------open new file
             uint32_t fopen1 = XTHAL_GET_CCOUNT();
             this->openFile(h, aiff_file[h]);
+            if(! aiff_file[h]) {
+              printf("[%d] Error opening file!\n", h);
+              this->stopDAC();
+              break;
+            }
             uint32_t fopen2 = XTHAL_GET_CCOUNT();
 
             //-------------------------------------------------------read new file to to buffer
             int available=aiff_file[h].available();
-            if(available < 0) {
-              printf("----- available < 0");
-              abort();
+            if(available <= 0) {
+              printf("Error opening sound file! available <= 0\n");
+              this->stopDAC();
+              break;
             }
             int read_end=min(available+file_buf_len, buf_len_16);
-            printf("[%d] open file (part) filling %d bytes open took %uclk\n", h, buf_len_16-file_buf_len,fopen2-fopen1);
+#ifdef DEBUG_MAS
+            printf("[%d] open file (part) filling %d bytes open took %uclk, available Bytes:%d\n", h, buf_len_16-file_buf_len,fopen2-fopen1, available);
+#endif
             for (int i = file_buf_len; i  < read_end; i++) {
               file_buf[h][i] = aiff_file[h].read();
               pitch[h] += pitch_loc;
@@ -177,6 +215,9 @@ void ESP32_MAS::run() {
               }
             }
             // could not fill buffer, give up and fill it with 0
+            if(read_end < buf_len_16) {
+              printf("WARNING: filling buffer with %d bytes \\0\n", buf_len_16 - read_end);
+            }
             for (int i = read_end; i < buf_len_16; i++) {
               file_buf[h][i] = 0;
             }
@@ -192,9 +233,10 @@ void ESP32_MAS::run() {
           }//                                                        read new file to to buffer
           else {
             //-----------------------------------------------------------cleare rest of channel
-            if(h == 0) printf("End of file, closing + clearing %d bytes\n", buf_len_16-file_buf_len);
+            // if(h == 0)
+            printf("[%d] End of file, closing + clearing %d bytes\n", h, buf_len_16-file_buf_len);
             aiff_file[h].close();
-            this->Channel[h] = 0;
+            this->Channel[h] = 6;
             for (int i = file_buf_len; i < buf_len_16; i++) {
               file_buf[h][i] = 0;
             }//for
@@ -204,22 +246,38 @@ void ESP32_MAS::run() {
       }//                                                                                  play
       else {
         //---------------------------------------------------------------------------------stop
-        // if(h == 0) printf("stop clearing %d bytes\n", buf_len_16);
+        /* => channel not added if 0 / 1 - STOP / BRAKE
+        // if(h == 0) printf("[%d] stop/brake: clearing %d bytes\n", h, buf_len_16);
+        #warning FIXME only clear once
         for (int i = 0; i < buf_len_16; i++) {
           //----------------------------------------------------------------write clear channel
           file_buf[h][i] = 0;
         }//                                                                 write clear channel
+        */
       }//                                                                                  stop
     }//read channels
     //------------------------------------------------------------------------------------MIXER
-    
+    for (int i = 0; i < buf_len_16; i++) {
+      out_buf_16[i]=0;
+    }
+    for (int h = 0; h < CHANNELS; h++) {
+      if (this->Channel[h] > 1) { // channel playing
+        int gain=(this->Gain[h] * this->Volume + 128 ) >> 8;   // int only ;-)
+        for (int i = 0; i < buf_len_16; i++) {
+          out_buf_16[i] += file_buf[h][i] * gain;
+        }
+      }
+    }
+    /*
     for (int i = 0; i < buf_len_16; i++) {
       out_buf_16[i] = (file_buf[0][i] * (this->Gain[0]) +
                        file_buf[1][i] * (this->Gain[1]) +
                        file_buf[2][i] * (this->Gain[2]))
                       * float(this->Volume / 255.0);
       // printf("fill %d in:%d out:%d\n", i, file_buf[0][i], out_buf_16[i]);
-    }//                                                                                   MIXER
+    }*/
+    //                                                                                     MIXER
+
     // [chris]
     int min=255;
     int max=0;
@@ -275,14 +333,39 @@ void ESP32_MAS::run() {
         out_buf_8[i + 1] = highByte(out_buf_16[i / 2]);
       }
     }//                                                                        write IS2 buffer
-//   for(int i=0; i < buf_len_8; i++) 
-//      Serial.printf("%d:",out_buf_8[i]);
+
+/*
+    for(int i=0; i < buf_len_8/2; i++) {
+      Serial.printf("%d:",out_buf_8[i]);
+      // out_buf_8[i]=0x80;
+      // [1] => der kanal wo der lautsprecher dran hängt
+      // sägezahn 0 .. 255
+      // out_buf_8[i*2+1]=i >> 1;
+      // out_buf_8[i*2]=0;
+    }
+*/
+
     // size_t bytes_written=0;
     // esp_err_t ret=i2s_write(mas->I2S_PORT, (const char *)&out_buf_8, buf_len_8, &bytes_written, 500);
     // Serial.printf("bytes_written: %d, err=%d", bytes_written, ret); Serial.println(); // 500 delay
+    // Hints: 1025/2 => 512 samples @22,5kHz = 22ms, so we have 22ms to refill the buffer!
+    //        i2s_write_bytes is asyncron / DMA!
+    //        i2s_write macht memcopy
     int ret=i2s_write_bytes(this->I2S_PORT, (const char *)&out_buf_8, buf_len_8, portMAX_DELAY);
+#ifdef DEBUG_MAS
+//    Serial.printf("bytes_written: %d\n", ret);
+#endif
     if(ret != buf_len_8) {
       printf("Error: bytes_written: %d to %d, len=%d\n", ret, this->I2S_PORT, buf_len_8);
+    }
+    for (int h = 0; h < CHANNELS; h++) {
+      if(this->Channel[h]==6) {
+        if(this->playDoneCallback[h]) {
+          printf("[%d] calling calback\n", h);
+          this->playDoneCallback[h] ();
+        }
+        this->Channel[h]=0;
+      }
     }
     vTaskDelay(10);
   }//                                                                         AUDIO PLAYER LOOP
@@ -334,6 +417,7 @@ void ESP32_MAS::stopDAC() {
 }
 
 void ESP32_MAS::setVolume(uint8_t volume) {
+  printf("ESP32_MAS::setVolume(volume:%d)\n", volume);
   Volume = volume;
 };
 
@@ -347,10 +431,11 @@ void ESP32_MAS::brakeChan(uint8_t channel) {
   Channel[channel] = 1;
 };
 
-void ESP32_MAS::playFile(uint8_t channel, String audio_file) {
+void ESP32_MAS::playFile(uint8_t channel, String audio_file, std::function<void()> playDoneCallback) {
   assert(channel < CHANNELS);
   Audio_File[channel] = audio_file;
   Channel[channel] = 2;
+  this->playDoneCallback[channel] = playDoneCallback;
 };
 
 void ESP32_MAS::loopFile(uint8_t channel, String audio_file) {
@@ -370,6 +455,7 @@ void ESP32_MAS::outChan(uint8_t channel) {
 };
 
 void ESP32_MAS::setGain(uint8_t channel, uint8_t gain) {
+  printf("ESP32_MAS::setGain(channel:%d, gain:%d)\n", channel, gain);
   assert(channel < CHANNELS);
   Gain[channel] = gain;
 };
@@ -424,8 +510,26 @@ float ESP32_MAS::getPitch(uint8_t channel) {
 
 void ESP32_MAS::openFile(uint8_t channel, File &f) {
   if(this->Audio_File[channel] != f.name()) {
-    printf("open file [%s, %s]\n", this->Audio_File[channel].c_str(), f.name() ? f.name() : "null");
+#ifdef DEBUG_MAS
+    printf("[%d] open file [%s, curr:%s]\n", channel, this->Audio_File[channel].c_str(), f.name() ? f.name() : "null");
+#endif
+    // 202202 Workaround: f=SPIFFS.open => f doesn't return false if file doesn't exist
+    if(!SPIFFS.exists(this->Audio_File[channel])) {
+      printf("[%d] Error: file %s doesn't exist!\n", channel, this->Audio_File[channel].c_str());
+      return;
+    } else {
+#ifdef DEBUG_MAS
+      printf("[%d] file %s exists\n", channel, this->Audio_File[channel].c_str());
+#endif
+    }
     f = SPIFFS.open(this->Audio_File[channel], "r");
+    if(! f) {
+      printf("[%d] Error: failed!\n", channel);
+    } else {
+#ifdef DEBUG_MAS
+      printf("{%d] opened, %d bytes avalable\n", channel, f.available());
+#endif
+    }
   } else {
     printf("[%d] seek 0\n", channel);
     f.seek(0); // seek0 is nicht viel schneller als neues open !!!!

@@ -104,6 +104,7 @@
   Send a new file to the sound system for playback.
   channel = channel to play the file. (0 - 2)
   filename = full path of the file to be played
+  playDoneCallback = call lambda function if sound played
   The output starts immediately (delay approx. 2 ms) and stops at the end of the file.
   If the channel is running a file, this file will be attached to the active file.
 
@@ -174,7 +175,7 @@ class ESP32_MAS {
     void stopDAC();
     void setVolume(uint8_t volume);
     void stopChan(uint8_t channel);
-    void playFile(uint8_t channel, String audio_file);
+    void playFile(uint8_t channel, String audio_file, std::function<void()> playDoneCallback = [](){} );
     void loopFile(uint8_t channel, String audio_file);
     virtual void openFile(uint8_t channel, File &);
     void runChan(uint8_t channel);
@@ -199,9 +200,10 @@ class ESP32_MAS {
     uint8_t I2S_DATA = 22; // DATA
     bool I2S_noDAC = false; // noDAC
     uint8_t Volume = 255; // 0-255, 0 = mute, 255 = 0dB
-    uint8_t Channel[3] = {0, 0, 0}; // 0 = STOP, 1 = BRAKE, 2 = PLAY, 3 = LOOP, 4 = RUN, 5 = OUT
+    uint8_t Channel[3] = {0, 0, 0}; // 0 = STOP, 1 = BRAKE, 2 = PLAY, 3 = LOOP, 4 = RUN, 5 = OUT (play to EOF), 6 = EOF reached, call play done callback
     uint8_t Gain[3] = {128, 128, 128}; // 0-255, 0 = mute, 255 = 0dB
     float Pitch[3] = {0, 0, 0}; // 0 - 1, 0 = normal speed, 1 = double speed
+    std::function<void()> playDoneCallback[3] = { [](){}, [](){}, [](){} };
 
     bool Audio_Player_run;
 };
