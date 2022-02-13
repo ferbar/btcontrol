@@ -78,6 +78,7 @@ protected:
   static int nLokdef;
   static IPAddress host;
   static int port;
+  int abortConnect=0;
 };
 
 class GuiViewContolLocoSelectLoco : public GuiView { // GuiViewConnectServer ???

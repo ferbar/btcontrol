@@ -562,7 +562,13 @@ void GuiViewConnectServer::close() {
 }
 
 void GuiViewConnectServer::loop() {
-  DEBUGF("GuiViewConnectServer::loop() clientThread running: %d, wifi status: %d", controlClientThread.isRunning(), WiFi.status());
+  DEBUGF("GuiViewConnectServer::loop() clientThread running: %d, wifi status: %d, abortConnect: %d", controlClientThread.isRunning(), WiFi.status(), this->abortConnect);
+  if(!controlClientThread.isRunning()) {
+    this->abortConnect++;
+  }
+  if(this->abortConnect >=10) {
+    GuiView::startGuiView(new GuiViewErrorMessage(String("Error connecting to ") + host.toString() + "\nclientthread aborted"));
+  }
   delay(100);
 }
 // ============================================================= GuiViewContolLocoSelectLoco ======
