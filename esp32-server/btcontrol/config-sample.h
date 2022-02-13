@@ -3,7 +3,7 @@
 #define LOK_IMAGE "rangierlok.png"
 
 #include "config-wifi.h"
-// ======= Put yous wifi config in config-wifi.h:
+// ======= Put your wifi config in config-wifi.h:
 // switch with cv #510, default is create an softap, at least one of wifi_ap* and wifi_client* is required
 // password for AP
 // SOFTAP => create own wifi
