@@ -116,8 +116,11 @@ std::string readFile(std::string filename)
 		",,"
 #ifdef PUTZLOK
 		"mPutzmotor"
+#elif defined HAVE_SOUND
+    "sSound ein/aus"
 #endif
-		",,,,,,mMotor Boost\n";
+		",,,,,"
+		",mMotor Boost\n";
 #endif
 	} else if(filename == "conf/decoder_esp32.csv") {
 		return
@@ -130,10 +133,10 @@ std::string readFile(std::string filename)
 		if(filename.at(0) != '/') {
 			filename="/" + filename;
 		}
-		if(!SPIFFS.exists(filename.c_str())) {
-			ERRORF("file %s doesn't exist", filename.c_str());
-			return "";
-		}
+    if(!SPIFFS.exists(filename.c_str())) {
+      ERRORF("file %s doesn't exist", filename.c_str());
+      return "";
+    }
 		File f = SPIFFS.open(filename.c_str(), "r");
 		size_t size=f.size();
 		DEBUGF("file:%s size:%d", filename.c_str(), size);
