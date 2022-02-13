@@ -1,6 +1,7 @@
 #define lok_name "esp32-playmobil"
 // create a softlink under data/img - maybe from bluetoothserver/img/ and upload the SPIFFS image
 #define LOK_IMAGE "rangierlok.png"
+// #define LOK_IMAGE "putzlok.png"
 
 #include "config-wifi.h"
 // ======= Put your wifi config in config-wifi.h:
@@ -32,7 +33,10 @@
 // WEMOS v1.0.0
 #define WEMOS_I2C_MOTOR_SHIELD
 
-#define MOTOR_START 80
+// esp32-playmobil lok: @3S /12V
+#define MOTOR_START 30
+// vng5019
+//#define MOTOR_START 40
 
 // speaker/amplifier connected to internal DAC
 // mit Arduino -> Tools -> ES32 Sketch Data Upload die F*.raw files raufladen
