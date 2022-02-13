@@ -442,12 +442,14 @@ void ESP32PWM::setFunction(int nFunc, bool *func) {
 
 void ESP32PWM::commit() {
 // Print func values:
+#ifndef NODEBUG
   DEBUGF("=================commit ");
-    for(int i=0; i < nFunc; i++) {
-      DEBUGF("[%d]=%d, ",i, this->currentFunc[i]);
-    }
-    DEBUGF("~~~~~~~~~~~~~~~~~~~~~");
-
+  String debugFunc="";
+  for(int i=0; i < nFunc; i++) {
+    debugFunc+=String("[") + i + "]=" + this->currentFunc[i] + ", ";
+  }
+  DEBUGF("func=%s", debugFunc.c_str());
+#endif
   if(nFunc > 0 ) {
     // ================== headlight abhängig von setFunc + setDir
 #ifdef HEADLIGHT_1_PIN
