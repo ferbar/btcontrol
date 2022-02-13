@@ -88,10 +88,10 @@ void ControlClientThread::run()
 			if(this->getQueueLength() == 0) {
 				this->sendPing();
 			} else {
-				DEBUGF("/%d: sending command with callback", this->msgNum);
 				#warning todo: lock
 				ControlClientThreadQueueElement item=this->cmdQueue.front();
 				this->cmdQueue.pop();
+				DEBUGF("/%d: sending command %s with callback", this->msgNum, messageTypeName(item.cmd.getType()).c_str());
 				callback=item.callback;
 				this->sendMessage(item.cmd);
 			}
@@ -106,7 +106,7 @@ void ControlClientThread::run()
 			DEBUGF("/%d: received message in %ldms", this->msgNum, timetaken);
 			// reply.dump();
 			if(callback) {
-				DEBUGF("/%d: callback", this->msgNum);
+				DEBUGF("/%d: calling query callback for message type %s", this->msgNum, messageTypeName(reply.getType()).c_str());
 				callback(reply);
 			}
 			if(reply.isType("STATUS_REPLY")) {
