@@ -648,7 +648,10 @@ void drawCachedImage(const char*imgname, int x, int y) {
   Lock lock(imgCacheMutex);
   auto imgPair=imgCache.find(imgname);
   if(imgPair == imgCache.end()) {
-    DEBUGF("requesting image [%s]",imgname);
+    DEBUGF("inserting empty image to prevent multiple load requests");
+    std::pair<const std::string, TFT_eSprite> pair(imgname, TFT_eSprite(&tft));
+    imgCache.insert(pair); // das sollte gehen weil zu dem Zeitpunkt spr kopiert werden kann (pointer alle null)
+    NOTICEF("requesting image [%s]",imgname);
 	  FBTCtlMessage cmd(messageTypeID("GETIMAGE"));
 	  cmd["imgname"]=imgname;
 	  controlClientThread.query(cmd,[imgname](FBTCtlMessage &reply) { 
@@ -657,9 +660,15 @@ void drawCachedImage(const char*imgname, int x, int y) {
         Lock lock(imgCacheMutex);
         std::string data=reply["img"].getStringVal();
         NOTICEF("got getimage reply for %s - length:%dB",imgname, data.length());
+        /*
         std::pair<const std::string, TFT_eSprite> pair(imgname, TFT_eSprite(&tft));
-        imgCache.insert(pair); // das sollte gehen weil zu dem Zeitpunkt spr kopiert werden kann (pointer alle null)
+        imgCache.insert(pair);
+        */
+        // fill image, created above
         auto it=imgCache.find(imgname);
+        if(it == imgCache.end()) {
+          throw std::runtime_error("trying to fill img cache failed!!!");
+        }
         TFT_eSprite &spr=it->second;
         // imgPair.second;
         if(data.length() > 5000) {
