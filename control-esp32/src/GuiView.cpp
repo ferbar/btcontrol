@@ -638,6 +638,7 @@ std::map<const std::string, TFT_eSprite> imgCache;
 Mutex imgCacheMutex;
 /**
  * malt ein Bild wenns schon im cache ist, wenn nicht request und return ohne zu malen + GuiViewContolLocoSelectLoco::needUpdate=true;
+ * beim ersten Request wird ein leeres Bild angelegt. ist beim 2. Request das Bild noch nicht im cache wird ein leeres Bild gemalt
  */
 void drawCachedImage(const char*imgname, int x, int y) {
   if(strlen(imgname) == 0) {
