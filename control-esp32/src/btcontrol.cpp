@@ -192,6 +192,12 @@ void setup()
     print_wakeup_reason();
     
     WiFi.persistent(false);
+    
+    printf("ESP_IDF Version: %s\n", esp_get_idf_version());
+    FlashMode_t ideMode = ESP.getFlashChipMode();
+    if(ideMode != FM_QIO) {
+      ERRORF("WARNING: Flash not in QIO mode!");
+    }
 
     /*
     ADC_EN is the ADC detection enable port
