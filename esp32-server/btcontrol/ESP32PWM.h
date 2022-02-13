@@ -17,6 +17,7 @@ public:
   int sendPOM(int addr, int cv, int value);
 
   void loop();
+  static void dumpConfig();
   
 private:
 	void init(int devnr);

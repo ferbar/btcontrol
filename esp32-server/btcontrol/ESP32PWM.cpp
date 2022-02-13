@@ -243,6 +243,61 @@ ESP32PWM::~ESP32PWM() {
 	fullstop(true, true);
 }
 
+void ESP32PWM::dumpConfig() {
+  DEBUGF("ESP32PWM::dumpConfig()");
+#ifdef WEMOS_I2C_MOTOR_SHIELD
+  DEBUGF("WEMOS_I2C_MOTOR_SHIELD");
+#endif
+#ifdef LOLIN_I2C_MOTOR_SHIELD
+  DEBUGF("LOLIN_I2C_MOTOR_SHIELD");
+#endif
+#ifdef VNH5019_DUAL_SHIELD
+  DEBUGF("VNH5019_DUAL_SHIELD");
+#endif
+#ifdef DRV8871
+  DEBUGF("DRV8871");
+#endif
+#ifdef CHINA_MONSTER_SHIELD
+  DEBUGF("CHINA_MONSTER_SHIELD");
+#endif
+#ifdef HAVE_PWM_PIN
+  DEBUGF("HAVE_PWM_PIN");
+#endif
+#ifdef MOTOR_NR
+  DEBUGF("MOTOR_NR %d", MOTOR_NR);
+#endif
+#ifdef HAVE_CS
+  DEBUGf("HAVE_CS");
+#endif
+#ifdef HAVE_PWM_PIN
+  DEBUGF("HAVE_PWM_PIN");
+#endif
+#ifdef MOTOR_FREQUENCY
+  DEBUGF("MOTOR_FREQUENCY %d", MOTOR_FREQUENCY);
+#endif
+#ifdef MOTOR_IN_BRAKE
+  DEBUGF("MOTOR_IN_BRAKE " ## MOTOR_IN_BRAKE);
+#endif
+#ifdef MOTOR_OUTPUTS
+  DEBUGF("MOTOR_OUTPUTS %d", MOTOR_OUTPUTS);
+#endif
+#ifdef INFO_LED_PIN
+  DEBUGF("INFO_LED_PIN %d", INFO_LED_PIN);
+#endif
+#ifdef HEADLIGHT_1_PIN
+  DEBUGF("HEADLIGHT_1_PIN %d", HEADLIGHT_1_PIN);
+#endif
+#ifdef HEADLIGHT_2_PIN
+  DEBUGF("HEADLIGHT_2_PIN %d", HEADLIGHT_2_PIN);
+#endif
+#ifdef PUTZLOK_BLINK_1_PIN
+  DEBuGF("PUTZLOK_BLINK_1_PIN %d", PUTZLOK_BLINK_1_PIN);
+#endif
+#ifdef PUTZLOK_BLINK_2_PIN
+  DEBuGF("PUTZLOK_BLINK_2_PIN %d", PUTZLOK_BLINK_2_PIN);
+#endif
+}
+
 void ESP32PWM::loop() {
 #ifdef PUTZLOK
    static bool putzBlink=false;
