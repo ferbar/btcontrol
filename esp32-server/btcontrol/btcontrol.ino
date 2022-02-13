@@ -324,7 +324,7 @@ void init_wifi_client() {
 void init_wifi() {
 #if defined wifi_ap_ssid && defined wifi_client_ssid
     uint8_t ap_client = readEEPROM(EEPROM_WIFI_AP_CLIENT);
-    DEBUGF("############# switch Wifi AP / client mode: %d ###########################", ap_client);
+    NOTICEF("############# switch Wifi AP / client mode: %d (CV:510) ###########################", ap_client);
 
     if(ap_client == 0) {
       init_wifi_softap();
@@ -357,10 +357,12 @@ void setup(void)
     Serial.printf("SketchSize:     %0d\r\n", ESP.getSketchSize());
     Serial.printf("FreeSketchSpace:%d\r\n", ESP.getFreeSketchSpace());
 
-    Serial.printf("Flash ide  size: %u bytes\r\n", ideSize);
+    Serial.printf("Flash ide size:  %u bytes\r\n", ideSize);
     Serial.printf("Flash ide speed: %u Hz\r\n", ESP.getFlashChipSpeed());
     Serial.printf("Flash ide mode:  %s\r\n", (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN"));
-
+    if(ideMode != FM_QIO) {
+      ERRORF("WARNING: Flash not in QIO mode!");
+    }
         /* Print chip information */
     esp_chip_info_t chip_info;
     esp_chip_info(&chip_info);
@@ -381,7 +383,7 @@ void setup(void)
             (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
     printf("ESP_IDF Version: %s\n", esp_get_idf_version());
 
-
+    ESP32PWM::dumpConfig();
 
     init_wifi();
 
