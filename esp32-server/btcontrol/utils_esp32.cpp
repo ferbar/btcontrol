@@ -66,20 +66,20 @@ void printDirectory()
 	File root = SPIFFS.open("/");
 	int levels=0;
 	if(!root) {
-		ERRORF("- failed to open directory");
+		NOTICEF("failed to open directory, trying SPIFFS.begin()...");
 		if (!SPIFFS.begin()) {
 			ERRORF("SPIFFS Mount Failed");
 			return;
 		}
-		DEBUGF("mounting filesystem done");
+		DEBUGF("OK: mounting filesystem done");
 		root = SPIFFS.open("/");
 		if(!root) {
-			ERRORF("- failed to open directory");
+			ERRORF("Error: failed to open directory");
 			return;
 		}
 	}
 	if (!root.isDirectory()) {  // kein Verzeichnis, sondern Datei
-		ERRORF("− not a directory");
+		ERRORF("Error: / not a directory");
 		return;
 	}
 
@@ -130,6 +130,10 @@ std::string readFile(std::string filename)
 		if(filename.at(0) != '/') {
 			filename="/" + filename;
 		}
+		if(!SPIFFS.exists(filename.c_str())) {
+			ERRORF("file %s doesn't exist", filename.c_str());
+			return "";
+		}
 		File f = SPIFFS.open(filename.c_str(), "r");
 		size_t size=f.size();
 		DEBUGF("file:%s size:%d", filename.c_str(), size);
@@ -163,18 +167,21 @@ void writeEEPROM(int addr1, uint8_t data1, int addr2, uint8_t data2) {
     EEPROM.begin(EEPROM_VALUES);
   }
   uint8_t existing_data1=EEPROM.read(addr1);
-  uint8_t existing_data2;
+  uint8_t existing_data2=-1;
   if(addr2 >= 0) {
     existing_data2=EEPROM.read(addr2);
   } else {
     existing_data2=data2;
   }
   if(existing_data1 != data1 || existing_data2 != data2) {
-    printf("EEPROM.write %d:%d (=%d) %d:%d (=%d) ******************************\n", addr1, data1, existing_data1, addr2, data2, existing_data2);
+    printf("EEPROM.write [%d]:%d (=%d) [%d]:%d (=%d) ******************************\n", addr1, data1, existing_data1, addr2, data2, existing_data2);
     EEPROM.write(addr1, data1);
     if(addr2 >= 0)
       EEPROM.write(addr2, data2);
     EEPROM.commit();
+    printf("EEPROM.write verify: [%d]=%d\n", addr1, readEEPROM(addr1));
+    if(addr2 >= 0)
+      printf("EEPROM.write verify: [%d]=%d\n", addr2, readEEPROM(addr2));
   }
 }
 
