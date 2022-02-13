@@ -108,8 +108,6 @@ void ESP32_MAS_Speed::begin() {
     this->initialized=true;
   }
   if(!this->isRunning()) {
-    Audio.startDAC();
-    DEBUGF("DAC init done");
     Audio.setFahrstufe(0);
     Audio.setGain(0,80);  // Motor sound
     // Audio.setGain(1,100);  // Horn -> default 128
@@ -117,6 +115,8 @@ void ESP32_MAS_Speed::begin() {
     int volume=readEEPROM(EEPROM_SOUND_VOLUME);
     NOTICEF("############# Sound Volume: %d (CV:266) ###########################", volume);
     Audio.setVolume(volume); // 255=max
+    Audio.startDAC();
+    DEBUGF("DAC init done");
   }
 }
 
@@ -134,6 +134,16 @@ void ESP32_MAS_Speed::startPlayFuncSound() {
         DEBUGF("disable F1");
         lokdef[0].func[1].ison=false;
     });
+  }
+
+  if(lokdef[0].nFunc > SOUND_ON_OFF_FUNC && lokdef[0].func[SOUND_ON_OFF_FUNC].ison != this->isRunning()) {
+    if(lokdef[0].func[SOUND_ON_OFF_FUNC].ison) {
+      DEBUGF("ESP32_MAS_Speed::startPlayFuncSound() start");
+      this->begin();
+    } else {
+      DEBUGF("ESP32_MAS_Speed::startPlayFuncSound() stop");
+      this->stopDAC();
+    }
   }
 }
 

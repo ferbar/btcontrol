@@ -3,6 +3,9 @@
 #include "SPIFFS.h"
 #include "ESP32_MAS.h"
 
+// kann nicht geändert werden!
+#define SOUND_ON_OFF_FUNC 3
+
 class ESP32_MAS_Speed : public ESP32_MAS {
   virtual void openFile(uint8_t channel, File &f);
 public:
