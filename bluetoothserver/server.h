@@ -4,7 +4,9 @@
 #include <pthread.h>
 #include <map>
 #include <string>
+#ifdef INCL_BT
 #include "btserver.h"
+#endif
 
 class Server
 #ifdef INCL_BT
