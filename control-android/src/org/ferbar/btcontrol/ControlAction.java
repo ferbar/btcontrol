@@ -102,7 +102,7 @@ import org.ferbar.btcontrol.BTcommThread;
 import org.ferbar.btcontrol.Debuglog;
 
 public class ControlAction extends Activity implements BTcommThread.Callback, OnSeekBarChangeListener {
-	final static String TAG ="ControlAction";
+	final static String TAG ="btcontrol.ControlAction";
 	private static final int ACTIVITY_SELECT_LOK=0;
 	String infoMsg="";
 	static ArrayList<Integer> currSelectedAddr=new ArrayList<Integer>();
@@ -570,23 +570,38 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 		        ((Button)dialog.findViewById(R.id.buttonGo)).setOnClickListener(new View.OnClickListener() {
 		        	public void onClick(View goButton) {
 		        		try {
-		        			EditText v=(EditText) dialog.findViewById(R.id.editTextValue);
-			    			int value=Integer.parseInt(v.getText().toString());
-		        			v=(EditText) dialog.findViewById(R.id.editTextCV);
-			    			int cv=Integer.parseInt(v.getText().toString());
+		        			EditText v=(EditText) dialog.findViewById(R.id.editTextCV);
+		        			String sCV=v.getText().toString();
+		        			if(sCV.length()==0) {
+		        				Toast.makeText(dialog.getContext(), "CV number empty", Toast.LENGTH_LONG).show();
+		        				return;
+		        			}
+			    			int cv=Integer.parseInt(sCV);
+
+			    			v=(EditText) dialog.findViewById(R.id.editTextValue);
+		        			String sValue=v.getText().toString();
+		        			int value;
+		        			if(sValue.length() == 0) {
+		        				value=-1;
+		        			} else {
+		        				value=Integer.parseInt(sValue);
+		        			}
 		        		
 		        			FBTCtlMessage msg = new FBTCtlMessage();
 			    			msg.setType(MessageLayouts.messageTypeID("POM"));
 			    	    	msg.get("addr").set(ControlAction.currSelectedAddr.get(0));
 			    	    	msg.get("cv").set(cv);
 			    	    	msg.get("value").set(value);
+			    	    	
 			    	    	FBTCtlMessage reply = AndroidMain.btcomm.execCmd(msg);
 			    	    	if(reply != null) {
-			    	    		Toast.makeText(v.getContext(), "CV "+cv+" = "+value+" gesendet", Toast.LENGTH_LONG).show();
+			    	    		Toast.makeText(dialog.getContext(), "CV "+cv+" = "+value+" gesendet", Toast.LENGTH_LONG).show();
+			    	    		v.setText(""+reply.get("value").getIntVal());
 			    	    	}
 			    		} catch (Exception e) {
 			    			// TODO Auto-generated catch block
-			    			e.printStackTrace();
+			    			Log.e(TAG, "POM Exception", e);
+			    			Toast.makeText(dialog.getContext(), "POM Exception "+e.getMessage(), Toast.LENGTH_SHORT).show();
 			    		}
 
 		        	}
@@ -1332,7 +1347,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
         		ControlAction.this.setMessageAddrField(msgAcc, "ACC");
         		ControlAction.this.setMessageAddrField(msgBreak,"BREAK");
     		} catch (Exception e) {
-    			e.printStackTrace();
+    			Log.e(TAG,"HoldDownSliderTask", e);
     			Toast.makeText(ControlAction.this, "exception:"+e.getMessage(), Toast.LENGTH_LONG).show();
     		}
 		}
