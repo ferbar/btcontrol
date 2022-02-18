@@ -277,6 +277,7 @@ public class AndroidMain extends Activity {
 		        	}
 					AndroidMain.this.jmdns = JmDNS.create();  // Achtung !!! im strict mode macht das im UI thread eine Network Exception!!!
 					synchronized(AndroidMain.this.jmdns) {
+						Log.i(TAG, "initBonjour.run()");
 						AndroidMain.this.jmdns.addServiceListener(bonjourType, listener = new ServiceListener() {
 				            public void serviceResolved(final ServiceEvent ev) {
 				                notifyUser("Service resolved: "
@@ -340,10 +341,11 @@ public class AndroidMain extends Activity {
 				    			TextView t=(TextView) AndroidMain.this.findViewById(R.id.textViewInfo);
 				    			try {
 				    				// FIXME: da war mal eine NullPointer Exception. ka wie das geht ( AndroidMain.this.jmdns )
+				    				Log.i(TAG, "AndroidMain.this.jmdns.getInetAddress():"+AndroidMain.this.jmdns.getInetAddress());
 									t.setText(AndroidMain.this.getText(R.string.main_found_serives) + "(" + AndroidMain.this.jmdns.getInetAddress().getHostAddress() + ")");
-								} catch (IOException e) {
-									// lmaa
-									e.printStackTrace();
+								} catch (Exception e) {
+									Log.e(TAG,"initBonjour.run", e);
+									t.setText("Exception:" + e.getMessage());
 								}
 				    		}
 						});
