@@ -3,6 +3,7 @@
 #include <vector>
 #include "lokdef.h"
 #include "utils.h"
+#include "Thread.h"
 
 class GuiView {
 public:
@@ -22,7 +23,14 @@ protected:
   void drawButtons();
 };
 
-
+class RefreshWifiThread : public Thread {
+public:
+  RefreshWifiThread() {};
+  void run();
+  struct WifiEntry {int rssi; bool have_LR; }; 
+  static std::map <String, WifiEntry > wifiList;
+  Mutex listMutex;
+};
 
 class GuiViewSelectWifi : public GuiView {
 public:
@@ -38,12 +46,12 @@ public:
   static void buttonCallback(Button2 &b, int which);
   static void buttonCallbackLongPress(Button2 &b);
   const char * which() const { return "GuiViewSelectWifi"; };
-private:
-  struct WifiEntry {int rssi; bool have_LR; }; 
-  static std::map <String, WifiEntry > wifiList;
-  static int selectedWifi; // muss wegen callback static sein
   static bool needUpdate;
+private:
+  static int selectedWifi; // muss wegen callback static sein
   static const char *passwordForSSID(const String &ssid);
+  static RefreshWifiThread refreshWifiThread;
+  int lastFoundWifis=0;
 };
 
 class GuiViewConnectWifi : public GuiView {

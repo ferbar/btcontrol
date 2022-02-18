@@ -159,91 +159,98 @@ void GuiView::drawButtons() {
 int GuiViewSelectWifi::selectedWifi=0;
 bool GuiViewSelectWifi::needUpdate=false;
 
-std::map <String, GuiViewSelectWifi::WifiEntry> GuiViewSelectWifi::wifiList;
+std::map <String, RefreshWifiThread::WifiEntry> RefreshWifiThread::wifiList;
+RefreshWifiThread GuiViewSelectWifi::refreshWifiThread;
 
-void guiViewSelectWifiCallback1(Button2 &b);
-void guiViewSelectWifiCallback2(Button2 &b);
-void guiViewSelectWifiLongPressedCallback(Button2 &b);
+void RefreshWifiThread::run() {
+  DEBUGF("RefreshWifiThread::run() %d", this->getId());
+  if( WiFi.isConnected() ) {
+    WiFi.disconnect();
+    delay(100);
+  }
+  // WiFi.mode(WIFI_OFF); => dürfte wifi hin machen
+  try {
+    while(true) {  // beendet durch pthread_testcancel()
+      int16_t n = WiFi.scanNetworks();
+      DEBUGF("WiFi scan done found %d networks", n);
+      Lock lock(this->listMutex);
+      this->wifiList.clear();
+      for(int i=0; i < n; i++) {
+        wifi_ap_record_t *scanResult=(wifi_ap_record_t *)WiFi.getScanInfoByIndex(i);
+        NOTICEF("  - found wifi %s rssi:%d, chan:%d, %d %d %d %d", scanResult->ssid, scanResult->rssi, scanResult->primary, scanResult->phy_11b, scanResult->phy_11g, scanResult->phy_11n, scanResult->phy_lr);
 
-
+        auto it = this->wifiList.find(WiFi.SSID(i));
+        if(it == this->wifiList.end()) {
+          this->wifiList[WiFi.SSID(i)] = { scanResult->rssi, scanResult->phy_lr? true : false };
+        } else {
+          DEBUGF("  found duplicate SSID: %s (old:%d, new:%d)", WiFi.SSID(i).c_str(), it->second.rssi, WiFi.RSSI(i));
+          // multiple APs for the same ssid found, use the lower rssi;
+          if(this->wifiList[WiFi.SSID(i)].rssi < WiFi.RSSI(i)) // rssi is always negative!! -40 is better than -90!
+            this->wifiList[WiFi.SSID(i)].rssi = WiFi.RSSI(i) ;
+        }
+      }
+      GuiViewSelectWifi::needUpdate=true;
+      lock.unlock();
+      this->testcancel();
+      sleep(5);
+    }
+  } catch(...) {
+    this->wifiList.clear();
+    DEBUGF("RefreshWifiThread::run() - stopped %d", this->getId());
+    throw;
+  }
+}
 
 void GuiViewSelectWifi::init() {    
-
+  DEBUGF("GuiViewSelectWifi::init()");
+  this->needUpdate=false; // leave Scanning... until first scan complete
   DEBUGF("WiFi Mode STA");
   tft.fillScreen(TFT_BLACK);
-  tft.setTextDatum(MC_DATUM);
+  tft.setTextDatum(TC_DATUM);
   tft.setTextColor(TFT_GREEN, TFT_BLACK);
   tft.setTextSize(1);
   tft.setFreeFont(FSSP7);
   // 20210922 setTextDatum(MC) scheint die 0 pos vom string in die mitte vom string zu setzen. Koordinaten 0/0 sind trozdem links oben
-  tft.drawString("Scanning...", tft.width()/2, tft.height()/2);
+  tft.drawString("Scanning...", tft.width()/2, tft.fontHeight() * 4);
 
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
   if(esp_wifi_set_protocol( WIFI_IF_STA, WIFI_PROTOCOL_11B| WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_LR ) != ESP_OK ) {
-    tft.drawString("  esp_wifi_set_protocol failed", 0, tft.fontHeight()*2);
+    tft.drawString("  esp_wifi_set_protocol failed", 0, tft.fontHeight() * 2);
   }
-  WiFi.disconnect();
-  delay(100);
 
-  int16_t n = WiFi.scanNetworks();
-  this->wifiList.clear();
-  for(int i=0; i < n; i++) {
-    wifi_ap_record_t *scanResult=(wifi_ap_record_t *)WiFi.getScanInfoByIndex(i);
-    NOTICEF("  - found wifi %s rssi:%d, chan:%d, %d %d %d %d", scanResult->ssid, scanResult->rssi, scanResult->primary, scanResult->phy_11b, scanResult->phy_11g, scanResult->phy_11n, scanResult->phy_lr);
-
-    auto it = this->wifiList.find(WiFi.SSID(i));
-    if(it == this->wifiList.end()) {
-      this->wifiList[WiFi.SSID(i)] = { scanResult->rssi, scanResult->phy_lr? true : false };
-    } else {
-      DEBUGF("  found duplicate SSID: %s (old:%d, new:%d)", WiFi.SSID(i).c_str(), it->second.rssi, WiFi.RSSI(i));
-      // multiple APs for the same ssid found, use the lower rssi;
-      if(this->wifiList[WiFi.SSID(i)].rssi < WiFi.RSSI(i)) // rssi is always negative!! -40 is better than -90!
-        this->wifiList[WiFi.SSID(i)].rssi = WiFi.RSSI(i) ;
-    }
-  }
-	if(this->selectedWifi > n-1) {
-		this->selectedWifi = n-1;
-	}
-  // WiFi.mode(WIFI_OFF); => dürfte wifi hin machen
-  DEBUGF("WiFi scan done found %d networks", n);
   // don't start scan if btn1 pressed
   btn1.setPressedHandler([](Button2&b) {
     GuiViewSelectWifi::lastKeyPressed=millis();
   });
-  btn1.setClickHandler(guiViewSelectWifiCallback1);
-  btn2.setClickHandler(guiViewSelectWifiCallback2);
-  btn1.setLongClickDetectedHandler(guiViewSelectWifiLongPressedCallback);
-  btn2.setLongClickDetectedHandler([](Button2&b) {
+  btn1.setClickHandler([](Button2 &b) {
+    GuiViewSelectWifi::buttonCallback(b, 1);
+  });
+  btn2.setClickHandler([](Button2 &b) {
+    GuiViewSelectWifi::buttonCallback(b, 2);
+  });
+  btn1.setLongClickDetectedHandler([](Button2 &b) {
+    GuiViewSelectWifi::buttonCallbackLongPress(b);
+  });
+  btn2.setLongClickDetectedHandler([](Button2 &b) {
     DEBUGF("GuiViewSelectWifi::btn2.setLongClickHandler");
     // off
     GuiView::startGuiView(new GuiViewPowerDown());
-  }
-  );
+  });
   btn1.setPressedHandler([](Button2&b) {
     GuiViewSelectWifi::lastKeyPressed=millis();
   });
   btn2.setPressedHandler([](Button2&b) {
     GuiViewSelectWifi::lastKeyPressed=millis();
   });
-  this->needUpdate=true;
-  tft.fillScreen(TFT_BLACK);
+  // tft.fillScreen(TFT_BLACK);
+  this->refreshWifiThread.start();
 }
   
 void GuiViewSelectWifi::close() {
 	DEBUGF("GuiViewSelectWifi::close()");
-  this->wifiList.clear();
+  this->refreshWifiThread.cancel();
   resetButtons();
-}
-  
-void guiViewSelectWifiLongPressedCallback(Button2 &b) {
-  GuiViewSelectWifi::buttonCallbackLongPress(b);
-}
-void guiViewSelectWifiCallback1(Button2 &b) {
-  GuiViewSelectWifi::buttonCallback(b,1);
-}
-void guiViewSelectWifiCallback2(Button2 &b) {
-  GuiViewSelectWifi::buttonCallback(b,2);
 }
 
 const char *GuiViewSelectWifi::passwordForSSID(const String &ssid) {
@@ -258,25 +265,28 @@ const char *GuiViewSelectWifi::passwordForSSID(const String &ssid) {
 void GuiViewSelectWifi::loop() {
 	//DEBUGF("GuiViewSelectWifi::loop()");
 	// update only if changed:
-	static long last=millis();       // für refresh
 	if(this->needUpdate) {
 		DEBUGF("##################GuiViewSelectWifi::loop() needUpdate");
 		this->needUpdate=false;
-		last=millis();
 
-		this->drawButtons();   
+		this->drawButtons();
+    Lock lock(this->refreshWifiThread.listMutex);
+    int wifiCount=this->refreshWifiThread.wifiList.size();
 
-		if (this->wifiList.size() == 0) {
+		if (wifiCount == 0) {
       tft.setTextDatum(MC_DATUM);
-			tft.drawString("No wifi networks found", tft.width() / 2, tft.height() / 2);
+			tft.drawString("No wifi networks found", tft.width() / 2, tft.height() * 4);
 		} else {
-			DEBUGF("Found %d wifi networks", this->wifiList.size());
+      if(this->selectedWifi > wifiCount-1) {
+        this->selectedWifi = wifiCount-1;
+      }
+			DEBUGF("Found %d wifi networks, selected wifi:%d", wifiCount, this->selectedWifi);
       // tft.fillScreen(TFT_BLACK); text inhalt ändert sich nicht
       this->drawButtons();
 			int n=0;
 			char buff[50];
       for(int i=0; i < 2; i++) {
-			  for(const auto& value: this->wifiList) {
+			  for(const auto& value: this->refreshWifiThread.wifiList) {
 				  const String password=this->passwordForSSID(value.first);
   				DEBUGF("  wifi network %s have password: %s", value.first.c_str(), password ? "yes" : "no");
           // round 1: list APs with passwords
@@ -297,11 +307,21 @@ void GuiViewSelectWifi::loop() {
 						  value.second.rssi,
 						  value.second.have_LR ? " LR" : "");
   				//ft.println(buff); => println geht ned richtig mit custom fonts (baseline falsch, bg color geht ned)
-            tft.drawString(buff,0,tft.fontHeight()*n);
+            int width=tft.drawString(buff,0,tft.fontHeight()*n);
+            int maxwidth=tft.width()-10;
+            if(width < maxwidth) {
+              tft.fillRect(width-1, tft.fontHeight()*n, maxwidth-width, tft.fontHeight(), TFT_BLACK);
+            }
 	  	  		n++;
           }
 			  }
 			}
+      int maxwidth=tft.width()-10;
+      if(n < this->lastFoundWifis) {
+        DEBUGF("cleaning unused lines: start n:%d y:%d, height:%d", n, tft.fontHeight()*n, tft.height()-tft.fontHeight()*n);
+        tft.fillRect(0, tft.fontHeight()*n, maxwidth, tft.height()-tft.fontHeight()*n, TFT_BLACK);
+      }
+      this->lastFoundWifis=n;
 		}
 	} else {
     if(millis() > GuiViewSelectWifi::lastKeyPressed+POWER_DOWN_IDLE_TIMEOUT*1000) { // nach 5min power down
@@ -309,22 +329,18 @@ void GuiViewSelectWifi::loop() {
       GuiView::startGuiView(new GuiViewPowerDown());
     }
 
-		if(millis() > last+10*1000) { // alle 10 sekunden refresehen wenn keine taste gedrückt wurde
-			DEBUGF("##############GuiViewSelectWifi::loop - restart SelectWifi for rescan");
-			last=millis();
-			GuiView::startGuiView(new GuiViewSelectWifi());
-		}
 	}
 }
 
 void GuiViewSelectWifi::buttonCallback(Button2 &b, int which) {
-	DEBUGF("GuiViewSelectWifi::buttonCallback %d", which);
+  DEBUGF("GuiViewSelectWifi::buttonCallback %d, selectedWifi=%d", which, GuiViewSelectWifi::selectedWifi);
   GuiViewSelectWifi::lastKeyPressed=millis();
   if(which==1) {
     if(GuiViewSelectWifi::selectedWifi > 0) GuiViewSelectWifi::selectedWifi--;
   } else {
-    if(GuiViewSelectWifi::selectedWifi < GuiViewSelectWifi::wifiList.size() -1) GuiViewSelectWifi::selectedWifi++;
+    if(GuiViewSelectWifi::selectedWifi < (int) GuiViewSelectWifi::refreshWifiThread.wifiList.size() -1) GuiViewSelectWifi::selectedWifi++;
   }
+  DEBUGF("GuiViewSelectWifi::buttonCallback %d, new: selectedWifi=%d", which, GuiViewSelectWifi::selectedWifi);
   GuiViewSelectWifi::needUpdate=true;
 }
 
@@ -334,7 +350,8 @@ void GuiViewSelectWifi::buttonCallbackLongPress(Button2 &b) {
 	String ssid;
   int n=0;
   bool LR=false;
-	for(auto it=GuiViewSelectWifi::wifiList.begin(); it != GuiViewSelectWifi::wifiList.end(); ++it) {
+  Lock lock(GuiViewSelectWifi::refreshWifiThread.listMutex);
+  for(auto it=GuiViewSelectWifi::refreshWifiThread.wifiList.begin(); it != GuiViewSelectWifi::refreshWifiThread.wifiList.end(); ++it) {
     if(GuiViewSelectWifi::passwordForSSID(it->first)) {
       DEBUGF("have password for %s", it->first.c_str());
       if(n==GuiViewSelectWifi::selectedWifi) {
@@ -443,6 +460,9 @@ void GuiViewConnectWifi::loop() {
 			} else {
 				IPAddress ip = WiFi.localIP();
 				tft.drawString(String("connected to: ") + this->ssid + " " + ip.toString(), 0, 0 );
+#ifdef OTA_UPDATE
+        initOTA();
+#endif
         wifi_power_t txpower=WiFi.getTxPower();
         
         tft.drawString(String("   txpower: ") + txpower, 0, tft.fontHeight());
@@ -474,7 +494,6 @@ void GuiViewConnectWifi::loop() {
 					}
 
 				}
-
 			}
 		} else {
       if(this->connectingStartedAt + 10000 < millis()) {
@@ -796,32 +815,31 @@ void GuiViewControlLoco::sendSpeed(int what) {
 }
 
 void GuiViewControlLoco::onClick(Button2 &b) {
-	DEBUGF("GuiViewControlLoco::onClick(Button2 &b)");
+  // dynamic_cast wäre schöner, geht aber nicht
+	DEBUGF("GuiViewControlLoco::onClick(Button2 &b) Button");
 	if(String(currGuiView->which()) != "GuiViewControlLoco") {
 		ERRORF("GuiViewControlLoco::onClick_static no GuiViewControlLoco");
 		return;
 	}
-	GuiViewControlLoco *g=(GuiViewControlLoco *)(currGuiView);
-
-  // dynamic_cast wäre schöner, geht aber nicht
 	Button2Data<buttonConfig_t &> &button2Config=(Button2Data<buttonConfig_t &> &) b;
+	GuiViewControlLoco *g=(GuiViewControlLoco *)(currGuiView);
 
 	switch (button2Config.data.action) {
 		case sendFunc: {
-			DEBUGF("cb func %d #######################", button2Config.data.gpio);
+			DEBUGF("cb func:%d pin:%d pressed: %d #######################", button2Config.data.funcNr, button2Config.data.gpio, b.isPressed());
 			if(controlClientThread.isRunning()) {
         controlClientThread.sendFunc(button2Config.data.funcNr, b.isPressed() );
 			}
 			break; }
 		case sendFullStop: {
-			DEBUGF("cb fullstop %d #######################", button2Config.data.gpio);
+			DEBUGF("cb fullstop #######################");
 			g->forceStop=true;
       if(controlClientThread.isRunning()) {
         controlClientThread.sendStop();
       }
 			break; }
 		case direction: {
-			DEBUGF("cb direction %d #######################", button2Config.data.gpio);
+			DEBUGF("cb direction #######################");
 			dirSwitch=b.isPressed() ? 1 : -1 ;
 			break; }
 	}
@@ -836,27 +854,38 @@ void GuiViewControlLoco::init() {
 		buttons[i]=new Button2Data<buttonConfig_t &>(buttonConfig[i].gpio, buttonConfig[i]);
 
 		if(buttonConfig[i].when == on_off || buttonConfig[i].when == on) {
-			DEBUGF("set %i on handler", i);
+			DEBUGF("[%d] set on handler action:%d F:%d", i, buttonConfig[i].action, buttonConfig[i].funcNr);
 			buttons[i]->setPressedHandler(GuiViewControlLoco::onClick);
 		}
 		if(buttonConfig[i].when == on_off || buttonConfig[i].when == off) {
-			DEBUGF("set %i off handler", i);
+			DEBUGF("[%d] set off handler action:%d F:%d", i, buttonConfig[i].action, buttonConfig[i].funcNr);
 			buttons[i]->setReleasedHandler(GuiViewControlLoco::onClick);
 		}
 		// init senden. on_off haben nur die switches derzeit
 		if(buttonConfig[i].when == on_off) {
-			DEBUGF("call on_off handler");
+			DEBUGF("call on_off handler to initialize state");
 			GuiViewControlLoco::onClick(*buttons[i]);
 		}
 	}
 	tft.fillScreen(TFT_BLACK);
- 	btn2.setLongClickDetectedHandler([](Button2&b) {       // erst ab Button2 Version 1.5.0
+ 	btn1.setLongClickDetectedHandler([](Button2&b) {
+//  btn2.setLongClickHandler([](Button2&b) {
+		DEBUGF("GuiViewControlLoco::btn1.setLongClickHandler");
+		// off
+    if(controlClientThread.isRunning()) {
+      controlClientThread.cancel();
+    }
+		GuiView::startGuiView(new GuiViewSelectWifi());
+	}
+	);
+ 	btn2.setLongClickDetectedHandler([](Button2&b) {
 //  btn2.setLongClickHandler([](Button2&b) {
 		DEBUGF("GuiViewControlLoco::btn2.setLongClickHandler");
 		// off
 		GuiView::startGuiView(new GuiViewPowerDown());
 	}
 	);
+
   // load functions:
   FBTCtlMessage cmd(messageTypeID("GETFUNCTIONS"));
   cmd["addr"]=controlClientThread.getCurrLok().addr;
@@ -903,6 +932,9 @@ void GuiViewControlLoco::loop() {
 
           tft.setFreeFont(NULL);
           tft.setTextColor(TFT_BLACK, TFT_WHITE);
+          tft.setTextDatum(TR_DATUM);
+          tft.drawString("<<", tft.width(), tft.fontHeight());
+          tft.setTextDatum(BR_DATUM);
           tft.drawString("off",tft.width(), tft.height() - tft.fontHeight());
           tft.setTextDatum(TL_DATUM);
           tft.setTextColor(TFT_GREEN, TFT_BLACK);
