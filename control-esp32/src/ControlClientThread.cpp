@@ -38,6 +38,7 @@ void ControlClientThread::sendPing()
 
 void ControlClientThread::sendFunc(int funcNr, bool enable)
 {
+  DEBUGF("ControlClientThread::sendFunc funcNr:%d, enable:%d", funcNr, enable);
   FBTCtlMessage cmd(messageTypeID("SETFUNC"));
   cmd["addr"]=lokdef[this->selectedAddrIndex].addr;
   cmd["funcnr"]=funcNr;
