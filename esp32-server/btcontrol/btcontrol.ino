@@ -393,6 +393,7 @@ void setup(void)
 
     NOTICEF("loading lokdef");
     readLokdef();
+    dumpLokdef();
     DEBUGF("loading lokdef done");
 
     DEBUGF("init hardware");
@@ -438,7 +439,9 @@ void startClientThread(void *s) {
     esp_wifi_set_ps(WIFI_PS_NONE);
 #endif
 #ifdef HAVE_SOUND
-    Audio.begin();
+    // Audio.begin(); => wwill always start sounds
+    // will start sounds only if F3 == true:
+    Audio.startPlayFuncSound();
 #endif
     ClientThread *clientThread=NULL;
     try {
