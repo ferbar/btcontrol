@@ -15,10 +15,6 @@
 #include <Button2.h>        // works with version 1.6
 #include <esp_wifi.h>
 
-#ifdef OTA_UPDATE
-// https://lastminuteengineers.com/esp32-ota-updates-arduino-ide/
-#include <ArduinoOTA.h>
-#endif
 
 #include "esp_adc_cal.h"
 #include "bmp.h"
@@ -27,6 +23,11 @@
 #include "lokdef.h"
 #include "GuiView.h"
 #include "message_layout.h"
+
+#ifdef OTA_UPDATE
+// https://lastminuteengineers.com/esp32-ota-updates-arduino-ide/
+#include <ArduinoOTA.h>
+#endif
 
 #define TAG "btcontrol"
 bool cfg_debug=false;
@@ -305,6 +306,9 @@ void setup()
 //attachInterrupt(15, isrGPIO15, CHANGE);
 // attachInterrupt(15, isrGPIO15fall, FALLING);
 */
+
+
+
   GuiView::startGuiView(new GuiViewSelectWifi());
   btn1.setLongClickTime(1000);
   btn2.setLongClickTime(1000);
@@ -349,4 +353,8 @@ void loop()
         */
     }
     // delay(100);  <- reduziert den stromverbrauch nur ein bissl
+#ifdef OTA_UPDATE
+    ArduinoOTA.handle();
+#endif
+
 }
