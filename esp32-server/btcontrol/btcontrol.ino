@@ -159,58 +159,16 @@ void init_wifi_done(bool softAP) {
     MDNS.addService("_btcontrol", "_tcp", 3030);
     DEBUGF("btcontrol MDNS started [%s]", lok_name);
 
-  
-#ifdef OTA_UPDATE
-  // Port defaults to 3232
-  // ArduinoOTA.setPort(3232);
-
-  // Hostname defaults to esp3232-[MAC]
-  // ArduinoOTA.setHostname("myesp32");
-
-  // No authentication by default
-  // ArduinoOTA.setPassword("admin");
-
-  // Password can be set with it's md5 value as well
-  // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
-  // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
-
-  NOTICEF("Setting up ArduinoOTA");
-  ArduinoOTA
-    .onStart([]() {
-      const char *type="unknown";
-      if (ArduinoOTA.getCommand() == U_FLASH)
-        type = "sketch";
-      else // U_SPIFFS
-        type = "filesystem";
-
-      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-      NOTICEF("Start updating %s", type);
+ 
+    initOTA([]() {
+      NOTICEF("OTA UPDATE started");
+      hardware->fullstop(true, true);
 #ifdef HAVE_SOUND
       Audio.stop();
 #endif
-    })
-    .onEnd([]() {
-      NOTICEF("Update done");
-    })
-    .onProgress([](unsigned int progress, unsigned int total) {
-      DEBUGF("Progress: %u%%", (progress / (total / 100)));
-    })
-    .onError([](ota_error_t error) {
-      const char *e="unknown";
-      if (error == OTA_AUTH_ERROR) e="Auth Failed";
-      else if (error == OTA_BEGIN_ERROR) e="Begin Failed";
-      else if (error == OTA_CONNECT_ERROR) e="Connect Failed";
-      else if (error == OTA_RECEIVE_ERROR) e="Receive Failed";
-      else if (error == OTA_END_ERROR) e="End Failed";
-      ERRORF("Error[%u]: %s", error, e);
-    });
+    }
+    );
 
-  // ArduinoOTA.begin startet sonst mdns mit default hostname
-  // ArduinoOTA.setHostname(lok_name);
-  ArduinoOTA.setMdnsEnabled(false);
-  ArduinoOTA.begin();
-  MDNS.enableArduino(3232, "");
-#endif
 
 }
 

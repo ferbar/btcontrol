@@ -224,7 +224,7 @@ void *memmem(const void *haystack, size_t haystacklen,
 #include <ESPmDNS.h>
 
 #endif
-void initOTA()
+void initOTA(void (*onStartCallback)() )
 {
 #ifdef OTA_UPDATE
   // Port defaults to 3232
@@ -242,7 +242,7 @@ void initOTA()
 
   NOTICEF("Setting up ArduinoOTA");
   ArduinoOTA
-    .onStart([]() {
+    .onStart([onStartCallback]() {
       const char *type="unknown";
       if (ArduinoOTA.getCommand() == U_FLASH)
         type = "sketch";
@@ -251,6 +251,7 @@ void initOTA()
 
       // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
       NOTICEF("Start updating %s", type);
+      onStartCallback();
     })
     .onEnd([]() {
       NOTICEF("Update done");
