@@ -2,6 +2,7 @@
 #include "utils.h"
 #include "lokdef.h"
 #include "utils_esp32.h"
+#include "clientthread.h"
 
 #define TAG "ESP32_MAS_SPEED"
 
@@ -127,6 +128,11 @@ void ESP32_MAS_Speed::stop() {
 
 void ESP32_MAS_Speed::startPlayFuncSound() {
   // printf("ESP32_MAS_Speed::startPlayFuncSound() %d %d %d \n",lokdef[0].nFunc, lokdef[0].func[1].ison , this->Channel[1] );
+  if(TCPClient::numClients == 0) {
+    DEBUGF("ESP32_MAS_Speed::startPlayFuncSound() - no clients connected, ignoring");
+    return;
+  }
+    
   DEBUGF(":startPlayFuncSound() func1 = %d", lokdef[0].func[1].ison);
   if(lokdef[0].nFunc > 1 && lokdef[0].func[1].ison && this->Channel[1] == 0 ) {
     DEBUGF("play!");

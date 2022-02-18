@@ -17,11 +17,14 @@
 
 #include <Arduino.h>
 #include <FS.h>
-#include "driver/i2s.h"
+#include <driver/i2s.h>
 #include "esp_task.h"
 #include "ESP32_MAS.h"
 #include "SPIFFS.h"
 #include "xtensa/core-macros.h"
+
+#warning test
+#include <driver/dac.h>
 
 #define CHANNELS 3
 
@@ -120,6 +123,22 @@ void ESP32_MAS::run() {
       Serial.println("invalid channel format");
       abort();
     }
+    i2s_zero_dma_buffer(this->I2S_PORT);
+
+    // soft boot 0 ... 0x80
+    for(int i=0; i < buf_len_8/2; i++) {
+      // sägezahn 0 .. 255
+      out_buf_8[i*2+1]=128 * i / (buf_len_8/2) ;
+      out_buf_8[i*2]=0;
+    }
+    // 0x80
+    int ret=i2s_write_bytes(this->I2S_PORT, (const char *)&out_buf_8, buf_len_8, portMAX_DELAY);
+    for(int i=0; i < buf_len_8/2; i++) {
+      // 0
+      out_buf_8[i*2+1]=0x80;
+      out_buf_8[i*2]=0;
+    }
+    ret=i2s_write_bytes(this->I2S_PORT, (const char *)&out_buf_8, buf_len_8, portMAX_DELAY);
     
     //i2s_set_clk(mas->I2S_PORT, i2s_config_noDAC.sample_rate, i2s_config_noDAC.bits_per_sample, (i2s_channel_t) 1);
     //i2s_set_sample_rates(mas->I2S_PORT, 22050);
@@ -128,8 +147,8 @@ void ESP32_MAS::run() {
   else {
     i2s_driver_install(this->I2S_PORT, &i2s_config_DAC, 0, NULL);
     i2s_set_pin(this->I2S_PORT, &pin_config);
+    i2s_zero_dma_buffer(this->I2S_PORT);
   }
-  i2s_zero_dma_buffer(this->I2S_PORT);
   Serial.print("RUN I2S ON PORT_NUM: "); Serial.println(this->I2S_PORT);
 
   while (this->Audio_Player_run) {
@@ -371,9 +390,18 @@ void ESP32_MAS::run() {
   }//                                                                         AUDIO PLAYER LOOP
   i2s_driver_uninstall(this->I2S_PORT); //stop & destroy i2s driver
   if (this->I2S_noDAC) {
-    #warning FIXME: nach stop den ausgang auf irgendwas setzen damit der ned floatet
+    printf("-------------------- this->I2S_noDAC writing 0x0\n");
+    dac_i2s_disable();
+    // macht lechte knackser
+    // dacWrite(DAC1,0x80);
+/*
+    dac_output_enable(DAC_GPIO25_CHANNEL);
+    dac_output_voltage(DAC_GPIO25_CHANNEL, 100);
+*/
+    // stille:
+    pinMode(25, OUTPUT);
+    digitalWrite(25, 0);
     Serial.println("stop noDAC done");
-//    dacWrite(25,0x80);
   }
 }//                                                                           VOID AUDIO PLAYER
 

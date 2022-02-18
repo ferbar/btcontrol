@@ -412,6 +412,11 @@ void ESP32PWM::fullstop(bool stopAll, bool emergencyStop) {
 #endif
   lokdef[0].currspeed=0;
 }
+
+/**
+ * wird von USBPlatine.cpp aufgerufen
+ * FIXME: in *func steht das selbe wie in lokdef[0].func
+ */
 void ESP32PWM::setFunction(int nFunc, bool *func) {
   DEBUGF("=================setFunction ");
 
