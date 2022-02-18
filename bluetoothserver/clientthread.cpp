@@ -120,7 +120,11 @@ void ClientThread::run()
 	utils::setThreadClientID(this->clientID);
 	NOTICEF("%d:socket accepted sending welcome msg",this->clientID);
 	FBTCtlMessage heloReply(messageTypeID("HELO"));
+#ifdef ESP32
+	heloReply["name"]="esp32 server";
+#else
 	heloReply["name"]="my bt server";
+#endif
 	heloReply["version"]="0.9";
 	heloReply["protohash"]=messageLayouts.protocolHash;
 	// heloReply.dump();
@@ -275,7 +279,8 @@ continue;
 				int funcNr=cmd["funcnr"].getIntVal();
 				int value=cmd["value"].getIntVal();
 				if(funcNr >= 0 && funcNr < lokdef[addr_index].nFunc) {
-					if(cfg_debug) DEBUGF("/%d:set funcNr[%d]=%d", this->msgNum, funcNr, value);
+					// if(cfg_debug)
+					DEBUGF("/%d:set funcNr[%d]=%d", this->msgNum, funcNr, value);
 					if(value)
 						lokdef[addr_index].func[funcNr].ison = true;
 					else
