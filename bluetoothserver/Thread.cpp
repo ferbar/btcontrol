@@ -43,6 +43,9 @@ void *Thread::startupThread(void *ptr) {
 }
 
 void Thread::start() {
+	if(this->isRunning()) {
+		throw std::runtime_error("Thread::start() => thread already running!");
+	}
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 #ifdef ESP32

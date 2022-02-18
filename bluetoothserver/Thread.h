@@ -48,9 +48,11 @@ friend class Condition;
 class Lock {
 public:
 	explicit Lock(Mutex &m) : m(m) { m.lock(); } ;
-	~Lock() { m.unlock(); } ;
+	~Lock() { if(this->needunlock) m.unlock(); } ;
+	void unlock() {this->needunlock=false; m.unlock(); };
 private:
 	Mutex &m;
+	bool needunlock=true;
 };
 
 class Condition {
