@@ -147,7 +147,9 @@ bool readLokdef()
 			CHECKVAL("func i = %d, nfunc %d invalid? %d function names missing",i,lokdef[n].nFunc,lokdef[n].nFunc-i);
 			// =1 suchen
 			int funcNameLen=pos_end-pos;
+			// DEBUGF("[%d] function name: [%.*s], funcNameLen=%d", i, funcNameLen, pos, funcNameLen);
 			if(memmem(pos, funcNameLen, "=1", 2)) {
+				DEBUGF("startval=1 for %.*s", funcNameLen, pos);
 				funcNameLen-=2;
 				lokdef[n].func[i].ison=true;
 			}
