@@ -11,13 +11,13 @@
 	<item android:id="@+id/menu_Power"
           android:title="Power" />
 	<item android:id="@+id/menu_POM" android:icon="@drawable/ic_bits" android:title="POM" />
-    <item android:id="@+id/menu_help"
+	<item android:id="@+id/menu_POM_Neu"
+          android:icon="@drawable/ic_bits"
+          android:title="POM Gui" />
+	<item android:id="@+id/menu_help"
           android:icon="@drawable/ic_lok"
           android:title="@string/help" />
     <item android:id="@+id/menu_exitNoPowerOff" android:title="App Exit ohne Power Off" />
-	<item android:id="@+id/menu_POM_Neu"
-          android:icon="@drawable/ic_bits"
-          android:title="POM neu" />
 	<item android:id="@+id/menu_seekbarWorkaround"
           android:icon="@drawable/ic_bits"
           android:title="Seekbar Workaround" />

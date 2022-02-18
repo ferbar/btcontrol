@@ -25,6 +25,7 @@ package org.ferbar.btcontrol;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,6 +38,13 @@ import javax.xml.namespace.NamespaceContext;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.TransformerFactoryConfigurationError;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
@@ -53,6 +61,7 @@ import org.w3c.dom.Comment;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
@@ -90,165 +99,221 @@ import android.view.ViewGroup;
 import android.view.LayoutInflater;
 import android.view.ViewGroup.LayoutParams;
 
-
 @TargetApi(8)
 public class PomAction extends Activity {
 
-	ArrayAdapter<AvailLocosListItemAddr> listAdapter=null;
-	Object listAdapter_notify=new Object();
+	static String tag = "btcontrol.PomAction";
+
+	ArrayAdapter<AvailLocosListItemAddr> listAdapter = null;
+	Object listAdapter_notify = new Object();
 	private LayoutInflater mInflater;
-	
+
 	List<Integer> selectedLocosPos;
-	
-    static final String URL = "http://jmri.org/xml/decoders/Zimo_Unified_software_MX690Sv30.xml";
+
+	static final String URL = "http://jmri.org/xml/decoders/Zimo_Unified_software_MX690Sv30.xml";
 	static final String XincludeXMLns = "http://www.w3.org/2001/XInclude";
-    
-    TabHost mTabHost;
-    static Document doc=null;
-// TODO:    static Document docPane=null;
-    
-    static HashMap<String, View> tabViews = new HashMap<String, View>();
-    static ArrayList<String> tabTabs = new ArrayList<String>();
-    
+
+	TabHost mTabHost;
+	TextView tvInfo;
+	static Document doc = null;
+	// TODO: static Document docPane=null;
+
+	static HashMap<String, View> tabViews = new HashMap<String, View>();
+	// liste an pane nodes
+	static ArrayList<Element> tabTabs = new ArrayList<Element>();
+
+	static XPath xpath = XPathFactory.newInstance().newXPath();
+
 	/** Called when the activity is first created. */
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
 
-        setContentView(R.layout.pom_neu);
-        
-        this.mTabHost = (TabHost) findViewById(android.R.id.tabhost);
-        this.mTabHost.setup();
-        
-        // JMRI decoder beschreibung laden: 
-        if(doc == null) {
-	        // XMLParser parser = new XMLParser();
-	        String xml = this.getXmlFromUrl(PomAction.URL); // getting XML
-	        this.doc = this.getDomElement(xml); // getting DOM element
-	         
-	        // NodeList nl = doc.getElementsByTagName(KEY_ITEM);
-	        
-	        Log.d("xml",doc.toString());
-	        
-	        XPath xpath = XPathFactory.newInstance().newXPath();
-	        xpath.setNamespaceContext(new MyNamespaceContext());
-			try {
-	            // da alle include-nodes nachladen ... (2012.0707: android kennt kein include: 
-		        // includeXMLns
-		        String expression = "//xi:include";
-				NodeList nodes = (NodeList) xpath.evaluate(expression, doc, XPathConstants.NODESET);
-				Log.d("test", nodes.toString());
-				Element lastParent=null;
-		        for(int i = 0; i < nodes.getLength(); i++) {
-		            Node node = nodes.item(i);
-	
-		            if (node instanceof Element) {
-		                Element child = (Element)node;
-		                String url = child.getAttribute("href");
-		                xml = this.getXmlFromUrl(url); // getting XML
-		                Document subdoc = this.getDomElement(xml); // getting DOM element
-		                NodeList list = subdoc.getChildNodes();
-		                Node newChild = list.item(1);
-		                Node tempDoc = doc.importNode(newChild, true);
-		                lastParent=(Element) child.getParentNode();
-		                // doc.replaceChild(tempDoc, child);
-		                // child.appendChild(tempDoc);
-		                lastParent.appendChild(tempDoc);
-		                // node.appendChild(); // 0 = processing info
-		                // Comment comment = doc.createComment("Just a thought");
-		                // Element e = doc.createElement("child");
-		                // e.appendChild(newChild);
-		                // child.appendChild(e);
-		            }
-		        }
-		        
-		        // includes aus Comprehensive.xml, an letztes child anhängen
-		        String extra[] = { "http://jmri.org/xml/programmers/parts/BasicPane.xml",
-		        	"http://jmri.org/xml/programmers/parts/MotorPane.xml",
-		        	"http://jmri.org/xml/programmers/parts/BasicSpeedControlPane.xml",
-		       		"http://jmri.org/xml/programmers/parts/SpeedTablePane.xml",
-		       		"http://jmri.org/xml/programmers/parts/FunctionMapPane.xml",
-		       		"http://jmri.org/xml/programmers/parts/LightsPane.xml",
-		       		"http://jmri.org/xml/programmers/parts/AnalogControlsPane.xml",
-		       		"http://jmri.org/xml/programmers/parts/ConsistPane.xml",
-		       		"http://jmri.org/xml/programmers/parts/AdvancedPane.xml",
-		       		"http://jmri.org/xml/programmers/parts/SoundPane.xml",
-		       		"http://jmri.org/xml/programmers/parts/SoundLevelsPane.xml",
-		       		"http://jmri.org/xml/programmers/parts/CVsPane.xml"};
-		        for(String url : extra) {
-	            	xml = this.getXmlFromUrl(url); // getting XML
-	                Document subdoc = this.getDomElement(xml); // getting DOM element
-	                NodeList list = subdoc.getChildNodes();
-	                Node newChild = null;
-	                if(list.item(0) instanceof Element)
-	                	 newChild = list.item(0);
-	                else if (list.item(1) instanceof Element)
-	                	 newChild = list.item(1);
-	                if(newChild != null) {
-	                	Node tempDoc = doc.importNode(newChild, true);
-	                	lastParent.appendChild(tempDoc);
-	                }
-		        }
-	
-		        
-			} catch (XPathExpressionException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (DOMException e) {
-				e.printStackTrace();
-				Debuglog.debugln("DOMException " + e.toString());
-				// TODO Auto-generated catch block
-			}
-	        
-			try {
-				// panes raussuchen und dann die tabs anlegen:
-		        String expression = "//pane";
-				NodeList nodes;
-				nodes = (NodeList) xpath.evaluate(expression, doc, XPathConstants.NODESET);
-				Log.d("test", nodes.toString());
-		        //NodeList nodes = doc.getElementsByTagName("pane");
-		        for(int i = 0; i < nodes.getLength(); i++) {
-		            Node node = nodes.item(i);
-	
-		            if (node instanceof Element) {
-		            	Element child = (Element)node;
-		            	String name = child.getAttribute("name");
-		            	PomAction.tabTabs.add(name);
-		            	
-		            }
-		        }
+		setContentView(R.layout.pom_neu);
+		
+		this.tvInfo = (TextView) findViewById(R.id.infoText);
 
-			} catch (XPathExpressionException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+		this.mTabHost = (TabHost) findViewById(android.R.id.tabhost);
+		this.mTabHost.setup();
+		this.selectedLocosPos = new ArrayList<Integer>();
+
+		xpath.setNamespaceContext(new MyNamespaceContext());
+
+		// JMRI decoder beschreibung laden:
+		if (doc == null) {
+			final PomAction PA=this;
+			Thread thread = new Thread(new Runnable() {
+				@Override
+				public void run() {
+					try {
+
+						// XMLParser parser = new XMLParser();
+						String xml = PomAction.getXmlFromUrl(PomAction.URL); // getting
+																				// XML
+						PomAction.doc = PomAction.getDomElement(xml); // getting
+																		// DOM
+																		// element
+
+						// NodeList nl = doc.getElementsByTagName(KEY_ITEM);
+
+						Log.d("xml", doc.toString());
+
+						try {
+
+							PomAction.replaceIncludes(PomAction.doc, 0, "root", PA);
+							// includes aus Comprehensive.xml, an letztes child
+							// anhängen
+							String extra[] = {
+									"http://jmri.org/xml/programmers/parts/BasicPane.xml",
+									"http://jmri.org/xml/programmers/parts/MotorPane.xml",
+									"http://jmri.org/xml/programmers/parts/BasicSpeedControlPane.xml",
+									"http://jmri.org/xml/programmers/parts/SpeedTablePane.xml",
+									"http://jmri.org/xml/programmers/parts/FunctionMapPane.xml",
+									"http://jmri.org/xml/programmers/parts/LightsPane.xml",
+									"http://jmri.org/xml/programmers/parts/AnalogControlsPane.xml",
+									"http://jmri.org/xml/programmers/parts/ConsistPane.xml",
+									"http://jmri.org/xml/programmers/parts/AdvancedPane.xml",
+									"http://jmri.org/xml/programmers/parts/SoundPane.xml",
+									"http://jmri.org/xml/programmers/parts/SoundLevelsPane.xml",
+									"http://jmri.org/xml/programmers/parts/CVsPane.xml" };
+							for (String url : extra) {
+								xml = PomAction.getXmlFromUrl(url); // getting
+																	// XML
+								Document subdoc = PomAction.getDomElement(xml); // getting
+																				// DOM
+																				// element
+								NodeList list = subdoc.getChildNodes();
+								Node newChild = null;
+								if (list.item(0) instanceof Element)
+									newChild = list.item(0);
+								else if (list.item(1) instanceof Element)
+									newChild = list.item(1);
+								if (newChild != null) {
+									Node tempDoc = doc.importNode(newChild,
+											true);
+									// lastParent.appendChild(tempDoc);
+								}
+							}
+							// Log.i(tag,"============================= dumping generated xml ===========================");
+							// dumpElement(doc);
+
+						} catch (DOMException e) {
+							Log.e(tag, "DOMException " + e.toString(), e);
+							return;
+						}
+						// PomAction.dumpElement((Node) doc);
+
+						try {
+							// panes raussuchen und dann die tabs anlegen:
+							String expression = "//pane";
+							NodeList nodes;
+							nodes = (NodeList) xpath.evaluate(expression, doc,
+									XPathConstants.NODESET);
+							Log.d(tag, nodes.toString());
+							// NodeList nodes =
+							// doc.getElementsByTagName("pane");
+							for (int i = 0; i < nodes.getLength(); i++) {
+								Node node = nodes.item(i);
+								Log.d(tag, node.toString());
+
+								/*
+								 * NamedNodeMap baseElmnt_gold_attr =
+								 * node.getAttributes(); for (int j = 0; j <
+								 * baseElmnt_gold_attr.getLength(); ++j) { Node
+								 * attr = baseElmnt_gold_attr.item(j);
+								 * Log.d(tag, attr.getNodeName() + " = \"" +
+								 * attr.getNodeValue() + "\""); }
+								 */
+
+								if (node instanceof Element) {
+									// Element child = (Element)node;
+									// String name = child.getAttribute("name");
+									// NodeList names = (NodeList)
+									// xpath.evaluate("name", node,
+									// XPathConstants.NODESET);
+									Node nodeName = (Node) xpath.evaluate(
+											"name", node, XPathConstants.NODE);
+									/*
+									 * if(names.getLength()==0) { Log.e(tag,
+									 * "empty node name!"); } else { Element
+									 * e=(Element) names.item(0); Log.d(tag,
+									 * "Name element:" + e.toString());
+									 */
+									String name = nodeName.getTextContent();
+									Log.i(tag, "add tab " + name);
+									PomAction.tabTabs.add((Element) node);
+									// }
+
+								}
+							}
+
+						} catch (XPathExpressionException e) {
+							Log.e(tag, "XPathExpressionException", e);
+						}
+					} catch (Exception e) {
+						Log.e(tag, "Exception", e);
+					}
+					
+					PomAction.this.runOnUiThread(new Runnable() {
+					    public void run() {
+					        Log.d("UI thread", "I am the UI thread");
+							for (Element node : PomAction.tabTabs) {
+								PA.setupTab(node);
+							}
+							PA.tvInfo.setText("");
+					    }
+					});
+				}
+
+			});
+			thread.start();
+		} else { // nur tabs anlegen:
+			for (Element node : PomAction.tabTabs) {
+				this.setupTab(node);
 			}
-        } else { // nur tabs anlegen:
-        	for(String name :PomAction.tabTabs) {
-        		this.setupTab(name);
-        	}
-        }
-        
-        this.selectedLocosPos = new ArrayList<Integer>();
-        
-    	// mInflater = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        
-        // registerForContextMenu(getListView());
-        /*
-        Bundle bundle = getIntent().getExtras();
-        if(bundle != null) {
-        	this.selectMehrfachsteuerung=bundle.getBoolean("Mehrfachsteuerung",false);
-        	ImageButton ib = (ImageButton) this.findViewById(R.id.imageButtonStartMulti);
-        	this.orgStartMultiButtonImage = ib.getDrawable();
-        } else {
-        	this.findViewById(R.id.linearLayoutMulti).setVisibility(View.GONE);
-        }
-        */
-        
-        // startFillData();
-        // String[] mStrings = new String[]{"Android", "Google", "Eclipse"};
-		// this.setListAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, mStrings));
-    }
-    
+		}
+
+		// mInflater =
+		// (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+
+		// registerForContextMenu(getListView());
+		/*
+		 * Bundle bundle = getIntent().getExtras(); if(bundle != null) {
+		 * this.selectMehrfachsteuerung
+		 * =bundle.getBoolean("Mehrfachsteuerung",false); ImageButton ib =
+		 * (ImageButton) this.findViewById(R.id.imageButtonStartMulti);
+		 * this.orgStartMultiButtonImage = ib.getDrawable(); } else {
+		 * this.findViewById(R.id.linearLayoutMulti).setVisibility(View.GONE); }
+		 */
+
+		// startFillData();
+		// String[] mStrings = new String[]{"Android", "Google", "Eclipse"};
+		// this.setListAdapter(new ArrayAdapter<String>(this,
+		// android.R.layout.simple_list_item_1, mStrings));
+	}
+	
+	static public void dumpElement(final Node node) {
+		try {
+			StringWriter writer = new StringWriter();
+			Transformer transformer;
+			transformer = TransformerFactory.newInstance().newTransformer();
+			// if (node instanceof Element) {
+			transformer
+					.transform(new DOMSource(node), new StreamResult(writer));
+			String generatedxml = writer.toString();
+			for (String line : generatedxml.split("\n")) {
+				Log.d(tag, line);
+			}
+			// Log.d(tag, generatedxml);
+		} catch (TransformerConfigurationException e) {
+			Log.e(tag, "TransformerConfigurationException ", e);
+		} catch (TransformerFactoryConfigurationError e) {
+			Log.e(tag, "TransformerFactoryConfigurationError ", e);
+		} catch (TransformerException e) {
+			Log.e(tag, "TransformerException ", e);
+		}
+	}
+
 	/**
 	 * legt ein neues tab an, tabhost muss inited sein + setup() aufgerufen
 	 * 
@@ -257,14 +322,23 @@ public class PomAction extends Activity {
 	 * @param tag
 	 *            -> tab name
 	 */
-	private void setupTab(final String tag) {
+	private void setupTab(final Element node) {
+		Node nodeName;
+		try {
+			nodeName = (Node) xpath.evaluate("name", node, XPathConstants.NODE);
+		} catch (XPathExpressionException e) {
+			Log.e(tag, "XPathExpressionException", e);
+			return;
+		}
+		String tabName = nodeName.getTextContent();
 
-		TabSpec tab = this.mTabHost.newTabSpec(tag);
+		TabSpec tab = this.mTabHost.newTabSpec(tabName);
 		// View tabview = createTabView(this.mTabHost.getContext(), tag);
 		// newlines einbauen:
-		Pattern p = Pattern.compile("^(\\w{3,})([\\s/-]+)(\\w{3,})(([\\s/-]+)(.*))?$");
-		Matcher m = p.matcher(tag);
-		String tabIndicator = tag;
+		Pattern p = Pattern
+				.compile("^(\\w{3,})([\\s/-]+)(\\w{3,})(([\\s/-]+)(.*))?$");
+		Matcher m = p.matcher(tabName);
+		String tabIndicator = tabName;
 		if (m.matches()) {
 			tabIndicator = m.group(1) + "\n" + m.group(3);
 			if (m.group(6) != null) {
@@ -281,7 +355,7 @@ public class PomAction extends Activity {
 				 * passt das mit dem parent - context return
 				 * PomAction.tabViews.get(tag); }
 				 */
-				View tabView = PomAction.this.createPOMView(tag);
+				View tabView = PomAction.this.createPOMView(node);
 				if (tabView != null) {
 					PomAction.tabViews.put(tag, tabView);
 				}
@@ -300,278 +374,388 @@ public class PomAction extends Activity {
 
 	/**
 	 * legt eine view für den Tab Indicator an, unused
+	 * 
 	 * @param context
 	 * @param text
 	 * @return
 	 *
-	private static View createTabView(final Context context, String text) {
-
-		LinearLayout view = new LinearLayout(context); 
-/ *			
-			LayoutInflater.from(context)
-				.inflate(R.layout.tabs_bg, null);
-
-		TextView tv = (TextView) view.findViewById(R.id.tabsText);
-* /
-		TextView tv = new TextView(context);
-		// ~ alle 4 Zeichen ein newline reinhaun:
-		text=text.replaceAll("^(\\w{3,})([\\s\\/]+)(.*)$","$1\n$3");
-
-		tv.setText(text);
-		view.addView(tv);
-
-		return view;
-
-	}
-	*/
+	 *         private static View createTabView(final Context context, String
+	 *         text) {
+	 * 
+	 *         LinearLayout view = new LinearLayout(context); / *
+	 *         LayoutInflater.from(context) .inflate(R.layout.tabs_bg, null);
+	 * 
+	 *         TextView tv = (TextView) view.findViewById(R.id.tabsText); /
+	 *         TextView tv = new TextView(context); // ~ alle 4 Zeichen ein
+	 *         newline reinhaun:
+	 *         text=text.replaceAll("^(\\w{3,})([\\s\\/]+)(.*)$","$1\n$3");
+	 * 
+	 *         tv.setText(text); view.addView(tv);
+	 * 
+	 *         return view;
+	 * 
+	 *         }
+	 */
 
 	/**
 	 * legt das view dings für die Tab Seite an
-	 * @param tag <pane name="_tag_">
+	 * 
+	 * @param tag
+	 *            <pane name="_tag_">
 	 * @return View
 	 */
-	private View createPOMView(String tag) {
+	private View createPOMView(Element node) {
 		LinearLayout ret = new LinearLayout(this);
 		ret.setOrientation(LinearLayout.VERTICAL);
-    	TextView tv = new TextView(this);
-    	tv.setText(tag);
-    	ret.addView(tv);
-    	
-    	XPath xpath = XPathFactory.newInstance().newXPath();
-    	String expression="//pane[@name='"+tag+"']"; // /decoder-config/pane müsste auch gehn
-		Element node;
+		/*
+		 * TextView tv = new TextView(this); try { Node nodeName = (Node)
+		 * xpath.evaluate("name", node, XPathConstants.NODE); String
+		 * tabName=nodeName.getTextContent(); tv.setText(tabName); } catch
+		 * (XPathExpressionException e) {
+		 * Log.e(tag,"XPathExpressionException",e); tv.setText("invalid"); }
+		 * ret.addView(tv);
+		 */
+
 		try {
-			node = (Element) xpath.evaluate(expression, PomAction.doc, XPathConstants.NODE);
-			if(node == null) {
-				Debuglog.debugln("createPOMView error finding pane:"+tag+"");
-			} else {
-				Log.d("test", node.toString());
-				ScrollView v = new ScrollView(this);
-				v.setFillViewport(true);
-				HorizontalScrollView hv = new HorizontalScrollView(this);
-				hv.setFillViewport(true);
-				LayoutParams params=new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
-				v.setLayoutParams(params);
-				hv.setLayoutParams(params);
-				hv.addView(createPOMViewRecursive(node));
-			    v.addView(hv);
-				ret.addView(v);
-			}
-				
+			Log.d(tag, node.toString());
+			ScrollView v = new ScrollView(this);
+			v.setFillViewport(true);
+			HorizontalScrollView hv = new HorizontalScrollView(this);
+			hv.setFillViewport(true);
+			LayoutParams params = new LayoutParams(LayoutParams.MATCH_PARENT,
+					LayoutParams.MATCH_PARENT);
+			v.setLayoutParams(params);
+			hv.setLayoutParams(params);
+			hv.addView(createPOMViewRecursive(node));
+			v.addView(hv);
+			ret.addView(v);
+
 		} catch (XPathExpressionException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			Log.e(tag, "XPathExpressionException", e);
 		}
-    	return ret;
+		return ret;
 	}
 
-	private View createPOMViewRecursive(Element node) throws XPathExpressionException {
-		View ret ;
-		String nodeName=node.getNodeName();
-		if(nodeName.equals("column") || nodeName.equals("row") || nodeName.equals("pane")) {
-			LinearLayout ll_ret=new LinearLayout(this);
-			if(nodeName.equals("column")) {
+	private View createPOMViewRecursive(Element node)
+			throws XPathExpressionException {
+		View ret;
+		String nodeName = node.getNodeName();
+		Log.d(tag, "createPOMViewRecursive: nodename=" + nodeName);
+		if (nodeName.equals("column") || nodeName.equals("row")
+				|| nodeName.equals("pane")) {
+			Log.d(tag, "add view recursive");
+			LinearLayout ll_ret = new LinearLayout(this);
+			if (nodeName.equals("column")) {
 				// TODO: vertical setzen
 				ll_ret.setOrientation(LinearLayout.VERTICAL);
 			}
-			for(Node childNode=(Node) node.getFirstChild(); childNode!=null; childNode=(Node)childNode.getNextSibling()){
+			for (Node childNode = (Node) node.getFirstChild(); childNode != null; childNode = (Node) childNode
+					.getNextSibling()) {
 				// Do something with childNode...
-				if(childNode instanceof Element) {
-					Element e=(Element) childNode;
-					View v=createPOMViewRecursive(e);
-					if(v != null) {
+				if (childNode instanceof Element) {
+					Element e = (Element) childNode;
+					Log.d(tag, "add view recursive ...");
+					View v = createPOMViewRecursive(e);
+					if (v != null) {
 						ll_ret.addView(v);
 					}
 				}
 			}
-			ret=ll_ret;
-		} else if(nodeName.equals("label")) {
-			TextView tv=new TextView(this);
-			tv.setText(node.getAttribute("label"));
-			ret=tv;
-		} else if(nodeName.equals("separator")) {
-			View v=new View(this);
-			LayoutParams params;
-			if(node.getParentNode().getNodeName().equals("row")) {
-				params=new LayoutParams(2, LayoutParams.MATCH_PARENT);
+			ret = ll_ret;
+		} else if (nodeName.equals("label")) {
+			Element text = (Element) xpath.evaluate("text", node,
+					XPathConstants.NODE);
+			String label;
+			if (text != null) {
+				label = text.getTextContent();
 			} else {
-				params=new LayoutParams(LayoutParams.MATCH_PARENT, 2);
+				label = "null";
+			}
+			Log.d(tag, "add label [" + label + "]");
+			TextView tv = new TextView(this);
+			tv.setText(label);
+			ret = tv;
+		} else if (nodeName.equals("separator")) {
+			Log.d(tag, "add separator");
+			View v = new View(this);
+			LayoutParams params;
+			if (node.getParentNode().getNodeName().equals("row")) {
+				params = new LayoutParams(2, LayoutParams.MATCH_PARENT);
+			} else {
+				params = new LayoutParams(LayoutParams.MATCH_PARENT, 2);
 			}
 			v.setLayoutParams(params);
-			int bgcolor=0xFF909090;
+			int bgcolor = 0xFF909090;
 			v.setBackgroundColor(bgcolor);
-			ret=v;
-		} else if(nodeName.equals("display")) {
-			String item=node.getAttribute("item");
-			XPath xpath = XPathFactory.newInstance().newXPath();
-	    	// String expression="//variable[@label='"+item+"']";
-	    	String expression="/decoder-config/variables/variable[@item='"+item+"']";
-// 	--- da muss man rausfinden ob a) voller xpath funzt, b) @item= oder @label=
+			ret = v;
+		} else if (nodeName.equals("display")) {
+			// PomAction.dumpElement((Element)
+			// xpath.evaluate("/decoder-config/decoder/variables",
+			// PomAction.doc, XPathConstants.NODE));
+			String item = node.getAttribute("item");
+			Log.d(tag, "add display [" + item + "]");
+			// String expression="//variable[@label='"+item+"']";
+			// die xmls haben einen Bug: variables -> include und dort ist das root tag wieder variables ...
+			String expression = "//variables/variable[@item='"
+					+ item + "']";
+			// --- da muss man rausfinden ob a) voller xpath funzt, b) @item=
+			// oder @label=
 			// variable label="Acceleration" CV="3" default="12" item="Accel"
-			Element variableNode = (Element) xpath.evaluate(expression, this.doc, XPathConstants.NODE);
-			if(variableNode != null) {
-				LinearLayout ll_ret=new LinearLayout(this);
-				TextView label=new TextView(this);
-				String format=node.getAttribute("format");
-				label.setText(variableNode.getAttribute("label") + " (#"+variableNode.getAttribute("CV")+")");
-				ll_ret.addView(label);
-				TextView comment=new TextView(this);
+			Element variableNode = (Element) xpath.evaluate(expression, PomAction.doc, XPathConstants.NODE);
+			if (variableNode != null) {
+				LinearLayout ll_ret = new LinearLayout(this);
+				TextView tvLabel = new TextView(this);
+				String format = variableNode.getAttribute("format");
+				String label = "";
+				Element labelNode = (Element) xpath.evaluate("label",  variableNode, XPathConstants.NODE);
+				if(labelNode != null) {
+					label = labelNode.getTextContent();
+				}
+				tvLabel.setText(label + " (#"	+ variableNode.getAttribute("CV") + ")");
+				ll_ret.addView(tvLabel);
+				TextView comment = new TextView(this);
 				ll_ret.addView(comment);
-				ret=ll_ret;
+				ret = ll_ret;
 			} else {
-				Debuglog.debugln("error finding " + expression );
-				ret=null;
+				Log.e(tag, "error finding " + expression);
+				TextView comment = new TextView(this);
+				comment.setText("didn't find [" + item + "]");
+				ret = comment;
 			}
 		} else {
-			Debuglog.debugln("createPOMViewRecursive: invalid nodename:"+nodeName);
-			// TODO: error handling
-			ret= null;
+			Log.e(tag, "createPOMViewRecursive: invalid nodename:" + nodeName);
+			ret = null;
 		}
 		return ret;
 	}
-	
-    private static class MyNamespaceContext implements NamespaceContext {
 
-    	/// @prefix: das ist das was im xpath verwendet wurde (nicht das aus der .xml)
-        public String getNamespaceURI(String prefix) {
-            if("xi".equals(prefix)) {
-                return PomAction.XincludeXMLns ;
-            }
-            return null;
-        }
+	private static class MyNamespaceContext implements NamespaceContext {
 
-        public String getPrefix(String namespaceURI) {
-            return null;
-        }
+		// / @prefix: das ist das was im xpath verwendet wurde (nicht das aus
+		// der .xml)
+		public String getNamespaceURI(String prefix) {
+			if ("xi".equals(prefix)) {
+				return PomAction.XincludeXMLns;
+			}
+			return null;
+		}
 
-        public Iterator getPrefixes(String namespaceURI) {
-            return null;
-        }
+		public String getPrefix(String namespaceURI) {
+			return null;
+		}
 
-    }
-    
+		public Iterator getPrefixes(String namespaceURI) {
+			return null;
+		}
+
+	}
+
 	@Override
 	public void onResume() {
 		super.onResume();
-		System.out.println("ControlAction::onResume");
+		Log.i(tag, "ControlAction::onResume");
 		AndroidMain.plusActivity();
 	}
+
 	@Override
 	public void onPause() {
 		super.onPause();
-		System.out.println("ControlAction::onPause isFinishing:"+this.isFinishing());
+		Log.i(tag, "ControlAction::onPause isFinishing:" + this.isFinishing());
 		AndroidMain.minusActivity();
 	}
 
 	/**
-	 * das rumgefummel mit onKeyDown ist weil sich das ControlAction sonst gerne auch beendet weils das onBackPressed auch bekommt ....
+	 * das rumgefummel mit onKeyDown ist weil sich das ControlAction sonst gerne
+	 * auch beendet weils das onBackPressed auch bekommt ....
+	 * 
 	 * @see android.app.Activity#onKeyDown(int, android.view.KeyEvent)
 	 */
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
-		if(keyCode == KeyEvent.KEYCODE_BACK)
-			return true; 
+		if (keyCode == KeyEvent.KEYCODE_BACK)
+			return true;
 		return super.onKeyDown(keyCode, event);
 	}
+
 	@Override
 	public boolean onKeyUp(int keyCode, KeyEvent event) {
-		if(keyCode == KeyEvent.KEYCODE_BACK) {
+		if (keyCode == KeyEvent.KEYCODE_BACK) {
 			this.finish();
-			return true; 
+			return true;
 		}
 		return super.onKeyDown(keyCode, event);
 	}
-	
-    class AvailLocosListItemAddr extends AvailLocosListItem {
-    	public AvailLocosListItemAddr(int addr, String name, Bitmap img, int speed, int funcBits) {
-    		super(name, img, speed, funcBits);
-    		this.addr=addr;
-    	}
-    	int addr;
-    }
-    public static class ViewHolder {
-    	ImageView img;
+
+	class AvailLocosListItemAddr extends AvailLocosListItem {
+		public AvailLocosListItemAddr(int addr, String name, Bitmap img,
+				int speed, int funcBits) {
+			super(name, img, speed, funcBits);
+			this.addr = addr;
+		}
+
+		int addr;
+	}
+
+	public static class ViewHolder {
+		ImageView img;
 		TextView addr;
 		TextView name;
 		CheckBox cb;
 	}
 
- 
-    
-    public void onClickMultiButton(View v) {
-        Intent intent=new Intent();
-        ArrayList<Integer> value = new ArrayList<Integer>();
-        for(int position : this.selectedLocosPos) {
-        	value.add(this.listAdapter.getItem(position).addr);
-        }
-        intent.putIntegerArrayListExtra("currAddr", value);
-        intent.putExtra("currAddr", value);
-        setResult(RESULT_OK, intent);
-        finish();    	
-    }
-    
-    /** 
-     * Getting XML content by making HTTP Request
-This function will get XML by making an HTTP Request.
-     */
-    public String getXmlFromUrl(String url) {
-        String xml = null;
- 
-        try {
-            Debuglog.debugln("fetching url ... " + url);
-            // defaultHttpClient
-            DefaultHttpClient httpClient = new DefaultHttpClient();
-            HttpPost httpPost = new HttpPost(url);
- 
-            HttpResponse httpResponse = httpClient.execute(httpPost);
-            HttpEntity httpEntity = httpResponse.getEntity();
-            xml = EntityUtils.toString(httpEntity);
- 
-        } catch (UnsupportedEncodingException e) {
-            Debuglog.debugln("fetching url ... error ");
-            e.printStackTrace();
-        } catch (ClientProtocolException e) {
-            Debuglog.debugln("fetching url ... error ");
-            e.printStackTrace();
-        } catch (IOException e) {
-            Debuglog.debugln("fetching url ... error ");
-            e.printStackTrace();
-        }
-        // return XML
-        return xml;
-    }
-    
-    /**
-     * Parsing XML content and getting DOM element
-After getting XML content we need to get the DOM element of the XML file. Below function will parse the XML content and will give you DOM element.
-     */
-    public Document getDomElement(String xml){
-        Document doc = null;
-        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-        dbf.setIgnoringComments(true);
-        // Debuglog.debugln("isXIncludeAware: "+dbf.isXIncludeAware()); dbf.setXIncludeAware(true);
-        // Debuglog.debugln("isNamespaceAware: "+dbf.isNamespaceAware());
-        dbf.setNamespaceAware(true);
-        try {
- 
-            DocumentBuilder db = dbf.newDocumentBuilder();
- 
-            InputSource is = new InputSource();
-                is.setCharacterStream(new StringReader(xml));
-                doc = db.parse(is); 
- 
-            } catch (ParserConfigurationException e) {
-                Log.e("Error: ", e.getMessage());
-                return null;
-            } catch (SAXException e) {
-                Log.e("Error: ", e.getMessage());
-                return null;
-            } catch (IOException e) {
-                Log.e("Error: ", e.getMessage());
-                return null;
-            }
-                // return DOM
-            return doc;
-    }
-    
+	public void onClickMultiButton(View v) {
+		Intent intent = new Intent();
+		ArrayList<Integer> value = new ArrayList<Integer>();
+		for (int position : this.selectedLocosPos) {
+			value.add(this.listAdapter.getItem(position).addr);
+		}
+		intent.putIntegerArrayListExtra("currAddr", value);
+		intent.putExtra("currAddr", value);
+		setResult(RESULT_OK, intent);
+		finish();
+	}
+
+	/**
+	 * Getting XML content by making HTTP Request This function will get XML by
+	 * making an HTTP Request.
+	 */
+	static HashMap <String, String>xmlCache=new HashMap<String,String>();
+	public static String getXmlFromUrl(String url) {
+		if(xmlCache.containsKey(url)) {
+			Log.i(tag, "fetching url (cached) ... " + url);
+			return xmlCache.get(url);
+		}
+		try {
+			String xml = null;
+			Log.i(tag, "fetching url ... " + url);
+			// defaultHttpClient
+			DefaultHttpClient httpClient = new DefaultHttpClient();
+			HttpPost httpPost = new HttpPost(url);
+
+			HttpResponse httpResponse = httpClient.execute(httpPost);
+			HttpEntity httpEntity = httpResponse.getEntity();
+			xml = EntityUtils.toString(httpEntity);
+			xmlCache.put(url, xml);
+			return xml;
+			
+		} catch (UnsupportedEncodingException e) {
+			Log.e(tag, "fetching url ... error ", e);
+		} catch (ClientProtocolException e) {
+			Log.e(tag, "fetching url ... error ", e);
+		} catch (IOException e) {
+			Log.e(tag, "fetching url ... error ", e);
+		}
+		return null;
+	}
+
+	/**
+	 * Parsing XML content and getting DOM element After getting XML content we
+	 * need to get the DOM element of the XML file. Below function will parse
+	 * the XML content and will give you DOM element.
+	 */
+	public static Document getDomElement(String xml) {
+		Document doc = null;
+		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+		dbf.setIgnoringComments(true);
+		// Debuglog.debugln("isXIncludeAware: "+dbf.isXIncludeAware());
+		// dbf.setXIncludeAware(true);
+		// Debuglog.debugln("isNamespaceAware: "+dbf.isNamespaceAware());
+		dbf.setNamespaceAware(true);
+		try {
+
+			DocumentBuilder db = dbf.newDocumentBuilder();
+
+			InputSource is = new InputSource();
+			is.setCharacterStream(new StringReader(xml));
+			doc = db.parse(is);
+
+		} catch (ParserConfigurationException e) {
+			Log.e(tag, "ParserConfigurationException: ", e);
+			return null;
+		} catch (SAXException e) {
+			Log.e(tag, "SAXException: ", e);
+			return null;
+		} catch (IOException e) {
+			Log.e(tag, "IOException: ", e);
+			return null;
+		}
+		// return DOM
+		return doc;
+	}
+
+	static public void replaceIncludes(Node startNode, int depth, String which, final PomAction PA) {
+		Log.d(tag, "## replaceIncludes("+depth+" / " + which + ") >>>>>");
+		if(depth > 4) {
+			Log.e(tag, "## replaceIncludes depth");
+			return;
+		}
+		Element lastParent = null;
+		// 2* includes auflösen ...
+
+			// da alle include-nodes nachladen ...
+			// (2012.0707: android kennt kein include:
+			// includeXMLns
+			String expression = "//xi:include";
+			NodeList nodes;
+			try {
+				nodes = (NodeList) xpath.evaluate(expression, startNode, XPathConstants.NODESET);
+			} catch (XPathExpressionException e) {
+				// TODO Auto-generated catch block
+				Log.e(tag, "## XPathExpressionException",e);
+				return;
+			}
+			Log.d(tag, "## found " + nodes.getLength() + " Elements ==== " + nodes.toString());
+			for (int i = 0; i < nodes.getLength(); i++) {
+				Node node = nodes.item(i);
+
+				if (node instanceof Element) {
+					Element includeChild = (Element) node;
+					final String url = includeChild.getAttribute("href");
+					
+					PA.runOnUiThread(new Runnable() {
+					    public void run() {
+							PA.tvInfo.setText("loading xml "+url);					    	
+					    }
+					});
+					
+
+					String xmlData = PomAction.getXmlFromUrl(url); // getting
+														// XML
+					Document includeDoc = PomAction.getDomElement(xmlData); // getting
+													// DOM
+													// element
+					PomAction.replaceIncludes(includeDoc, depth+1, url, PA);
+					NodeList list = includeDoc.getChildNodes();
+					lastParent = (Element) includeChild.getParentNode();
+					
+					for(int j = 0; j < list.getLength(); j++) {
+						Node newChild = list.item(j);
+						if(newChild instanceof Element) {
+							Log.d(tag, "importing tag "+((Element)newChild).getTagName());							
+						} else {
+							Log.d(tag, "skipping import of "+newChild.getClass());
+						}
+						Node tempDoc = lastParent.getOwnerDocument().importNode(newChild, true);
+					
+					// Log.i(tag, "doc:" + doc + " startNode doc: " + startNode.getOwnerDocument() + " child doc: " + child.getOwnerDocument() +
+					// 		" parent doc:"+lastParent.getOwnerDocument() +
+					// 		" new doc:"+tempDoc.getOwnerDocument());
+						lastParent.insertBefore(tempDoc, includeChild);
+					// child.appendChild(tempDoc);
+					// lastParent.appendChild(tempDoc);
+					// node.appendChild(); // 0 = processing
+					// info
+					// Comment comment =
+					// doc.createComment("Just a thought");
+					// Element e =
+					// doc.createElement("child");
+					// e.appendChild(newChild);
+					// child.appendChild(e);
+					}
+					lastParent.removeChild(includeChild);
+				}
+		}
+		Log.d(tag, "## replaceIncludes("+depth+" / " + which + ") <<<< done");
+	}
+
 }
