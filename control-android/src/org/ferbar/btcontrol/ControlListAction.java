@@ -244,6 +244,16 @@ public class ControlListAction extends ListActivity {
     	
     	};
     	Enumeration<Integer> e = ControlAction.availLocos.keys();
+    	if(ControlAction.availLocos.size() == 1) {
+    		Integer addr=e.nextElement();
+    		Intent intent=new Intent();
+	        ArrayList<Integer> value = new ArrayList<Integer>();
+        	value.add(addr);
+	        intent.putIntegerArrayListExtra("currAddr", value);
+	        intent.putExtra("currAddr", value);
+	        setResult(RESULT_OK, intent);
+	        finish();
+    	}
     	while(e.hasMoreElements()) {
     		Integer addr=e.nextElement();
     		AvailLocosListItem i=(AvailLocosListItem)ControlAction.availLocos.get(addr);
