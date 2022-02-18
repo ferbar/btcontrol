@@ -21,6 +21,8 @@
  */
 package org.ferbar.btcontrol;
 
+import android.util.Log;
+
 /**
 *
 * @author chris
@@ -28,7 +30,7 @@ package org.ferbar.btcontrol;
 public class Debuglog {
 
 	static public String pingstat="";
-
+	static final String TAG="btcontrol.log";
 
 	//	static private Form debugForm;
 //	static private Display display;
@@ -41,12 +43,13 @@ public class Debuglog {
 	static public void debugln(String text) {
 //		StringItem item=new StringItem("",text+"\n");
 //		debug(item);
-		System.out.println(text);
+		Log.i(TAG, text);
 	}
 	static public void debug(String text) {
 //		StringItem item=new StringItem("",text);
 		// debug(item);
-		System.out.print(text);
+		// System.out.print(text);
+		Log.i(TAG, text);
    }
 	
 	static public void debug(StringItem text) {
