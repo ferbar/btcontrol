@@ -117,7 +117,7 @@ std::string readFile(std::string filename)
 #ifdef PUTZLOK
 		"mPutzmotor"
 #elif defined HAVE_SOUND
-    "sSound ein/aus"
+    "sSound ein/aus=1"
 #endif
 		",,,,,"
 		",mMotor Boost\n";
@@ -191,10 +191,10 @@ void writeEEPROM(int addr1, uint8_t data1, int addr2, uint8_t data2) {
 /**
  * memmem für ESP32
  * Tests:
-Serial.printf("1.: %p\n", memmem("abcdefghi", 10, "abc", 3) );
-Serial.printf("2.: %p\n", memmem("abcdefghi", 10, "ghi", 3) );
-Serial.printf("3.: %p\n", memmem("abcdefghi", 10, "dghi", 3) );
-Serial.printf("4.: %p\n", memmem("abcdef", 3, "abcd", 4) );
+Serial.printf("1.: %p\n", memmem("abcdefghi", 9, "abc", 3) );
+Serial.printf("2.: %p\n", memmem("abcdefghi", 9, "ghi", 3) );
+Serial.printf("3.: %p\n", memmem("abcdefghi", 9, "dghi", 3) );
+Serial.printf("4.: %p\n", memmem("abcdef", 4, "abcd", 4) );
  */
 void *memmem(const void *haystack, size_t haystacklen,
              const void *needle, size_t needlelen) {
@@ -203,15 +203,75 @@ void *memmem(const void *haystack, size_t haystacklen,
 	if(needlelen > haystacklen) {
 		return NULL;
 	}
-	for(int i=0; i < haystacklen-needlelen; i++) {
+	for(int i=0; i < haystacklen-needlelen+1; i++) { // string ist 16 lang, 2 ist needlelen => +1 damit [14] auch noch gecheckt wird
 		for(int j=0; j < needlelen; j++) {
 			if(h[i+j] != n[j]) {
+        // printf("[%d]=%c != [%d]=%c, ",i+j, h[i+j], j, n[j]);
 				goto not_found;
 			}
 		}
+    // DEBUGF("memmem found @%p", &haystack+i);
 		return &haystack+i;
 		not_found: {}
-		// printf("test %d\n",i);
+		// DEBUGF("memmem not found @%d haystack:[%.*s] needle:[%.*s]",i,haystacklen, (const char*) haystack, needlelen, (const char*) needle);
 	}
 	return NULL;
+}
+
+#ifdef OTA_UPDATE
+// https://lastminuteengineers.com/esp32-ota-updates-arduino-ide/
+#include <ArduinoOTA.h>
+#include <ESPmDNS.h>
+
+#endif
+void initOTA()
+{
+#ifdef OTA_UPDATE
+  // Port defaults to 3232
+  // ArduinoOTA.setPort(3232);
+
+  // Hostname defaults to esp3232-[MAC]
+  // ArduinoOTA.setHostname("myesp32");
+
+  // No authentication by default
+  // ArduinoOTA.setPassword("admin");
+
+  // Password can be set with it's md5 value as well
+  // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
+  // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
+
+  NOTICEF("Setting up ArduinoOTA");
+  ArduinoOTA
+    .onStart([]() {
+      const char *type="unknown";
+      if (ArduinoOTA.getCommand() == U_FLASH)
+        type = "sketch";
+      else // U_SPIFFS
+        type = "filesystem";
+
+      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+      NOTICEF("Start updating %s", type);
+    })
+    .onEnd([]() {
+      NOTICEF("Update done");
+    })
+    .onProgress([](unsigned int progress, unsigned int total) {
+      DEBUGF("Progress: %u%%", (progress / (total / 100)));
+    })
+    .onError([](ota_error_t error) {
+      const char *e="unknown";
+      if (error == OTA_AUTH_ERROR) e="Auth Failed";
+      else if (error == OTA_BEGIN_ERROR) e="Begin Failed";
+      else if (error == OTA_CONNECT_ERROR) e="Connect Failed";
+      else if (error == OTA_RECEIVE_ERROR) e="Receive Failed";
+      else if (error == OTA_END_ERROR) e="End Failed";
+      ERRORF("Error[%u]: %s", error, e);
+    });
+
+  // ArduinoOTA.begin startet sonst mdns mit default hostname
+  // ArduinoOTA.setHostname(lok_name);
+  ArduinoOTA.setMdnsEnabled(false);
+  ArduinoOTA.begin();
+  MDNS.enableArduino(3232, "");
+#endif
 }

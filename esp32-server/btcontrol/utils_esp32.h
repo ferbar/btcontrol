@@ -15,4 +15,6 @@ void *memmem(const void *haystack, size_t haystacklen,
 
 void printDirectory();
 
+void initOTA();
+
 #endif
