@@ -35,6 +35,9 @@
 #include <netinet/tcp.h>
 #include <unistd.h>
 
+// für getpeername
+#include <arpa/inet.h>
+
 #include <errno.h>
 
 #include "utils.h"
@@ -95,8 +98,14 @@ std::string TCPClient::getRemoteAddr() {
 #ifdef INCL_BT
 	return BTUtils::getRemoteAddr(this->so);
 #else
-	printf("TCPClient::getRemoteAddr ohne BT\n");
-	abort();
+	struct sockaddr_in peeraddr;
+	socklen_t peeraddrlen = sizeof(peeraddr);
+	getpeername(this->so, (sockaddr*) &peeraddr, &peeraddrlen);
+	std::string ret;
+	ret.resize(INET_ADDRSTRLEN+1);
+	inet_ntop(AF_INET, &(peeraddr.sin_addr), (char *) ret.c_str(), INET_ADDRSTRLEN);
+
+	return ret;
 #endif
 }
 
