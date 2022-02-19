@@ -11,7 +11,7 @@
 * Ein/Ausschalter für den Rauchfang
 * Kabel mit verpolungssicherem Stecker
 * Helle warmweisse LED + R
-* Spannungsteiler + C zum Bat Spannung messen
+* Spannungsteiler + C zum Bat Spannung messen (47k Ohm / 10k Ohm)
 
 <img src="img_playmobil_inside.jpg" alt="Playmobillok Innenleben" width="300"/>
 
