@@ -31,6 +31,8 @@
 #include "utils.h"
 #include "lokdef.h"
 
+#define TAG "SRCP"
+
 bool SRCP::powered=false;
 
 
@@ -49,7 +51,7 @@ SRCPReply::SRCPReply(const char *message)
 		this->type=SRCPReply::INFO;
 	else
 		this->type=SRCPReply::ERROR;
-	printf("SRCPReply: %d %s\n", this->code, this->message);
+	DEBUGF("SRCPReply: %d %s\n", this->code, this->message);
 }
 
 SRCPReply::~SRCPReply()
@@ -83,22 +85,22 @@ SRCP::SRCP()
 
 	memset(servermsg,0,SERVMSGLEN);
 	read(so,servermsg,SERVMSGLEN-1);
-	printf("\nconnected to: %s\n", servermsg);
+	DEBUGF("\nconnected to: %s", servermsg);
 	SRCPReplyPtr reply;
 	reply=this->sendMessage("SET PROTOCOL SRCP 0.8");
 	if(reply->type != SRCPReply::OK) {
-		fprintf(stderr,"error setting protocol: %s\n",reply->message);
-		exit(1);
+		ERRORF("error setting protocol: %s",reply->message);
+		abort();
 	}
 	reply=this->sendMessage("SET CONNECTIONMODE SRCP COMMAND");
 	if(reply->type != SRCPReply::OK) {
-		fprintf(stderr,"error setting protocol: %s\n",reply->message);
-		exit(1);
+		ERRORF("error setting protocol: %s",reply->message);
+		abort();
 	}
 	reply=this->sendMessage("GO");
 	if(reply->type != SRCPReply::OK) {
-		fprintf(stderr,"error setting protocol: %s\n",reply->message);
-		exit(1);
+		ERRORF("error setting protocol: %s",reply->message);
+		abort();
 	}
 	this->pwrOn();
 }
@@ -109,16 +111,16 @@ SRCP::~SRCP()
 	const char *buf="LOGOUT\n";
 	write(so,buf,strlen(buf));
 	close(so);
-	printf("STOPVOLTAGE done\n");
+	DEBUGF("STOPVOLTAGE done");
 }
 
 void SRCP::pwrOn()
 {
 	SRCPReplyPtr reply = this->sendMessage("SET 1 POWER ON");
 	if(reply->type != SRCPReply::OK) {
-		fprintf(stderr,"error power on (%s)\n",reply->message);
+		ERRORF("error power on (%s)",reply->message);
 	}
-	printf("STARTVOLTAGE done\n");
+	DEBUGF("STARTVOLTAGE done");
 	this->powered=true;
 }
 
@@ -126,9 +128,9 @@ void SRCP::pwrOff()
 {
 	SRCPReplyPtr reply = this->sendMessage("SET 1 POWER OFF");
 	if(reply->type != SRCPReply::OK) {
-		fprintf(stderr,"error power on (%s)\n",reply->message);
+		ERRORF("error power on (%s)",reply->message);
 	}
-	printf("STOPVOLTAGE done\n");
+	DEBUGF("STOPVOLTAGE done");
 	this->powered=false;
 }
 
@@ -138,7 +140,7 @@ void SRCP::pwrOff()
  */
 SRCPReplyPtr SRCP::sendMessage(const char *message)
 {
-	printf("SRCP send: %s\n",message);
+	DEBUGF("SRCP send: %s",message);
 	write(this->so,message,strlen(message));
 	write(this->so,"\n",1);
 	return this->readReply();
@@ -150,8 +152,8 @@ SRCPReplyPtr SRCP::readReply()
 	int n=read(this->so,buffer,sizeof(buffer));
 	if(n <= 0) {
 		// exception ???
-		fprintf(stderr,"error reading reply (%s)\n",strerror(errno));
-		exit(1);
+		ERRORF("error reading reply (%s)",strerror(errno));
+		abortf();
 	}
 	buffer[n]=0;
 
@@ -236,7 +238,7 @@ bool SRCP::getInfo(int addr, int *dir, int *dccSpeed, int nFunc, bool *func)
 	// printf("cmd: %s\n",buf);
 	SRCPReplyPtr reply = this->sendMessage(buf);
 	if(reply->type == SRCPReply::INFO) {
-		printf("scanning reply: %s\n",reply->message);
+		DEBUGF("scanning reply: %s",reply->message);
 		int saddr, sdrivemode, sv, svmax;
 		// INFO 1 GL 647 0 0 128 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 		int rc=sscanf(reply->message,"%*s 1 GL " /*addr*/ "%d " /*drivemode*/ "%d " /* V */ "%d " /* V_max */ "%d " /* F0 .. Fn */,
@@ -244,7 +246,7 @@ bool SRCP::getInfo(int addr, int *dir, int *dccSpeed, int nFunc, bool *func)
 			&sdrivemode,
 			&sv,
 			&svmax);
-		printf("printf matched %d vars, v=%d vmax=%d\n",rc, sv, svmax);
+		DEBUGF("printf matched %d vars, v=%d vmax=%d",rc, sv, svmax);
 //	sscanf(message,"%lf %d %a[^\n]", &this->timestamp, &this->code, &this->message); 
 		return true;
 	}
@@ -256,13 +258,13 @@ void SRCP_Hardware::fullstop(bool stopAll, bool emergencyStop) {
 	int addr_index=0;
 	while(lokdef[addr_index].addr) {
 		if(clientID)
-			printf("last client [%d]=%d\n",addr_index,lokdef[addr_index].currspeed);
+			DEBUGF("last client [%d]=%d",addr_index,lokdef[addr_index].currspeed);
 		if( (stopAll && (lokdef[addr_index].currspeed != 0) ) ||
 		    (!stopAll && (lokdef[addr_index].lastClientID == clientID ) ) ) {
 			if(clientID)
-				printf("\tstop %d\n",addr_index);
+				DEBUGF("\tstop %d",addr_index);
 			else
-				printf("emgstop [%d]=addr:%d\n",addr_index, lokdef[addr_index].addr);
+				DEBUGF("emgstop [%d]=addr:%d\n",addr_index, lokdef[addr_index].addr);
 			lokdef[addr_index].currspeed=0;
 			this->sendLoco(addr_index, true);
 			lokdef[addr_index].lastClientID=0;
@@ -292,22 +294,30 @@ void SRCP_Hardware::sendLoco(int addr_index, bool emergencyStop) {
 					if(!lokdef[addr_index].initDone) {
 						SRCPReplyPtr replyInit = this->sendLocoInit(lokdef[addr_index].addr, nFahrstufen, lokdef[addr_index].nFunc);
 						if(replyInit->type != SRCPReply::OK) {
-							fprintf(stderr,ANSI_RED "%d/%d: error init loco: (%s)\n" ANSI_DEFAULT, clientID, msgNum, replyInit->message);
+							ERRORF("%d/%d: error init loco: (%s)", clientID, msgNum, replyInit->message);
 							if(replyInit->code == 412) {
-								fprintf(stderr,"%d/%d: loopback/ddl|number_gl, max addr < %d?\n", clientID, msgNum, lokdef[addr_index].addr);
+								ERRORF("%d/%d: loopback/ddl|number_gl, max addr < %d?", clientID, msgNum, lokdef[addr_index].addr);
 								lokdef[addr_index].currspeed=-1;
 							}
 						} else {
 							lokdef[addr_index].initDone=true;
-							printf("try to read curr state...\n");
+							ERRORF("try to read curr state...");
 							if(!this->getInfo(lokdef[addr_index].addr,&dir,&dccSpeed,lokdef[addr_index].nFunc, func)) {
-								fprintf(stderr,ANSI_RED "%d/%d: error getting state of loco: (%s)\n" ANSI_DEFAULT, clientID, msgNum, replyInit->message);
+								ERRORF("%d/%d: error getting state of loco: (%s)", clientID, msgNum, replyInit->message);
 							}
 						}
 					}
 					SRCPReplyPtr reply = this->sendLocoSpeed(lokdef[addr_index].addr, dir, nFahrstufen, dccSpeed, lokdef[addr_index].nFunc, func);
 
 					if(reply->type != SRCPReply::OK) {
-						fprintf(stderr,ANSI_RED "%d/%d: error sending speed: (%s)\n" ANSI_DEFAULT, clientID, msgNum, reply->message);
+						ERRORF("%d/%d: error sending speed: (%s)", clientID, msgNum, reply->message);
 					}
+}
+
+int SRCP_Hardware::sendPOM(int addr, int cv, int value) {
+	if(cv < 0) {
+		NOTICEF("SRCP::sendPOM(addr=%d, cv=%d)", addr, cv);
+		return -1;
+	}
+	return SRCP::sendPOM(addr, cv, value)->type != SRCPReply::OK ? -1 : value ;
 }

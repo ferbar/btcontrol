@@ -52,7 +52,7 @@ class SRCP_Hardware : public Hardware, public SRCP {
 
 	void fullstop(bool stopAll, bool emergenyStop);
 	void sendLoco(int addr_index, bool emergencyStop);
-	virtual int sendPOM(int addr, int cv, int value) { return SRCP::sendPOM(addr, cv, value)->type != SRCPReply::OK ? -1 : value ; };
+	virtual int sendPOM(int addr, int cv, int value);
 	virtual int sendPOMBit(int addr, int cv, int bitNr, bool value) { return SRCP::sendPOMBit(addr, cv, bitNr, value)->type != SRCPReply::OK ? -1 : value ; };
 };
 
