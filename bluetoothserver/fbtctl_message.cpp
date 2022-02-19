@@ -273,7 +273,7 @@ void FBTCtlMessage::dump(int indent, const MessageLayout *layout) const
 		case MessageLayout::STRING:
 			// INDENT();
 			// printf("(STRING) %s\n",this->sval.c_str()); break;
-			printf("len=%d value=%s\n", this->sval.length(), this->sval.c_str()); break;
+			printf("len=%d value=%s\n", (int) this->sval.length(), this->sval.c_str()); break;
 		case MessageLayout::ARRAY: {
 			// INDENT(); 
 			// printf("(ARRAY)\n");
