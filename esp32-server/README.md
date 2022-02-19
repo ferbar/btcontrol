@@ -10,3 +10,5 @@ Beschreibung: [LGB Putzlok](Setup-Putzlok.md)
 
 ## Playmobil Lok
 [Playmobil Lok](Setup-Playmobillok.md)
+
+<img src="img_playmobil_inside.jpg" alt="Playmobil Lok ESP32" width="300"/>
