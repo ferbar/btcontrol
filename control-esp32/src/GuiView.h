@@ -89,9 +89,9 @@ protected:
   int abortConnect=0;
 };
 
-class GuiViewContolLocoSelectLoco : public GuiView { // GuiViewConnectServer ???
+class GuiViewControlLocoSelectLoco : public GuiView { // GuiViewConnectServer ???
 public:
-	GuiViewContolLocoSelectLoco() {needUpdate=true; };
+	GuiViewControlLocoSelectLoco() {needUpdate=true; };
 	void init();
 	void close();
 	void loop();
@@ -109,9 +109,14 @@ public:
 	void loop();
 	const char * which() const { return "GuiViewControlLoco"; };
 	static void onClick(Button2 &b);
+  void refreshBatLevel();
 private:
 	void sendSpeed(int what);
 	static bool forceStop;              // Speed schieber muss auf 0 geschoben werden, bis dahin 'stop'
+  int batLevelAddr=-1;
+  int batLevelCV=-1;
+  int batLevel=-1;
+  unsigned long lastBatLevelRefresh=(unsigned) -30000;
 };
 
 class GuiViewErrorMessage : public GuiView {

@@ -29,7 +29,7 @@
 #include "ControlClientThread.h"
 #include "lokdef.h"
 #include "remoteLokdef.h"
-
+#include "Hardware.h"
 
 #define TAG "GuiView"
 
@@ -819,6 +819,42 @@ void GuiViewControlLoco::sendSpeed(int what) {
   GuiViewControlLoco::lastKeyPressed=millis();  // poti geändert oder notaus gedrückt => wir kommen da her
 }
 
+void GuiViewControlLoco::refreshBatLevel() {
+  DEBUGF("GuiViewControlLoco::refreshBatLevel() addr=%d CV=%d", this->batLevelAddr, this->batLevelCV);
+  try {
+    if(this->batLevelAddr == -1) {
+      this->batLevelAddr=controlClientThread.getCurrLok().addr;
+      if(this->batLevelAddr < 0) {
+        return;
+      }
+
+      FBTCtlMessage cmd(messageTypeID("POM"));
+      cmd["addr"]=this->batLevelAddr;
+      cmd["cv"]=Hardware::CV_CV_BAT;
+      cmd["value"]=-1;
+      controlClientThread.query(cmd,[this](FBTCtlMessage &reply) {
+        this->batLevelCV=reply["value"].getIntVal();
+        DEBUGF("got reply for bat level CV: %d", this->batLevelCV);
+        if(this->batLevelCV > 0) {
+          this->refreshBatLevel();
+        }
+      });
+    }
+    if(this->batLevelCV != -1) {
+      FBTCtlMessage cmd(messageTypeID("POM"));
+      cmd["addr"]=this->batLevelAddr;
+      cmd["cv"]=this->batLevelCV;
+      cmd["value"]=-1;
+      controlClientThread.query(cmd,[this](FBTCtlMessage &reply) {
+        this->batLevel=reply["value"].getIntVal();
+        DEBUGF("got reply for bat level: %d", this->batLevel);
+      } );
+    }
+  } catch(std::runtime_error &e) {
+    NOTICEF("GuiViewControlLoco::refreshBatLevel failed (%s)", e.what());
+  }
+}
+
 void GuiViewControlLoco::onClick(Button2 &b) {
   // dynamic_cast wäre schöner, geht aber nicht
 	DEBUGF("GuiViewControlLoco::onClick(Button2 &b) Button");
@@ -929,7 +965,7 @@ void GuiViewControlLoco::loop() {
       abort();
 	  }
     // DEBUGF("gui_connect_state=%d", gui_connect_state);
-	  unsigned long now = millis();
+	  unsigned long now = millis(); // !!! unsigned => nicht - machen !!!
 	  static long last=0;
         static int avg=0;
         if(now > last+200) { // jede 0,2 refreshen
@@ -944,7 +980,17 @@ void GuiViewControlLoco::loop() {
           tft.setTextDatum(TL_DATUM);
           tft.setTextColor(TFT_GREEN, TFT_BLACK);
           // ping stats:
-          tft.drawString( utils::format( "ping: ~%4.2g (%4.2g) drop: %d ", ((float)controlClientThread.pingAvg)/controlClientThread.pingCount/1000.0, controlClientThread.pingMax/1000.0, droppedCommands).c_str(),
+          std::string info=utils::format( "ping: ~%4.2f (%4.2f) drop: %d ", ((float)controlClientThread.pingAvg)/controlClientThread.pingCount/1000.0, controlClientThread.pingMax/1000.0, droppedCommands);
+          // bat info:
+          if(now > (this->lastBatLevelRefresh + 30000)) {
+            // DEBUGF("need refresh bat level last:%ld now:%ld", this->lastBatLevelRefresh, now);
+            this->lastBatLevelRefresh = now;
+            this->refreshBatLevel();
+          }
+          if(this->batLevel>=0) {
+            info += utils::format(" bat: %d/255  ", this->batLevel);
+          }
+          tft.drawString(info.c_str(),
             0, tft.height() - tft.fontHeight() );
 
           // Func:
