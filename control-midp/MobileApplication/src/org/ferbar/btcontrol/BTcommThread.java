@@ -74,6 +74,13 @@ public class BTcommThread extends Thread {
 	// doClient neu starten wenn verbindung abgebrochen?
 	private boolean stop=false;
 
+    public static final int CV_CV_SOUND_VOL=-10;
+    public static final int CV_CV_BAT=-20;
+    public static final int CV_CV_WIFI_CLIENT_SWITCH=-30;
+    public static final int CV_SOUND_VOL=266;
+    public static final int CV_BAT=500;
+    public static final int CV_WIFI_CLIENT_SWITCH=510;
+	
 	public static final int MAX_MESSAGE_SIZE=10000;
 	
 	public static final int STATE_DISCONNECTED = 0;
@@ -201,8 +208,8 @@ public class BTcommThread extends Thread {
 		this.BTStreamConnection.connect();
 		this.iStream=BTStreamConnection.openInputStream();
 		this.oStream=BTStreamConnection.openOutputStream();
-		System.out.print("iStream: "+this.iStream+" oStream:"+this.oStream);
-		System.out.print("str: i:"+this.iStream.toString()+" o:"+this.oStream.toString());
+		Debuglog.debug("iStream: "+this.iStream+" oStream:"+this.oStream);
+		Debuglog.debug("str: i:"+this.iStream.toString()+" o:"+this.oStream.toString());
 	}
 
 	private void setStatus(int connState,String message) {
