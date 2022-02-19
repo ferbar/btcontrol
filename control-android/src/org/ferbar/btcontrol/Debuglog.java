@@ -62,7 +62,7 @@ public class Debuglog {
 	 */
    static public void vibrate(int ms) {
 //		display.vibrate(ms);
-	   System.out.println("vibrate");
+	   Log.i(TAG, "vibrate");
 /*
 		try {
       // Nokia
