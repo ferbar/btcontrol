@@ -7,6 +7,9 @@
 // enable update OTA
 #define OTA_UPDATE
 
+// 5 für 'normale' Loks, 10 für Spiel-Loks
+#define SPEED_STEP 10
+
 // bridge type, one of these:
 // #define CHINA_MONSTER_SHIELD
 #define VNH5019_DUAL_SHIELD

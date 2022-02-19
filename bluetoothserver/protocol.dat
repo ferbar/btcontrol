@@ -26,7 +26,7 @@ DIR=addr:I,dir:I
 # stop
 STOP=addr:I
 
-
+# TODO: speed setzen über target-speed-CV-register
 ACC_MULTI=list:A{addr:I}
 BREAK_MULTI=list:A{addr:I}
 DIR_MULTI=dir:I,list:A{addr:I}

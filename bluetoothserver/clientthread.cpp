@@ -29,6 +29,7 @@
 #include "lokdef.h"
 #include "Hardware.h"
 #include <stdexcept>
+#include "config.h"
 
 #include <errno.h>
 
@@ -189,7 +190,7 @@ continue;
 			} else if(cmd.isType("ACC")) {
 				int addr=cmd["addr"].getIntVal();
 				int addr_index=getAddrIndex(addr);
-				lokdef[addr_index].currspeed+=5;
+				lokdef[addr_index].currspeed+=SPEED_STEP;
 				if(lokdef[addr_index].currspeed > 255)
 					lokdef[addr_index].currspeed=255;
 				sendStatusReply(lastStatus);
@@ -197,7 +198,7 @@ continue;
 			} else if(cmd.isType("BREAK")) {
 				int addr=cmd["addr"].getIntVal();
 				int addr_index=getAddrIndex(addr);
-				lokdef[addr_index].currspeed-=5;
+				lokdef[addr_index].currspeed-=SPEED_STEP;
 				if(lokdef[addr_index].currspeed < 0)
 					lokdef[addr_index].currspeed=0;
 				sendStatusReply(lastStatus);
@@ -225,7 +226,7 @@ continue;
 				int n=cmd["list"].getArraySize();
 				int addr=cmd["list"][0]["addr"].getIntVal();
 				int addr_index=getAddrIndex(addr);
-				lokdef[addr_index].currspeed+=5;
+				lokdef[addr_index].currspeed+=SPEED_STEP;
 				if(lokdef[addr_index].currspeed > 255)
 					lokdef[addr_index].currspeed=255;
 				changedAddrIndex[addr_index]=true;
@@ -241,7 +242,7 @@ continue;
 				int n=cmd["list"].getArraySize();
 				int addr=cmd["list"][0]["addr"].getIntVal();
 				int addr_index=getAddrIndex(addr);
-				lokdef[addr_index].currspeed-=5;
+				lokdef[addr_index].currspeed-=SPEED_STEP;
 				if(lokdef[addr_index].currspeed < -255)
 					lokdef[addr_index].currspeed=-255;
 				changedAddrIndex[addr_index]=true;
