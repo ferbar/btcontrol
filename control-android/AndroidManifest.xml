@@ -43,7 +43,7 @@
             >
         </activity>
         <activity
-            android:name=".ControlListAction"
+            android:name=".SelectLocoAction"
             android:launchMode="singleTop"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme"

@@ -196,7 +196,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
         
         if(ControlAction.currSelectedAddr.size() == 0) {
         	// lok liste laden
-        	Intent i = new Intent(this, ControlListAction.class);
+        	Intent i = new Intent(this, SelectLocoAction.class);
         	startActivityForResult(i, ACTIVITY_SELECT_LOK);
         } else { // schon eine lok ausgewählt dann funk liste laden:
     		try {
@@ -407,7 +407,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
         // Handle item selection
         switch (item.getItemId()) {
         case R.id.menu_selectLok: { // lok auswahl starten
-        	Intent i = new Intent(this, ControlListAction.class);
+        	Intent i = new Intent(this, SelectLocoAction.class);
         	startActivityForResult(i, ACTIVITY_SELECT_LOK);
             return true; }
         case R.id.menu_Power: { // Power togglen
@@ -614,7 +614,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
         	return true;
         }
         case R.id.menu_multi: { // Mehrfachsteuerung lok auswahl starten
-        	Intent i = new Intent(this, ControlListAction.class);
+        	Intent i = new Intent(this, SelectLocoAction.class);
         	i.putExtra("Mehrfachsteuerung", true);
         	startActivityForResult(i, ACTIVITY_SELECT_LOK);
         	return true;
@@ -646,7 +646,6 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
     @Override
     public void onCreateContextMenu(ContextMenu menu, View view, ContextMenu.ContextMenuInfo menuInfo){
     	// System.out.println("onCreateContextMenu");
-    	// TODO: da was sinnvolles tun ;-)
     	int viewid=view.getId();
     	int func = -1;
 		for(int i=0; i < this.viewFunctions.length; i++) {
@@ -793,7 +792,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 			AndroidMain.btcomm.addCmdToQueue(msg,this);
 		} catch (Exception e) {
 			// Toast.makeText(this, "error sending cmd:" + e.toString(), Toast.LENGTH_LONG).show();
-			e.printStackTrace();
+			Log.e(TAG, "onClickButton", e);
 			this.handleBtCommException(e);
 		}
 	}
