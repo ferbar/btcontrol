@@ -110,7 +110,12 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 	// damit sich der bildschirmschoner nicht einschaltet:
 	PowerManager.WakeLock powerManager_wl;
 	String [] funcNames=null;
-	boolean [] funcStates=null; // beim repaint wird das geupdatet  
+	boolean [] funcStates=null; // beim repaint wird das geupdatet
+	
+	int batLevelCV=-1;
+	int batLevel=-1;
+	int batLevelAddr=-1;
+	long lastBatLevelRefresh=0;
 
 	// zuordnung adresse -> lokbezeichnung,bild
 	static class AvailLocosListItem {public String name; public Bitmap img; public int speed; public int funcBits;
@@ -208,7 +213,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 		    	msg.get("addr").set(ControlAction.currSelectedAddr.get(0));
 				AndroidMain.btcomm.addCmdToQueue(msg,this);
     		} catch (Exception e) {
-    			e.printStackTrace();
+    			Log.e(TAG, "onCreate GETLOCOS GETFUNCTIONS failed", e);
     			Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
     		}
         }
@@ -333,6 +338,13 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 		System.out.println("ControlAction::onDestroy");
 	} */
 
+	class BtCommCallback implements BTcommThread.Callback {
+		public BtCommCallback() {};
+		public void BTCallback(FBTCtlMessage reply) {
+			Log.e("TAG", "BtCommCallback override me!");
+		}
+	}
+	
 	/**
 	 * lok ausgewählt
 	 */
@@ -345,15 +357,15 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
         		throw new NullPointerException("onActivityResult: nullpointer");
         	}
         	ControlAction.currSelectedAddr = tmp;
-        	// funcNames von der 1. Lok einlesen:
+        	// funcNames der 1. ausgewählten Lok (eventuell ja multi) einlesen:
 	    	FBTCtlMessage msg = new FBTCtlMessage();
 	    	try {
 				msg.setType(MessageLayouts.messageTypeID("GETFUNCTIONS"));
 		    	msg.get("addr").set(ControlAction.currSelectedAddr.get(0));
 				AndroidMain.btcomm.addCmdToQueue(msg,this);
+				
 			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				Log.e(TAG, "onActivityResult error getfunctions", e);
 			}
 	        this.repaint();
         }
@@ -384,7 +396,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 			MenuItem seekbarWorkaroundMenuItem = (MenuItem) menu.findItem(R.id.menu_seekbarWorkaround);
 			seekbarWorkaroundMenuItem.setTitle("Seekbar Workaround ("+(cfg_seekBarWorkaround ? "on" : "off" ) + ")"); 
 		} catch (Exception e) {
-			e.printStackTrace();
+			Log.e(TAG, "onPrepareOptionsMenu", e);
 			Toast.makeText(this, "error checking power state: "+e.getMessage(), Toast.LENGTH_LONG).show();
 		}
 		return true;
@@ -417,7 +429,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 		    	msg.get("value").set(powerMenuItemState==0 ? 1 : 0);
 				AndroidMain.btcomm.addCmdToQueue(msg,this);
 			} catch (Exception e) {
-				e.printStackTrace();
+				Log.e(TAG, "onOptionsItemSelected", e);
 				Toast.makeText(this, "error changing power state: "+e.getMessage(), Toast.LENGTH_LONG).show();
 			}
             return true; }
@@ -459,8 +471,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
         	        	msg.get("addr").set(ControlAction.currSelectedAddr.get(0));
 						AndroidMain.btcomm.addCmdToQueue(msg); // TODO: callback handler vom ControlAction aufrufen
 					} catch (Exception e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
+						Log.e(TAG, "onOptionsItemSelected SETFUNC failed", e);
 					}
         	    }
         	}
@@ -834,8 +845,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 		    	    	this.setMessageAddrField(msg, keyCode == KeyEvent.KEYCODE_VOLUME_DOWN ? "BREAK" : "ACC");
 		    			AndroidMain.btcomm.addCmdToQueue(msg,this);
 		    		} catch (Exception e) {
-		    			// TODO Auto-generated catch block
-		    			e.printStackTrace();
+		    			Log.e(TAG, "onKeyDown ACC/BREAK failed", e);
 		    			this.handleBtCommException(e);
 		    		}
 		    		this.updateSpeedSlider(0,msg.isType("ACC") ? 1 : -1);
@@ -1108,12 +1118,28 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 			TextView tv=(TextView)this.findViewById(R.id.textViewStatus);
 			if(AndroidMain.btcomm != null && AndroidMain.btcomm.connState == BTcommThread.STATE_CONNECTED) {
 				info=Debuglog.pingstat;
+				// Print Bat Level
+				if(this.lastBatLevelRefresh < System.currentTimeMillis()-30000) { // refresh jede 30s
+					this.lastBatLevelRefresh=System.currentTimeMillis();
+					this.refreshBatLevel();
+				}
+				if(this.batLevel >= 0) {
+					info+=" Bat:"+this.batLevel+"/255";
+				}
 				tv.setBackgroundColor(Color.TRANSPARENT);
 			} else {
+				// TODO: wlan empfang? ???
+				ConnectivityManager conMan = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+				android.net.NetworkInfo.State wifi = conMan.getNetworkInfo(1).getState();
+				if(wifi == NetworkInfo.State.CONNECTED) {
+				} else if(wifi == NetworkInfo.State.CONNECTING) {
+                    info +=" (wifi connecting)";
+				} else if(wifi == NetworkInfo.State.DISCONNECTED) {
+					info +=" (wifi disconnected)";
+				}
 				tv.setBackgroundColor(Color.RED);
 			}
 			tv.setText(info);
-			// TODO: wlan empfang? ???
 		}
 		
 		// func buttons neu zeichnen TODO: nur nach änderung machen!!!
@@ -1224,12 +1250,6 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 			}
 		}
 
-		ConnectivityManager conMan = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-		android.net.NetworkInfo.State wifi = conMan.getNetworkInfo(1).getState();
-		if(wifi == NetworkInfo.State.CONNECTED) {
-		} else if(wifi == NetworkInfo.State.CONNECTING) {
-			
-		}
 	}
 	
 	abstract static class CallbackProgressRunnable implements Runnable {
@@ -1410,7 +1430,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
     		this.setMessageAddrField(msg, "STOP");
     		AndroidMain.btcomm.addCmdToQueue(msg,this);
     	} catch (Exception e) {
-			e.printStackTrace();
+			Log.e(TAG, "fullStop failed", e);
 			this.handleBtCommException(e);
 		}
 		this.updateSpeedSlider(0,0);
@@ -1423,8 +1443,64 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 	    	msg.get("value").set(powerState ? 1 : 0);
 			AndroidMain.btcomm.addCmdToQueue(msg,this);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			Log.e(TAG, "setPower failed", e);
+		}
+	}
+	
+	public void refreshBatLevel() {
+		final int addr;
+		if(ControlAction.currSelectedAddr.size() > 0) {
+			addr=ControlAction.currSelectedAddr.get(0);
+		} else {
+			Log.d(TAG, "getBatLevel no selected addr");
+			return;
+		}
+		try {
+			// refresh batLevelCV#
+			if(this.batLevelAddr != addr) {
+				this.batLevelAddr=addr;
+				// get bat CV
+				Log.d(TAG,"asking for bat CV");
+				FBTCtlMessage msg = new FBTCtlMessage();
+					msg.setType(MessageLayouts.messageTypeID("POM"));
+		    	msg.get("addr").set(ControlAction.currSelectedAddr.get(0));
+		    	msg.get("cv").set(BTcommThread.CV_CV_BAT);
+		    	msg.get("value").set(-1);
+				AndroidMain.btcomm.addCmdToQueue(msg,new BtCommCallback() {
+					public void BTCallback(FBTCtlMessage reply) {
+						Log.d(TAG,"got bat CV reply");
+						try {
+							batLevelCV=reply.get("value").getIntVal();
+							if(batLevelCV > 0 && (batLevelAddr == addr) )
+								refreshBatLevel();
+						} catch (Exception e) {
+							Log.e(TAG,"failed", e);
+							batLevelCV=-1;
+						}
+					}
+				} );
+			}
+			if(this.batLevelCV > 0) {
+				Log.d(TAG,"asking for bat Level");
+				FBTCtlMessage msg = new FBTCtlMessage();
+				msg.setType(MessageLayouts.messageTypeID("POM"));
+		    	msg.get("addr").set(ControlAction.currSelectedAddr.get(0));
+		    	msg.get("cv").set(this.batLevelCV);
+		    	msg.get("value").set(-1);
+				AndroidMain.btcomm.addCmdToQueue(msg,new BtCommCallback() {
+					public void BTCallback(FBTCtlMessage reply) {
+						Log.d(TAG,"got bat Level reply");
+						try {
+							batLevel=reply.get("value").getIntVal();
+						} catch (Exception e) {
+							Log.e(TAG,"failed", e);
+							batLevel=-1;
+						}
+					}
+				} );
+			}
+		} catch (Exception e) {
+			Log.e(TAG, "refresh Bat Level failed", e);
 		}
 	}
 
