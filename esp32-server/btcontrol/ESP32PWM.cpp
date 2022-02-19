@@ -483,16 +483,21 @@ void ESP32PWM::commit() {
 void init_wifi();
 
 int ESP32PWM::sendPOM(int addr, int cv, int value) {
-
 #ifdef HAVE_SOUND
-    if(cv==266) {
-        Audio.setVolume(value);
-        return 1;
-    }
+  if(cv == CV_CV_SOUND_VOL) {
+    return CV_SOUND_VOL;
+  }
+  if(cv==CV_SOUND_VOL) {
+    Audio.setVolume(value);
+    return 1;
+  }
 #endif
 #ifdef BAT_ADC_PIN1
+  if(cv == CV_CV_BAT) {
+    return CV_BAT;
+  }
 // ladestand in 1/255
-    if(cv==500) {
+    if(cv==CV_BAT) {
         long readStart=millis();
         int a=analogRead(BAT_ADC_PIN1); // => keine korrektur, wir messen einfach 12V und 16,4V
         // a=b/2;
@@ -515,8 +520,11 @@ int ESP32PWM::sendPOM(int addr, int cv, int value) {
         return a_p;
     }
 #endif
+  if(cv == CV_CV_WIFI_CLIENT_SWITCH) {
+    return CV_WIFI_CLIENT_SWITCHT;
+  }
 // wifi client/master switch
-    if(cv==510) {
+    if(cv==CV_WIFI_CLIENT_SWITCH) {
         DEBUGF("############# switch Wifi AP / client mode ###########################");
         if(value >= 0) {
           writeEEPROM(EEPROM_WIFI_AP_CLIENT, value);
