@@ -89,10 +89,11 @@ if ($app-name == 'btcontrol') then {
 */
 #define SYSLOG_SERVER "some-syslog-server"
 
-#define BAT_ADC_PIN1 39
-// #define BAT_ADC_PIN2 39
-// 12V ausgetestet
-#define BAT_ADC_MIN 2430
-// 16,4V   => ausgetestet!!!!!!!!!
-#define BAT_ADC_MAX 3507
+// Playmobil Lok Spannungsteiler 47/10kOhm
+#define BAT_ADC_PIN1 32
+// 11V => 2130
+#define BAT_ADC_MIN 2000
+// 12,5V
+#define BAT_ADC_MAX 2463
+
 
