@@ -461,7 +461,12 @@ void GuiViewConnectWifi::loop() {
 				IPAddress ip = WiFi.localIP();
 				tft.drawString(String("connected to: ") + this->ssid + " " + ip.toString(), 0, 0 );
 #ifdef OTA_UPDATE
-        initOTA();
+        initOTA([]() {
+          NOTICEF("OTA UPDATE started");
+          if(controlClientThread.isRunning()) {
+            controlClientThread.sendStop();
+          }
+        });
 #endif
         wifi_power_t txpower=WiFi.getTxPower();
         
@@ -567,7 +572,7 @@ void GuiViewConnectServer::init() {
 			while(lokdef[nLokdef].addr) {
 				nLokdef++;
 			}
-			GuiView::startGuiView(new GuiViewContolLocoSelectLoco());
+			GuiView::startGuiView(new GuiViewControlLocoSelectLoco());
 		} else {
 			ERRORF("invalid reply received");
 			abort();
@@ -590,12 +595,12 @@ void GuiViewConnectServer::loop() {
   }
   delay(100);
 }
-// ============================================================= GuiViewContolLocoSelectLoco ======
-bool GuiViewContolLocoSelectLoco::needUpdate=false;
-int GuiViewContolLocoSelectLoco::firstLocoDisplayed=0;
+// ============================================================= GuiViewControlLocoSelectLoco ======
+bool GuiViewControlLocoSelectLoco::needUpdate=false;
+int GuiViewControlLocoSelectLoco::firstLocoDisplayed=0;
 
-void GuiViewContolLocoSelectLoco::init() {
-	DEBUGF("GuiViewContolLocoSelectLoco::init()");
+void GuiViewControlLocoSelectLoco::init() {
+	DEBUGF("GuiViewControlLocoSelectLoco::init()");
 	controlClientThread.selectedAddrIndex=0;
 	if(lokdef[0].addr && ! lokdef[1].addr) {  // only one loco in list
 		GuiView::startGuiView(new GuiViewControlLoco());
@@ -605,10 +610,10 @@ void GuiViewContolLocoSelectLoco::init() {
   btn1.setClickHandler([](Button2& b) {
 		if(controlClientThread.selectedAddrIndex > 0) {
 			controlClientThread.selectedAddrIndex--;
-		if(controlClientThread.selectedAddrIndex < GuiViewContolLocoSelectLoco::firstLocoDisplayed)
-			GuiViewContolLocoSelectLoco::firstLocoDisplayed--;
+		if(controlClientThread.selectedAddrIndex < GuiViewControlLocoSelectLoco::firstLocoDisplayed)
+			GuiViewControlLocoSelectLoco::firstLocoDisplayed--;
 
-   		GuiViewContolLocoSelectLoco::needUpdate=true;
+   		GuiViewControlLocoSelectLoco::needUpdate=true;
 		}
 	}
 	);
@@ -619,12 +624,12 @@ void GuiViewContolLocoSelectLoco::init() {
       int fontHeight=17;
       
       DEBUGF("btn2.setClickHandler first:%d, selected: %d, fontheight:%d, height:%d",
-        GuiViewContolLocoSelectLoco::firstLocoDisplayed,
+        GuiViewControlLocoSelectLoco::firstLocoDisplayed,
         controlClientThread.selectedAddrIndex,
         fontHeight,
         tft.height());
-      if((controlClientThread.selectedAddrIndex - GuiViewContolLocoSelectLoco::firstLocoDisplayed)*fontHeight >= tft.height())
-        GuiViewContolLocoSelectLoco::firstLocoDisplayed++;
+      if((controlClientThread.selectedAddrIndex - GuiViewControlLocoSelectLoco::firstLocoDisplayed)*fontHeight >= tft.height())
+        GuiViewControlLocoSelectLoco::firstLocoDisplayed++;
 
    		needUpdate=true;
 		}
@@ -648,15 +653,15 @@ void GuiViewContolLocoSelectLoco::init() {
   tft.fillScreen(TFT_BLACK);
 }
 
-void GuiViewContolLocoSelectLoco::close() {
-	DEBUGF("GuiViewContolLocoSelectLoco::close()");
+void GuiViewControlLocoSelectLoco::close() {
+	DEBUGF("GuiViewControlLocoSelectLoco::close()");
   resetButtons();
 }
 
 std::map<const std::string, TFT_eSprite> imgCache;
 Mutex imgCacheMutex;
 /**
- * malt ein Bild wenns schon im cache ist, wenn nicht request und return ohne zu malen + GuiViewContolLocoSelectLoco::needUpdate=true;
+ * malt ein Bild wenns schon im cache ist, wenn nicht request und return ohne zu malen + GuiViewControlLocoSelectLoco::needUpdate=true;
  * beim ersten Request wird ein leeres Bild angelegt. ist beim 2. Request das Bild noch nicht im cache wird ein leeres Bild gemalt
  */
 void drawCachedImage(const char*imgname, int x, int y) {
@@ -705,7 +710,7 @@ void drawCachedImage(const char*imgname, int x, int y) {
         png.load_data(data);
         DEBUGF("image decoded in %ldms",millis()-startms);
 
-        GuiViewContolLocoSelectLoco::needUpdate=true;
+        GuiViewControlLocoSelectLoco::needUpdate=true;
       } else {
         ERRORF("didn't receive getimage_reply");
       }
@@ -727,11 +732,11 @@ void drawCachedImage(const char*imgname, int x, int y) {
 }
 
 // Vorsicht !!! in der theorie kann lokdef beim starten da noch nicht initialisiert sein weil die callback func noch nicht aufgerufen wurde.
-void GuiViewContolLocoSelectLoco::loop() {
+void GuiViewControlLocoSelectLoco::loop() {
 
 	if(this->needUpdate) {
     this->drawButtons();
-		DEBUGF("GuiViewContolLocoSelectLoco::loop needUpdate - firstLoco:%d fontheight:%d", this->firstLocoDisplayed, tft.fontHeight());
+		DEBUGF("GuiViewControlLocoSelectLoco::loop needUpdate - firstLoco:%d fontheight:%d", this->firstLocoDisplayed, tft.fontHeight());
 		int n=0;
     // -20 damit wir die up down buttons nicht auch noch löschen
 		tft.setTextPadding(tft.width()-18-20);
