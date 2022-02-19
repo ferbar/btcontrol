@@ -28,8 +28,11 @@ import java.io.OutputStream;
 
 import org.ferbar.btcontrol.BTcommThread.PlattformStream;
 
+import android.util.Log;
+
 
 public class AndroidStream implements PlattformStream {
+	final static String TAG = "btcontrol.AndroidStream";
 
 	public AndroidStream(String server, int port) {
 		this.server=server;
@@ -48,7 +51,7 @@ public class AndroidStream implements PlattformStream {
 	}
 
 	public void connect() throws IOException {
-		System.out.println("connecting:"+this.server+":"+this.port);
+		Log.i(TAG, "connecting:"+this.server+":"+this.port);
 		this.socket = new Socket(this.server, this.port);
 	}
 	
