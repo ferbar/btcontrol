@@ -34,6 +34,7 @@ import org.ferbar.btcontrol.ControlAction.CallbackProgressRunnable;
 // import com.example.helloandroid.R.id;
 // import com.example.helloandroid.R.layout;
 
+
 import protocol.FBTCtlMessage;
 import protocol.MessageLayouts;
 import android.app.ListActivity;
@@ -44,6 +45,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
@@ -55,8 +57,9 @@ import android.view.KeyEvent;
 import android.view.ViewGroup;
 import android.view.LayoutInflater;
 
-public class ControlListAction extends ListActivity {
+public class SelectLocoAction extends ListActivity {
 
+	static final String TAG="btcontrol.ControlListAction";
 	ArrayAdapter<AvailLocosListItemAddr> listAdapter=null;
 	Object listAdapter_notify=new Object();
 	private LayoutInflater mInflater;
@@ -74,7 +77,7 @@ public class ControlListAction extends ListActivity {
         this.selectedLocosPos = new ArrayList<Integer>();
         
     	mInflater = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        setContentView(R.layout.list);
+        setContentView(R.layout.select_loco_list);
         registerForContextMenu(getListView());
         
         Bundle bundle = getIntent().getExtras();
@@ -93,13 +96,13 @@ public class ControlListAction extends ListActivity {
 	@Override
 	public void onResume() {
 		super.onResume();
-		System.out.println("ControlAction::onResume");
+		Log.i(TAG, "ControlAction::onResume");
 		AndroidMain.plusActivity();
 	}
 	@Override
 	public void onPause() {
 		super.onPause();
-		System.out.println("ControlAction::onPause isFinishing:"+this.isFinishing());
+		Log.i(TAG, "ControlAction::onPause isFinishing:"+this.isFinishing());
 		AndroidMain.minusActivity();
 	}
 
@@ -151,7 +154,7 @@ public class ControlListAction extends ListActivity {
         			this.selectedLocosPos.add(position);
         		}
         	} else {
-        		this.selectedLocosPos.remove(new Integer(position));
+        		this.selectedLocosPos.remove(Integer.valueOf(position));
         	}
         	
         	// ausgewählte loks in der image button anzeigen:
@@ -225,13 +228,13 @@ public class ControlListAction extends ListActivity {
 		        		holder = (ViewHolder) convertView.getTag();
 	        		}
         			AvailLocosListItemAddr item=getItem(position);
-        			System.out.println("set list item name:"+item.name);
+        			Log.d(TAG, "set list item name:"+item.name);
 	        		holder.name.setText(item.name);
-        			System.out.println("set list item addr:"+item.addr);
+        			Log.d(TAG, "set list item addr:"+item.addr);
 	        		holder.addr.setText(""+item.addr);
 	        		holder.img.setImageBitmap(item.img);
-	        		if(ControlListAction.this.selectMehrfachsteuerung) {
-	        			holder.cb.setChecked(ControlListAction.this.selectedLocosPos.contains(position));
+	        		if(SelectLocoAction.this.selectMehrfachsteuerung) {
+	        			holder.cb.setChecked(SelectLocoAction.this.selectedLocosPos.contains(position));
 	        		} else {
 		        		// cb.setVisibility(View.GONE); -> dann funktioniert das alignLeftOf CheckBox nichtmehr !!!
 		        		// cb.setVisibility(View.INVISIBLE);
@@ -276,8 +279,7 @@ public class ControlListAction extends ListActivity {
 		try {
 			msg.setType(MessageLayouts.messageTypeID("GETLOCOS"));
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			Log.e(TAG,"startFillData()", e);
 		}
 		loadProgressDialog = new ProgressDialog(this);
         loadProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
@@ -393,7 +395,7 @@ public class ControlListAction extends ListActivity {
 		        });
 			} catch(Exception e) {
 				//setTitle("ex:"+e.toString());
-				Debuglog.debugln("FillListThread|||"+e.getMessage());
+				Log.e(TAG, "FillListThread|||", e);
 			} finally {
 				runOnUiThread(new Runnable() {
 					public void run() {
