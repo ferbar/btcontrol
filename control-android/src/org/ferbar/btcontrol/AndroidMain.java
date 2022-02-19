@@ -71,7 +71,7 @@ import org.ferbar.btcontrol.R;
  *
  */
 public class AndroidMain extends Activity {
-	public final String TAG = "btcontrol";
+	public static final String TAG = "btcontrol";
 	public static final String PREFS_NAME = "btcontrol";
 	
 	static BTcommThread btcomm = null;
@@ -489,7 +489,7 @@ public class AndroidMain extends Activity {
 		}
 		EditText server = (EditText) findViewById(R.id.editText1);
 		AndroidMain.sserver = server.getText().toString();
-		System.out.println("server:"+AndroidMain.sserver);
+		Log.d(TAG, "server:"+AndroidMain.sserver);
 		//startActivityForResult(i, ACTIVITY_CREATE);
 		
 		final ProgressDialog loadProgressDialog=AndroidMain.createConnectingProgressDialog(this);
@@ -577,7 +577,7 @@ public class AndroidMain extends Activity {
     }
     public static void checkIfBackgrounded() {
     	if(AndroidMain.foregroundActivities==0) {
-    		System.out.println("****************** no activity in foreground ********");
+    		Log.d(AndroidMain.TAG, "****************** no activity in foreground ********");
     		AndroidMain.stopConnection();
     	}
     }
