@@ -102,7 +102,7 @@ import android.view.ViewGroup.LayoutParams;
 @TargetApi(8)
 public class PomAction extends Activity {
 
-	static String tag = "btcontrol.PomAction";
+	static String TAG = "btcontrol.PomAction";
 
 	ArrayAdapter<AvailLocosListItemAddr> listAdapter = null;
 	Object listAdapter_notify = new Object();
@@ -198,7 +198,7 @@ public class PomAction extends Activity {
 							// dumpElement(doc);
 
 						} catch (DOMException e) {
-							Log.e(tag, "DOMException " + e.toString(), e);
+							Log.e(TAG, "DOMException " + e.toString(), e);
 							return;
 						}
 						// PomAction.dumpElement((Node) doc);
@@ -209,12 +209,12 @@ public class PomAction extends Activity {
 							NodeList nodes;
 							nodes = (NodeList) xpath.evaluate(expression, doc,
 									XPathConstants.NODESET);
-							Log.d(tag, nodes.toString());
+							Log.d(TAG, nodes.toString());
 							// NodeList nodes =
 							// doc.getElementsByTagName("pane");
 							for (int i = 0; i < nodes.getLength(); i++) {
 								Node node = nodes.item(i);
-								Log.d(tag, node.toString());
+								Log.d(TAG, node.toString());
 
 								/*
 								 * NamedNodeMap baseElmnt_gold_attr =
@@ -240,7 +240,7 @@ public class PomAction extends Activity {
 									 * "Name element:" + e.toString());
 									 */
 									String name = nodeName.getTextContent();
-									Log.i(tag, "add tab " + name);
+									Log.i(TAG, "add tab " + name);
 									PomAction.tabTabs.add((Element) node);
 									// }
 
@@ -248,10 +248,10 @@ public class PomAction extends Activity {
 							}
 
 						} catch (XPathExpressionException e) {
-							Log.e(tag, "XPathExpressionException", e);
+							Log.e(TAG, "XPathExpressionException", e);
 						}
 					} catch (Exception e) {
-						Log.e(tag, "Exception", e);
+						Log.e(TAG, "Exception", e);
 					}
 					
 					PomAction.this.runOnUiThread(new Runnable() {
@@ -302,15 +302,15 @@ public class PomAction extends Activity {
 					.transform(new DOMSource(node), new StreamResult(writer));
 			String generatedxml = writer.toString();
 			for (String line : generatedxml.split("\n")) {
-				Log.d(tag, line);
+				Log.d(TAG, line);
 			}
 			// Log.d(tag, generatedxml);
 		} catch (TransformerConfigurationException e) {
-			Log.e(tag, "TransformerConfigurationException ", e);
+			Log.e(TAG, "TransformerConfigurationException ", e);
 		} catch (TransformerFactoryConfigurationError e) {
-			Log.e(tag, "TransformerFactoryConfigurationError ", e);
+			Log.e(TAG, "TransformerFactoryConfigurationError ", e);
 		} catch (TransformerException e) {
-			Log.e(tag, "TransformerException ", e);
+			Log.e(TAG, "TransformerException ", e);
 		}
 	}
 
@@ -319,7 +319,7 @@ public class PomAction extends Activity {
 	 * 
 	 * @param view
 	 *            -> content
-	 * @param tag
+	 * @param TAG
 	 *            -> tab name
 	 */
 	private void setupTab(final Element node) {
@@ -327,7 +327,7 @@ public class PomAction extends Activity {
 		try {
 			nodeName = (Node) xpath.evaluate("name", node, XPathConstants.NODE);
 		} catch (XPathExpressionException e) {
-			Log.e(tag, "XPathExpressionException", e);
+			Log.e(TAG, "XPathExpressionException", e);
 			return;
 		}
 		String tabName = nodeName.getTextContent();
@@ -400,7 +400,7 @@ public class PomAction extends Activity {
 	/**
 	 * legt das view dings für die Tab Seite an
 	 * 
-	 * @param tag
+	 * @param TAG
 	 *            <pane name="_tag_">
 	 * @return View
 	 */
@@ -417,7 +417,7 @@ public class PomAction extends Activity {
 		 */
 
 		try {
-			Log.d(tag, node.toString());
+			Log.d(TAG, node.toString());
 			ScrollView v = new ScrollView(this);
 			v.setFillViewport(true);
 			HorizontalScrollView hv = new HorizontalScrollView(this);
@@ -431,7 +431,7 @@ public class PomAction extends Activity {
 			ret.addView(v);
 
 		} catch (XPathExpressionException e) {
-			Log.e(tag, "XPathExpressionException", e);
+			Log.e(TAG, "XPathExpressionException", e);
 		}
 		return ret;
 	}
@@ -440,10 +440,10 @@ public class PomAction extends Activity {
 			throws XPathExpressionException {
 		View ret;
 		String nodeName = node.getNodeName();
-		Log.d(tag, "createPOMViewRecursive: nodename=" + nodeName);
+		Log.d(TAG, "createPOMViewRecursive: nodename=" + nodeName);
 		if (nodeName.equals("column") || nodeName.equals("row")
 				|| nodeName.equals("pane")) {
-			Log.d(tag, "add view recursive");
+			Log.d(TAG, "add view recursive");
 			LinearLayout ll_ret = new LinearLayout(this);
 			if (nodeName.equals("column")) {
 				// TODO: vertical setzen
@@ -454,7 +454,7 @@ public class PomAction extends Activity {
 				// Do something with childNode...
 				if (childNode instanceof Element) {
 					Element e = (Element) childNode;
-					Log.d(tag, "add view recursive ...");
+					Log.d(TAG, "add view recursive ...");
 					View v = createPOMViewRecursive(e);
 					if (v != null) {
 						ll_ret.addView(v);
@@ -471,12 +471,12 @@ public class PomAction extends Activity {
 			} else {
 				label = "null";
 			}
-			Log.d(tag, "add label [" + label + "]");
+			Log.d(TAG, "add label [" + label + "]");
 			TextView tv = new TextView(this);
 			tv.setText(label);
 			ret = tv;
 		} else if (nodeName.equals("separator")) {
-			Log.d(tag, "add separator");
+			Log.d(TAG, "add separator");
 			View v = new View(this);
 			LayoutParams params;
 			if (node.getParentNode().getNodeName().equals("row")) {
@@ -493,7 +493,7 @@ public class PomAction extends Activity {
 			// xpath.evaluate("/decoder-config/decoder/variables",
 			// PomAction.doc, XPathConstants.NODE));
 			String item = node.getAttribute("item");
-			Log.d(tag, "add display [" + item + "]");
+			Log.d(TAG, "add display [" + item + "]");
 			// String expression="//variable[@label='"+item+"']";
 			// die xmls haben einen Bug: variables -> include und dort ist das root tag wieder variables ...
 			String expression = "//variables/variable[@item='"
@@ -517,13 +517,13 @@ public class PomAction extends Activity {
 				ll_ret.addView(comment);
 				ret = ll_ret;
 			} else {
-				Log.e(tag, "error finding " + expression);
+				Log.e(TAG, "error finding " + expression);
 				TextView comment = new TextView(this);
 				comment.setText("didn't find [" + item + "]");
 				ret = comment;
 			}
 		} else {
-			Log.e(tag, "createPOMViewRecursive: invalid nodename:" + nodeName);
+			Log.e(TAG, "createPOMViewRecursive: invalid nodename:" + nodeName);
 			ret = null;
 		}
 		return ret;
@@ -553,14 +553,14 @@ public class PomAction extends Activity {
 	@Override
 	public void onResume() {
 		super.onResume();
-		Log.i(tag, "ControlAction::onResume");
+		Log.i(TAG, "ControlAction::onResume");
 		AndroidMain.plusActivity();
 	}
 
 	@Override
 	public void onPause() {
 		super.onPause();
-		Log.i(tag, "ControlAction::onPause isFinishing:" + this.isFinishing());
+		Log.i(TAG, "ControlAction::onPause isFinishing:" + this.isFinishing());
 		AndroidMain.minusActivity();
 	}
 
@@ -622,12 +622,12 @@ public class PomAction extends Activity {
 	static HashMap <String, String>xmlCache=new HashMap<String,String>();
 	public static String getXmlFromUrl(String url) {
 		if(xmlCache.containsKey(url)) {
-			Log.i(tag, "fetching url (cached) ... " + url);
+			Log.i(TAG, "fetching url (cached) ... " + url);
 			return xmlCache.get(url);
 		}
 		try {
 			String xml = null;
-			Log.i(tag, "fetching url ... " + url);
+			Log.i(TAG, "fetching url ... " + url);
 			// defaultHttpClient
 			DefaultHttpClient httpClient = new DefaultHttpClient();
 			HttpPost httpPost = new HttpPost(url);
@@ -639,11 +639,11 @@ public class PomAction extends Activity {
 			return xml;
 			
 		} catch (UnsupportedEncodingException e) {
-			Log.e(tag, "fetching url ... error ", e);
+			Log.e(TAG, "fetching url ... error ", e);
 		} catch (ClientProtocolException e) {
-			Log.e(tag, "fetching url ... error ", e);
+			Log.e(TAG, "fetching url ... error ", e);
 		} catch (IOException e) {
-			Log.e(tag, "fetching url ... error ", e);
+			Log.e(TAG, "fetching url ... error ", e);
 		}
 		return null;
 	}
@@ -670,13 +670,13 @@ public class PomAction extends Activity {
 			doc = db.parse(is);
 
 		} catch (ParserConfigurationException e) {
-			Log.e(tag, "ParserConfigurationException: ", e);
+			Log.e(TAG, "ParserConfigurationException: ", e);
 			return null;
 		} catch (SAXException e) {
-			Log.e(tag, "SAXException: ", e);
+			Log.e(TAG, "SAXException: ", e);
 			return null;
 		} catch (IOException e) {
-			Log.e(tag, "IOException: ", e);
+			Log.e(TAG, "IOException: ", e);
 			return null;
 		}
 		// return DOM
@@ -684,9 +684,9 @@ public class PomAction extends Activity {
 	}
 
 	static public void replaceIncludes(Node startNode, int depth, String which, final PomAction PA) {
-		Log.d(tag, "## replaceIncludes("+depth+" / " + which + ") >>>>>");
+		Log.d(TAG, "## replaceIncludes("+depth+" / " + which + ") >>>>>");
 		if(depth > 4) {
-			Log.e(tag, "## replaceIncludes depth");
+			Log.e(TAG, "## replaceIncludes depth");
 			return;
 		}
 		Element lastParent = null;
@@ -701,10 +701,10 @@ public class PomAction extends Activity {
 				nodes = (NodeList) xpath.evaluate(expression, startNode, XPathConstants.NODESET);
 			} catch (XPathExpressionException e) {
 				// TODO Auto-generated catch block
-				Log.e(tag, "## XPathExpressionException",e);
+				Log.e(TAG, "## XPathExpressionException",e);
 				return;
 			}
-			Log.d(tag, "## found " + nodes.getLength() + " Elements ==== " + nodes.toString());
+			Log.d(TAG, "## found " + nodes.getLength() + " Elements ==== " + nodes.toString());
 			for (int i = 0; i < nodes.getLength(); i++) {
 				Node node = nodes.item(i);
 
@@ -731,9 +731,9 @@ public class PomAction extends Activity {
 					for(int j = 0; j < list.getLength(); j++) {
 						Node newChild = list.item(j);
 						if(newChild instanceof Element) {
-							Log.d(tag, "importing tag "+((Element)newChild).getTagName());							
+							Log.d(TAG, "importing tag "+((Element)newChild).getTagName());
 						} else {
-							Log.d(tag, "skipping import of "+newChild.getClass());
+							Log.d(TAG, "skipping import of "+newChild.getClass());
 						}
 						Node tempDoc = lastParent.getOwnerDocument().importNode(newChild, true);
 					
@@ -755,7 +755,7 @@ public class PomAction extends Activity {
 					lastParent.removeChild(includeChild);
 				}
 		}
-		Log.d(tag, "## replaceIncludes("+depth+" / " + which + ") <<<< done");
+		Log.d(TAG, "## replaceIncludes("+depth+" / " + which + ") <<<< done");
 	}
 
 }
