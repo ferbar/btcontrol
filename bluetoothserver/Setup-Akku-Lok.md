@@ -74,12 +74,30 @@ StateDirectory=run/timesync
 dietpi-drive_manager:
 root und /boot readonly mounten
 / muss in der fstab auf ro gestellt werden: (/boot sollte schon RO sein)
+
+Wlan ist nicht schneller _up_ wenn /boot nicht gemountet wird. Problem: die dietpi scripts gehen dann nicht mehr,
+bluetooth wird zu früh initialisiert, kein ntp etc... Nur Probleme!
 ```
 vi /etc/fstab
 ```
 
 !!!!!!! nicht vergessen: mit 0 am Ende von / und /boot den fsck on boot disablen !!!!!!
 fsck on boot raus aus der config / cmdline.txt
+
+bringt das was??? 
+
+```
+vi /boot/cmdline.txt
+boot_delay=0
+
+```
+
+das sollte mit fstab -> '0' nicht notwendig sein
+```
+ vi /boot/cmdline.txt
+fsck.repair=yes auf fsck.repair=no
+```
+
 
 ### DietPi Updates disablen:
 
@@ -106,6 +124,17 @@ set mouse=
 systemctl mask systemd-rfkill.service
 ```
 
+wird bei schlechtem empfang mehr ärger machen als es bringt => wifi soft AP weiter unten
+```
+systemctl disable dietpi-wifi-monitor.service
+```
+
+Kopiert logs von /var/tmp nach /var/log ... brauchen wir nicht
+```
+systemctl disable dietpi-ramlog.service
+```
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! sound config !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 => usb soundkarte wird standardmässig nicht als default genommen
 Fehlermeldung:
@@ -128,4 +157,40 @@ requires network | bluetooth (!!!! nicht multiuser - wir brauchen keine ntpd zei
 ln -s /run/ /var/lib/bluetooth
 
 systemctl enable btcontrol
+
+mappt /boot/dietpi ins ram => wozu???
+systemctl disable vmtouch
+
+
+# remove ms repo, don't need on raspi-lok. (installed by raspi-sys-something repo)
+mv /etc/apt/sources.list.d/vscode.list /etc/apt/sources.list.d/vscode.list.disabled
+
+## Setup Wlan soft - AP
+apt-get install hostapd dnsmasq lighttpd
+
+Anleitung entsprechend:
+https://blog.thewalr.us/2017/09/26/raspberry-pi-zero-w-simultaneous-ap-and-managed-mode-wifi/
+
+dnsmasq.conf:
++ address=/#/192.168.10.1
+
+
+hostapd.conf: (channel kann irgendwas sein, nimmt den vom verbundenen wlan)
++ multicast_to_unicast=1
+
+
+
+lighttpd:
+
+/etc/lighttpd/conf-enable/redirect.conf
+
+   $HTTP["host"] != "computer.local" {
+        url.redirect = ("" => "http://computer.local/")
+    }
+
+/sbin/iw phy phy0 interface add ap0 type __ap ; /bin/ip link set ap0 address b8:27:eb:0b:78:f2 ; 
+/bin/ip link set ap0 up; systemctl restart hostapd ; systemctl restart dnsmasq
+
+dietpi-services
+=> hostap + dnsmasq systemd controlled machen, exclude from service restart
 
