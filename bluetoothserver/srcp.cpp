@@ -153,7 +153,7 @@ SRCPReplyPtr SRCP::readReply()
 	if(n <= 0) {
 		// exception ???
 		ERRORF("error reading reply (%s)",strerror(errno));
-		abortf();
+		abort();
 	}
 	buffer[n]=0;
 
