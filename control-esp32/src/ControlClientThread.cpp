@@ -137,11 +137,11 @@ void ControlClientThread::run()
 			this->msgNum++;
 			this->testcancel();
 		}
-	} catch(std::runtime_error &e) {
+	} catch(...) { // testcancel + runtime_error
 		ERRORF("ControlClientThread::run exception. closing clientthread");
 		this->disconnect();
 		// rethrow
-		throw e;
+		throw;
 	}
 }
 
