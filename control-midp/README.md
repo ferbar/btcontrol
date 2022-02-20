@@ -2,6 +2,12 @@
 
 Midp App für die uralt Nokia Handies. netbeans MIDP Projekt
 
+Hints:
+* Nokia 5310 => funktioniert gut (gute Bluetooth Verbindung, Lauter/Leiser Tasten => Geschwindigkeit geht)
+* Nokia 3120 classic => funktioniert gut bis auf Lauter/Leiser Tasten
+
+* Startmelodie ausschalten
+
 ### Entwicklungsumgebung:
 
 hints für linux:
