@@ -338,13 +338,6 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 		System.out.println("ControlAction::onDestroy");
 	} */
 
-	class BtCommCallback implements BTcommThread.Callback {
-		public BtCommCallback() {};
-		public void BTCallback(FBTCtlMessage reply) {
-			Log.e("TAG", "BtCommCallback override me!");
-		}
-	}
-	
 	/**
 	 * lok ausgewählt
 	 */
@@ -1466,7 +1459,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 		    	msg.get("addr").set(ControlAction.currSelectedAddr.get(0));
 		    	msg.get("cv").set(BTcommThread.CV_CV_BAT);
 		    	msg.get("value").set(-1);
-				AndroidMain.btcomm.addCmdToQueue(msg,new BtCommCallback() {
+				AndroidMain.btcomm.addCmdToQueue(msg,new BTcommThread.BtCommCallback() {
 					public void BTCallback(FBTCtlMessage reply) {
 						Log.d(TAG,"got bat CV reply");
 						try {
@@ -1487,7 +1480,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 		    	msg.get("addr").set(ControlAction.currSelectedAddr.get(0));
 		    	msg.get("cv").set(this.batLevelCV);
 		    	msg.get("value").set(-1);
-				AndroidMain.btcomm.addCmdToQueue(msg,new BtCommCallback() {
+				AndroidMain.btcomm.addCmdToQueue(msg,new BTcommThread.BtCommCallback() {
 					public void BTCallback(FBTCtlMessage reply) {
 						Log.d(TAG,"got bat Level reply");
 						try {

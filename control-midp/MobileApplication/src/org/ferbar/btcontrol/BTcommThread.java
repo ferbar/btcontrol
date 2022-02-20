@@ -32,8 +32,6 @@ import java.io.OutputStream;
 import java.util.Timer;
 import java.util.TimerTask;
 
-
-
 import protocol.FBTCtlMessage;
 import protocol.MessageLayouts;
 import protocol.InputReader;
@@ -97,7 +95,15 @@ public class BTcommThread extends Thread {
 	public interface Callback {
 		public void BTCallback(FBTCtlMessage reply);
 	}
-	private class NextMessage {
+	// für lambda func addCmdToQueue
+	public static class BtCommCallback implements BTcommThread.Callback {
+		public BtCommCallback() {};
+		public void BTCallback(FBTCtlMessage reply) {
+			Debuglog.debugln("TAG", "BtCommCallback override me!");
+		}
+	}
+	
+	private static class NextMessage {
 		NextMessage(FBTCtlMessage message, Callback callback) {
 			this.message=message;
 			this.callback=callback;
@@ -247,12 +253,16 @@ public class BTcommThread extends Thread {
 		Debuglog.vibrate(500);
 		this.connectedNotifyObject.unlock();
 	}
-	
+
 	public void addCmdToQueue(FBTCtlMessage message) throws Exception {
 		addCmdToQueue(message,null);
 	}
-	
-	
+
+	/**
+	 * Add a command + callback to queue, blocks if one message in queue 
+	 * @param message
+	 * @param callback => entweder this oder BtCommCallback wie in ControlAction
+	 */
 	public void addCmdToQueue(FBTCtlMessage message, Callback callback) throws Exception {
 		if(this.connError()) {
 			throw new Exception("addCmdToQueue: no comm");
