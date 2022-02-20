@@ -136,9 +136,11 @@ namespace utils
 #define ERRORF(fmt, ...) utils::log.printf(utils::Log::LEVEL_ERROR, __FILE__, __LINE__, TAG LOG_SEP ANSI_RED2 fmt ANSI_DEFAULT NEWLINE, ##__VA_ARGS__ )
 #endif
 
-// arduino / wiring pi / utils.cpp
+// arduino / wiring pi -> int millis() / utils.cpp
+#if not defined HAVE_RASPI_WIRINGPI
 extern "C" {
 extern unsigned long millis();
 }
+#endif
 
 #endif // utils.h
