@@ -212,7 +212,7 @@ void GuiViewSelectWifi::init() {
   tft.setFreeFont(FSSP7);
   // 20210922 setTextDatum(MC) scheint die 0 pos vom string in die mitte vom string zu setzen. Koordinaten 0/0 sind trozdem links oben
   tft.drawString("Scanning...", tft.width()/2, tft.fontHeight() * 4);
-
+  this->lastFoundWifis=5; // to clear "scanning ..."
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
   if(esp_wifi_set_protocol( WIFI_IF_STA, WIFI_PROTOCOL_11B| WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_LR ) != ESP_OK ) {
@@ -249,7 +249,7 @@ void GuiViewSelectWifi::init() {
   
 void GuiViewSelectWifi::close() {
 	DEBUGF("GuiViewSelectWifi::close()");
-  this->refreshWifiThread.cancel();
+  this->refreshWifiThread.cancel(false);
   resetButtons();
 }
 
@@ -910,18 +910,16 @@ void GuiViewControlLoco::init() {
 	}
 	tft.fillScreen(TFT_BLACK);
  	btn1.setLongClickDetectedHandler([](Button2&b) {
-//  btn2.setLongClickHandler([](Button2&b) {
-		DEBUGF("GuiViewControlLoco::btn1.setLongClickHandler");
-		// off
+		DEBUGF("GuiViewControlLoco::btn1.setLongClickHandler back");
+		// back to wifi list
     if(controlClientThread.isRunning()) {
-      controlClientThread.cancel();
+      controlClientThread.cancel(true);
     }
 		GuiView::startGuiView(new GuiViewSelectWifi());
 	}
 	);
  	btn2.setLongClickDetectedHandler([](Button2&b) {
-//  btn2.setLongClickHandler([](Button2&b) {
-		DEBUGF("GuiViewControlLoco::btn2.setLongClickHandler");
+		DEBUGF("GuiViewControlLoco::btn2.setLongClickHandler power off");
 		// off
 		GuiView::startGuiView(new GuiViewPowerDown());
 	}
@@ -1033,7 +1031,7 @@ void GuiViewControlLoco::loop() {
               }
             }
             if(width < lastWidth) {
-              tft.fillRect(width-1, 0, lastWidth-width, tft.fontHeight(), TFT_BLUE); // TFT_BLACK);
+              tft.fillRect(width-1, 0, lastWidth-width, tft.fontHeight(), TFT_BLACK);
             }
             lastWidth=width;
           } else {
@@ -1274,7 +1272,7 @@ void GuiViewPowerDown::loop() {
 	if(millis() >  GuiViewPowerDown::startTime + 10*1000 && ! this->done) { // 10 sekunden
 		this->done=true;
     if(controlClientThread.isRunning()) {
-      controlClientThread.cancel();
+      controlClientThread.cancel(true);
     }
 		DEBUGF("GuiViewPowerDown::loop() power down ******************************************************************************");
         // digitalWrite(TFT_BL, !r);
