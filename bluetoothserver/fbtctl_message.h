@@ -24,7 +24,7 @@ public:
 	unsigned char getByte() { 
 		unsigned char ret=*((unsigned char *)(&this->data[this->pos])); this->pos+=1;
 		// printf("getByte ret=%d = %#x\n",(int) ret, ret);
-		if(this->pos > this->len) throw std::runtime_error("getInt übers ende gelesen");
+		if(this->pos > this->len) throw std::runtime_error("getByte übers ende gelesen");
 		return ret; };
 	int getInt() { 
 		int ret=*((int *)(&this->data[this->pos])); this->pos+=4;
