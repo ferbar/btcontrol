@@ -112,12 +112,14 @@ void ClientThread::run()
 {
 	// startupdata_t *startupdata=(startupdata_t *)data;
 
+/*
 #ifdef HAVE_ALSA
 #warning FIXME: nur bei platine sound spielen
 	if(FahrSound::soundFiles != NULL) { // nur wenn eine platine angeschlossen und sound files geladen
 		clientFahrSound.start();
 	}
 #endif
+*/
 	utils::setThreadClientID(this->clientID);
 	NOTICEF("%d:socket accepted sending welcome msg",this->clientID);
 	FBTCtlMessage heloReply(messageTypeID("HELO"));
