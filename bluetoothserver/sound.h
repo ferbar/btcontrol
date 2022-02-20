@@ -6,7 +6,6 @@
 
 #define SOUND_FUNC_NUM_HORN     1
 #define SOUND_FUNC_NUM_WHISTLE  2
-#define SOUND_FUNC_NUM_ENABLE   8
 
 class PlayAsync;
 
@@ -120,8 +119,7 @@ private:
 public:
 	static SoundType *soundFiles;
 	static bool soundFilesLoaded; // in soundFiles stehen zuerst nur die dateinamen
-
-
+	int SOUND_FUNC_NUM_ENABLE=-1;
 };
 
 extern FahrSound clientFahrSound;

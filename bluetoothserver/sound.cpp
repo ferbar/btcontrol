@@ -339,8 +339,9 @@ public:
 		unsigned int loopPlayPos=0;
 		while(true) {
 		
+			this->testcancel(); // exit loop via exception
 			if(lokdef[0].currspeed < 5) {
-				DEBUGF("EMotorOutLoop in sleep mode");
+				DEBUGF("EMotorOutLoop while stopped");
 				sleep(1);
 				continue;
 			}
@@ -370,7 +371,6 @@ public:
 					loopPlayPos=0;
 //			}
 			sound.writeSound(wav);
-			this->testcancel();
 		}
 		// sound.writeSound(this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_EMOTOR].loopEnd());
 	};
@@ -858,15 +858,16 @@ void PlayAsyncData::run() {
 }
 
 FahrSound::~FahrSound() {
-	printf("FahrSound::~FahrSound()\n");
+	DEBUGF("FahrSound::~FahrSound()");
 	this->cancel();
-	printf("FahrSound::~FahrSound() done\n");
+	DEBUGF("FahrSound::~FahrSound() done");
 }
 
 void FahrSound::start() {
-	printf("FahrSound::start()\n");
+	DEBUGF("FahrSound::start()");
+
 	if(!FahrSound::soundFiles) {
-		printf("===== no sound files loaded ====\n");
+		NOTICEF("===== no sound files loaded ====");
 		return;
 	}
 	if(lokdef[0].nFunc <= SOUND_FUNC_NUM_HORN ||
@@ -920,7 +921,7 @@ void FahrSoundPlayFuncAsyncData::done() {
 }
 
 void FahrSound::startPlayFuncSound() {
-	// printf("FahrSound::startPlayFuncSound #####################################\n");
+	DEBUGF("FahrSound::startPlayFuncSound #####################################");
 	static PlayAsync horn;
 	static PlayAsync whistle;
 	if(lokdef[0].func[SOUND_FUNC_NUM_HORN].ison && ! horn.isPlaying() && (this->soundFiles->funcSound[CFG_FUNC_SOUND_HORN] )) {
@@ -932,7 +933,24 @@ void FahrSound::startPlayFuncSound() {
 		whistle.play(data);
 	}
 
+	// funcname sSound on off suchen
+	if(SOUND_FUNC_NUM_ENABLE < 0) {
+		for(int i=0; i < lokdef[0].nFunc; i++) {
+			if(STREQ(lokdef[0].func[i].name, "sSound ein/aus")) {
+				SOUND_FUNC_NUM_ENABLE=i;
+				break;
+			}
+		}
+		if(SOUND_FUNC_NUM_ENABLE < 0) {
+			ERRORF("func sSound ein/aus not found, pease disable sound or add [sSound ein/aus] function");
+			abort();
+		}
+		DEBUGF("FahrSound::start() SOUND_FUNC_NUM_ENABLE=%d", SOUND_FUNC_NUM_ENABLE);
+	}
+	
 	if(lokdef[0].func[SOUND_FUNC_NUM_ENABLE].ison != this->isRunning()) {
+		DEBUGF("FahrSound::startPlayFuncSound sound enabled: %d running: %d",
+			lokdef[0].func[SOUND_FUNC_NUM_ENABLE].ison, this->isRunning());
 		if(lokdef[0].func[SOUND_FUNC_NUM_ENABLE].ison) {
 			this->start();
 		} else {
