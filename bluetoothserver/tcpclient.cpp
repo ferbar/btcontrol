@@ -73,9 +73,10 @@ void TCPClient::readSelect()
 	int rc;
 	if((rc=select(this->so+1, &set, NULL, NULL, &timeout)) <= 0) {
 		if(rc != 0) {
+			ERRORF("ClientThread::readSelect error in select(%d)=%d %s", this->so, rc, strerror(errno));
 			throw std::runtime_error("error select");
 		}
-		ERRORF("ClientThread::readSelect error in select(%d) %s\n", this->so, strerror(errno));
+		ERRORF("ClientThread::readSelect timeout in select(%d)=%d timeout=%ds", this->so, rc, cfg_tcpTimeout);
 		throw std::runtime_error("timeout reading cmd");
 	}
 }
