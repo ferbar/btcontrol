@@ -51,7 +51,7 @@ int getAddrIndex(int addr)
 #define CHECKVAL(_FMT, ...)	\
 		if(!pos) {	\
 			fprintf(stderr,"%s:%d " _FMT " \n",LOKDEF_FILENAME, lineNo, ## __VA_ARGS__);	\
-			throw std::runtime_error(_FMT);	\
+			throw std::runtime_error(utils::format(_FMT, ## __VA_ARGS__));	\
 		}
 
 
