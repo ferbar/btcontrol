@@ -521,7 +521,7 @@ int ESP32PWM::sendPOM(int addr, int cv, int value) {
     }
 #endif
   if(cv == CV_CV_WIFI_CLIENT_SWITCH) {
-    return CV_WIFI_CLIENT_SWITCHT;
+    return CV_WIFI_CLIENT_SWITCH;
   }
 // wifi client/master switch
     if(cv==CV_WIFI_CLIENT_SWITCH) {
