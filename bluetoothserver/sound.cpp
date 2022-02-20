@@ -66,20 +66,20 @@ int Sound::soundObjects=0;
 void Sound::init(int mode)
 {
 	if(this->handle) {
-		printf("sound already initialized\n");
+		DEBUGF("sound already initialized");
 		throw std::runtime_error("sound already initialized");
 	}
 	if(Sound::bits==SND_PCM_FORMAT_UNKNOWN) { // setParams crasht sonst
-		printf("Sound::init() sound format not set\n");
-		throw std::runtime_error("Sound::init() sound format not set\n");
+		DEBUGF("Sound::init() sound format not set");
+		throw std::runtime_error("Sound::init() sound format not set");
 	}
 	int err;
 
 	if ((err = snd_pcm_open(&this->handle, device, SND_PCM_STREAM_PLAYBACK, mode)) < 0) {
-		printf("Playback open error: %s\n", snd_strerror(err));
+		DEBUGF("Playback open error: %s", snd_strerror(err));
 		throw std::runtime_error(std::string("Sound::init() Playback open error: ") + snd_strerror(err));
 	}
-	printf("Sound::init() handle=%p\nbits:%d, sample_rate:%d\n",this->handle,this->bits,this->sample_rate);
+	DEBUGF("Sound::[%p] init() bits:%d, sample_rate:%d", this->handle, this->bits, this->sample_rate);
 	if ((err = snd_pcm_set_params(this->handle,
 					this->bits,							// format
 					SND_PCM_ACCESS_RW_INTERLEAVED,		// access
@@ -110,26 +110,26 @@ void Sound::init(int mode)
 }
 
 Sound::~Sound() {
-	printf("Sound::[%p]~Sound()\n",this->handle);
+	DEBUGF("Sound::[%p] ~Sound()",this->handle);
 	this->close();
-	printf("Sound::[%p]~Sound() done\n",this->handle);
+	DEBUGF("Sound::[%p] ~Sound() done",this->handle);
 	if(Sound::soundObjects==0) {
 		snd_config_update_free_global();
 	}
 }
 
 void Sound::close(bool waitDone) {
-	printf("Sound::[%p]close()\n",this->handle);
+	DEBUGF("Sound::[%p]close()",this->handle);
 	// ohne lock: race condition: wenn close() in 2 threads in snd_pcm_drain hängtstirbt snd_pcm_close weil dann this->handle == null
 	Lock closeLock(this->mutex);
 	if(this->handle) {
 		if(waitDone) {
-			printf("Sound::[%p]close() -- wait till done\n",this->handle);
+			DEBUGF("Sound::[%p]close() -- wait till done",this->handle);
 			snd_pcm_drain(this->handle); // darauf warten bis alles bis zum ende gespielt wurde
 		}
 		snd_pcm_close(this->handle);
 		this->handle=NULL;
-		printf("Sound::[%p]close() -- closed\n",this->handle);
+		DEBUGF("Sound::[%p]close() -- closed",this->handle);
 	}
 }
 
@@ -144,11 +144,11 @@ void Sound::loadSoundFiles(SoundType *soundFiles) {
 
 	for(unsigned int i=0; i < countof(soundFiles->funcSound); i++) {
 		if(soundFiles->funcSound[i]) {
-			printf("loading CFG_FUNC_SOUND_%d = %s\n", i, soundFiles->funcSound[i].fileName.c_str());
+			DEBUGF("loading CFG_FUNC_SOUND_%d = %s", i, soundFiles->funcSound[i].fileName.c_str());
 			soundFiles->funcSound[i].load(soundFiles->funcSoundVolume[i]);
 			DEBUGF("wav file length: %zuBytes", soundFiles->funcSound[i].wav.length());
 		} else {
-			printf("no CFG_FUNC_SOUND_%d\n",i);
+			DEBUGF("no CFG_FUNC_SOUND_%d",i);
 		}
 	}
 }
@@ -159,16 +159,16 @@ void Sound::loadSoundFile(const std::string &fileName, std::string &dst, int vol
 			   WavHeader wavHeader;
 			   FILE *f=fopen(fileName.c_str(),"r");
 			   if(!f) {
-			   fprintf(stderr, "error open '%s' %s\n", fileName.c_str(), strerror(errno));
+			   DEBUGF(stderr, "error open '%s' %s\n", fileName.c_str(), strerror(errno));
 			   abort();
 			   }
 			   if(fread(&wavHeader,1,sizeof(wavHeader),f) != sizeof(wavHeader)) {
-			   fprintf(stderr, "error fread header '%s' %s\n", fileName.c_str(), strerror(errno));
+			   DEBUGF(stderr, "error fread header '%s' %s\n", fileName.c_str(), strerror(errno));
 			   abort();
 			   }
 			   struct stat buf;
 			   fstat(fileno(f), &buf);
-			   printf("filename: %s, sample_rate: %d num_channels: %d, bits_per_sample:%d len:%lu\n", fileName.c_str(),
+			   DEBUGF("filename: %s, sample_rate: %d num_channels: %d, bits_per_sample:%d len:%lu\n", fileName.c_str(),
 			   wavHeader.sample_rate, wavHeader.num_channels, wavHeader.bits_per_sample, buf.st_size-sizeof(wavHeader));
 			   int bufferSize=buf.st_size-sizeof(wavHeader);
 			   unsigned char *buffer;
@@ -210,7 +210,7 @@ enum class WavFormat {
 
 void Sound::loadWavFile(const std::string &filename, std::string &out, int volumeLevel) {
 #warning FIXME volumeLevel TODO
-	printf("Sound::loadWavFile() read file: %s\n", filename.c_str());
+	DEBUGF("Sound::loadWavFile() read file: %s", filename.c_str());
 	Reader reader(filename);
 	int channels=-1;
 	int32_t samplerate=-1;
@@ -232,10 +232,10 @@ void Sound::loadWavFile(const std::string &filename, std::string &out, int volum
 										bytespersecond = reader.ReadInt32( );
 										/*int16_t formatblockalign = */ reader.ReadInt16( );
 										bitdepth = reader.ReadInt16( );
-										// printf("formatsize=%d\n",formatsize);
+										// DEBUGF("formatsize=%d\n",formatsize);
 										if ( formatsize == 18 ) {
 											int32_t extradata = reader.ReadInt16( );
-											printf("seek skipsize=%d\n",extradata);
+											DEBUGF("seek skipsize=%d",extradata);
 											reader.Seek( extradata, SEEK_CUR );
 										}
 										break; }
@@ -249,12 +249,12 @@ void Sound::loadWavFile(const std::string &filename, std::string &out, int volum
 									  break; }
 			default: {
 						 int32_t skipsize = reader.ReadInt32( );
-						 printf("seek skipsize=%d\n",skipsize);
+						 DEBUGF("seek skipsize=%d",skipsize);
 						 reader.Seek( skipsize, SEEK_CUR );
 						 break; }
 		}
 	}
-	printf("wav file: size=%d, bitdepth=%d, bytespersecond=%d, samplerate=%d channels=%d wavFormat=%x\n", datasize, bitdepth, bytespersecond, samplerate, channels, (int) wavFormat);
+	DEBUGF("wav file: size=%d, bitdepth=%d, bytespersecond=%d, samplerate=%d channels=%d wavFormat=%x", datasize, bitdepth, bytespersecond, samplerate, channels, (int) wavFormat);
 	if(bitdepth == 8) {
 		Sound::bits=SND_PCM_FORMAT_U8;
 	}
@@ -263,26 +263,26 @@ void Sound::loadWavFile(const std::string &filename, std::string &out, int volum
 	if(Sound::sample_rate == 0) {
 		Sound::sample_rate = samplerate;
 	} else if(Sound::sample_rate == samplerate) {
-		printf("samplerate OK\n");
+		DEBUGF("samplerate OK");
 	} else if(Sound::sample_rate == samplerate*2) {
 		std::string outX2;
 		Sound::resampleX2(out, outX2);
 		out=outX2;
 	} else {
-		printf("========== error: invalid samplerate %d\n",samplerate);
+		DEBUGF("========== error: invalid samplerate %d",samplerate);
 		abort();
 	}
 }
 
 void Sound::resampleX2(const std::string &in, std::string &out) {
-	printf("Sound::resampleX2()\n");
+	DEBUGF("Sound::resampleX2()");
 	assert(in.length() > 0);
 	out.resize((in.length() * 2) -1 );
 	for(size_t i=0; i < in.length()-1; i++) {
 		out[i*2]=in[i];
 		out[i*2+1]=(((unsigned int) (unsigned char) in[i]) + ((unsigned int) (unsigned char) in[i+1])) / 2 ;
 
-		// printf("%d [%d] (%d) ",out[i*2] & 0xff, out[i*2+1] & 0xff, in[i+1] & 0xff);
+		// DEBUGF("%d [%d] (%d) ",out[i*2] & 0xff, out[i*2+1] & 0xff, in[i+1] & 0xff);
 	}
 	out[(in.length()-1)*2]=in[in.length()-1];
 }
@@ -302,14 +302,14 @@ void FahrSound::run() {
 	} else if( dynamic_cast<SteamSoundType*>(this->soundFiles)) {
 		this->steamOutloop();
 	} else {
-		printf("FahrSound::outloop invalid sound config\n");
+		DEBUGF("FahrSound::outloop invalid sound config");
 	}
 }
 
 void FahrSound::cancel() {
 	this->currFahrstufe=-1;
 	this->doRun=false;
-	printf(ANSI_RED2 "FahrSound::cancel() %p\n" ANSI_DEFAULT, this);
+	ERRORF("FahrSound::cancel() %p" ANSI_DEFAULT, this);
 }
 
 class EMotorOutLoop : public Thread {
@@ -318,7 +318,7 @@ public:
 		this->fahrsound=fahrsound;
 	};
 	~EMotorOutLoop() {
-		this->cancel();
+		this->cancel(true);
 	};
 	void run() {
 		if(! this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_EMOTOR]) {
@@ -328,9 +328,9 @@ public:
 		std::string orgWav=this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_EMOTOR].loop();
 		// float currWavSpeed=0;
 		std::string wav;
-		printf("############################### EMotorOutLoop org.data=%p wav.data=%p\n", orgWav.data(), wav.data());
+		DEBUGF("############################### EMotorOutLoop org.data=%p wav.data=%p", orgWav.data(), wav.data());
 		wav.append(orgWav);
-		printf("############################### EMotorOutLoop org.data=%p wav.data=%p\n", orgWav.data(), wav.data());
+		DEBUGF("############################### EMotorOutLoop org.data=%p wav.data=%p", orgWav.data(), wav.data());
 
 		Sound sound;
 		sound.init();
@@ -347,7 +347,7 @@ public:
 			}
 			
 			float nextWavSpeed=lokdef[0].currspeed/255.0;
-//			printf("############################### EMotorOutLoop %f org.data=%p wav.data=%p loopPlayPos=%d out level=%d\n",
+//			DEBUGF("############################### EMotorOutLoop %f org.data=%p wav.data=%p loopPlayPos=%d out level=%d\n",
 //				nextWavSpeed, orgWav.data(), wav.data(),loopPlayPos, lokdef[0].currspeed/255);
 //			if(nextWavSpeed != currWavSpeed) {
 				int outPos=0;
@@ -379,7 +379,7 @@ private:
 };
 
 void FahrSound::diOutloop() {
-	printf("FahrSound::diOutloop() %d\n", this->currFahrstufe);
+	DEBUGF("FahrSound::diOutloop() %d", this->currFahrstufe);
 	Sound sound;
 	sound.init();
 	DiSoundType *diSoundFiles = dynamic_cast<DiSoundType*>(this->soundFiles);
@@ -389,7 +389,7 @@ void FahrSound::diOutloop() {
 	int lastFahrstufe=this->currFahrstufe;
 	this->currFahrstufe=0;
 	while(this->doRun || lastFahrstufe >= 0) {
-printf("FahrSound::diOutloop ####### %d %d\n", this->doRun, lastFahrstufe);
+DEBUGF("FahrSound::diOutloop ####### %d %d", this->doRun, lastFahrstufe);
 		this->currSpeed=lokdef[0].currspeed;
 		if(this->currSpeed == 0 && lastFahrstufe == 0 && ! this->doRun) {
 			this->currFahrstufe = -1;
@@ -397,12 +397,12 @@ printf("FahrSound::diOutloop ####### %d %d\n", this->doRun, lastFahrstufe);
 			for(int i=0; i < diSoundFiles->nsteps; i++) {
 				if(this->currSpeed < diSoundFiles->steps[i].limit) {
 					this->currFahrstufe=i;
-					printf("set fahrstufe: %d (limit %d)\n", i, diSoundFiles->steps[i].limit);
+					DEBUGF("set fahrstufe: %d (limit %d)", i, diSoundFiles->steps[i].limit);
 					break;
 				}
 			}
 		}
-		printf("FahrSound::diOutloop() playing [%d/%d]\n",lastFahrstufe, this->currFahrstufe); fflush(stdout);
+		DEBUGF("FahrSound::diOutloop() playing [%d/%d]",lastFahrstufe, this->currFahrstufe); fflush(stdout);
 		Sample sample;
 		if(this->currFahrstufe == lastFahrstufe) {
 			if(lastFahrstufe == -1) {
@@ -412,22 +412,22 @@ printf("FahrSound::diOutloop ####### %d %d\n", this->doRun, lastFahrstufe);
 			sample=diSoundFiles->steps[lastFahrstufe].run;
 		} else if(this->currFahrstufe < lastFahrstufe) {
 			sample=diSoundFiles->steps[lastFahrstufe].down;
-			printf("v");
+			DEBUGF("v");
 			lastFahrstufe--;
 		} else {
 			lastFahrstufe++;
 			sample=diSoundFiles->steps[lastFahrstufe].up;
-			printf("^");
+			DEBUGF("^");
 		}
 
-		printf("FahrSound::diOutloop() playing %zu bytes (last byte: %d)\n", sample.wav.length(), 
+		DEBUGF("FahrSound::diOutloop() playing %zu bytes (last byte: %d)", sample.wav.length(), 
 			sample.wav.length() > 0 ? (unsigned char) sample.wav[0] : 0);
 		sound.writeSound(sample.wav);
 
-		// printf("Sound::outloop() - testcancel\n");
+		// DEBUGF("Sound::outloop() - testcancel\n");
 		this->testcancel();
 	}
-	printf("Sound::outloop() done");
+	DEBUGF("Sound::outloop() done");
 }
 
 class BoilSteamOutLoop : public Thread {
@@ -436,11 +436,11 @@ public:
 		this->fahrsound=fahrsound;
 	};
 	~BoilSteamOutLoop() {
-		this->cancel();
+		this->cancel(true);
 	};
 	void run() {
 		if(! this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_BOIL]) {
-			printf(ANSI_RED "no boiler sound");
+			ERRORF("no boiler sound");
 			return;
 		}
 		Sound sound;
@@ -473,13 +473,13 @@ void FahrSound::steamOutloop() {
 	int lastSpeed=0;
 	int lastBrake=0;
 	int lastAcc=0;
-	printf(ANSI_RED2 "FahrSound::steamOutloop() %lu\n" ANSI_DEFAULT, tid);
+	NOTICEF("FahrSound::steamOutloop() %lu", tid);
 // ?????????? currFahrstufe umbaun auf 0 == stop ??????????????
 	while(this->doRun || this->currFahrstufe >= 0) {
 		this->currSpeed=lokdef[0].currspeed;
 		this->currFahrstufe=this->currSpeed/(256.0) * dSoundFiles->nsteps; // bei 3 fahrstufen:  0-90 => [0] ; -175 => [1] ; -255 => [2]
 
-		printf(ANSI_RED "FahrSound::steamOutloop %p Fahrstufe:%d\n" ANSI_DEFAULT,this,this->currFahrstufe); fflush(stdout);
+		DEBUGF("FahrSound::steamOutloop %p Fahrstufe:%d",this,this->currFahrstufe); fflush(stdout);
 		if(lastSpeed > 0 && this->currSpeed==0) {
 			PlayAsync quietschen(this->soundFiles->funcSound[CFG_FUNC_SOUND_BRAKE]);
 		} else if(lastSpeed == 0 && this->currSpeed > 0) {
@@ -493,7 +493,7 @@ void FahrSound::steamOutloop() {
 		lastSpeed=this->currSpeed;
 
 		if(this->currSpeed <= 0) {
-			printf(" ---- out silence\n");
+			DEBUGF(" ---- out silence");
 			sleep(1);
 			continue;
 		}
@@ -505,7 +505,7 @@ void FahrSound::steamOutloop() {
 		if(lastBrake > time(NULL) -2) {
 			lmh=STEAM_SLOT_BRAKE;
 		}
-		// printf("BoilSteamOutLoop:run -> lmh: %i #################################\n", lmh);
+		// DEBUGF("BoilSteamOutLoop:run -> lmh: %i #################################\n", lmh);
 			
 		const std::string &wav=dSoundFiles->steps[this->currFahrstufe].ch[lmh][(slot++)%dSoundFiles->nslots].wav;
 		/*
@@ -517,12 +517,12 @@ void FahrSound::steamOutloop() {
 			wav=dSoundFiles->steps[lastFahrstufe].run;
 		} else if(this->currFahrstufe < lastFahrstufe) {
 			wav=dSoundFiles->steps[lastFahrstufe].down;
-			printf("v");
+			DEBUGF("v");
 			lastFahrstufe--;
 		} else {
 			lastFahrstufe++;
 			wav=dSoundFiles->steps[lastFahrstufe].up;
-			printf("^");
+			DEBUGF("^");
 		}
 		*/
 
@@ -540,22 +540,22 @@ void FahrSound::steamOutloop() {
 			sound.writeSound(wav);
 		}
 
-		printf("FahrSound::steamOutloop wait: %g\n", s);
+		DEBUGF("FahrSound::steamOutloop wait: %g", s);
 		// usleep(s*1000000);
 		for(int i = 0; i < ((s-0.1)*100); i++) {
 			sound.writeSound(outSilence); // => 0,01s stille
 		}
-		printf("Sound::steamOutloop() - testcancel\n");
+		DEBUGF("Sound::steamOutloop() - testcancel");
 		this->testcancel();
 	}
 }
 
 /*
 void Sound::playSingleSound(int index) {
-	printf("Sound::playSingleSound(%d)\n", index);
+	DEBUGF("Sound::playSingleSound(%d)\n", index);
 
 	this->writeSound(cfg_funcSound[index]);
-	printf("Sound::playSingleSound(%d) - done\n", index);
+	DEBUGF("Sound::playSingleSound(%d) - done\n", index);
 }
 */
 
@@ -566,7 +566,7 @@ void Sound::playSingleSound(int index) {
  * @return frames
  */
 int Sound::writeSound(const std::string &data, int startpos) {
-	//printf("Sound::writeSound(len=%lu, start=%d) \n", data.length(), startpos);
+	//DEBUGF("Sound::writeSound(len=%lu, start=%d) \n", data.length(), startpos);
 	assert(startpos >= 0);
 	assert(data.length() >= (unsigned) startpos);
 	const char *wavData = data.data() + startpos;
@@ -591,41 +591,41 @@ int Sound::writeSound(const std::string &data, int startpos) {
 	snd_pcm_status_alloca(&status);
 	int err;
 	if ((err = snd_pcm_status(this->handle, status)) < 0) {
-		printf("Stream status error: %s\n", snd_strerror(err));
+		ERRORF("Stream status error: %s", snd_strerror(err));
 		// exit(0);
 	}
 
-	//printf("Sound::[%p]writeSound() ========= status dump\n",this->handle);
+	//DEBUGF("Sound::[%p]writeSound() ========= status dump\n",this->handle);
 	//snd_output_t* out;
 	//snd_output_stdio_attach(&out, stderr, 0);
 	//snd_pcm_status_dump(status, out);
 	if (snd_pcm_state(this->handle) == SND_PCM_STATE_XRUN || 
 		snd_pcm_state(handle) == SND_PCM_STATE_SUSPENDED) {
-		printf("Sound::writeSound need to recover ...\n");
+		DEBUGF("Sound::writeSound need to recover ...");
 		err = snd_pcm_prepare(handle);
 		assert(err >= 0 && "Can't recovery from underrun, prepare failed"); // , snd_strerror(err));
 	}
 
-	//printf("Sound::writeSound dataLength=%zd startpos=%d\n", data.length(), startpos);
+	//DEBUGF("Sound::writeSound dataLength=%zd startpos=%d\n", data.length(), startpos);
 	snd_pcm_sframes_t frames = snd_pcm_writei(this->handle, wavData, len);
-	//printf("Sound::writeSound frames=%ld\n", frames);
+	//DEBUGF("Sound::writeSound frames=%ld\n", frames);
 	if (frames < 0) { // 2* probieren:
-		printf("Sound::[%p]writeSound recover error: %s\n", this->handle, snd_strerror(frames));
+		DEBUGF("Sound::[%p]writeSound recover error: %s", this->handle, snd_strerror(frames));
 		frames = snd_pcm_recover(this->handle, frames, 0);
 	}
 	if (frames == -EPIPE) {
 		/* EPIPE means underrun */
-		fprintf(stderr, "underrun occurred\n");
+		ERRORF("underrun occurred");
 		snd_pcm_prepare(this->handle);
 	}
 	/*
 	if (frames < 0) { // noch immer putt
-		printf("Sound::writeSound snd_pcm_writei failed: %s\n", snd_strerror(frames));
+		DEBUGF("Sound::writeSound snd_pcm_writei failed: %s\n", snd_strerror(frames));
 		return frames;
 	} */
 	if (frames > 0 && frames < (snd_pcm_sframes_t) len)
-		printf("Sound::writeSound Short write (expected %zi, wrote %li) %s\n", len, frames, strerror(errno));
-	// printf("Sound::[%p]writeSound done\n",this->handle);
+		DEBUGF("Sound::writeSound Short write (expected %zi, wrote %li) %s", len, frames, strerror(errno));
+	// DEBUGF("Sound::[%p]writeSound done\n",this->handle);
 	return frames;
 }
 
@@ -633,7 +633,7 @@ int Sound::writeSound(const std::string &data, int startpos) {
  * raspi hat nix geändert
  */
 void Sound::setBlocking(bool blocking) {
-	printf("Sound::[%p]setBlocking %d\n", this->handle, blocking);	
+	DEBUGF("Sound::[%p]setBlocking %d", this->handle, blocking);	
 	int rc=snd_pcm_nonblock	(this->handle, blocking ? 0 : 1);
 	if(rc != 0) {
 		ERRORF("error setting blocking mode\n");
@@ -648,7 +648,7 @@ void Sound::setBlocking(bool blocking) {
  */
 void Sound::setMasterVolume(int volume)
 {
-	printf("Sound::setMasterVolume(%d)\n",volume);
+	DEBUGF("Sound::setMasterVolume(%d)",volume);
     long min, max;
     snd_mixer_t *handle;
     snd_mixer_selem_id_t *sid;
@@ -661,11 +661,11 @@ void Sound::setMasterVolume(int volume)
 		ERRORF("snd_mixer_open: %s", snd_strerror(rc));
 		abort();
 	}
-	printf("Sound::[%p]setMasterVolume(%d)\n", handle, volume);
+	DEBUGF("Sound::[%p]setMasterVolume(%d)", handle, volume);
 	/*
 	snd_ctl_card_info_alloca(&info);
 	if (rc = snd_ctl_card_info(handle, info)) {
-		printf("Control device %s hw info error: %s", card, snd_strerror(rc));
+		DEBUGF("Control device %s hw info error: %s", card, snd_strerror(rc));
 		return err;
 	}
 	*/
@@ -684,7 +684,7 @@ void Sound::setMasterVolume(int volume)
 		if (!snd_mixer_selem_is_active(elem)) {
 			continue;
 		}
-		printf("Simple mixer control '%s',%i\n", snd_mixer_selem_id_get_name(sid), snd_mixer_selem_id_get_index(sid));
+		DEBUGF("Simple mixer control '%s',%i", snd_mixer_selem_id_get_name(sid), snd_mixer_selem_id_get_index(sid));
 		break;
 	}
 	/*
@@ -699,10 +699,10 @@ void Sound::setMasterVolume(int volume)
 
     // snd_mixer_selem_get_playback_dB_range(elem, &min, &max);
     snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
-	printf("min:%ld max:%ld\n", min, max);
+	DEBUGF("min:%ld max:%ld", min, max);
 	long range = max - min;
 	long calcVolume = (float) range * volume / 255;
-	printf("calcVolume %ld => %ld\n", calcVolume, calcVolume + min);
+	DEBUGF("calcVolume %ld => %ld", calcVolume, calcVolume + min);
     snd_mixer_selem_set_playback_volume_all(elem, calcVolume + min);
     // snd_mixer_selem_set_playback_dB_all(elem, volume, 0);
 
@@ -713,11 +713,11 @@ void Sound::setMasterVolume(int volume)
 // http://www.alsa-project.org/alsa-doc/alsa-lib/_2test_2pcm_8c-example.html#a41
 static void async_callback(snd_async_handler_t *ahandler)
 {
-	printf("async_callback\n");
+	DEBUGF("async_callback");
         // snd_pcm_t *handle = snd_async_handler_get_pcm(ahandler);
 	PlayAsyncData *data = (PlayAsyncData*) snd_async_handler_get_callback_private(ahandler);
 	if (data->sound == NULL) {
-		printf("async_callback --- sound closing/deleted\n");
+		DEBUGF("async_callback --- sound closing/deleted");
 		return;
 	}
         // signed short *samples = data->samples;
@@ -726,7 +726,7 @@ static void async_callback(snd_async_handler_t *ahandler)
         
         // snd_pcm_sframes_t avail = snd_pcm_avail_update(handle);
 		int writtenFrames=data->sound->writeSound(data->wav, data->position);
-	printf("async_callback writtenFrames=%d\n",writtenFrames);
+	DEBUGF("async_callback writtenFrames=%d",writtenFrames);
 		if(writtenFrames > 0) {
 			data->position+=writtenFrames;
 			if(data->position >= (int) data->wav.length()) {
@@ -735,10 +735,10 @@ static void async_callback(snd_async_handler_t *ahandler)
 		} else {
 			end=true;
 		}
-	printf("async_callback new position=%d\n", data->position);
+	DEBUGF("async_callback new position=%d", data->position);
 
 		if(end) {
-			printf("playAsync end\n");
+			DEBUGF("playAsync end");
 			// macht das ~Sound() schon. Damit destructur fix nur einmal aufgerufen wird:
 			// data->sound->close();
 			Sound *tmp_sound=data->sound;
@@ -752,11 +752,11 @@ static void async_callback(snd_async_handler_t *ahandler)
                 generate_sine(areas, 0, period_size, &data->phase);
                 err = snd_pcm_writei(handle, samples, period_size);
                 if (err < 0) {
-                        printf("Write error: %s\n", snd_strerror(err));
+                        DEBUGF("Write error: %s", snd_strerror(err));
                         exit(EXIT_FAILURE);
                 }
                 if (err != period_size) {
-                        printf("Write error: written %i expected %li\n", err, period_size);
+                        DEBUGF("Write error: written %i expected %li", err, period_size);
                         exit(EXIT_FAILURE);
                 }
                 avail = snd_pcm_avail_update(handle);
@@ -824,21 +824,21 @@ PlayAsync::PlayAsync(int index) {
 		snd_async_handler_t *ahandler;
 		int err=snd_async_add_pcm_handler(&ahandler, data->sound->handle, async_callback, data);
 		if (err < 0) {
-			printf("Unable to register async handler %s\n",snd_strerror(err));
+			DEBUGF("Unable to register async handler %s",snd_strerror(err));
 			abort();
 		}
 		err=snd_pcm_prepare(data->sound->handle);
 		if (err < 0) {
-			printf("prepare error: %s\n", snd_strerror(err));
+			DEBUGF("prepare error: %s", snd_strerror(err));
 			abort();
 		}
 
 		data->position=data->sound->writeSound(data->wav);
 		if (snd_pcm_state(data->sound->handle) == SND_PCM_STATE_PREPARED) {
-			printf("PlayAsync in PREPARED state\n");
+			DEBUGF("PlayAsync in PREPARED state");
 			err = snd_pcm_start(data->sound->handle);
 			if (err < 0) {
-				printf("Start error: %s\n", snd_strerror(err));
+				DEBUGF("Start error: %s", snd_strerror(err));
 				abort();
 			}
 		}
@@ -879,10 +879,10 @@ void FahrSound::start() {
 	/*
 // FIXME: wenn thread rennt und doRun false is dann warten bis thread tot und neu starten
 	if(this->thread) {
-		printf("FahrSound::run: already started\n");
+		DEBUGF("FahrSound::run: already started");
 		return;
 	}
-	printf("FahrSound::run() starting sound thread\n");
+	DEBUGF("FahrSound::run() starting sound thread");
 	this->doRun=true;
 
 	// Start a thread and then send it a cancellation request
@@ -892,7 +892,7 @@ void FahrSound::start() {
 		perror("pthread_create");
 */
 	if(this->isRunning() ) {
-		printf("FahrSound::start already started\n");
+		DEBUGF("FahrSound::start already started");
 	} else {
 		this->doRun=true;
 		Thread::start();
@@ -903,7 +903,7 @@ void FahrSound::start() {
 
 /*
 void FahrSound::kill() {
-	printf("FahrSound::[%p]kill()\n",this->handle);
+	DEBUGF("FahrSound::[%p]kill()\n",this->handle);
 	if(this->thread) {
 		int s = pthread_cancel(this->thread);
 		if (s != 0)
@@ -916,7 +916,7 @@ void FahrSound::kill() {
 */
 
 void FahrSoundPlayFuncAsyncData::done() {
-	// printf("FahrSoundPlayFuncAsyncData::done ************************************* %d\n", this->func);
+	// DEBUGF("FahrSoundPlayFuncAsyncData::done ************************************* %d\n", this->func);
 	lokdef[0].func[this->func].ison=false;
 }
 
@@ -965,7 +965,7 @@ int main(int argc, char *argv[]) {
 	if(argc == 2) {
 		volume=atoi(argv[1]);
 	}
-	printf("setting volume to %d\n",volume);
+	DEBUGF("setting volume to %d",volume);
 	SetAlsaMasterVolume(volume);
 }
 */
