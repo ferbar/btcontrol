@@ -7,9 +7,11 @@
 #include "USBPlatine.h"
 #include "lokdef.h"
 
+#define TAG "USBPlatine"
 
 void USBPlatine::sendLoco(int addr_index, bool emergencyStop) {
-				assert(addr_index >= 0);
+	assert(addr_index >= 0);
+	DEBUGF("USBPlatine::sendLoco(%d=>%d)", addr_index, lokdef[addr_index].addr);
 				int a_speed=abs(lokdef[addr_index].currspeed);
 
 				double f_speed=a_speed;
