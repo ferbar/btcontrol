@@ -15,22 +15,27 @@
 #define TAG "Thread"
 
 void *Thread::startupThread(void *ptr) {
-	NOTICEF("Thread::startupThread() ========================================");
 	Thread *t=(Thread *) ptr;
+	// %lu => linux ist pthread_ unsigned long
+	NOTICEF("Thread::startupThread() %lu ========================================",t->thread);
 	t->exited=false;
 	try {
 		t->run();
 	} catch(const char *e) {
-		ERRORF(ANSI_RED "?: exception %s - client thread killed\n" ANSI_DEFAULT, e);
+		ERRORF("?: exception %s - client thread killed", e);
 	} catch(std::RuntimeExceptionWithBacktrace &e) {
-		ERRORF(ANSI_RED "?: Runtime Exception %s - client thread killed\n" ANSI_DEFAULT, e.what());
+		ERRORF("?: Runtime Exception %s - client thread killed", e.what());
 	} catch(std::exception &e) {
-		ERRORF(ANSI_RED "?: exception %s - client thread killed\n" ANSI_DEFAULT, e.what());
+		ERRORF("?: exception %s - client thread killed", e.what());
 	} catch (abi::__forced_unwind&) { // http://gcc.gnu.org/bugzilla/show_bug.cgi?id=28145
-		ERRORF(ANSI_RED "?: forced unwind exception - client thread killed\n" ANSI_DEFAULT);
+		ERRORF("?: forced unwind exception - client thread killed");
 		// copy &paste:
 		// printf("%d:client exit\n",startupData->clientID);
 		// pthread_cleanup_pop(true);
+		t->exited=true;
+		if(t->autodelete) {
+			delete t;
+		}
 		throw; // rethrow exeption bis zum pthread_create, dort isses dann aus
 	}
 
@@ -54,8 +59,10 @@ void Thread::start() {
 	this->cancelstate=0;
 #endif
 	int s = pthread_create(&this->thread, &attr, &Thread::startupThread, (void *) this);
-	if (s != 0)
+	if (s != 0) {
 		perror("pthread_create");
+		throw std::runtime_error("error pthread_create");
+	}
 	pthread_attr_destroy(&attr);
 }
 
@@ -71,9 +78,11 @@ void Thread::cancel() {
 			perror("pthread_cancel");
 			throw std::runtime_error("error pthread_cancel");
 		}
-		void *ret;
+		void *ret=NULL;
+		// %lu => linux ist pthread_ unsigned long
+		DEBUGF("waiting for thread %lu to exit", this->thread);
 		int rc = pthread_join(this->thread, &ret);
-		assert(ret == NULL); // if this is malloced value we create a memory leak
+		assert(ret != NULL); // if this is malloced value we create a memory leak
 		if(rc != 0) {
 			// FIXME: memory leak wenn ret malloced ist
 			throw std::runtime_error("error pthread_join");
