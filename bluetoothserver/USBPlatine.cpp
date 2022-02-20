@@ -76,3 +76,17 @@ int USBPlatine::sendPOM(int addr, int cv, int value) {
 int USBPlatine::sendPOMBit(int addr, int cv, int bitNr, bool value) {
 	return 0;
 }
+
+void USBPlatine::clientConnected() {
+#ifdef HAVE_ALSA
+	clientFahrSound.startPlayFuncSound();
+#endif
+}
+
+void USBPlatine::clientDisconnected(bool all) {
+#ifdef HAVE_ALSA
+	if(all) {
+		clientFahrSound.cancel();
+	}
+#endif
+}

@@ -13,6 +13,9 @@ public:
 	virtual void pwrOff()=0;
 	virtual bool getPowerState()=0;
 
+	virtual void clientConnected() {};
+	virtual void clientDisconnected(bool all) {};
+
 	static const int CV_CV_SOUND_VOL=-10;
 	static const int CV_CV_BAT=-20;
 	static const int CV_CV_WIFI_CLIENT_SWITCH=-30;

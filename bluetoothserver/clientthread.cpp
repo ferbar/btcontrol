@@ -25,6 +25,7 @@
 #include <strings.h>
 #include <string.h>
 #include <assert.h>
+#include <unistd.h>
 #include "clientthread.h"
 #include "lokdef.h"
 #include "Hardware.h"
@@ -32,11 +33,6 @@
 #include "config.h"
 
 #include <errno.h>
-
-#ifdef HAVE_ALSA
-#warning FIXME: sound gehört ins USBPlatine rein
-#include "sound.h"
-#endif
 
 #ifdef INCL_BT
 #include "BTUtils.h"
@@ -112,16 +108,9 @@ void ClientThread::run()
 {
 	// startupdata_t *startupdata=(startupdata_t *)data;
 
-/*
-#ifdef HAVE_ALSA
-#warning FIXME: nur bei platine sound spielen
-	if(FahrSound::soundFiles != NULL) { // nur wenn eine platine angeschlossen und sound files geladen
-		clientFahrSound.start();
-	}
-#endif
-*/
 	utils::setThreadClientID(this->clientID);
 	NOTICEF("%d:socket accepted sending welcome msg",this->clientID);
+	hardware->clientConnected();
 	FBTCtlMessage heloReply(messageTypeID("HELO"));
 #ifdef ESP32
 	heloReply["name"]="esp32 server";
@@ -487,14 +476,13 @@ ClientThread::~ClientThread()
 	ERRORF(":~ClientThread numClientd=%d\n", this->numClients);
 	if(--this->numClients == 0) {
 		// letzter client => sound aus
-#ifdef HAVE_ALSA
-		clientFahrSound.cancel();
-#endif
 		// letzter client => alles notstop
 		hardware->fullstop(true, true);
+		hardware->clientDisconnected(true);
 	} else {
 		// nicht letzter client => alle loks die von mir gesteuert wurden notstop
 		NOTICEF("lastClient, stopping my Locos\n");
 		hardware->fullstop(false, true);
+		hardware->clientDisconnected(false);
 	}
 }

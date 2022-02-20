@@ -20,6 +20,9 @@ public:
 	virtual int read_input ( unsigned char *a1, unsigned char *a2, unsigned char *d, unsigned short *c1, unsigned short *c2 )=0;
 */
 
+	virtual void clientConnected();
+	virtual void clientDisconnected(bool all);
+
 	virtual void sendLoco(int addr_index, bool emergencyStop);
 	
 	virtual int sendPOM(int addr, int cv, int value);
