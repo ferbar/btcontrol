@@ -17,7 +17,7 @@
 void *Thread::startupThread(void *ptr) {
 	Thread *t=(Thread *) ptr;
 	// %lu => linux ist pthread_ unsigned long
-	NOTICEF("Thread::startupThread() %lu ========================================",t->thread);
+	NOTICEF("Thread::[%d] startupThread() ========================================", t->getMyId());
 	t->exited=false;
 	try {
 		t->run();
@@ -28,7 +28,7 @@ void *Thread::startupThread(void *ptr) {
 	} catch(std::exception &e) {
 		ERRORF("?: exception %s - client thread killed", e.what());
 	} catch (abi::__forced_unwind&) { // http://gcc.gnu.org/bugzilla/show_bug.cgi?id=28145
-		ERRORF("?: forced unwind exception - client thread killed");
+		ERRORF("Thread::[%d] done: forced unwind exception - client thread killed", t->getMyId());
 		// copy &paste:
 		// printf("%d:client exit\n",startupData->clientID);
 		// pthread_cleanup_pop(true);
@@ -39,7 +39,7 @@ void *Thread::startupThread(void *ptr) {
 		throw; // rethrow exeption bis zum pthread_create, dort isses dann aus
 	}
 
-	NOTICEF("Thread::startupThread() done ====================================");
+	NOTICEF("Thread::[%d] done ====================================", t->getMyId());
 	t->exited=true;
 	if(t->autodelete) {
 		delete t;
@@ -66,8 +66,8 @@ void Thread::start() {
 	pthread_attr_destroy(&attr);
 }
 
-void Thread::cancel() {
-	NOTICEF("Thread::cancel()");
+void Thread::cancel(bool join) {
+	NOTICEF("Thread::cancel(join=%d) thread=%0lx", join, this->thread);
 	if(this->thread) {
 #ifdef ESP32
     // ESP lib kennt kein pthread_cancel
@@ -78,16 +78,22 @@ void Thread::cancel() {
 			perror("pthread_cancel");
 			throw std::runtime_error("error pthread_cancel");
 		}
-		void *ret=NULL;
-		// %lu => linux ist pthread_ unsigned long
-		DEBUGF("waiting for thread %lu to exit", this->thread);
-		int rc = pthread_join(this->thread, &ret);
-		assert(ret != NULL); // if this is malloced value we create a memory leak
-		if(rc != 0) {
-			// FIXME: memory leak wenn ret malloced ist
-			throw std::runtime_error("error pthread_join");
-		}
 #endif
+		if(join) {
+			void *ret=NULL;
+			// %lu => linux ist pthread_ unsigned long
+			DEBUGF("Thread::[%0lx] cancel() waiting to exit", this->thread);
+			int rc = pthread_join(this->thread, &ret);
+			if(ret == PTHREAD_CANCELED) {
+				NOTICEF("Thread::[%0lx] cancel() join=true thread was canceled", this->thread);
+			} else if(ret != NULL) { // if this is malloced value we create a memory leak
+				ERRORF("Thread::[%0lx] cancel() join=true, ret=%p", this->thread, ret);
+				abort();
+			}			
+			if(rc != 0) {
+				throw std::runtime_error("error pthread_join");
+			}
+		}
 		this->thread=0;
 	} else {
 		// already killed/never started
@@ -102,6 +108,7 @@ bool Thread::isRunning() {
 void Thread::testcancel() {
 #ifdef ESP32
 	if(this->cancelstate) {
+		DEBUGF("Thread::[%0lx] quitting thread with an exception", this->getMyId());
 		throw std::runtime_error("thread canceled from testcancel()"); // pthread_testcancel macht auch nur exception
 	}
 #else
