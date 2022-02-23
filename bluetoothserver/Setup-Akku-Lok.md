@@ -2,7 +2,13 @@
 
 Das ist die Anleitung um ein komplett neues DietPi - Image für eine neue Rasperry PI Akku Lok zu erstellen:
 
-### DietPi image auf eine SD-Karte kopieren (Linux: dd_rescue)
+### SD Karte in den PC
+
+* DietPi Image auf eine SD-Karte kopieren (Linux: dd_rescue)
+
+a) /boot unter mounten + /boot/dietpi.text bearbeiten (wifi config) 202202: hat nicht funktioniert
+https://dietpi.com/docs/usage/#how-to-do-an-automatic-base-installation-at-first-boot
+b) mit usb - ethernet Adapter booten
 
 ### Wlan konfigurieren
 dietpi-config: (startet automatisch)
