@@ -11,8 +11,26 @@
 #include <stdexcept>
 #include <exception>
 #include <assert.h>
+#ifdef HAVE_RASPI_WIRINGPI
 #include <wiringPi.h>
 #include <softPwm.h>
+#elif HAVE_RASPI_PIGPIO
+#include <pigpio.h>
+// wiringpi defines:
+#define pinMode gpioSetMode
+#define OUTPUT PI_OUTPUT
+#define digitalWrite gpioWrite
+void softPwmCreate(unsigned pin, int value, int maxrange) {
+	gpioSetPWMrange(pin, maxrange);
+	gpioSetPWMfrequency(pin, 1000);
+	gpioPWM(pin, value);
+}
+void softPwmStop(unsigned pin) {
+	gpioPWM(pin, 0);
+}
+#else
+#error "Raspi PWM, no lib"
+#endif
 
 #include "ParseExpr.h"
 #define TAG "RaspiPWM"
@@ -48,7 +66,10 @@ RaspiPWM::~RaspiPWM() {
 	this->fullstop(true, true);
 	this->release();
 	delete(parseExpr); parseExpr=NULL;
-	this->funcThread.cancel();
+	this->funcThread.cancel(true);
+#if HAVE_RASPI_PIGPIO
+	gpioTerminate();
+#endif
 	printf("RaspiPWM::~RaspiPWM() done\n");
 }
 
@@ -56,9 +77,17 @@ void RaspiPWM::release() {
 }
 
 void RaspiPWM::init() {
-
+#ifdef HAVE_RASPI_WIRINGPI
 	printf("RaspiPWM::init()\n");
 	wiringPiSetupGpio();
+#elif HAVE_RASPI_PIGPIO
+	if (gpioInitialise() < 0) {
+		ERRORF("gpioInitialise failed");
+		abort();
+	} else {
+		DEBUGF("pigpio initialised okay.");
+	}
+#endif
 
 	std::string tmp = config.get("digispark.motorStart");
 	this->motorStart=utils::stoi(tmp);
@@ -119,11 +148,12 @@ void RaspiPWM::init() {
 	} else {
 		printf("error opening raspi ACT led (%s)\n",strerror(errno));
 	}
-
+#ifdef HAVE_RASPI_WIRINGPI
 	pinMode(cfg_pinPWM, PWM_OUTPUT);
 	pwmSetMode(PWM_MODE_MS);
 	pwmSetClock(4); // => 19,2MHz base clock / 4 = 4,8MHz
 	pwmSetRange(256); // 4,8MHz / 256 = 18,75kHz
+#endif
 	this->setPWM(0);
 	this->setDir(0); // default dir = 0
 	// test ob parsbar + bits initialisieren
@@ -146,7 +176,11 @@ void RaspiPWM::setPWM(int f_speed) {
 	// int result = 0;
 	if(this->pwm!=pwm) {
 		printf("setting pwm: %d\n", pwm);
+#ifdef HAVE_RASPI_WIRINGPI
 		pwmWrite(cfg_pinPWM, pwm);
+#else
+		gpioHardwarePWM(cfg_pinPWM,  20000, pwm*1000000/256);
+#endif
 		this->pwm=pwm;
 	}
 

@@ -97,6 +97,11 @@ Makefile.config:
 			echo "CFLAGS+=-DHAVE_RASPI_WIRINGPI" >> Makefile.config ; \
 			echo "LDFLAGS+=-lwiringPi" >> Makefile.config;			\
 			echo "btserver: RaspiPWM.o" >> Makefile.config;			\
+		elif [ -f /usr/include/pigpio.h ] ; then \
+			echo "found pigpio" ; 	\
+			echo "CFLAGS+=-DHAVE_RASPI_PIGPIO" >> Makefile.config ; 	\
+			echo "LDFLAGS+=-lpigpio" >> Makefile.config ;			\
+			echo "btserver: RaspiPWM.o" >> Makefile.config ;		\
 		else					\
 			echo "not found - RaspiPWM disabled"	;\
 		fi ; 					\
@@ -117,7 +122,7 @@ Makefile.config:
 	@echo "CFLAGS+=-DHAVE_EXECINFO" >> Makefile.config
 
 btserver: fbtctl_message.o CommThread.o message_layout.o server.o tcpclient.o clientthread.o lokdef.o main.o srcp.o utils.o ParseExpr.o Thread.o USBPlatine.o BTUtils.o
-	${CPP} ${LDFLAGS} $+ -o btserver
+	${CPP} $+ ${LDFLAGS} -o btserver
 
 digispark_test: USBDigispark.cpp utils.o
 	${CPP} ${CFLAGS} ${LDFLAGS} $+ -DDIGISPARK_TEST -o digispark_test
