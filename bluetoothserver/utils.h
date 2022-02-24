@@ -99,7 +99,8 @@ namespace utils
 		output.reserve(SIZE+1);
 		output.resize(SIZE);
 		snprintf( &(output[0]), SIZE+1, format, args... );
-		return std::move(output);
+		// kein std::move machen!
+		return output;
 	}
 
 	bool isDir(const char *filename);
