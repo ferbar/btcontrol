@@ -51,7 +51,7 @@
 	#include "zsp.h"
 	#include "sound.h"
 #endif
-#ifdef HAVE_RASPI_WIRINGPI
+#if defined HAVE_RASPI_WIRINGPI || defined HAVE_RASPI_PIGPIO
 	#include "RaspiPWM.h"
 #endif
 
@@ -111,7 +111,7 @@ void initPlatine()
 	}
 	DEBUGF("... done");
 #endif
-#ifdef HAVE_RASPI_WIRINGPI
+#if defined HAVE_RASPI_WIRINGPI || defined HAVE_RASPI_PIGPIO
 	if(!hardware) {
 		try {
 			hardware=new RaspiPWM(cfg_debug);
@@ -197,6 +197,9 @@ int main(int argc, char *argv[])
 				printf("btserver version %s\n", _STR(SVNVERSION));
 #ifdef HAVE_RASPI_WIRINGPI
 				printf("+RASPI_WIRINGPI ");
+#endif
+#ifdef HAVE_RASPI_PIGPIO
+				printf("+RASPI_PIGPIO ");
 #endif
 #ifdef HAVE_ALSA
 				printf("+alsa ");
