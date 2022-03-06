@@ -99,7 +99,7 @@ public class BTcommThread extends Thread {
 	public static class BtCommCallback implements BTcommThread.Callback {
 		public BtCommCallback() {};
 		public void BTCallback(FBTCtlMessage reply) {
-			Debuglog.debugln("TAG", "BtCommCallback override me!");
+			Debuglog.debugln("BtCommCallback override me!");
 		}
 	}
 	
