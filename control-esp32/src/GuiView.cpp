@@ -31,6 +31,10 @@
 #include "remoteLokdef.h"
 #include "Hardware.h"
 
+#ifdef HAVE_BLUETOOTH
+#include "BTClient.h"
+#endif
+
 #define TAG "GuiView"
 
 // PNG Functions
@@ -159,47 +163,11 @@ void GuiView::drawButtons() {
 int GuiViewSelectWifi::selectedWifi=0;
 bool GuiViewSelectWifi::needUpdate=false;
 
-std::map <String, RefreshWifiThread::WifiEntry> RefreshWifiThread::wifiList;
-RefreshWifiThread GuiViewSelectWifi::refreshWifiThread;
+#include "RefreshWifiThread.h"
 
-void RefreshWifiThread::run() {
-  DEBUGF("RefreshWifiThread::run() %d", this->getId());
-  if( WiFi.isConnected() ) {
-    WiFi.disconnect();
-    delay(100);
-  }
-  // WiFi.mode(WIFI_OFF); => dürfte wifi hin machen
-  try {
-    while(true) {  // beendet durch pthread_testcancel()
-      int16_t n = WiFi.scanNetworks();
-      DEBUGF("WiFi scan done found %d networks", n);
-      Lock lock(this->listMutex);
-      this->wifiList.clear();
-      for(int i=0; i < n; i++) {
-        wifi_ap_record_t *scanResult=(wifi_ap_record_t *)WiFi.getScanInfoByIndex(i);
-        NOTICEF("  - found wifi %s rssi:%d, chan:%d, %d %d %d %d", scanResult->ssid, scanResult->rssi, scanResult->primary, scanResult->phy_11b, scanResult->phy_11g, scanResult->phy_11n, scanResult->phy_lr);
+std::map <String, RefreshWifiThread::Entry> RefreshWifiThread::wifiList;
+RefreshWifiThread refreshWifiThread;
 
-        auto it = this->wifiList.find(WiFi.SSID(i));
-        if(it == this->wifiList.end()) {
-          this->wifiList[WiFi.SSID(i)] = { scanResult->rssi, scanResult->phy_lr? true : false };
-        } else {
-          DEBUGF("  found duplicate SSID: %s (old:%d, new:%d)", WiFi.SSID(i).c_str(), it->second.rssi, WiFi.RSSI(i));
-          // multiple APs for the same ssid found, use the lower rssi;
-          if(this->wifiList[WiFi.SSID(i)].rssi < WiFi.RSSI(i)) // rssi is always negative!! -40 is better than -90!
-            this->wifiList[WiFi.SSID(i)].rssi = WiFi.RSSI(i) ;
-        }
-      }
-      GuiViewSelectWifi::needUpdate=true;
-      lock.unlock();
-      this->testcancel();
-      sleep(5);
-    }
-  } catch(...) {
-    this->wifiList.clear();
-    DEBUGF("RefreshWifiThread::run() - stopped %d", this->getId());
-    throw;
-  }
-}
 
 void GuiViewSelectWifi::init() {    
   DEBUGF("GuiViewSelectWifi::init()");
@@ -244,12 +212,12 @@ void GuiViewSelectWifi::init() {
     GuiViewSelectWifi::lastKeyPressed=millis();
   });
   // tft.fillScreen(TFT_BLACK);
-  this->refreshWifiThread.start();
+  refreshWifiThread.start();
 }
   
 void GuiViewSelectWifi::close() {
 	DEBUGF("GuiViewSelectWifi::close()");
-  this->refreshWifiThread.cancel(false);
+  refreshWifiThread.cancel(false);
   resetButtons();
 }
 
@@ -265,13 +233,14 @@ const char *GuiViewSelectWifi::passwordForSSID(const String &ssid) {
 void GuiViewSelectWifi::loop() {
 	//DEBUGF("GuiViewSelectWifi::loop()");
 	// update only if changed:
-	if(this->needUpdate) {
+	if(this->needUpdate || refreshWifiThread.listChanged ) {
 		DEBUGF("##################GuiViewSelectWifi::loop() needUpdate");
 		this->needUpdate=false;
+    refreshWifiThread.listChanged=false;
 
 		this->drawButtons();
-    Lock lock(this->refreshWifiThread.listMutex);
-    int wifiCount=this->refreshWifiThread.wifiList.size();
+    Lock lock(refreshWifiThread.listMutex);
+    int wifiCount=refreshWifiThread.wifiList.size();
 
 		if (wifiCount == 0) {
       tft.setTextDatum(MC_DATUM);
@@ -286,7 +255,7 @@ void GuiViewSelectWifi::loop() {
 			int n=0;
 			char buff[50];
       for(int i=0; i < 2; i++) {
-			  for(const auto& value: this->refreshWifiThread.wifiList) {
+			  for(const auto& value: refreshWifiThread.wifiList) {
 				  const String password=this->passwordForSSID(value.first);
   				DEBUGF("  wifi network %s have password: %s", value.first.c_str(), password ? "yes" : "no");
           // round 1: list APs with passwords
@@ -338,7 +307,7 @@ void GuiViewSelectWifi::buttonCallback(Button2 &b, int which) {
   if(which==1) {
     if(GuiViewSelectWifi::selectedWifi > 0) GuiViewSelectWifi::selectedWifi--;
   } else {
-    if(GuiViewSelectWifi::selectedWifi < (int) GuiViewSelectWifi::refreshWifiThread.wifiList.size() -1) GuiViewSelectWifi::selectedWifi++;
+    if(GuiViewSelectWifi::selectedWifi < (int) refreshWifiThread.wifiList.size() -1) GuiViewSelectWifi::selectedWifi++;
   }
   DEBUGF("GuiViewSelectWifi::buttonCallback %d, new: selectedWifi=%d", which, GuiViewSelectWifi::selectedWifi);
   GuiViewSelectWifi::needUpdate=true;
@@ -350,8 +319,8 @@ void GuiViewSelectWifi::buttonCallbackLongPress(Button2 &b) {
 	String ssid;
   int n=0;
   bool LR=false;
-  Lock lock(GuiViewSelectWifi::refreshWifiThread.listMutex);
-  for(auto it=GuiViewSelectWifi::refreshWifiThread.wifiList.begin(); it != GuiViewSelectWifi::refreshWifiThread.wifiList.end(); ++it) {
+  Lock lock(refreshWifiThread.listMutex);
+  for(auto it=refreshWifiThread.wifiList.begin(); it != refreshWifiThread.wifiList.end(); ++it) {
     if(GuiViewSelectWifi::passwordForSSID(it->first)) {
       DEBUGF("have password for %s", it->first.c_str());
       if(n==GuiViewSelectWifi::selectedWifi) {
@@ -461,6 +430,9 @@ void GuiViewConnectWifi::loop() {
 				IPAddress ip = WiFi.localIP();
 				tft.drawString(String("connected to: ") + this->ssid + " " + ip.toString(), 0, 0 );
 #ifdef OTA_UPDATE
+        if (!MDNS.begin(device_name)) {
+          ERRORF("Error setting up MDNS responder!");
+        }
         initOTA([]() {
           NOTICEF("OTA UPDATE started");
           if(controlClientThread.isRunning()) {

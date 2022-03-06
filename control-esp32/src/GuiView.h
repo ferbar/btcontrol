@@ -23,15 +23,6 @@ protected:
   void drawButtons();
 };
 
-class RefreshWifiThread : public Thread {
-public:
-  RefreshWifiThread() {};
-  void run();
-  struct WifiEntry {int rssi; bool have_LR; }; 
-  static std::map <String, WifiEntry > wifiList;
-  Mutex listMutex;
-};
-
 class GuiViewSelectWifi : public GuiView {
 public:
   struct wifiConfigEntry_t {
@@ -50,7 +41,6 @@ public:
 private:
   static int selectedWifi; // muss wegen callback static sein
   static const char *passwordForSSID(const String &ssid);
-  static RefreshWifiThread refreshWifiThread;
   int lastFoundWifis=0;
 };
 
