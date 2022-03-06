@@ -250,8 +250,6 @@ void setup()
         DEBUGF("Default Vref: 1100mV");
     }
 
-
-
 /*
     tft.fillScreen(TFT_BLACK);
     tft.setTextDatum(TL_DATUM);
@@ -265,15 +263,14 @@ void setup()
 */
 
 /*
-    WiFi.begin(wifi_ssid, wifi_password);
-    Serial.printf("connecting to wifi %s...\r\n", wifi_ssid);
-    */
     if (!MDNS.begin(device_name)) {
         DEBUGF("Error setting up MDNS responder!");
         while(1) {
-            delay(1000);
+            delay(10000);
+            abort();
         }
     }
+    */
     DEBUGF("loading message layouts");
     messageLayouts.load();
 
