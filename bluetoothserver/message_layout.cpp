@@ -64,7 +64,7 @@ MessageLayout parseMessageLayout(const char *&pos)
 		const char *namestart=pos;
 		while(*pos && *pos != ':') pos++;
 		if(*pos=='\0')
-			throw "error finding name";
+			throw std::runtime_error("error finding name");
 		// printf("pos=\"%c\"\n",*pos);
 		MessageLayout info;
 		std::string name=std::string(namestart, pos-namestart);
@@ -79,7 +79,7 @@ MessageLayout parseMessageLayout(const char *&pos)
 				break;
 			case 'A': info.type=MessageLayout::ARRAY;
 				pos++;
-				if(*pos != '{') throw "kein { nach A";
+				if(*pos != '{') throw std::runtime_error(utils::format("A must be followed by { @%s", pos));
 				pos++;
 				info=parseMessageLayout(pos);
 				info.name=name;
@@ -88,8 +88,7 @@ MessageLayout parseMessageLayout(const char *&pos)
 			case '\0': // ende/leer
 				break;
 			default:
-				printf("invalid id: %s\n",pos);
-				throw "error parsing protocol.dat";
+				throw std::runtime_error(utils::format("error parsing protocol.dat invalid type @%s", pos));
 		}
 		messageLayout.childLayouts.push_back(info);
 		if(*pos == '}' || *pos == '\0') {
@@ -97,7 +96,7 @@ MessageLayout parseMessageLayout(const char *&pos)
 		}
 		// printf("pos2=\"%s\"\n",pos);
 		if(*pos != ',') {
-			throw ", erwartet";
+			throw std::runtime_error(", expected");
 		}
 		pos++;
 	}
@@ -149,7 +148,7 @@ int MessageLayouts::load()
 		const char *namestart=pos;
 		while(*pos && *pos!='=') pos++;
 		if(*pos=='\0') {
-			throw "invalid identifier";
+			throw std:runtime_error("invalid identifier");
 		}
 		std::string name(namestart,pos-namestart);
 		// printf("identifier found: %s\n",name.c_str());
@@ -217,11 +216,7 @@ std::string messageTypeName(MessageLayout::DataType type)
 					break;
 			}
 			if(it == messageLayouts.end()) {
-				std::string tmp;
-				tmp += "invalid id (";
-				tmp += type;
-				tmp += ")";
-				throw tmp;
+				throw std::runtime_error(utils::format("invalid id(%d)", type));
 			}
 			tmp += it->first;
 			tmp +=")";
