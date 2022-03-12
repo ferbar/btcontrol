@@ -148,7 +148,7 @@ int MessageLayouts::load()
 		const char *namestart=pos;
 		while(*pos && *pos!='=') pos++;
 		if(*pos=='\0') {
-			throw std:runtime_error("invalid identifier");
+			throw std::runtime_error("invalid identifier");
 		}
 		std::string name(namestart,pos-namestart);
 		// printf("identifier found: %s\n",name.c_str());
