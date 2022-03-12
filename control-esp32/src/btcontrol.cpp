@@ -189,6 +189,7 @@ void setup()
 {
     Serial.begin(115200);
     Serial.println("Start");
+    PRINT_FREE_HEAP("setup()");
 
     print_wakeup_reason();
     
@@ -238,6 +239,27 @@ void setup()
     espDelay(1000);
 */
 
+/*
+try {
+    try {
+        ERRORF("esp idf 4.4 try/catch test");
+        throw std::runtime_error("test runtime error");
+    } catch(...) {
+        ERRORF("catch1");
+        throw;
+    }
+} catch(const char *e) {
+    NOTICEF("~~~~~ cought outer exception char * %s ~~~~", e);
+} catch(const std::exception &e ) {
+    NOTICEF("~~~~~ cought outer exception %s ~~~~", e.what());
+} catch(...) {
+    NOTICEF("~~~~~ all caught ~~~~");
+}
+ERRORF("try/catch test done");
+*/
+
+
+
     esp_adc_cal_characteristics_t adc_chars;
     esp_adc_cal_value_t val_type = esp_adc_cal_characterize((adc_unit_t)ADC_UNIT_1, (adc_atten_t)ADC1_CHANNEL_6, (adc_bits_width_t)ADC_WIDTH_BIT_12, 1100, &adc_chars);
     //Check type of calibration value used to characterize ADC
@@ -272,8 +294,10 @@ void setup()
     }
     */
     DEBUGF("loading message layouts");
+    PRINT_FREE_HEAP("message layout load done");
     messageLayouts.load();
 
+    PRINT_FREE_HEAP("message layout load done");
     // disable power saving: sonst gibts dauernd retransmitts beim empfangen
     esp_wifi_set_ps(WIFI_PS_NONE);
 
@@ -309,18 +333,24 @@ void setup()
   GuiView::startGuiView(new GuiViewSelectWifi());
   btn1.setLongClickTime(1000);
   btn2.setLongClickTime(1000);
+  PRINT_FREE_HEAP("setup()");
 }
 
 void loop()
 {
-  /*
-    Serial.print("loop ");
-    Serial.print(ESP.getFreeHeap()); // ./cores/esp32/Esp.h
-    Serial.print("/");
-    Serial.print(ESP.getMinFreeHeap());
-    Serial.print("/");
-    Serial.println(ESP.getMaxAllocHeap());
-*/
+    static long last=0;
+    if(last + 1000 < millis() ) {
+        PRINT_FREE_HEAP("loop");
+        /*
+        Serial.print(ESP.getFreeHeap()); // ./cores/esp32/Esp.h
+        Serial.print("/");
+        Serial.print(ESP.getMinFreeHeap());
+        Serial.print("/");
+        Serial.println(ESP.getMaxAllocHeap());
+        */
+       last=millis();
+    }
+
     try {
     // DEBUGF("main::loop()");
         button_loop();
