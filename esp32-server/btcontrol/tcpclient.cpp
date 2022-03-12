@@ -121,6 +121,7 @@ void TCPClient::flushMessage() {
 }
 
 std::string TCPClient::getRemoteAddr() {
+	ERRORF("TCPClient::getRemoteAddr() not implemented!");
 	abort();
 }
 

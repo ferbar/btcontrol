@@ -14,11 +14,10 @@ public:
 		this->client.setNoDelay(1);
 	};
 	void connect(int id, const IPAddress &host, int port);
-	void disconnect() {
+	virtual void close() {
 		this->client.stop();
 	};
 	virtual ~TCPClient();
-	virtual void run()=0;
 	virtual void readSelect();
 	virtual void prepareMessage();
 	virtual void flushMessage();
@@ -27,7 +26,7 @@ public:
 	virtual ssize_t read(void *buf, size_t count);
 	virtual ssize_t write(const void *buf, size_t count);
 
-	bool isConnected() {
+	virtual bool isConnected() {
 		return this->client.connected();
 	};
 
