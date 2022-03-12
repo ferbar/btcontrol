@@ -170,13 +170,16 @@ static void *phoneClient(void *data)
 	try {
 #ifdef INCL_X11
 		if(cfg_X11) {
-			ClientThreadX11 client(startupData->clientID, startupData->so);
+			ClientThreadX11 client(startupData->clientID);
+			client.begin(new TCPClient(startupData->so), true);
 			client.run();
 		} else 
 #endif
 		{
-#warning das auf Thread.start umstellen
-			ClientThread client(startupData->clientID, startupData->so);
+# warning todo: phoneClient() auf thread.start() umstellen
+			ClientThread client(startupData->clientID);
+			client.begin(new TCPClient(startupData->so), true);
+			// !!! kein start !!!
 			client.run();
 		}
 	} catch(const char *e) {
