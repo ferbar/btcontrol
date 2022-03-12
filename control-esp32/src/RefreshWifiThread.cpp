@@ -84,9 +84,11 @@ void RefreshWifiThread::run() {
       this->listChanged=true;
       lock.unlock();
       this->testcancel();
-      sleep(5);
-      // DEBUGF("sleep done");
-      this->testcancel();
+	  for(int i=0; i < 5; i++) {
+        sleep(1);
+        // DEBUGF("sleep done");
+        this->testcancel();
+      }
     }
   } catch(...) {
 #ifdef HAVE_BLUETOOTH
