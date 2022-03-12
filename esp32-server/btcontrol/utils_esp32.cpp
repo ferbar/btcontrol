@@ -11,6 +11,8 @@
 
 #define TAG "utils_esp32"
 
+const char* device_name=DEVICE_NAME;
+
 /*
  * stack max used:
 #warning FIXME
@@ -152,6 +154,7 @@ std::string readFile(std::string filename)
 			return ret;
 		}
 	}
+	ERRORF("readFile failed");
 	abort();
 }
 
@@ -275,4 +278,10 @@ void initOTA(void (*onStartCallback)() )
   ArduinoOTA.begin();
   MDNS.enableArduino(3232, "");
 #endif
+}
+
+void debugPrintFreeHeap(const char *file, int line, const char *text) {
+	utils::log.printf(utils::Log::LEVEL_NOTICE, file, line,
+		ANSI_YELLOW "%s freeHeap: %d (minfree: %d, maxalloc: %d)" ANSI_DEFAULT,
+		text, ESP.getFreeHeap(), heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL), ESP.getMaxAllocHeap());
 }
