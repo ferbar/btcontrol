@@ -89,7 +89,7 @@ void ClientThread::sendStatusReply(lastStatus_t *lastStatus)
 void ClientThread::sendClientUpdate()
 {
 #ifdef INCL_BT
-	std::string clientAddr = this->getRemoteAddr();
+	std::string clientAddr = this->client->getRemoteAddr();
 	for(int i=0; i < 10; i++) {
 		DEBUGF(".");
 		sleep(1);

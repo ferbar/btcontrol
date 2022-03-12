@@ -13,14 +13,8 @@ struct lastStatus_t {
 
 class ClientThread : public CommThread {
 public:
-#ifdef ESP_PLATFORM
-	ClientThread(int id, WiFiClient &client) : CommThread(id, client) {
-	};
-#else
-	ClientThread(int id, int so) : CommThread(id, so) {
-	};
-#endif
-	
+	ClientThread(int clientID) : CommThread(clientID) {};
+
 	virtual ~ClientThread();
 	virtual void run();
 	void setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus);

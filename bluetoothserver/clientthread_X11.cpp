@@ -27,10 +27,13 @@
 #include <string.h>
 #include "clientthread_X11.h"
 #include "lokdef.h"
-#include "utils.h"
+#include <stdexcept>
+#include "config.h"
 #ifdef INCL_BT
 #include "BTUtils.h"
 #endif
+
+#include "utils.h"
 
 #include <X11/Xlib.h>
 #include <X11/extensions/XTest.h>
@@ -54,7 +57,7 @@ void ClientThreadX11::run()
 {
 	// startupdata_t *startupdata=(startupdata_t *)data;
 
-	printf("%d:socket accepted sending welcome msg\n",this->clientID);
+	NOTICEF("%d:socket accepted sending welcome msg",this->clientID);
 	utils::setThreadClientID(this->clientID);
 	FBTCtlMessage heloReply(messageTypeID("HELO"));
 	heloReply["name"]="my bt server";
@@ -73,7 +76,7 @@ void ClientThreadX11::run()
 	for(int i=0; i <= nLokdef; i++) { changedAddrIndex[i] = false; }
 
 
-	printf("%d:hello done, enter main loop\n",this->clientID);
+	NOTICEF("%d:hello done, enter main loop",this->clientID);
 	// int speed=0;
 	// int addr=3;
 	while(1) {
@@ -81,46 +84,29 @@ void ClientThreadX11::run()
 	
 		// bool emergencyStop=false;
 
-		int msgsize=0;
-		int rc;
-		this->readSelect(); // auf daten warten, macht exception wenn innerhalb vom timeout nix kommt
-		if((rc=this->read(&msgsize, 4)) != 4) {
-			throw std::runtime_error("error reading cmd: " + rc);
-		}
-		// printf("%d:reading msg.size: %d bytes\n",this->clientID,msgsize);
-		if(msgsize < 0 || msgsize > MAX_MESSAGE_SIZE) {
-			throw std::runtime_error("invalid size msgsize 2big");
-		}
-		char buffer[msgsize];
-		this->readSelect();
-		if((rc=this->read(buffer, msgsize)) != msgsize) {
-			throw std::runtime_error("error reading cmd.data: " + rc);
-		}
-		InputReader in(buffer,msgsize);
-		// printf("%d:parsing msg\n",this->clientID);
-		FBTCtlMessage cmd;
-		cmd.readMessage(in);
+		FBTCtlMessage cmd=this->readMessage();
+
 		if(cfg_debug) {
-			printf("%d/%d: msg",this->clientID, this->msgNum);
+			DEBUGF("/%d: msg", this->msgNum);
 			cmd.dump();
 		} else {
-			printf("%d/%d: msg %d=%s\n", this->clientID, this->msgNum, cmd.getType(), messageTypeName(cmd.getType()).c_str());
+			DEBUGF("/%d: msg %d=%s", this->msgNum, cmd.getType(), messageTypeName(cmd.getType()).c_str());
 		}
-		// int nr=0; // für die conrad platine
 		/*
+		int nr=0; // für die conrad platine
 		int size;
 		char buffer[256];
 		if((size = read(startupdata->so, buffer, sizeof(buffer))) <= 0) {
-			printf("%d:error reading message size=%d \"%.*s\"\n",startupdata->clientID,size,size >= 0 ? buffer : NULL);
+			DEBUGF("%d:error reading message size=%d \"%.*s\"\n",startupdata->clientID,size,size >= 0 ? buffer : NULL);
 			break;
 		}
 		buffer[size]='\0';
-		printf("%.*s",size,buffer);
+		DEBUGF("%.*s",size,buffer);
 		char cmd[sizeof(buffer)]="";
 		char param1[sizeof(buffer)]="";
 		char param2[sizeof(buffer)]="";
 		sscanf(buffer,"%d %s %s %s",&nr,&cmd, &param1, &param2);
-		printf("%d:<- %s p1=%s p2=%s\n",startupdata->clientID,cmd,param1,param2);
+		DEBUGF("%d:<- %s p1=%s p2=%s\n",startupdata->clientID,cmd,param1,param2);
 		*/
 		if(true) {
 			if(cmd.isType("PING")) {
@@ -128,7 +114,7 @@ void ClientThreadX11::run()
 			} else if(cmd.isType("ACC")) {
 				int addr=cmd["addr"].getIntVal();
 				int addr_index=getAddrIndex(addr);
-				lokdef[addr_index].currspeed+=5;
+				lokdef[addr_index].currspeed+=SPEED_STEP;
 				if(lokdef[addr_index].currspeed > 255)
 					lokdef[addr_index].currspeed=255;
 				sendStatusReply(lastStatus);
@@ -141,7 +127,7 @@ void ClientThreadX11::run()
 			} else if(cmd.isType("BREAK")) {
 				int addr=cmd["addr"].getIntVal();
 				int addr_index=getAddrIndex(addr);
-				lokdef[addr_index].currspeed-=5;
+				lokdef[addr_index].currspeed-=SPEED_STEP;
 				if(lokdef[addr_index].currspeed < 0)
 					lokdef[addr_index].currspeed=0;
 				sendStatusReply(lastStatus);
@@ -180,7 +166,7 @@ void ClientThreadX11::run()
 				int n=cmd["list"].getArraySize();
 				int addr=cmd["list"][0]["addr"].getIntVal();
 				int addr_index=getAddrIndex(addr);
-				lokdef[addr_index].currspeed+=5;
+				lokdef[addr_index].currspeed+=SPEED_STEP;
 				if(lokdef[addr_index].currspeed > 255)
 					lokdef[addr_index].currspeed=255;
 				changedAddrIndex[addr_index]=true;
@@ -196,7 +182,7 @@ void ClientThreadX11::run()
 				int n=cmd["list"].getArraySize();
 				int addr=cmd["list"][0]["addr"].getIntVal();
 				int addr_index=getAddrIndex(addr);
-				lokdef[addr_index].currspeed-=5;
+				lokdef[addr_index].currspeed-=SPEED_STEP;
 				if(lokdef[addr_index].currspeed < -255)
 					lokdef[addr_index].currspeed=-255;
 				changedAddrIndex[addr_index]=true;
@@ -234,13 +220,14 @@ void ClientThreadX11::run()
 				int funcNr=cmd["funcnr"].getIntVal();
 				int value=cmd["value"].getIntVal();
 				if(funcNr >= 0 && funcNr < lokdef[addr_index].nFunc) {
-					if(cfg_debug) printf("%d/%d:set funcNr[%d]=%d\n",this->clientID,this->msgNum,funcNr,value);
+					// if(cfg_debug)
+					DEBUGF("/%d:set funcNr[%d]=%d", this->msgNum, funcNr, value);
 					if(value)
 						lokdef[addr_index].func[funcNr].ison = true;
 					else
 						lokdef[addr_index].func[funcNr].ison = false;
 				} else {
-					printf(ANSI_RED "%d/%d:invalid funcNr out of bounds(%d)\n" ANSI_DEFAULT, this->clientID,this->msgNum,funcNr);
+					ERRORF("/%d:invalid funcNr out of bounds(%d)", this->msgNum, funcNr);
 				}
 				sendStatusReply(lastStatus);
 				changedAddrIndex[addr_index]=true;
@@ -248,7 +235,7 @@ void ClientThreadX11::run()
 /*
 			} else if(STREQ(cmd,"select")) { // ret = lokname
 				int new_addr=atoi(param1);
-				printf("%d:neue lok addr:%d\n",startupdata->clientID,new_addr);
+				DEBUGF("%d:neue lok addr:%d\n",startupdata->clientID,new_addr);
 				int new_addr_index=getAddrIndex(new_addr);
 				if(new_addr_index >= 0) {
 					addr=new_addr;
@@ -285,7 +272,7 @@ void ClientThreadX11::run()
 				int addr=cmd["addr"].getIntVal();
 				int addr_index=getAddrIndex(addr);
 				FBTCtlMessage reply(messageTypeID("GETFUNCTIONS_REPLY"));
-				printf("%d/%d: funclist for addr %d\n",this->clientID,this->msgNum,addr);
+				DEBUGF("/%d: funclist for addr %d", this->msgNum, addr);
 				// char buffer[32];
 				for(int i=0; i < lokdef[addr_index].nFunc; i++) {
 					// snprintf(buffer,sizeof(buffer)," %d;%d;%s\n",j+1,lokdef[addr_index].func[j].ison,lokdef[addr_index].func[j].name);
@@ -311,13 +298,18 @@ void ClientThreadX11::run()
 			} else if(cmd.isType("GETIMAGE")) {
 				std::string imageName=cmd["imgname"].getStringVal();
 				FBTCtlMessage reply(messageTypeID("GETIMAGE_REPLY"));
-				reply["img"]=readFile("img/"+imageName);
+				if(imageName == "") {
+					ERRORF("requesting null file");
+					reply["img"]="";
+				} else {
+					reply["img"]=readFile("img/"+imageName);
+				}
 				sendMessage(reply);
 			} else if(cmd.isType("HELO_ERR")) {
-				printf(ANSI_RED "%d/%d: client proto error\n" ANSI_DEFAULT, this->clientID, this->msgNum);
+				ERRORF("/%d: client proto error", this->msgNum);
 				int protohash=cmd["protohash"].getIntVal();
 				int doupdate=cmd["doupdate"].getIntVal();
-				printf("hash=%d (me:%d), doupdate=%d\n",protohash,messageLayouts.protocolHash,doupdate);
+				ERRORF("hash=%d (me:%d), doupdate=%d",protohash,messageLayouts.protocolHash,doupdate);
 				this->sendClientUpdate();
 #ifdef INCL_BT
 			} else if(cmd.isType("BTSCAN")) { // liste mit eingetragenen loks abrufen, format: <name>;<adresse>;...\n
@@ -326,7 +318,7 @@ void ClientThreadX11::run()
 				// reply.dump();
 				sendMessage(reply);
 			} else if(cmd.isType("BTPUSH")) { // sendUpdate
-				printf("BTPUSH ---------------------------------------------------\n");
+				DEBUGF("BTPUSH ---------------------------------------------------");
 				FBTCtlMessage reply(messageTypeID("BTPUSH_REPLY"));
 				std::string addr=cmd["addr"].getStringVal();
 				// TODO: ussppush oder gammu push 
@@ -338,11 +330,11 @@ void ClientThreadX11::run()
 				sendMessage(reply);
 #endif
 			} else {
-				printf(ANSI_RED "%d/%d:----------------- invalid/unimplemented command (%d,%s)------------------------\n" ANSI_DEFAULT,
-					this->clientID, this->msgNum, cmd.getType(), messageTypeName(cmd.getType()).c_str());
+				ERRORF("/%d:----------------- invalid/unimplemented command (%d,%s)------------------------",
+					this->msgNum, cmd.getType(), messageTypeName(cmd.getType()).c_str());
 			/*
 			if(memcmp(cmd,"invalid_key",10)==0) {
-				printf("%d:invalid key ! param1: %s\n",startupdata->clientID,param1);
+				DEBUGF("%d:invalid key ! param1: %s\n",startupdata->clientID,param1);
 				bool notaus=false;
 				/ *
 				int i=0;
@@ -371,14 +363,14 @@ void ClientThreadX11::run()
 				}
 				* /
 				if(notaus) {
-					printf("notaus\n");
+					DEBUGF("notaus\n");
 					lokdef[addr_index].currspeed=0;
 					emergencyStop=true;
 				}
 				*/
 			}
 		} else {
-			printf("%d:no command?????",this->clientID);
+			ERRORF(":no command?????");
 		}
 
 		/*
@@ -395,7 +387,7 @@ void ClientThreadX11::run()
 		*/
 
 	}
-	printf("%d:client exit\n",this->clientID);
+	NOTICEF("%d:client exit",this->clientID);
 }
 
 /**
