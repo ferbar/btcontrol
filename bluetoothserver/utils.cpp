@@ -217,7 +217,7 @@ void utils::dumpBacktrace() {
 #endif
 
 #undef runtime_error
-std::RuntimeExceptionWithBacktrace::RuntimeExceptionWithBacktrace(const std::string &what)
+std::RuntimeExceptionWithBacktrace::RuntimeExceptionWithBacktrace(const std::string &what) throw()
 	: std::runtime_error(what)
 {
 	printf("Error: %s\n", what.c_str());
@@ -377,7 +377,8 @@ void utils::Log::init(bool softAP) {
 
 void utils::Log::printf(int level, const char *file, int line, const char *fmt, ...) {
 #ifdef ESP_PLATFORM
-	Serial.printf("%d: ", utils::getThreadClientID());
+	// Serial.printf("%d: ", utils::getThreadClientID());
+	Serial.printf("%s:%d ", file, line);
 	va_list args;
 	va_start(args, fmt);
 	char *data=NULL;

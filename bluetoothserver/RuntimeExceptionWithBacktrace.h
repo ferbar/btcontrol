@@ -9,12 +9,13 @@ namespace std
 
 class RuntimeExceptionWithBacktrace : public std::runtime_error {
 public:
-	RuntimeExceptionWithBacktrace(const std::string &what);
+	RuntimeExceptionWithBacktrace(const std::string &what) throw();
 	virtual ~RuntimeExceptionWithBacktrace() throw ();
 private:
 };
 
 }
+
 #define runtime_error RuntimeExceptionWithBacktrace
 
 #endif
