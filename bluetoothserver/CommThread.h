@@ -8,24 +8,31 @@
 #define MAX_MESSAGE_SIZE 10000
 
 
-class CommThread : public TCPClient, public Thread {
+class CommThread : public Thread {
 public:
-#ifdef ESP_PLATFORM
-	CommThread() : TCPClient(), msgNum(0) {};
-	CommThread(int id, WiFiClient &client) : TCPClient(id, client), msgNum(0) {
+	CommThread(int clientID) : clientID(clientID) {
+		numClients++; // sollte atomic sein
 	};
-	void connect(int id, const IPAddress &host, int port ) { TCPClient::connect(id, host, port); msgNum=0; };
-#else
-	CommThread(int id, int so) : TCPClient(id, so), msgNum(0) {
-	};
-#endif
-	
+	void begin(TCPClient *client, bool doDelete) { this->client=client; this->doDelete = doDelete; this->msgNum=0; };
 	virtual ~CommThread();
 	virtual void run()=0;
 	void sendMessage(const FBTCtlMessage &msg);
 	FBTCtlMessage readMessage();
 
-	int msgNum;
+	void readSelect();
+
+	void close();
+    
+	TCPClient *client=NULL;
+	bool doDelete=false;
+
+	int msgNum=0;
+
+	// ID vom client
+	int clientID;
+
+	// anzahl clients die gerade laufen
+	static int numClients;
 };
 
 #endif
