@@ -47,7 +47,6 @@
 
 #define TAG "TCPClient"
 
-int TCPClient::numClients=0;
 
 void TCPClient::prepareMessage()
 {

@@ -5,8 +5,7 @@
 
 class TCPClient {
 public:
-	TCPClient(int id, int so) : clientID(id), so(so) {
-		numClients++; // sollte atomic sein
+	TCPClient(int so) : so(so) {
 	};
 	virtual ~TCPClient();
 	virtual void close();
@@ -20,10 +19,6 @@ public:
 
 	virtual bool isConnected() { return this->so >= 0; } ;
 
-	// ID vom client
-	int clientID;
-	// anzahl clients die gerade laufen
-	static int numClients;
 private:
 	int so;
 };
