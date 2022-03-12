@@ -12,21 +12,33 @@
 #include "utils.h"
 #include "Thread.h"
 
+#if defined ESP32 && defined DEBUG_MUTEX
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#endif
+
 #define TAG "Thread"
 
 void *Thread::startupThread(void *ptr) {
 	Thread *t=(Thread *) ptr;
 	// %lu => linux ist pthread_ unsigned long
-	NOTICEF("Thread::[%d] startupThread() ========================================", t->getMyId());
+	NOTICEF("Thread::[%x] @%p startupThread name=%s ========================================", t->getMyId(), t, t->which());
 	t->exited=false;
 	try {
 		t->run();
+
+// !!!!! looks as if ESP32 idf 4.4 can only handle 2 different exceptions, 202203: all exceptions should be std::exception
+#ifndef ESP32
 	} catch(const char *e) {
 		ERRORF("?: exception %s - client thread killed", e);
-	} catch(std::RuntimeExceptionWithBacktrace &e) {
+	} catch(const std::RuntimeExceptionWithBacktrace &e) {
+		ERRORF("?: Runtime Exception with Backtrace %s - client thread killed", e.what());
+	} catch(const std::runtime_error &e) {
 		ERRORF("?: Runtime Exception %s - client thread killed", e.what());
-	} catch(std::exception &e) {
+#endif
+	} catch(const std::exception &e) {
 		ERRORF("?: exception %s - client thread killed", e.what());
+#ifndef ESP32
 	} catch (abi::__forced_unwind&) { // http://gcc.gnu.org/bugzilla/show_bug.cgi?id=28145
 		ERRORF("Thread::[%d] done: forced unwind exception - client thread killed", t->getMyId());
 		// copy &paste:
@@ -37,11 +49,15 @@ void *Thread::startupThread(void *ptr) {
 			delete t;
 		}
 		throw; // rethrow exeption bis zum pthread_create, dort isses dann aus
+#endif
+	} catch(...) {
+		ERRORF("?: unknown exception caught!"); // crash otherwise
 	}
 
-	NOTICEF("Thread::[%d] done ====================================", t->getMyId());
+	NOTICEF("[%x] %s done ====================================", t->getMyId(), t->which() );
 	t->exited=true;
 	if(t->autodelete) {
+		DEBUGF("deleting object %p", t);
 		delete t;
 	}
 	return NULL;
@@ -124,6 +140,9 @@ Mutex::Mutex() {
 	if(pthread_mutex_init(&this->m, NULL) != 0) {
 		throw std::runtime_error("error creating mutex");
 	}
+#ifdef DEBUG_MUTEX
+	this->lockedby=0;
+#endif
 }
 
 Mutex::~Mutex() {
@@ -139,18 +158,42 @@ Mutex::~Mutex() {
 }
 
 void Mutex::lock() {
+#ifdef DEBUG_MUTEX
+	if(this->lockedby) {
+		DEBUGF("mutex locked by %0x", this->lockedby);
+	}
+#endif
 	if(pthread_mutex_lock(&this->m) != 0 ) {
 		throw std::runtime_error("error Mutex::lock()");
 	}
+#ifdef DEBUG_MUTEX
+#ifdef ESP32
+	// esp32 crashes if pthread_self() is called in main loop!!! => getName returns "loop"
+	if(STREQ(pcTaskGetName(NULL), "pthread"))
+#endif
+		this->lockedby=pthread_self();
+#ifdef ESP32
+	else
+		this->lockedby=-1;
+#endif
+#endif
 }
 
 void Mutex::unlock() {
 	if(pthread_mutex_unlock(&this->m) != 0 ) {
 		throw std::runtime_error("error Mutex::unlock()");
 	}
+#ifdef DEBUG_MUTEX
+	this->lockedby=0;
+#endif
 }
 
 bool Mutex::tryLock() {
+#ifdef DEBUG_MUTEX
+	if(this->lockedby) {
+		DEBUGF("mutex locked by %0x", this->lockedby);
+	}
+#endif
 	// 0 on success
 	int ret = pthread_mutex_trylock(&this->m);
 	if(ret == 0) return true;

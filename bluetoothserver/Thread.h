@@ -16,6 +16,8 @@ public:
 
 	int getId() { return this->thread; };
 
+	virtual const char *which() { return ""; };
+
 private:
 	virtual void run()=0;
 	pthread_t thread;
@@ -25,8 +27,6 @@ private:
 #ifdef ESP32
 	int cancelstate; // hat die esp32 lib nicht
 #endif
-
-protected:
 	int getMyId() { return pthread_self(); };
 };
 
@@ -42,6 +42,9 @@ public:
 	bool tryLock();
 private:
 	pthread_mutex_t m;
+#ifdef DEBUG_MUTEX
+	pthread_t lockedby;
+#endif
 friend class Condition;
 };
 
