@@ -1,5 +1,5 @@
 
-#define NODEBUG
+// #define NODEBUG
 
 #include "ControlClientThread.h"
 #include "utils.h"
@@ -9,8 +9,7 @@
 
 #define TAG "ControlClientThread"
 
-
-ControlClientThread::ControlClientThread()
+ControlClientThread::ControlClientThread() : CommThread(0)
 {
 }
 
@@ -80,7 +79,7 @@ void ControlClientThread::run()
 		}
 
 		while(true) {
-			// DEBUGF("TCPClient::readSelect() watermark: %d", uxTaskGetStackHighWaterMark(NULL));
+			PRINT_FREE_HEAP("TCPClient::readSelect()");
 
 			CallbackCmdFunction callback=NULL;
 			// wait until item in queue or 2s
@@ -89,7 +88,7 @@ void ControlClientThread::run()
 			if(this->getQueueLength() == 0) {
 				this->sendPing();
 			} else {
-				#warning todo: lock
+#warning todo: lock
 				ControlClientThreadQueueElement item=this->cmdQueue.front();
 				this->cmdQueue.pop();
 				DEBUGF("/%d: sending command %s with callback", this->msgNum, messageTypeName(item.cmd.getType()).c_str());
@@ -137,9 +136,15 @@ void ControlClientThread::run()
 			this->msgNum++;
 			this->testcancel();
 		}
+	} catch(const std::exception &e) { // testcancel + runtime_error
+		ERRORF("ControlClientThread::run exception [%s]. closing clientthread", e.what());
+		this->close();
+		this->lastError=e.what();
+		// rethrow
+		throw;
 	} catch(...) { // testcancel + runtime_error
 		ERRORF("ControlClientThread::run exception. closing clientthread");
-		this->disconnect();
+		this->close();
 		// rethrow
 		throw;
 	}

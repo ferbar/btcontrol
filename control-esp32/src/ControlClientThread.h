@@ -43,6 +43,10 @@ public:
   void setCurrLok(int index) { this->selectedAddrIndex=index; };
   lokdef_t &getCurrLok();
 
+  virtual const char *which() { return "ControlClientThread"; };
+
+	std::string lastError;
+
 private:
 	bool waitForItemInQueueTimeout();
 	std::queue<ControlClientThreadQueueElement> cmdQueue;
