@@ -341,14 +341,7 @@ void loop()
     static long last=0;
     if(last + 1000 < millis() ) {
         PRINT_FREE_HEAP("loop");
-        /*
-        Serial.print(ESP.getFreeHeap()); // ./cores/esp32/Esp.h
-        Serial.print("/");
-        Serial.print(ESP.getMinFreeHeap());
-        Serial.print("/");
-        Serial.println(ESP.getMaxAllocHeap());
-        */
-       last=millis();
+        last=millis();
     }
 
     try {
