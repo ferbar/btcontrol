@@ -143,6 +143,13 @@ namespace utils
 #endif
 #endif
 
+#ifdef DEBUG_FREE_HEAP
+#define PRINT_FREE_HEAP(_TEXT) debugPrintFreeHeap(__FILE__, __LINE__, _TEXT)
+#else
+#define PRINT_FREE_HEAP(_TEXT)
+#endif
+void debugPrintFreeHeap(const char *file, int line, const char *text);
+
 // arduino / wiring pi -> int millis() / utils.cpp
 #if not defined HAVE_RASPI_WIRINGPI
 extern "C" {
