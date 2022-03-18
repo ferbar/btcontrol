@@ -35,7 +35,7 @@ const MessageLayout& getMessageLayout(MessageLayout::DataType type)
 {
 	assert(messageLayouts.isLoaded());
 	if(type <= MessageLayout::STRUCT) {
-		printf("getMessageLayout: non-struct (%d)\n", type);
+		ERRORF("getMessageLayout: non-struct (%d)\n", type);
 		throw std::runtime_error("invalid type");
 	}
 
@@ -201,7 +201,7 @@ void MessageLayouts::dump()
 std::string messageTypeName(MessageLayout::DataType type)
 {
 	switch(type) {
-		case MessageLayout::UNDEF: throw std::runtime_error("undefined data type cant get type for this (UNDEF)");
+		case MessageLayout::UNDEF: return "(UNDEF)";
 		case MessageLayout::INT: return "(INT)";
 		case MessageLayout::STRING: return "(STRING)";
 		case MessageLayout::ARRAY: return "(ARRAY)";
