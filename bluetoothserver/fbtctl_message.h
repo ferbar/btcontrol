@@ -1,7 +1,7 @@
 #ifndef FBTCTL_MESSAGE_H
 #define FBTCTL_MESSAGE_H
 /**
- * bastelt die protokoll packete zusammen und zerlegts wieder
+ * bastelt die protokoll pakete zusammen und zerlegts wieder
  */
 
 
@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdexcept>
+#include <memory>
 
 #include "message_layout.h"
 
@@ -33,9 +34,10 @@ public:
 		return ret; };
 	std::string getString() {
 		int len=this->getByte() | (this->getByte() << 8);
+		if(this->pos+len > this->len) { throw std::runtime_error("getString length > end of message"); }
 		std::string ret=std::string(&this->data[this->pos],len); this->pos +=len;
 		// printf("getString %s\n",ret.c_str());
-		if(this->pos > this->len) { throw std::runtime_error("getString übers ende gelesen"); } return ret; };
+		return ret; };
 	const char *data;
 	int len;
 	int pos;
@@ -65,6 +67,7 @@ public:
 	int getArraySize();
 	FBTCtlMessage &operator [](int i);
 	FBTCtlMessage &operator [](const std::string &s);
+	const FBTCtlMessage &operator [](const std::string &s) const;
 
 	void readMessage(InputReader &in, const MessageLayout *layout=NULL);
 
@@ -76,18 +79,35 @@ public:
 
 	bool isType(const char *);
 
+	size_t getSize() const;
+
 private:
 //	int seqNum; -> wird nirgendwo verwendet
 
-	std::string name;
-
 	MessageLayout::DataType type;
-	int ival;
-	std::string sval;
-	std::vector<FBTCtlMessage> arrayVal;
-	typedef std::map<std::string,FBTCtlMessage> StructVal;
-	StructVal structVal;
+	struct data_t {
+		virtual ~data_t() = default;
+	};
+	struct data_int_t : data_t {
+		int ival;
+		data_int_t(int ival) : ival(ival) {};
+	};
+	struct data_string_t : data_t {
+		std::string sval;
+		data_string_t(const std::string &sval) : sval(sval) {};
+	};
+	struct data_array_t : data_t {
+		typedef	std::vector<FBTCtlMessage> ArrayVal;
+		ArrayVal arrayVal;
+		data_array_t() {};
+	};
+	struct data_struct_t : data_t {
+		typedef std::map<std::string,FBTCtlMessage> StructVal;
+		StructVal structVal;
+		data_struct_t() {};
+	};
 
+	std::shared_ptr<data_t> data;
 };
 
 // typedef std::auto_ptr<FBTCtlMessage> FBTCtlMessagePtr;

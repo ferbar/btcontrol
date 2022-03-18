@@ -40,12 +40,13 @@
  * f["info"][0]["functions"]=50
  */
 
-#define NODEBUG
+// #define NODEBUG
 
 #include <string.h>
 #include <stdio.h>
 #include "fbtctl_message.h"
 #include "utils.h"
+#include <assert.h>
 
 #define TAG "FBTCtlMessage"
 
@@ -61,9 +62,9 @@ FBTCtlMessage::FBTCtlMessage(const char *binMessage, int len)
 
 void FBTCtlMessage::readMessage(InputReader &in, const MessageLayout *layout)
 {
-	clear();
+	this->clear();
 	if(cfg_debug) {
-		printf("reading bin msg\n");
+		ERRORF("FBTCtlMessage::readMessage");
 	}
 
 	this->type=(MessageLayout::DataType) in.getByte();
@@ -86,16 +87,18 @@ void FBTCtlMessage::readMessage(InputReader &in, const MessageLayout *layout)
 	for(it=layout->childLayouts.begin(); it != layout->childLayouts.end(); ++it) {
 		MessageLayout::DataType type=(MessageLayout::DataType)in.getByte();
 		if(type != it->type) {
-			printf("unexpected type! %d, %d (%s)\n",type, it->type, messageTypeName(it->type).c_str());
+			ERRORF("unexpected type! %d, %d (%s)\n",type, it->type, messageTypeName(it->type).c_str());
 			throw std::runtime_error("unexpected DataType");
 		}
 		switch(it->type){
 			case MessageLayout::INT:
-				DEBUGF("read int");
-				this->structVal[it->name] = FBTCtlMessage(in.getInt()); break;
+				this->operator[](it->name) = FBTCtlMessage(in.getInt());
+				DEBUGF("read int message size: %zd", this->operator[](it->name).getSize());
+				break;
 			case MessageLayout::STRING:
-				DEBUGF("read string");
-				this->structVal[it->name] = FBTCtlMessage(in.getString()); break;
+				this->operator[](it->name) = FBTCtlMessage(in.getString());
+				DEBUGF("read string message size: %zd", this->operator[](it->name).getSize());
+				break;
 			case MessageLayout::ARRAY: {
 				int n=in.getByte();
 				DEBUGF("read arraysize:%d",n);
@@ -104,8 +107,9 @@ void FBTCtlMessage::readMessage(InputReader &in, const MessageLayout *layout)
 					FBTCtlMessage tmp;
 					tmp.readMessage(in,&*it);
 					tmparray[i]=tmp;
+					PRINT_FREE_HEAP("readmessage");
 				}
-				this->structVal[it->name] = tmparray;
+				this->operator[](it->name) = tmparray;
 				break; }
 		/* ... wir sind in einem struct drinnen
 			case STRUCT: {
@@ -127,19 +131,19 @@ void FBTCtlMessage::readMessage(InputReader &in, const MessageLayout *layout)
 FBTCtlMessage::FBTCtlMessage(int i)
 {
 	this->type=MessageLayout::INT;
-	this->ival=i;
+	this->data=std::make_shared<data_int_t>(i);
 }
 
 FBTCtlMessage::FBTCtlMessage(const std::string &s)
 {
 	this->type=MessageLayout::STRING;
-	this->sval=s;
+	this->data=std::make_shared<data_string_t>(s);
 }
 
 FBTCtlMessage::FBTCtlMessage(const char *s)
 {
 	this->type=MessageLayout::STRING;
-	this->sval=std::string(s);
+	this->data=std::make_shared<data_string_t>(s);
 }
 
 FBTCtlMessage::FBTCtlMessage() : type(MessageLayout::UNDEF)
@@ -150,50 +154,82 @@ FBTCtlMessage::FBTCtlMessage() : type(MessageLayout::UNDEF)
 
 FBTCtlMessage::FBTCtlMessage(MessageLayout::DataType type) : type(type)
 {
-
-
+	if(type == MessageLayout::ARRAY) {
+		this->data=std::make_shared<data_array_t>();
+	} else if(type >= MessageLayout::STRUCT) {
+		this->data=std::make_shared<data_struct_t>();
+	} else {
+		ERRORF("invalid init type %d - use specialized constructor", type);
+		abort();
+	}
 }
 
 void FBTCtlMessage::clear()
 {
 	this->type=MessageLayout::UNDEF;
-	this->ival=0;
-	this->sval="";
-	this->structVal.clear();
-	this->arrayVal.clear();
+	this->data=NULL;
 }
 
 int FBTCtlMessage::getIntVal()
 {
 	if(type != MessageLayout::INT) throw std::runtime_error("invalid type(int)");
-	return ival;
+	data_int_t &d=static_cast<data_int_t &>(*data);
+	return d.ival;
 }
 
 std::string FBTCtlMessage::getStringVal()
 {
 	if(this->type != MessageLayout::STRING) throw std::runtime_error("invalid type(string)");
-	return sval;
+	data_string_t &d=static_cast<data_string_t &>(*data);
+	return d.sval;
 }
 
 int FBTCtlMessage::getArraySize()
 {
-	return arrayVal.size();
+	if(this->type != MessageLayout::ARRAY) throw std::runtime_error("invalid type(no array)");
+	data_array_t &d=static_cast<data_array_t &>(*data);
+	return d.arrayVal.size();
 }
 
 FBTCtlMessage &FBTCtlMessage::operator [](int i)
 {
-	if(this->type == MessageLayout::UNDEF) this->type=MessageLayout::ARRAY;
-	if(this->type != MessageLayout::ARRAY) throw std::runtime_error("invalid type(array)");
-	if((signed)arrayVal.size() <= i) {
-		arrayVal.push_back(FBTCtlMessage(MessageLayout::STRUCT));
+	// DEBUGF("[%d]", i);
+	if(this->type == MessageLayout::UNDEF) {
+		DEBUGF("init to array");
+		this->type=MessageLayout::ARRAY;
+		this->data=std::make_shared<data_array_t>();
 	}
-	return arrayVal[i];
+	if(this->type != MessageLayout::ARRAY) throw std::runtime_error(utils::format("invalid type=%d(no array)", type));
+	data_array_t *d=static_cast<data_array_t *>(&*data);
+	assert(d);
+	if((signed)d->arrayVal.size() <= i) {
+		d->arrayVal.push_back(FBTCtlMessage(MessageLayout::STRUCT));
+	}
+	return d->arrayVal[i];
 }
 
 FBTCtlMessage &FBTCtlMessage::operator [](const std::string &s)
 {
-	if(this->type < MessageLayout::STRUCT) throw std::runtime_error("invalid type(stuct)");
-	return structVal[s];
+	// DEBUGF("[%s]", s.c_str());
+	if(this->type < MessageLayout::STRUCT) throw std::runtime_error(utils::format("invalid type=%d (no struct)",this->type));
+	data_struct_t *d=static_cast<data_struct_t *>(&*data);
+	if(!d) {
+		DEBUGF("FBTCtlMessage::operator [string] init");
+		data=std::make_shared<data_struct_t>();
+		d=static_cast<data_struct_t *>(&*data);
+	}
+	return d->structVal[s];
+}
+
+const FBTCtlMessage &FBTCtlMessage::operator [](const std::string &s) const
+{
+	// DEBUGF("[%s]", s.c_str());
+	if(this->type < MessageLayout::STRUCT) throw std::runtime_error(utils::format("invalid type=%d (no struct)",this->type));
+	data_struct_t *d=static_cast<data_struct_t *>(&*data);
+	if(!d) {
+		throw std::runtime_error("operator[] const, structVal not initialized");
+	}
+	return d->structVal[s];
 }
 
 std::string FBTCtlMessage::getBinaryMessage(const MessageLayout *layout) const
@@ -207,34 +243,40 @@ std::string FBTCtlMessage::getBinaryMessage(const MessageLayout *layout) const
 	
 	ret += std::string((char *) &this->type, 1);
 	switch(this->type) {
-		case MessageLayout::INT:
-			ret += std::string((char *) &this->ival, 4);
-			break;
+		case MessageLayout::INT: {
+			data_int_t &d=static_cast<data_int_t &>(*data);
+			// The Straight Answer: ESP32 is Little Endian
+			// unsigned char data[4]={ival & 0xff, (ival << 8) & 0xff, (ival << 16) & 0xff, ival << 24 };
+			ret += std::string((char *) &d.ival, 4);
+			break; }
 		case MessageLayout::STRING: {
-			int tmp=this->sval.size();
+			data_string_t &d=static_cast<data_string_t &>(*data);
+			int tmp=d.sval.size();
 			if(tmp > 0x10000) {
 				throw std::runtime_error("string too big");
 			}
 			ret += std::string((char *) &tmp, 2);
-			ret += this->sval;
+			ret += d.sval;
 			break; }
 		case MessageLayout::ARRAY: {
-			int tmp=this->arrayVal.size();
+			data_array_t &d=static_cast<data_array_t &>(*data);
+			int tmp=d.arrayVal.size();
 			ret += std::string((char *) &tmp, 1);
 			/*
 			printf("arraysize:%d string.size=%d:<",tmp,ret.size());
 			fwrite(ret.data(),1,ret.size(),stdout);
 			printf(">\n");
 			*/
-			for(size_t i=0; i < arrayVal.size(); i++) {
-				ret += arrayVal[i].getBinaryMessage(layout);
+			for(size_t i=0; i < d.arrayVal.size(); i++) {
+				ret += d.arrayVal[i].getBinaryMessage(layout);
 			}
 			break; }
 		default: { // struct + message type
+			data_struct_t &d=static_cast<data_struct_t &>(*data);
 			std::vector<MessageLayout>::const_iterator it;
 			for(it=layout->childLayouts.begin(); it != layout->childLayouts.end(); ++it) {
-				StructVal::const_iterator element=this->structVal.find(it->name);
-				if(element != this->structVal.end()) {
+				auto element=d.structVal.find(it->name);
+				if(element != d.structVal.end()) {
 					if(element->second.type == it->type) {
 						ret += element->second.getBinaryMessage(&*it);
 					} else {
@@ -253,73 +295,90 @@ std::string FBTCtlMessage::getBinaryMessage(const MessageLayout *layout) const
 void FBTCtlMessage::dump(int indent, const MessageLayout *layout) const
 {
 	
-	if(!layout)
-		layout=&getMessageLayout(this->type);
-
-	if(!layout)
-		throw std::runtime_error("no message layout");
+	if(!layout) {
+		try {
+			layout=&getMessageLayout(this->type);
+		} catch(std::exception &e) {
+			printf("unable to get layout for %d\n", this->type);
+		}
+	}
 
 	// layout->dump();
 	if(indent == 0) {
 		printf("dumpMessage\n");
 	}
 	INDENT();
-	printf(/* "seqnum: %d, */ "type:%d=%s ", /* this->seqNum,*/ this->type,  messageTypeName(this->type).c_str());
+	printf(/* "seqnum: %d, */ "type:%d=%s size=%zu ", /* this->seqNum,*/ this->type,  messageTypeName(this->type).c_str(),
+		this->getSize() );
 	switch(this->type) {
-		case MessageLayout::INT:
+		case MessageLayout::UNDEF: {
+			printf("undefined\n");
+			break; }
+		case MessageLayout::INT: {
+			data_int_t &d=static_cast<data_int_t &>(*data);
 			// INDENT();
 			// printf("(INT) %d\n",this->ival); break;
-			printf("value=%d\n",this->ival); break;
-		case MessageLayout::STRING:
+			printf("value=%d\n",d.ival); break; }
+		case MessageLayout::STRING: {
+			data_string_t &d=static_cast<data_string_t &>(*data);
 			// INDENT();
 			// printf("(STRING) %s\n",this->sval.c_str()); break;
-			printf("len=%d value=%s\n", (int) this->sval.length(), this->sval.c_str()); break;
+			printf("len=%d value=%s\n", (int) d.sval.length(), d.sval.c_str()); break; }
 		case MessageLayout::ARRAY: {
+			data_array_t &d=static_cast<data_array_t &>(*data);
 			// INDENT(); 
 			// printf("(ARRAY)\n");
 			printf("\n");
-			for(size_t i=0; i < arrayVal.size(); i++) {
+			for(size_t i=0; i < d.arrayVal.size(); i++) {
 				INDENT();
 				printf("[%zu]:\n",i);
-				arrayVal[i].dump(indent+1,layout);
+				d.arrayVal[i].dump(indent+1,layout);
 			}
 			break; }
 		default: { // struct + message type
+			data_struct_t *d=static_cast<data_struct_t *>(&*data);
 			// INDENT();
 			// printf("(STRUCT)\n");
 			printf("\n");
-			std::vector<MessageLayout>::const_iterator it;
 			std::map<std::string,bool> validEntries;
-			for(it=layout->childLayouts.begin(); it != layout->childLayouts.end(); ++it) {
-				INDENT();
-				printf("  [%s]:\n",it->name.c_str());
-				if(this->structVal.count(it->name) == 0) { // element gibts nicht
-					INDENT()
-					printf("  NULL\n");
-				} else {
-					// map::operator[] geht anscheinend nicht mit const keys grrr ...
-					FBTCtlMessage *sub=&(const_cast<FBTCtlMessage*>(this))->structVal[it->name];
-					if(sub->type == it->type) {
-						sub->dump(indent+2, &*it);
-						validEntries[it->name] = true;
+			if(layout) {
+				for(auto it=layout->childLayouts.begin(); it != layout->childLayouts.end(); ++it) {
+					INDENT();
+					printf("  [%s]:\n",it->name.c_str());
+					if(!d || d->structVal.count(it->name) == 0) { // element gibts nicht
+						INDENT()
+						printf("  NULL\n");
 					} else {
-						try {
-							std::string typeName=messageTypeName(sub->type);
-							printf("type mismatch (expected %s, is: %s)\n",messageTypeName(it->type).c_str(), typeName.c_str());
-						} catch(const char *e) {
-							printf("exception: %s ",e);
-							printf("invalid field: %s\n",it->name.c_str());
-							layout->dump();
+						// map::operator[] geht anscheinend nicht mit const keys grrr ...
+						const FBTCtlMessage &sub=this->operator[](it->name);
+						if(sub.type == it->type) {
+							sub.dump(indent+2, &*it);
+							validEntries[it->name] = true;
+						} else {
+							try {
+								std::string typeName=messageTypeName(sub.type);
+								printf("type mismatch (expected %s, is: %s)\n",messageTypeName(it->type).c_str(), typeName.c_str());
+							} catch(const char *e) {
+								printf("exception: %s ",e);
+								printf("invalid field: %s\n",it->name.c_str());
+								layout->dump();
+							}
 						}
 					}
+					
 				}
-				
+			} else {
+				printf("struct -- no message layout");
 			}
-			std::map<std::string,FBTCtlMessage>::const_iterator itCheck;
-			for(itCheck=this->structVal.begin(); itCheck != this->structVal.end(); ++itCheck) {
-				if(!validEntries[itCheck->first]) {
-					printf("**** invalid field %s\n",itCheck->first.c_str());
+			if(d) {
+				// std::map<std::string,FBTCtlMessage>::const_iterator itCheck;
+				for(auto itCheck=d->structVal.begin(); itCheck != d->structVal.end(); ++itCheck) {
+					if(!validEntries[itCheck->first]) {
+						printf("**** unused extra field: \"%s\"\n",itCheck->first.c_str());
+					}
 				}
+			} else {
+				printf("**** NULL\n");
 			}
 			break; }
 	}
@@ -327,6 +386,41 @@ void FBTCtlMessage::dump(int indent, const MessageLayout *layout) const
 	if(indent == 0) {
 		printf("dumpMessage done \n");
 	}
+}
+
+size_t FBTCtlMessage::getSize() const
+{
+	size_t ret=sizeof(FBTCtlMessage);
+	// string
+	switch(this->type) {
+		case MessageLayout::UNDEF: {
+			ret+=0;
+			break; }
+		case MessageLayout::INT: {
+			// data_int_t &d=static_cast<data_int_t &>(*data);
+			ret+=sizeof(data_int_t);
+			break; }
+		case MessageLayout::STRING: {
+			data_string_t &d=static_cast<data_string_t &>(*data);
+			ret+=sizeof(data_string_t) + d.sval.capacity();
+			break; }
+		case MessageLayout::ARRAY: {
+			data_array_t &d=static_cast<data_array_t &>(*data);
+			ret+=sizeof(std::vector<FBTCtlMessage>);
+			for(auto &it : d.arrayVal)
+				ret+=it.getSize();
+			break; }
+		default: { // STRUCT etc
+			data_struct_t *d=static_cast<data_struct_t *>(&*data);
+			if(d) {
+				ret+=sizeof(data_struct_t) + (sizeof(std::string)) * d->structVal.size();
+				  // das wird unten im getSize mitgerechnet+ (sizeof(FBTCtlMessage)) * structVal.size();
+				for(auto &it : d->structVal)
+					ret+=it.first.capacity() + it.second.getSize();
+			}
+			break; }
+	}
+	return ret;
 }
 
 bool FBTCtlMessage::isType(const char *name)
