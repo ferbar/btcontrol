@@ -19,8 +19,4 @@ void initOTA(void (*onStartCallback)());
 
 extern const char* device_name;
 
-#define PRINT_FREE_HEAP(_TEXT) debugPrintFreeHeap(__FILE__, __LINE__, _TEXT)
-
-void debugPrintFreeHeap(const char *file, int line, const char *text);
-
 #endif
