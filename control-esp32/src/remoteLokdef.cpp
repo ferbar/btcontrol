@@ -14,8 +14,12 @@ lokdef_t *initLokdef(FBTCtlMessage &reply)
 	DEBUGF("initLokdef");
 	lokdef_t *tmplokdef=NULL;
 	int nLocos=reply["info"].getArraySize();
-	DEBUGF("initLokdef n=%d", nLocos);
+	DEBUGF("initLokdef n=%d, need: %dB", nLocos, sizeof(lokdef_t) * (nLocos+1));
 	tmplokdef = (lokdef_t *) calloc(sizeof(lokdef_t),nLocos+1);
+	if(!tmplokdef) {
+		ERRORF("failed to allocate lokdef (%dB)", sizeof(lokdef_t) * (nLocos+1));
+		throw std::runtime_error("failed to allocate lokdef");
+	}
 
 	for(int i=0; i < nLocos; i++) {
 		DEBUGF("initLokdef %d, name: %s", i, reply["info"][i]["name"].getStringVal().c_str());
