@@ -19,12 +19,11 @@ void RefreshWifiThread::run() {
   }
 
 #ifdef HAVE_BLUETOOTH
-#warning todo: mem_release
-  NOTICEF("RefreshWifiThread::run() freeHeap: %d (minfree: %d, maxalloc: %d) ", ESP.getFreeHeap(), ESP.getFreeHeap(), ESP.getMaxAllocHeap());
-
+#warning mem_release(BLE) checken
+  PRINT_FREE_HEAP("before btclient start");
   btClient.begin(device_name, true);
   BTScanResults* btDeviceList = btClient.getScanResults();  // maybe accessing from different threads!
-  NOTICEF("RefreshWifiThread::run() init bt done freeHeap: %d (minfree: %d, maxalloc: %d) ", ESP.getFreeHeap(), ESP.getFreeHeap(), ESP.getMaxAllocHeap());
+  PRINT_FREE_HEAP("after btclient start");
 #endif
   // WiFi.mode(WIFI_OFF); => schaltet Wifi komplett ab
   try {
