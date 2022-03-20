@@ -48,6 +48,7 @@ ssize_t myRead(int so, void *data, size_t size);
   #define ANSI_RED "\x1b[31m"
   #define ANSI_RED2 "\x1b[31;1m"
   #define ANSI_YELLOW "\x1b[33;1m"
+  #define ANSI_PINK   "\x1b[35;1m"
 
   #define ANSI_GREEN1 "\x1b[32m"
   #define ANSI_GREEN2 "\x1b[32;1m"
