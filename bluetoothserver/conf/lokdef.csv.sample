@@ -3,7 +3,7 @@
 # l => Licht: lRauchfang, lFernlicht
 # p => Pantho
 
-3,  F_DEFAULT,lok3,                  ,           12,func1,func2,func3,func4,func5,func6,func7,func8,func9,func10,func11,func12
+3,  F_DEFAULT,lok3,                  ,           12,func1,func2,sSound ein/aus,func4,func5,func6,func7,func8,func9,func10,func11,func12
 #3, F_DEC28,lok 3 (28 FS),  dampf.png,            4,1,2,3,4
 4,  F_DEFAULT,Ge 4/4 I (605),    ge_4_4_I.png,   16,sPfeife,sBremse,sPfeife+Echo,sDurchsage,sAggregat ein/aus,sSound ein/aus,lFührerstand,Rangiergang,sDurchsage,sLufthahn,Pantho,Pantho,sKompressor,sVakuumpumpe,sStufenschalter,schaltbare Verzögerung
 621,  F_DEFAULT,Ge 4/4 II (621), ge_4_4_II.png,  12,sPfeife,2,lSchweizer Rücklicht,lFührerstand,5,lFernlicht,sDurchsage Zug fährt ab,sSound ein/aus,sQuietschen,10,11,sKompressor
@@ -14,7 +14,7 @@
 # 5,  F_DEFAULT,lok5,
 413,F_DEFAULT,Ge 6/6 I (413),    kroko.png,      16,lRücklicht,sPfeife,sPfiff,sKupplung,sKupplung,pBügel1,pBügel2,sSound ein/aus,sQuietschen,10,11,sVakuumbremse,sKompressor,sDurchsage,15,sSound inv
 33, F_DEFAULT,AbE (33),    abe_4_4_1.png,        16,lInnenbeleuchtung,sPfeife,sPfiff,sDurchsage,sKupplung,pBügel1,pBügel2,sSound ein/aus,sQuietschen,sSchalter,11,sVakuumbremse,sKompressor,sDurchsage,15,sSound inv
-41, F_DEFAULT,AbE 4/4 II,    abe_4_4_1.png,         12,sSound ein/aus,sPfeife,lInnenbeleuchtung,lFührerstandsbeleuchtung,pBügel1,pBügel2,lSchweizer Rücklicht,lRangierbeleuchtung,sPfeife 2,sSchaffnerpfiff,sDurchsage,sDurchsage
+41, F_DEFAULT,AbE 4/4 II,    abe_4_4_2.png,         12,sSound ein/aus,sPfeife,lInnenbeleuchtung,lFührerstandsbeleuchtung,pBügel1,pBügel2,lSchweizer Rücklicht,lRangierbeleuchtung,sPfeife 2,sSchaffnerpfiff,sDurchsage,sDurchsage
 6,  F_DEFAULT,Ge 6/6 II (703),   ge_6_6_II.png,   8,sSound ein/aus,sPfeife,sRangierpfiff,sKompressor,sPressluft,Rangiergang,,
 11, F_DEFAULT,G 3/4 Heidi,  dampf.png,			 12,lRauchfang,sPfeife,lRücklicht aus,lFührerstand,sPfeife,s6,s7,sSound ein/aus,s9,s10,s11,s12
 108,F_DEFAULT,G 4/5 (108),       dampf.png,      12,lRauchfang,sPfeife kurz,3,sZylinderventile,sPfeife,sGlocke,sKohleschaufeln,sSound ein/aus,sPfeife,sLuftpumpe,sGenerator,sWasserpumpe
