@@ -7,7 +7,7 @@
 
 #ifdef HAVE_BLUETOOTH
 
-#define NODEBuG
+#define NODEBUG
 
 
 BTClient btClient;
@@ -16,6 +16,7 @@ BTClient btClient;
  *
  */
 void BTClient::connect(const BTAddress &address, int channel) {
+	DEBUGF("connecting to %s :%d", address.toString().c_str(), channel);
 	if(! BluetoothSerial::connect(address, channel, ESP_SPP_SEC_NONE, ESP_SPP_ROLE_SLAVE)) {
 		throw std::runtime_error("error connecting...");	
 	} else {
