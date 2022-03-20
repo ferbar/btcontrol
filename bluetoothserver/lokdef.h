@@ -11,7 +11,9 @@ struct func_t {
 	char name[32];
 	bool pulse; // nur einmal einschalten dann gleich wieder aus
 	bool ison;
+#ifndef DISABLE_FUNC_IMGNAME
 	char imgname[32];
+#endif
 };
 
 struct lokdef_t {
