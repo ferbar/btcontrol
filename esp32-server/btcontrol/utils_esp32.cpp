@@ -13,12 +13,6 @@
 
 const char* device_name=DEVICE_NAME;
 
-/*
- * stack max used:
-#warning FIXME
-DEBUGF("TCPClient::readSelect() watermark: %d", uxTaskGetStackHighWaterMark(NULL));
-*/
-
 // https://github.com/espressif/esp-idf/blob/23b6d40c537bec674537d52fdea34857a4892dc9/components/esp32/panic.c
 void putBacktraceEntryESP32(uint32_t pc, uint32_t sp) {
 	if (pc & 0x80000000) {
@@ -282,6 +276,6 @@ void initOTA(void (*onStartCallback)() )
 
 void debugPrintFreeHeap(const char *file, int line, const char *text) {
 	utils::log.printf(utils::Log::LEVEL_NOTICE, file, line,
-		ANSI_YELLOW "%s freeHeap: %d (minfree: %d, maxalloc: %d)" ANSI_DEFAULT,
+		ANSI_PINK "%s freeHeap: %d (minfree: %d, maxalloc: %d)\n" ANSI_DEFAULT,
 		text, ESP.getFreeHeap(), heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL), ESP.getMaxAllocHeap());
 }
