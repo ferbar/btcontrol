@@ -40,7 +40,7 @@
  * f["info"][0]["functions"]=50
  */
 
-// #define NODEBUG
+#define NODEBUG
 
 #include <string.h>
 #include <stdio.h>
@@ -107,7 +107,7 @@ void FBTCtlMessage::readMessage(InputReader &in, const MessageLayout *layout)
 					FBTCtlMessage tmp;
 					tmp.readMessage(in,&*it);
 					tmparray[i]=tmp;
-					PRINT_FREE_HEAP("readmessage");
+					// PRINT_FREE_HEAP("readmessage");
 				}
 				this->operator[](it->name) = tmparray;
 				break; }
