@@ -76,6 +76,9 @@ void load_file(const uint8_t* arrayData, uint32_t arraySize)
   pc = 0;
 
   pngle_t *pngle = pngle_new();
+  if(!pngle) {
+    throw std::runtime_error("failed to start pngle");
+  }
   pngle_set_user_data(pngle, (void *) this);
   pngle_set_draw_callback(pngle, pngle_on_draw);
 
@@ -121,6 +124,9 @@ void load_data(const std::string data)
   pc = 0;
 
   pngle_t *pngle = pngle_new();
+  if(!pngle) {
+    throw std::runtime_error("failed to start pngle");
+  }
   pngle_set_user_data(pngle, (void *) this);
   pngle_set_draw_callback(pngle, pngle_on_draw);
 
