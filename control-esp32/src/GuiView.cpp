@@ -74,7 +74,7 @@ Button2Data <buttonConfig_t&> *buttons[buttonConfigSize];
 ControlClientThread controlClientThread;
 
 // ^
-uint8_t arrowBitmap[]= {
+const uint8_t arrowBitmap[]= {
   0,128,
   1,128+64,
   1+2,128+64+32,
@@ -119,6 +119,7 @@ void GuiView::loop() {
 void GuiView::startGuiView(GuiView *newGuiView) {
   // DEBUGF("GuiView::startGuiView");
   // utils::dumpBacktrace();
+  // PRINT_FREE_HEAPD("startGuiView");
   if(currGuiView) {
     DEBUGF("startGuiView current: %s new: %s", currGuiView->which(), newGuiView->which());
     currGuiView->close();
@@ -165,7 +166,6 @@ bool GuiViewSelectWifi::needUpdate=false;
 
 #include "RefreshWifiThread.h"
 
-std::map <String, RefreshWifiThread::Entry> RefreshWifiThread::wifiList;
 RefreshWifiThread refreshWifiThread;
 
 
@@ -182,7 +182,7 @@ void GuiViewSelectWifi::init() {
   tft.drawString("Scanning...", tft.width()/2, tft.fontHeight() * 4);
   this->lastFoundWifis=5; // to clear "scanning ..."
   WiFi.persistent(false);
-  WiFi.mode(WIFI_STA);
+  WiFi.mode(WIFI_STA);  // 34kB heap
   if(esp_wifi_set_protocol( WIFI_IF_STA, WIFI_PROTOCOL_11B| WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_LR ) != ESP_OK ) {
     tft.drawString("  esp_wifi_set_protocol failed", 0, tft.fontHeight() * 2);
   }
@@ -212,13 +212,20 @@ void GuiViewSelectWifi::init() {
     GuiViewSelectWifi::lastKeyPressed=millis();
   });
   // tft.fillScreen(TFT_BLACK);
-  refreshWifiThread.start();
+  refreshWifiThread.start(); // 10k für thread-stack
 }
-  
+
 void GuiViewSelectWifi::close() {
-	DEBUGF("GuiViewSelectWifi::close()");
-  refreshWifiThread.cancel(false);
+  // DEBUGF("GuiViewSelectWifi::close()");
+  tft.setTextDatum(MC_DATUM);
+  tft.setTextSize(1);
+  tft.setTextColor(TFT_GREEN, TFT_BLACK);
+  tft.drawString("waiting for scanner to terminate...", tft.width()/2, tft.fontHeight() * 4);
+  PRINT_FREE_HEAP("GuiViewSelectWifi::close()");
+  // wait for thread to cancel to free up stack memory + wait for bt / wifi usage done
+  refreshWifiThread.cancel(true);
   resetButtons();
+  PRINT_FREE_HEAP("after GuiViewSelectWifi::close()");
 }
 
 const char *GuiViewSelectWifi::passwordForSSID(const String &ssid) {
@@ -256,11 +263,19 @@ void GuiViewSelectWifi::loop() {
 			char buff[50];
       for(int i=0; i < 2; i++) {
 			  for(const auto& value: refreshWifiThread.wifiList) {
-				  const String password=this->passwordForSSID(value.first);
-  				DEBUGF("  wifi network %s have password: %s", value.first.c_str(), password ? "yes" : "no");
+          bool usable=false;
+          if(value.second.type==RefreshWifiThread::WIFI) {
+            usable=this->passwordForSSID(value.first);
+#ifdef HAVE_BLUETOOTH
+          } else {
+            usable=value.second.channel == 30; // bt control channel
+#endif
+          }
+          // DEBUGF("  wifi network %s usable: %s", value.first.c_str(), usable ? "yes" : "no");
+          // value.second.dump();
           // round 1: list APs with passwords
-          if((password && i==0) || (!password && i==1)) {
-	  			  int foregroundColor = password ? TFT_GREEN : TFT_RED;
+          if((usable && i==0) || (!usable && i==1)) {
+  		  		int foregroundColor = usable ? TFT_GREEN : TFT_RED;
   		  		int backgroundColor = TFT_BLACK;
 	  		  	if(n==this->selectedWifi) {
 		  		  	// backgroundColor=foregroundColor;
@@ -269,19 +284,31 @@ void GuiViewSelectWifi::loop() {
               // foregroundColor=TFT_YELLOW;
   		  		}
 	  		  	tft.setTextColor(foregroundColor, backgroundColor);
-		  		  snprintf(buff,sizeof(buff),
-			  			"[%d] %s (%d%s)",
-              n,
-					  	value.first.c_str(),
-						  value.second.rssi,
-						  value.second.have_LR ? " LR" : "");
-  				//ft.println(buff); => println geht ned richtig mit custom fonts (baseline falsch, bg color geht ned)
+            if(value.second.type==RefreshWifiThread::WIFI) {
+  		  		  snprintf(buff,sizeof(buff),
+	  		  			"[%d] %s (%d%s)",
+                n,
+			  		  	value.first.c_str(),
+				  		  value.second.rssi,
+					  	  value.second.have_LR ? " LR" : "");
+#ifdef HAVE_BLUETOOTH
+            } else {
+   		  		  snprintf(buff,sizeof(buff),
+	  		  			"[%d] %s-%d (%d)",
+                n,
+			  		  	value.first.c_str(),
+                value.second.rssi,
+				  		  value.second.channel);
+#endif
+            }
+
+            //ft.println(buff); => println geht ned richtig mit custom fonts (baseline falsch, bg color geht ned)
             int width=tft.drawString(buff,0,tft.fontHeight()*n);
             int maxwidth=tft.width()-10;
             if(width < maxwidth) {
               tft.fillRect(width-1, tft.fontHeight()*n, maxwidth-width, tft.fontHeight(), TFT_BLACK);
             }
-	  	  		n++;
+            n++;
           }
 			  }
 			}
@@ -313,34 +340,51 @@ void GuiViewSelectWifi::buttonCallback(Button2 &b, int which) {
   GuiViewSelectWifi::needUpdate=true;
 }
 
+/**
+ * start connect to wifi or bluetooth server
+ */
 void GuiViewSelectWifi::buttonCallbackLongPress(Button2 &b) {
 	DEBUGF("GuiViewSelectWifi::buttonCallbackLongPress");
   GuiViewSelectWifi::lastKeyPressed=millis();
-	String ssid;
   int n=0;
-  bool LR=false;
   Lock lock(refreshWifiThread.listMutex);
   for(auto it=refreshWifiThread.wifiList.begin(); it != refreshWifiThread.wifiList.end(); ++it) {
-    if(GuiViewSelectWifi::passwordForSSID(it->first)) {
-      DEBUGF("have password for %s", it->first.c_str());
+    // DEBUGF("check [%d] => %s", n, it->first.c_str());
+    bool usable=false;
+    if(it->second.type==RefreshWifiThread::WIFI) {
+      usable=GuiViewSelectWifi::passwordForSSID(it->first);
+#ifdef HAVE_BLUETOOTH
+    } else {
+      usable=it->second.channel != 0;
+#endif
+    }
+    if(usable) {
       if(n==GuiViewSelectWifi::selectedWifi) {
-        ssid=it->first;
-        LR=it->second.have_LR;
-        break;
+        lock.unlock();
+        if(it->second.type==RefreshWifiThread::WIFI) {
+          const char *password = GuiViewSelectWifi::passwordForSSID(it->first);
+          if(password) {
+            DEBUGF("have password for %s", it->first.c_str());
+            String ssid=it->first;
+            bool LR=it->second.have_LR;
+  		      GuiView::startGuiView(new GuiViewConnectWifi(ssid, password, LR));
+          } else {
+            ERRORF("no password for [%d] %s", GuiViewSelectWifi::selectedWifi, it->first.c_str());
+          }
+#ifdef HAVE_BLUETOOTH
+        } else {
+          DEBUGF("bt connect to %s - %d", it->second.addr.toString().c_str(), it->second.channel);
+          // disable WiFi
+          // adc_power_off();
+          GuiView::startGuiView(new GuiViewConnectServer(it->second.addr, it->second.channel));
+#endif
+        }
+        return ;
       }
       n++;
     }
-	}
-  if(ssid) {
-	  const char *password=GuiViewSelectWifi::passwordForSSID(ssid);
-    if(password) {
-		  GuiView::startGuiView(new GuiViewConnectWifi(ssid, password, LR));
-    } else {
-      DEBUGF("no password for %d", GuiViewSelectWifi::selectedWifi);
-    }
-  } else {
-    DEBUGF("no wifi selected");
   }
+  NOTICEF("invalid wifi selected");
 }
 
 // ============================================================= GuiViewConnectWifi ==========================
@@ -356,6 +400,12 @@ void GuiViewConnectWifi::init() {
 		GuiView::startGuiView(new GuiViewSelectWifi());
 	}
 	);*/
+#ifdef HAVE_BLUETOOTH
+        // free up ~100kb bluetooth - ram, this can only be reverted with a reset
+        PRINT_FREE_HEAP("before BT disable");
+        btClient.end(true);
+        PRINT_FREE_HEAP("after BT disable");
+#endif
 	this->lastWifiStatus=0;
 	WiFi.mode(WIFI_STA);
 
@@ -430,9 +480,6 @@ void GuiViewConnectWifi::loop() {
 				IPAddress ip = WiFi.localIP();
 				tft.drawString(String("connected to: ") + this->ssid + " " + ip.toString(), 0, 0 );
 #ifdef OTA_UPDATE
-        if (!MDNS.begin(device_name)) {
-          ERRORF("Error setting up MDNS responder!");
-        }
         initOTA([]() {
           NOTICEF("OTA UPDATE started");
           if(controlClientThread.isRunning()) {
@@ -516,17 +563,45 @@ int GuiViewConnectServer::nLokdef=0;
 
 IPAddress GuiViewConnectServer::host;
 int GuiViewConnectServer::port;
-
+#ifdef HAVE_BLUETOOTH
+int GuiViewConnectServer::channel;
+BTAddress GuiViewConnectServer::addr;
+#endif
 
 void GuiViewConnectServer::init() {
 	DEBUGF("GuiViewConnectServer::init()");
+  TCPClient *client=NULL;
 	try {
 		assert(!controlClientThread.isRunning());
-		controlClientThread.connect(0, host, port);
-		controlClientThread.start();
+#ifdef HAVE_BLUETOOTH
+    if(this->addr) {
+      // free up 20kB wifi ram
+      PRINT_FREE_HEAP("before wifi disable");
+      WiFi.disconnect(true);
+      WiFi.mode(WIFI_OFF);
+      PRINT_FREE_HEAP("after wifi disable");
+
+      btClient.connect(this->addr, this->channel);
+  		controlClientThread.begin(&btClient, false);
+    } else 
+#endif
+    {
+      client=new TCPClient();
+      client->connect(0, this->host, this->port);
+  		controlClientThread.begin(client, true );
+    }
+    DEBUGF("starting controlClientThread");
+    controlClientThread.start();
 	} catch (std::runtime_error &e) {
 		DEBUGF("error connecting / starting client thread");
-		GuiView::startGuiView(new GuiViewErrorMessage(String("Error connecting to ") + host.toString() + ":\n" + e.what()));
+    if(client)
+      delete(client);
+#ifdef HAVE_BLUETOOTH
+    if(this->addr) {
+      GuiView::startGuiView(new GuiViewErrorMessage(String("Error connecting to ") + this->addr.toString().c_str() + " :" + this->channel + "\n" + e.what()));
+    } else
+#endif
+		GuiView::startGuiView(new GuiViewErrorMessage(String("Error connecting to ") + this->host.toString() + ":\n" + e.what()));
 		return;
 	}
 
@@ -561,9 +636,10 @@ void GuiViewConnectServer::loop() {
   DEBUGF("GuiViewConnectServer::loop() clientThread running: %d, wifi status: %d, abortConnect: %d", controlClientThread.isRunning(), WiFi.status(), this->abortConnect);
   if(!controlClientThread.isRunning()) {
     this->abortConnect++;
-  }
-  if(this->abortConnect >=10) {
-    GuiView::startGuiView(new GuiViewErrorMessage(String("Error connecting to ") + host.toString() + "\nclientthread aborted"));
+    if(this->abortConnect >=10) {
+      GuiView::startGuiView(new GuiViewErrorMessage(String("Error connecting to ") + host.toString() + "\nclientthread aborted\n"+
+      controlClientThread.lastError.c_str()));
+    }
   }
   delay(100);
 }
@@ -656,7 +732,7 @@ void drawCachedImage(const char*imgname, int x, int y) {
         // reply.dump();
         Lock lock(imgCacheMutex);
         std::string data=reply["img"].getStringVal();
-        NOTICEF("got getimage reply for %s - length:%dB",imgname, data.length());
+        NOTICEF("got getimage reply for %s - @%p length:%dB", imgname, data.data(), data.length());
         /*
         std::pair<const std::string, TFT_eSprite> pair(imgname, TFT_eSprite(&tft));
         imgCache.insert(pair);
@@ -666,21 +742,27 @@ void drawCachedImage(const char*imgname, int x, int y) {
         if(it == imgCache.end()) {
           throw std::runtime_error("trying to fill img cache failed!!!");
         }
+        PRINT_FREE_HEAP("read image");
         TFT_eSprite &spr=it->second;
         // imgPair.second;
-        if(data.length() > 5000) {
+        if(data.length() > 5000 || ESP.getMaxAllocHeap() < 20000) {
           ERRORF("image %s too big (%d)",imgname, data.length());
           spr.createSprite(0,0);
           return;
         }
         long startms=millis();
         // TFT_eSprite spr = TFT_eSprite(&tft);
-        TFT_eSPI_PngSprite png(spr);
-        png.setPngPosition(0, 0);
-        png.setTransparentColor(TFT_WHITE);
-        spr.createSprite(20,20);
-        png.load_data(data);
-        DEBUGF("image decoded in %ldms",millis()-startms);
+        try {
+          TFT_eSPI_PngSprite png(spr);
+          png.setPngPosition(0, 0);
+          png.setTransparentColor(TFT_WHITE);
+          spr.createSprite(20,20);
+          png.load_data(data);
+          DEBUGF("image decoded in %ldms",millis()-startms);
+        } catch(std::exception &e) {
+          ERRORF("error loading image %s (%s)", imgname, e.what());
+          spr.createSprite(0,0);
+        }
 
         GuiViewControlLocoSelectLoco::needUpdate=true;
       } else {

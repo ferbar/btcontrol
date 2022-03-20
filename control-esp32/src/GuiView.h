@@ -4,6 +4,10 @@
 #include "lokdef.h"
 #include "utils.h"
 #include "Thread.h"
+#include "config.h"
+#ifdef HAVE_BLUETOOTH
+#include "BTClient.h"
+#endif
 
 class GuiView {
 public:
@@ -65,7 +69,14 @@ private:
 
 class GuiViewConnectServer : public GuiView {
 public:
-  GuiViewConnectServer(IPAddress host, int port) { this->host=host; this->port=port; };
+  GuiViewConnectServer(IPAddress host, int port) { this->host=host; this->port=port; 
+#ifdef HAVE_BLUETOOTH
+    this->addr=BTAddress();
+#endif
+  };
+#ifdef HAVE_BLUETOOTH
+  GuiViewConnectServer(const BTAddress &addr, int channel) { this->addr=addr; this->channel=channel; this->host=IPAddress(); };
+#endif
   GuiViewConnectServer() {};
   void init();
   void close();
@@ -77,6 +88,10 @@ protected:
   static IPAddress host;
   static int port;
   int abortConnect=0;
+#ifdef HAVE_BLUETOOTH
+  static BTAddress addr;
+  static int channel;
+#endif
 };
 
 class GuiViewControlLocoSelectLoco : public GuiView { // GuiViewConnectServer ???
