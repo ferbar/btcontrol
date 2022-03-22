@@ -25,24 +25,26 @@
   - Open the btclient app on your phone
 
 
-
-
  */
 
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <WiFiClient.h>
+
 // WifiClient verwendet pthread_*specific => pthread lib wird immer dazu gelinkt
 #include <pthread.h>
 // fürs esp_wifi_set_ps
 #include <esp_wifi.h>
 // #include <freertos/task.h>
+
+
 #include "ESP32PWM.h"
 #include "ESP32_MAS_Speed.h"
 #include "clientthread.h"
 #include "utils.h"
 #include "lokdef.h"
+#include "tcpclient.h"
 
 // TODO:
 // https://arduino.stackexchange.com/questions/23743/include-git-tag-or-svn-revision-in-arduino-sketch
@@ -82,8 +84,8 @@ WiFiServer HTTPServer(80);
 #endif
 
 String responseHTML = ""
-  "<!DOCTYPE html><html><head><title>" lok_name "</title></head><body>"
-  "<h1>" lok_name "</h1><p>Mit folgender App kannst du die Lok steuern: "
+  "<!DOCTYPE html><html><head><title>" LOK_NAME "</title></head><body>"
+  "<h1>" LOK_NAME "</h1><p>Mit folgender App kannst du die Lok steuern: "
   "<a href='https://github.com/ferbar/btcontrol/raw/master/control-android/bin/btcontrol.apk'>btcontrol.apk</a> "
   "(vor dem Download wieder ins Internet wechseln)"
   "</p>"
@@ -92,6 +94,8 @@ String responseHTML = ""
 #endif
 
 #define TAG "main"
+// tcp timeout
+#define TIMEOUT_SERVER 5
 
 Hardware *hardware=NULL;
 bool cfg_debug=false;
@@ -132,8 +136,8 @@ void init_wifi_start() {
     DEBUGF("disconnect wifi");
     WiFi.disconnect();
 
-    WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE);
-    WiFi.setHostname(lok_name);
+    // WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE); => IDF 4.4 setzt das auf static IP, tut sonst nix anderes
+    WiFi.setHostname(LOK_NAME);
 }
 
 void init_wifi_done(bool softAP) {
@@ -147,8 +151,8 @@ void init_wifi_done(bool softAP) {
     //   the fully-qualified domain name is "esp8266.local"
     // - second argument is the IP address to advertise
     //   we send our IP address on the WiFi network
-    NOTICEF("Setting up MDNS responder. Hostname: %s", lok_name);
-    if (!MDNS.begin(lok_name)) {
+    NOTICEF("Setting up MDNS responder. Hostname: %s", LOK_NAME);
+    if (!MDNS.begin(LOK_NAME)) {
         ERRORF("Error setting up MDNS responder!");
         while(1) {
             delay(1000);
@@ -157,7 +161,7 @@ void init_wifi_done(bool softAP) {
 
     // Add service to MDNS-SD
     MDNS.addService("_btcontrol", "_tcp", 3030);
-    DEBUGF("btcontrol MDNS started [%s]", lok_name);
+    DEBUGF("btcontrol MDNS started [%s]", LOK_NAME);
 
  
     initOTA([]() {
@@ -319,7 +323,7 @@ void setup(void)
     Serial.printf("Flash ide speed: %u Hz\r\n", ESP.getFlashChipSpeed());
     Serial.printf("Flash ide mode:  %s\r\n", (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN"));
     if(ideMode != FM_QIO) {
-      ERRORF("WARNING: Flash not in QIO mode!");
+//      ERRORF("WARNING: Flash not in QIO mode!");
     }
         /* Print chip information */
     esp_chip_info_t chip_info;
@@ -373,6 +377,7 @@ public:
 
 // https://www.freertos.org/a00125.html
 int clientID_counter=1;
+#warning: normalen thread verwenden!!!
 void startClientThread(void *s) {
     DEBUGF("==============client thread======================");
     int clientID=clientID_counter++;
@@ -403,12 +408,15 @@ void startClientThread(void *s) {
 #endif
     ClientThread *clientThread=NULL;
     try {
-        clientThread = new ClientThread(clientID, startupData->client);
+        clientThread = new ClientThread(clientID, TIMEOUT_SERVER);
+        clientThread->begin(new TCPClient(startupData->client), true);
         clientThread->run();
+/* workaround esp 4.4 idf throw problem
     } catch(const char *e) {
         ERRORF("%d: exception %s - client thread killed", clientID, e);
     } catch(std::RuntimeExceptionWithBacktrace &e) {
         ERRORF("%d: Runtime Exception [%s] - client thread killed", clientID, e.what());
+        */
     } catch(std::exception &e) {
         ERRORF("%d: exception %s - client thread killed", clientID, e.what());
         /*
@@ -571,4 +579,3 @@ void loop(void)
     Serial.println("Done with client");
     */
 }
-
