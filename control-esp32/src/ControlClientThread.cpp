@@ -9,6 +9,8 @@
 
 #define TAG "ControlClientThread"
 
+#define MAX_QUEUE_LENGTH 5
+
 ControlClientThread::ControlClientThread() : CommThread(0)
 {
 }
@@ -37,6 +39,10 @@ void ControlClientThread::sendPing()
 
 void ControlClientThread::sendFunc(int funcNr, bool enable)
 {
+  if(this->getQueueLength() > MAX_QUEUE_LENGTH) {
+    ERRORF("sendDir: queue full!");
+    return;
+  }
   DEBUGF("ControlClientThread::sendFunc funcNr:%d, enable:%d", funcNr, enable);
   FBTCtlMessage cmd(messageTypeID("SETFUNC"));
   cmd["addr"]=lokdef[this->selectedAddrIndex].addr;
@@ -54,6 +60,10 @@ void ControlClientThread::sendStop()
 
 void ControlClientThread::sendDir(bool forward)
 {
+  if(this->getQueueLength() > MAX_QUEUE_LENGTH) {
+    ERRORF("sendDir: queue full!");
+    return;
+  }
   FBTCtlMessage cmd(messageTypeID("DIR"));
   cmd["addr"]=this->getCurrLok().addr;
   cmd["dir"]= forward ? 1 : -1;
@@ -91,7 +101,7 @@ void ControlClientThread::run()
 #warning todo: lock
 				ControlClientThreadQueueElement item=this->cmdQueue.front();
 				this->cmdQueue.pop();
-				DEBUGF("/%d: sending command %s with callback", this->msgNum, messageTypeName(item.cmd.getType()).c_str());
+				DEBUGF("/%d: sending command %s with callback (queue length: %d)", this->msgNum, messageTypeName(item.cmd.getType()).c_str(), this->getQueueLength());
 				callback=item.callback;
 				this->sendMessage(item.cmd);
 			}
