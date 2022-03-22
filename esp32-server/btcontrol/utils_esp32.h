@@ -9,9 +9,13 @@
 uint8_t readEEPROM(int addr);
 void writeEEPROM(int addr1, uint8_t data1, int addr2 = -1, uint8_t data2 = 0);
 
-// gibts am ESP32 nicht
+// gibts am ESP32 nicht (update: im IDF 4.4 aufgetaucht)
+#ifndef memmem
+extern "C" {
 void *memmem(const void *haystack, size_t haystacklen,
                     const void *needle, size_t needlelen);
+}
+#endif
 
 void printDirectory();
 
