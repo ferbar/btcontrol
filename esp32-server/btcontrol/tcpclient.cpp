@@ -60,15 +60,15 @@ void TCPClient::readSelect(int timeout) {
 	struct timeval tv;
 	FD_ZERO(&fdset);
 	FD_SET(sockfd, &fdset);
-	tv.tv_sec = 0;
-	tv.tv_usec = timeout * 1000;
+	tv.tv_sec = timeout;
+	tv.tv_usec = 0;
 	res = select(sockfd + 1, &fdset, nullptr, nullptr, timeout<0 ? nullptr : &tv);
 	if (res < 0) {
 		ERRORF("select on fd %d, errno: %d, \"%s\"", sockfd, errno, strerror(errno));
 		// close(sockfd);
 		throw std::runtime_error("select error");
 	} else if (res == 0) {
-		ERRORF("select returned due to timeout %d ms for fd %d", timeout, sockfd);
+		ERRORF("select returned due to timeout %ds for fd %d", timeout, sockfd);
 		// close(sockfd);
 		throw std::runtime_error("timeout reading cmd");
 	} else {

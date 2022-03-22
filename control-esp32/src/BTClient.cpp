@@ -37,7 +37,7 @@ BTClient::~BTClient() {
 
 void BTClient::readSelect(int timeout) {
 	DEBUGF("BTClient::readSelect()");
-	BluetoothSerial::setTimeout(timeout);
+	BluetoothSerial::setTimeout(timeout * 1000); // s -> ms
 	if(BluetoothSerial::peek() < 0) {
 		throw std::runtime_error("timeout/error in readSelect");
 	}
