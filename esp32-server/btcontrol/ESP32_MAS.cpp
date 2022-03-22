@@ -132,13 +132,18 @@ void ESP32_MAS::run() {
       out_buf_8[i*2]=0;
     }
     // 0x80
-    int ret=i2s_write_bytes(this->I2S_PORT, (const char *)&out_buf_8, buf_len_8, portMAX_DELAY);
+    size_t ret;
+    if(i2s_write(this->I2S_PORT, (const char *)&out_buf_8, buf_len_8, &ret, portMAX_DELAY) != ESP_OK) {
+      Serial.printf("i2s_write failed!\n");
+    }
     for(int i=0; i < buf_len_8/2; i++) {
       // 0
       out_buf_8[i*2+1]=0x80;
       out_buf_8[i*2]=0;
     }
-    ret=i2s_write_bytes(this->I2S_PORT, (const char *)&out_buf_8, buf_len_8, portMAX_DELAY);
+    if(i2s_write(this->I2S_PORT, (const char *)&out_buf_8, buf_len_8, &ret, portMAX_DELAY) != ESP_OK) {
+      Serial.printf("i2s_write failed\n");
+    }
     
     //i2s_set_clk(mas->I2S_PORT, i2s_config_noDAC.sample_rate, i2s_config_noDAC.bits_per_sample, (i2s_channel_t) 1);
     //i2s_set_sample_rates(mas->I2S_PORT, 22050);
@@ -370,7 +375,10 @@ void ESP32_MAS::run() {
     // Hints: 1025/2 => 512 samples @22,5kHz = 22ms, so we have 22ms to refill the buffer!
     //        i2s_write_bytes is asyncron / DMA!
     //        i2s_write macht memcopy
-    int ret=i2s_write_bytes(this->I2S_PORT, (const char *)&out_buf_8, buf_len_8, portMAX_DELAY);
+    size_t ret;
+    if(i2s_write(this->I2S_PORT, (const char *)&out_buf_8, buf_len_8, &ret, portMAX_DELAY) != ESP_OK) {
+      Serial.printf("i2s_write failed!\n");
+    }
 #ifdef DEBUG_MAS
 //    Serial.printf("bytes_written: %d\n", ret);
 #endif
@@ -407,7 +415,7 @@ void ESP32_MAS::run() {
 
 ESP32_MAS::ESP32_MAS() {
   // !!!!!!!!!!!!!!!!!!!!!!!! serial noch nicht initialisiert !!!!!!!!!!!!!!!!
-  // Serial.println("ESP32_MAS::ESP32_MAS() DAC 0x80");
+  Serial.println("ESP32_MAS::ESP32_MAS() DAC 0x80");
   #warning fixme - machts knacksen noch schlechter:
   // pinMode(25, OUTPUT);
   // dacWrite(25,0x80);

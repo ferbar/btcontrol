@@ -17,7 +17,7 @@
 #endif
 
 ESP32_MAS_Speed::ESP32_MAS_Speed() : ESP32_MAS() {
-  
+  DEBUGF("ESP32_MAS_Speed::ESP32_MAS_Speed()");
 }
 
 void ESP32_MAS_Speed::openFile(uint8_t channel, File &f) {
