@@ -45,7 +45,3 @@ private:
 #define CW 1
 #define CCW 2
 #define BRAKEGND 3
-
-
-
-

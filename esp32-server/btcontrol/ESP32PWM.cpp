@@ -13,12 +13,12 @@
 // -============================================================================================================================= VNH2SP30 China Monster Shield
 // ************* pins für china arduino monster shield !!!! nicht für sparkfun !!!!!
 #define MOTOR_OUTPUTS 2
-int inApin[MOTOR_OUTPUTS] = {14, 17}; // INA: Clockwise Direction Motor0 and Motor1 (Check:"1.2 Hardware Monster Motor Shield").
-int inBpin[MOTOR_OUTPUTS] = {12, 13}; // INB: Counterlockwise Direction Motor0 and Motor1 (Check: "1.2 Hardware Monster Motor Shield").
-int pwmpin[MOTOR_OUTPUTS] = {16, 27}; // PWM's input
-int cspin[MOTOR_OUTPUTS] = {35, 34};  // Current's sensor input
+const int inApin[MOTOR_OUTPUTS] = {14, 17}; // INA: Clockwise Direction Motor0 and Motor1 (Check:"1.2 Hardware Monster Motor Shield").
+const int inBpin[MOTOR_OUTPUTS] = {12, 13}; // INB: Counterlockwise Direction Motor0 and Motor1 (Check: "1.2 Hardware Monster Motor Shield").
+const int pwmpin[MOTOR_OUTPUTS] = {16, 27}; // PWM's input
+const int cspin[MOTOR_OUTPUTS] = {35, 34};  // Current's sensor input
 
-int enpin[MOTOR_OUTPUTS] = {2, 4}; // open drain output vom VNH2SP30, 2 hat einen 1k PullDown R
+const int enpin[MOTOR_OUTPUTS] = {2, 4}; // open drain output vom VNH2SP30, 2 hat einen 1k PullDown R
 
 // Motor 0 geht beim monster shield nicht: EN1 wird über einen R am ESP32 board auf 0 gezogen
 #define MOTOR_NR 1
@@ -30,12 +30,12 @@ int enpin[MOTOR_OUTPUTS] = {2, 4}; // open drain output vom VNH2SP30, 2 hat eine
 #elif defined VNH5019_DUAL_SHIELD
 // =============================================================================================================================== Pololu / Aliexpress dual VNH5019 shield
 #define MOTOR_OUTPUTS 2
-int inApin[MOTOR_OUTPUTS] = {26, 14}; // INA: Clockwise Direction Motor0 and Motor1 (Check:"1.2 Hardware Monster Motor Shield").
-int inBpin[MOTOR_OUTPUTS] = {17, 12}; // INB: Counterlockwise Direction Motor0 and Motor1 (Check: "1.2 Hardware Monster Motor Shield").
-int pwmpin[MOTOR_OUTPUTS] = {13, 5}; // PWM's input
-int cspin[MOTOR_OUTPUTS] = {2, 4};  // Current's sensor input !!! ADC2 nicht mit Wlan verwendbar !!!
+const int inApin[MOTOR_OUTPUTS] = {26, 14}; // INA: Clockwise Direction Motor0 and Motor1 (Check:"1.2 Hardware Monster Motor Shield").
+const int inBpin[MOTOR_OUTPUTS] = {17, 12}; // INB: Counterlockwise Direction Motor0 and Motor1 (Check: "1.2 Hardware Monster Motor Shield").
+const int pwmpin[MOTOR_OUTPUTS] = {13, 5}; // PWM's input
+const int cspin[MOTOR_OUTPUTS] = {2, 4};  // Current's sensor input !!! ADC2 nicht mit Wlan verwendbar !!!
 
-int enpin[MOTOR_OUTPUTS] = {27, 19}; // open drain output vom VNH5019, board verbindet en/diag A+B,
+const int enpin[MOTOR_OUTPUTS] = {27, 19}; // open drain output vom VNH5019, board verbindet en/diag A+B,
 // The DIAGA/ENA or DIAGB/ENB, when connected to an external pull-up resistor, enable one leg of the bridge. They also provide a feedback digital diagnostic signal.
 
 
@@ -50,8 +50,8 @@ int enpin[MOTOR_OUTPUTS] = {27, 19}; // open drain output vom VNH5019, board ver
 #elif defined DRV8871
 // ************* drv8871 kein extra pwm pin. pwm geht über INA + INB, je nach richtung
 #define MOTOR_OUTPUTS 1
-int inApin[MOTOR_OUTPUTS] = {13}; // INA + PWM
-int inBpin[MOTOR_OUTPUTS] = {12}; // INB + PWM
+const int inApin[MOTOR_OUTPUTS] = {13}; // INA + PWM
+const int inBpin[MOTOR_OUTPUTS] = {12}; // INB + PWM
 
 #define MOTOR_FREQUENCY 16000
 #define MOTOR_NR 0
@@ -97,7 +97,7 @@ LOLIN_I2C_MOTOR motor; //I2C address 0x30
 +//     delay(100);
  }
 */
-Motor motor(0x30,_MOTOR_A, 1000);//Motor A
+Motor *motor;
 
 #else
 #error No motor board defined!
@@ -163,6 +163,7 @@ delay(100);
  * wird mit new im btcontrol::setup() gestartet
  */
 ESP32PWM::ESP32PWM() : USBPlatine(false), dir(0), pwm(0), motorStart(MOTOR_START), motorFullSpeed(255), ledToggle(0), nFunc(0) {
+  DEBUGF("ESP32PWM::ESP32PWM()");
   this->currentFunc[0]=1; // F0 beim booten ein
   for(int i=1; i < MAX_NFUNC; i++) {
     this->currentFunc[i]=0;
@@ -182,6 +183,7 @@ ESP32PWM::ESP32PWM() : USBPlatine(false), dir(0), pwm(0), motorStart(MOTOR_START
 #elif defined WEMOS_I2C_MOTOR_SHIELD
   // default WEMOS firmware never has any return checks ...
   DEBUGF("WEMOS I2C motor shield");
+  motor=new Motor(0x30,_MOTOR_A, 1000);//Motor A
 #else
 	for (int i=0; i<MOTOR_OUTPUTS; i++) {
 		pinMode(inApin[i], OUTPUT);
@@ -276,7 +278,7 @@ void ESP32PWM::dumpConfig() {
   DEBUGF("MOTOR_FREQUENCY %d", MOTOR_FREQUENCY);
 #endif
 #ifdef MOTOR_IN_BRAKE
-  DEBUGF("MOTOR_IN_BRAKE " ## MOTOR_IN_BRAKE);
+  DEBUGF("MOTOR_IN_BRAKE " _VAL(MOTOR_IN_BRAKE));
 #endif
 #ifdef MOTOR_OUTPUTS
   DEBUGF("MOTOR_OUTPUTS %d", MOTOR_OUTPUTS);
@@ -334,7 +336,7 @@ void ESP32PWM::setPWM(int f_speed) {
 #ifdef LOLIN_I2C_MOTOR_SHIELD
   motor.changeDuty(MOTOR_CH_A, this->pwm*100/256);
 #elif defined WEMOS_I2C_MOTOR_SHIELD
-  motor.setmotor(this->dir==0 ? _CW : _CCW, this->pwm*100/256);
+  motor->setmotor(this->dir==0 ? _CW : _CCW, this->pwm*100/256);
 #elif defined HAVE_PWM_PIN
   // analogWrite(pwmpin[motor], f_speed);
 	ledcWrite(MOTOR_NR, this->pwm);
@@ -398,7 +400,7 @@ void ESP32PWM::fullstop(bool stopAll, bool emergencyStop) {
 #ifdef LOLIN_I2C_MOTOR_SHIELD
   motor.changeStatus(MOTOR_CH_A, MOTOR_STATUS_SHORT_BRAKE);
 #elif defined WEMOS_I2C_MOTOR_SHIELD
-  motor.setmotor(_STOP);
+  motor->setmotor(_STOP);
 #else
 #ifdef HAVE_PWM_PIN
 	ledcWrite(MOTOR_NR, 0);
