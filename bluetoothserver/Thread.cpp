@@ -31,8 +31,10 @@ void *Thread::startupThread(void *ptr) {
 #ifndef ESP32
 	} catch(const char *e) {
 		ERRORF("?: exception %s - client thread killed", e);
+/*
 	} catch(const std::RuntimeExceptionWithBacktrace &e) {
 		ERRORF("?: Runtime Exception with Backtrace %s - client thread killed", e.what());
+*/
 	} catch(const std::runtime_error &e) {
 		ERRORF("?: Runtime Exception %s - client thread killed", e.what());
 #endif
