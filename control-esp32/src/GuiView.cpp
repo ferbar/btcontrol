@@ -160,6 +160,18 @@ void GuiView::drawButtons() {
      */
 }
 
+void GuiView::drawPopup(const char *msg) {
+  tft.setTextDatum(MC_DATUM);
+  tft.setTextColor(TFT_YELLOW, TFT_BLACK);
+  tft.setTextSize(1);
+  tft.setFreeFont(FSSP7);
+  // int textLen=tft.textWidth(msg);
+  // int n=1;
+  tft.fillRect(1, tft.height() / 2 - tft.fontHeight() / 2 - 4, tft.width()-2, tft.fontHeight()+8, TFT_BLACK);
+  tft.drawRect(0, tft.height() / 2 - tft.fontHeight() / 2 - 5, tft.width(), tft.fontHeight()+10, TFT_WHITE);
+  tft.drawString(msg, tft.width() / 2, tft.height() / 2);
+}
+
 // ============================================================= SelectWifi =============================
 int GuiViewSelectWifi::selectedWifi=0;
 bool GuiViewSelectWifi::needUpdate=false;
@@ -217,10 +229,6 @@ void GuiViewSelectWifi::init() {
 
 void GuiViewSelectWifi::close() {
   // DEBUGF("GuiViewSelectWifi::close()");
-  tft.setTextDatum(MC_DATUM);
-  tft.setTextSize(1);
-  tft.setTextColor(TFT_GREEN, TFT_BLACK);
-  tft.drawString("waiting for scanner to terminate...", tft.width()/2, tft.fontHeight() * 4);
   PRINT_FREE_HEAP("GuiViewSelectWifi::close()");
   // wait for thread to cancel to free up stack memory + wait for bt / wifi usage done
   refreshWifiThread.cancel(true);
@@ -367,6 +375,9 @@ void GuiViewSelectWifi::buttonCallbackLongPress(Button2 &b) {
             DEBUGF("have password for %s", it->first.c_str());
             String ssid=it->first;
             bool LR=it->second.have_LR;
+
+            GuiView::drawPopup("connecting ...");
+
   		      GuiView::startGuiView(new GuiViewConnectWifi(ssid, password, LR));
           } else {
             ERRORF("no password for [%d] %s", GuiViewSelectWifi::selectedWifi, it->first.c_str());
@@ -376,6 +387,7 @@ void GuiViewSelectWifi::buttonCallbackLongPress(Button2 &b) {
           DEBUGF("bt connect to %s - %d", it->second.addr.toString().c_str(), it->second.channel);
           // disable WiFi
           // adc_power_off();
+          GuiView::drawPopup("connecting ...");
           GuiView::startGuiView(new GuiViewConnectServer(it->second.addr, it->second.channel));
 #endif
         }
@@ -407,7 +419,9 @@ void GuiViewConnectWifi::init() {
         PRINT_FREE_HEAP("after BT disable");
 #endif
 	this->lastWifiStatus=0;
+	DEBUGF("setting Wifi to WIFI_STA + disable power saving");
 	WiFi.mode(WIFI_STA);
+	esp_wifi_set_ps(WIFI_PS_NONE); // results in packet loss + retransmit + 8s delays
 
   if(this->LR) {
     esp_wifi_set_protocol (WIFI_IF_STA, WIFI_PROTOCOL_LR);
@@ -587,7 +601,7 @@ void GuiViewConnectServer::init() {
 #endif
     {
       client=new TCPClient();
-      client->connect(0, this->host, this->port);
+      client->connect(this->host, this->port);
   		controlClientThread.begin(client, true );
     }
     DEBUGF("starting controlClientThread");

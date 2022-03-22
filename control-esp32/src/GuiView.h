@@ -22,6 +22,7 @@ public:
   virtual void close() {};
   virtual void init() {};
   virtual const char * which() const { return "GuiView" ; };
+  static void drawPopup(const char*msg);
 protected:
   static long lastKeyPressed;         // power off after POWER_DOWN_IDLE_TIMEOUT, init mit 0 => system boot
   void drawButtons();
