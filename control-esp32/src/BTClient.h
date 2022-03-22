@@ -5,17 +5,16 @@
 #include <BluetoothSerial.h>
 
 #include <string>
-#include <WiFiClient.h>
-#include "tcpclient.h"
 #include <map>
+#include "ClientStream.h"
 
-class BTClient : public TCPClient, public BluetoothSerial {
+class BTClient : public ClientStream, public BluetoothSerial {
 public:
 	BTClient() :remoteAddress("") {};
 	void connect(const BTAddress &address, int channel);
 	virtual void close();
 	virtual ~BTClient();
-	virtual void readSelect();
+	virtual void readSelect(int timeout);
 	virtual void prepareMessage();
 	virtual void flushMessage();
 	virtual std::string getRemoteAddr();

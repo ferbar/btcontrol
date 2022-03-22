@@ -38,6 +38,7 @@
 
 #include <cxxabi.h>
 
+#include "tcpclient.h"
 #include "server.h"
 #include "utils.h"
 #include "clientthread.h"
@@ -170,14 +171,14 @@ static void *phoneClient(void *data)
 	try {
 #ifdef INCL_X11
 		if(cfg_X11) {
-			ClientThreadX11 client(startupData->clientID);
+			ClientThreadX11 client(startupData->clientID, cfg_tcpTimeout);
 			client.begin(new TCPClient(startupData->so), true);
 			client.run();
 		} else 
 #endif
 		{
 # warning todo: phoneClient() auf thread.start() umstellen
-			ClientThread client(startupData->clientID);
+			ClientThread client(startupData->clientID, cfg_tcpTimeout);
 			client.begin(new TCPClient(startupData->so), true);
 			// !!! kein start !!!
 			client.run();

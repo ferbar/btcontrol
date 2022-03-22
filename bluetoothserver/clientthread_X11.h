@@ -4,7 +4,7 @@
 
 class ClientThreadX11 : public ClientThread {
 public:
-	ClientThreadX11(int clientID) : ClientThread(clientID) {};
+	ClientThreadX11(int clientID, int defaultTimeout) : ClientThread(clientID, defaultTimeout) {};
 
 	~ClientThreadX11();
 	virtual void run();

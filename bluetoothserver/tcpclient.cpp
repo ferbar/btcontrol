@@ -63,19 +63,19 @@ void TCPClient::flushMessage()
 /**
  * wartet bis daten daherkommen, macht exception wenn keine innerhalb von timeout gekommen sind
  */
-void TCPClient::readSelect()
+void TCPClient::readSelect(int timeout)
 {
-	struct timeval timeout;
+	struct timeval t;
 	fd_set set;
-	timeout.tv_sec=cfg_tcpTimeout; timeout.tv_usec=0;
+	t.tv_sec=timeout; t.tv_usec=0;
 	FD_ZERO(&set); FD_SET(this->so,&set);
 	int rc;
-	if((rc=select(this->so+1, &set, NULL, NULL, &timeout)) <= 0) {
+	if((rc=select(this->so+1, &set, NULL, NULL, &t)) <= 0) {
 		if(rc != 0) {
 			ERRORF("ClientThread::readSelect error in select(%d)=%d %s", this->so, rc, strerror(errno));
 			throw std::runtime_error("error select");
 		}
-		ERRORF("ClientThread::readSelect timeout in select(%d)=%d timeout=%ds", this->so, rc, cfg_tcpTimeout);
+		ERRORF("ClientThread::readSelect timeout in select(%d)=%d timeout=%ds", this->so, rc, timeout);
 		throw std::runtime_error("timeout reading cmd");
 	}
 }

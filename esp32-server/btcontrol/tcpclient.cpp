@@ -17,37 +17,36 @@ int TCPClient::numClients=0;
 TCPClient::~TCPClient() {
 }
 
-void TCPClient::connect(int id, const IPAddress &host, int port)
+void TCPClient::connect(const IPAddress &host, int port)
 {
 	this->client.stop();
 	this->client.flush();
 	if(this->client.connect(host, port)) {
-		DEBUGF("ControlClientThread::connect - connected!");
+		DEBUGF("TCPClient::connect - connected!");
 	} else {
 		throw std::runtime_error(strerror(errno));
 	}
-	this->clientID=id;
 	this->client.setTimeout(10); // in sekunden
 	// ohne dem hat man zwischen 2 esp32 einen ping von 200-500ms
 	this->client.setNoDelay(1);
 }
 
-void TCPClient::readSelect() {
+void TCPClient::readSelect(int timeout) {
 	if(!this->client.connected()) {
 		throw std::runtime_error("client not connected");
 	}
 
 	// !!!! wificlient hat einen eigenen rx buffer -> is da schon was drinnen?
 	if(this->client.available()) {
+		DEBUGF("TCPClient::readSelect(): bytes in buffer!");
 		return;
 	}
 
 #ifndef NODEBUG
 	long start=millis();
 #endif
-	const int timeout=5 * 1000 ; // 5 sekunden
 
-	int sockfd= this->client.fd();
+	int sockfd=this->client.fd();
 
 // clear error flag:
 	int sockerr;
@@ -88,21 +87,7 @@ void TCPClient::readSelect() {
 			throw std::runtime_error("socket error");
 		}
 	}
-	DEBUGF("select done in %ldms",millis()-start);
-
-/*
-	for(int i=0; i < 100; i++) {
-		if(!this->client.connected()) {
-			throw std::runtime_error("client not connected");
-		}
-		if(this->client.available() > 0) {
-			DEBUGF("TCPClient::readSelect available bytes after %dms",i*50);
-			return;
-		}
-		delay(50);
-	}
-	*/
-	DEBUGF("TCPClient::readselect: success");
+	DEBUGF("TCPClient::readselect: select done in %ldms",millis()-start);
 }
 
 void TCPClient::prepareMessage() {
@@ -129,13 +114,14 @@ ssize_t TCPClient::read(void *buf, size_t count) {
 	int read=0;
     
     while(read < (int) count) {
-        // printf("read: %zd\n",size-read);
+        DEBUGF("read: %zd",count-read);
         int rc=this->client.read(((uint8_t *) buf)+read,count-read);
-        // printf("rc: %d\n",rc);
+        DEBUGF("rc: %d",rc);
         if(rc < 0) {
             throw std::runtime_error("error reading data");
         } else if(rc == 0) { // stream is blocking -> sollt nie vorkommen
-            throw std::runtime_error("nothing to read");
+            NOTICEF("buffer emty rc: %d, readbytes: %d, want: %d ",rc, read, count);
+            throw std::runtime_error("empty buffer - nothing to read");
         }
         read+=rc;
     }

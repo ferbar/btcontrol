@@ -31,6 +31,7 @@
 #include "remoteLokdef.h"
 #include "Hardware.h"
 
+#include "tcpclient.h"
 #ifdef HAVE_BLUETOOTH
 #include "BTClient.h"
 #endif

@@ -13,8 +13,8 @@ struct lastStatus_t {
 
 class ClientThread : public CommThread {
 public:
-	ClientThread(int clientID) : CommThread(clientID) {};
-
+	ClientThread(int clientID, int defaultTimeout) : CommThread(clientID, defaultTimeout) {};
+// void begin(Client)
 	virtual ~ClientThread();
 	virtual void run();
 	void setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus);

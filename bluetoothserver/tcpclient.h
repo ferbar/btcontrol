@@ -2,14 +2,15 @@
 #define TCPCLIENT_H
 
 #include <string>
+#include "ClientStream.h"
 
-class TCPClient {
+class TCPClient : public ClientStream {
 public:
 	TCPClient(int so) : so(so) {
 	};
 	virtual ~TCPClient();
 	virtual void close();
-	virtual void readSelect();
+	virtual void readSelect(int timeout);
 	virtual void prepareMessage();
 	virtual void flushMessage();
 	virtual std::string getRemoteAddr();

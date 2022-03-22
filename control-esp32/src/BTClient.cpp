@@ -20,7 +20,6 @@ void BTClient::connect(const BTAddress &address, int channel) {
 	if(! BluetoothSerial::connect(address, channel, ESP_SPP_SEC_NONE, ESP_SPP_ROLE_SLAVE)) {
 		throw std::runtime_error("error connecting...");	
 	} else {
-		this->numClients++; // sollte atomic sein
 		this->remoteAddress=address;
 	}
 	DEBUGF("connect done");
@@ -36,9 +35,9 @@ BTClient::~BTClient() {
 	BluetoothSerial::disconnect();
 }
 
-void BTClient::readSelect() {
+void BTClient::readSelect(int timeout) {
 	DEBUGF("BTClient::readSelect()");
-	BluetoothSerial::setTimeout(2000);
+	BluetoothSerial::setTimeout(timeout);
 	if(BluetoothSerial::peek() < 0) {
 		throw std::runtime_error("timeout/error in readSelect");
 	}

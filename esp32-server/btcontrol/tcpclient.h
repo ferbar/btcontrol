@@ -3,22 +3,23 @@
 
 #include <string>
 #include <WiFiClient.h>
+#include "ClientStream.h"
 
-class TCPClient {
+class TCPClient : public ClientStream {
 public:
-	TCPClient() : clientID(0), client() {};
-	TCPClient(int id, WiFiClient &client) : clientID(id), client(client) {
+	TCPClient() : client() {};
+	TCPClient(WiFiClient &client) : client(client) {
 		numClients++; // sollte atomic sein
 		this->client.setTimeout(10); // in sekunden
 		// ohne dem hat man zwischen 2 esp32 einen ping von 200-500ms
 		this->client.setNoDelay(1);
 	};
-	void connect(int id, const IPAddress &host, int port);
+	void connect(const IPAddress &host, int port);
 	virtual void close() {
 		this->client.stop();
 	};
 	virtual ~TCPClient();
-	virtual void readSelect();
+	virtual void readSelect(int timeout);
 	virtual void prepareMessage();
 	virtual void flushMessage();
 	virtual std::string getRemoteAddr();
@@ -30,8 +31,6 @@ public:
 		return this->client.connected();
 	};
 
-	// ID vom client
-	int clientID;
 	// anzahl clients die gerade laufen
 	static int numClients;
 private:

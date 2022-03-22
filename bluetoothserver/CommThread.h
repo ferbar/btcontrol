@@ -2,7 +2,7 @@
 #define CLIENTTHREAD_H
 
 #include "fbtctl_message.h"
-#include "tcpclient.h"
+#include "ClientStream.h"
 #include "Thread.h"
 
 #define MAX_MESSAGE_SIZE 10000
@@ -10,10 +10,10 @@
 
 class CommThread : public Thread {
 public:
-	CommThread(int clientID) : clientID(clientID) {
+	CommThread(int clientID, int defaultTimeout) : clientID(clientID), timeout(defaultTimeout) {
 		numClients++; // sollte atomic sein
 	};
-	void begin(TCPClient *client, bool doDelete) { this->client=client; this->doDelete = doDelete; this->msgNum=0; };
+	void begin(ClientStream *client, bool doDelete) { this->client=client; this->doDelete = doDelete; this->msgNum=0; };
 	virtual ~CommThread();
 	virtual void run()=0;
 	void sendMessage(const FBTCtlMessage &msg);
@@ -23,7 +23,7 @@ public:
 
 	void close();
     
-	TCPClient *client=NULL;
+	ClientStream *client=NULL;
 	bool doDelete=false;
 
 	int msgNum=0;
@@ -33,6 +33,8 @@ public:
 
 	// anzahl clients die gerade laufen
 	static int numClients;
+private:
+	int timeout=0;
 };
 
 #endif

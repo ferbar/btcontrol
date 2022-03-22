@@ -35,7 +35,7 @@
 #endif
 
 // #define DUMPMESSAGE
-#define NODEBUG
+// #define NODEBUG
 
 #include "utils.h"
 
@@ -78,7 +78,7 @@ FBTCtlMessage CommThread::readMessage()
 	struct timeval t,t0;
 	gettimeofday(&t0, NULL);
 	*/
-	this->client->readSelect(); // auf daten warten, macht exception wenn innerhalb vom timeout nix kommt
+	this->readSelect(); // auf daten warten, macht exception wenn innerhalb vom timeout nix kommt
 	if((rc=this->client->read(&msgsize, 4)) != 4) {
 		throw std::runtime_error(utils::format("error reading cmd: %d", rc));
 	}
@@ -113,7 +113,7 @@ void CommThread::readSelect()
 	if(!this->client) {
 		throw std::runtime_error("no client");
 	}
-	this->client->readSelect();
+	this->client->readSelect(this->timeout);
 }
 
 void CommThread::close()

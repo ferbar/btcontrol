@@ -10,8 +10,9 @@
 #define TAG "ControlClientThread"
 
 #define MAX_QUEUE_LENGTH 5
+#define CLIENT_TIMEOUT 10
 
-ControlClientThread::ControlClientThread() : CommThread(0)
+ControlClientThread::ControlClientThread() : CommThread(0, CLIENT_TIMEOUT)
 {
 }
 
