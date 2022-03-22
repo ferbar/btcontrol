@@ -96,6 +96,9 @@ bool readLokdef()
 {
 #define LOKDEF_FILENAME "conf/lokdef.csv"
 	std::string lokdefCsv = readFile(LOKDEF_FILENAME);
+	if(lokdefCsv == "") {
+		throw new std::runtime_error("lokdev.csv is empty");
+	}
 	std::string line;
 	const char *buffer;
 	std::istringstream f(lokdefCsv);
