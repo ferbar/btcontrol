@@ -87,7 +87,8 @@ $HCICONFIG | grep ISCAN -q
 rc=$?
 if [ $rc != 0 ]; then
 	echo "bluetooth ISCAN noch nicht eingeschalten"
-	if $SUDO $HCICONFIG hci0 piscan ; then
+	if $SUDO bluetoothctl discoverable on ; then
+	# if $SUDO $HCICONFIG hci0 piscan ; then
 		echo "[ok] ... eingeschalten"
 	else
 		echo "[error] '$HCICONFIG hci0 piscan'" >&2
