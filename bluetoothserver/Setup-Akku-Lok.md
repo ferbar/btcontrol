@@ -41,6 +41,7 @@ apt-get install vim less openssh-client lsof gdb
 ### btcontroll installieren
 ```
 mkdir -p /root/dev/
+cd /root/dev/
 git clone git@github.com:ferbar/btcontrol  oder mit https://
 ```
 
@@ -211,3 +212,4 @@ serial0 abdrehen? => verhindert cpu throttle / stromsparen
 btcontrol.service:
 requires network | bluetooth (!!!! nicht multiuser - wir brauchen keine ntpd zeit !!!!)
 systemctl enable btcontrol
+systemctl enable btcontrol-initbt
