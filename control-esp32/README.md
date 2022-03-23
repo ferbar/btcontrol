@@ -2,7 +2,7 @@
 
 <img src="img_control_pad.jpg" alt="Putzlok" width="300"/>
 
-Wlan / Bluetooth Steuerung für die Eisenbahn
+Wlan / Bluetooth Steuerung für die Eisenbahn mit haptischem Feedback. Wlan / Lok Auswahl übers Display, Geschwindigkeit und Funktionen über das Schiebepotentiometer bzw die Taster.
 
 202203: die ESP32 Bluetooth lib braucht leider extrem viel RAM/Flash, funktioniert auch nicht mit Blueooth 2.0 USB Dongles, braucht mein gepatchtes ESP32-Arduino-SDK
 
