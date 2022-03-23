@@ -35,7 +35,7 @@
 #endif
 
 // #define DUMPMESSAGE
-// #define NODEBUG
+#define NODEBUG
 
 #include "utils.h"
 
