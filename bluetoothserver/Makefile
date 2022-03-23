@@ -206,6 +206,13 @@ install:
 	cp etc/avahi/services/btcontrol.service /etc/avahi/services/
 	cp etc/systemd/system/btcontrol.service /etc/systemd/system/
 	cp etc/systemd/system/btcontrol-initbt.service /etc/systemd/system/
+	@echo "checking bluetooth discoverable on boot"
+	@if grep '^DiscoverableTimeout' /etc/bluetooth/main.conf ; then \
+		echo "already set!" ;			\
+	else					\
+		echo "adding DiscoverableTimeout = 0" ;	\
+		echo -e "# setting by btcontrol\nDiscoverableTimeout = 0" >> /etc/bluetooth/main.conf ; \
+	fi
 
 search-ibm-desktop:
 	nmap -sP 192.168.0.1-240
