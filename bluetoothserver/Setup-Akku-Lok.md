@@ -69,6 +69,7 @@ systemctl disable cron
 rm -rf /var/lib/dhcp
 ln -s /run/ /var/lib/dhcp
 ln -s /run /var/lib/run
+ln -s /run /var/lib/misc
 rm /etc/resolv.conf && ln -s /run/resolv.conf /etc/
 mv /var/tmp/ /var/tmp-org/ && ln -s /tmp /var/tmp
 ```
@@ -97,12 +98,11 @@ mit 0 am Ende von / und /boot den fsck on boot disablen
 
 fsck on boot raus aus der config / cmdline.txt => notwendig?
 
-bringt das was??? 
 
+## boot delay auf 0 setzen (default ist 1, viel kanns nicht bringen, von der sd karte abhängig)
 ```
-vi /boot/cmdline.txt
+vi /boot/config.txt
 boot_delay=0
-
 ```
 
 das sollte mit fstab -> '0' nicht notwendig sein
@@ -181,28 +181,27 @@ mv /etc/apt/sources.list.d/vscode.list /etc/apt/sources.list.d/vscode.list.disab
 ## Setup Wlan soft - AP
 apt-get install hostapd dnsmasq lighttpd
 
-Anleitung entsprechend:
+Anleitung entsprechend bis zum forward, das brauch ma ned.
 https://blog.thewalr.us/2017/09/26/raspberry-pi-zero-w-simultaneous-ap-and-managed-mode-wifi/
 
 dnsmasq.conf:
 + address=/#/192.168.10.1
 
-
 hostapd.conf: (channel kann irgendwas sein, nimmt den vom verbundenen wlan)
 + multicast_to_unicast=1
 
-
-
 lighttpd:
 
-/etc/lighttpd/conf-enable/redirect.conf
+/etc/lighttpd/conf-enabled/redirect.conf
+```
+   $HTTP["host"] != "raspi-lok" {
+        url.redirect = ("" => "http://raspi-lok/")
+    }
+```
 
-   $HTTP["host"] != "computer.local" {
-        url.redirect = ("" => "http://computer.local/")
-    }
-
-/sbin/iw phy phy0 interface add ap0 type __ap ; /bin/ip link set ap0 address b8:27:eb:0b:78:f2 ; 
-/bin/ip link set ap0 up; systemctl restart hostapd ; systemctl restart dnsmasq
+brauch ma nicht
+- /sbin/iw phy phy0 interface add ap0 type __ap ; /bin/ip link set ap0 address b8:27:eb:0b:78:f2 ; 
+- /bin/ip link set ap0 up; systemctl restart hostapd ; systemctl restart dnsmasq
 
 dietpi-services
 => hostap + dnsmasq systemd controlled machen, exclude from service restart
