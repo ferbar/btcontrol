@@ -2,6 +2,7 @@
 Description=btcontrol-initbtrail, can be done after btserver is started
 # Order 1
 After=sys-subsystem-bluetooth-devices-hci0.device
+After=bluetooth.service
 BindsTo=sys-subsystem-bluetooth-devices-hci0.device
 
 # checks only once
