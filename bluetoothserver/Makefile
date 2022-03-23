@@ -211,7 +211,7 @@ install:
 		echo "already set!" ;			\
 	else					\
 		echo "adding DiscoverableTimeout = 0" ;	\
-		echo -e "# setting by btcontrol\nDiscoverableTimeout = 0" >> /etc/bluetooth/main.conf ; \
+		sed -i 's/\[General\]/[General]\n# config by btcontrol\nDiscoverableTimeout = 0/' /etc/bluetooth/main.conf ; \
 	fi
 
 search-ibm-desktop:
