@@ -6,8 +6,7 @@
 
 class TCPClient : public ClientStream {
 public:
-	TCPClient(int so) : so(so) {
-	};
+	TCPClient(int so);
 	virtual ~TCPClient();
 	virtual void close();
 	virtual void readSelect(int timeout);

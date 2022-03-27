@@ -165,7 +165,7 @@ static void unregisterPhoneClient(void *data)
 static void *phoneClient(void *data)
 {
 	startupdata_t *startupData=(startupdata_t *)data;
-	printf("%d:new client (so:%d)\n",startupData->clientID, startupData->so);
+	NOTICEF("%d:new client (so:%d)",startupData->clientID, startupData->so);
 	pthread_cleanup_push(unregisterPhoneClient,data);
 
 	try {
@@ -184,19 +184,19 @@ static void *phoneClient(void *data)
 			client.run();
 		}
 	} catch(const char *e) {
-		printf(ANSI_RED "%d: exception %s - client thread killed\n" ANSI_DEFAULT, startupData->clientID,e);
+		ERRORF("%d: exception %s - client thread killed", startupData->clientID,e);
 	} catch(std::RuntimeExceptionWithBacktrace &e) {
-		printf(ANSI_RED "%d: Runtime Exception %s - client thread killed\n" ANSI_DEFAULT, startupData->clientID,e.what());
+		ERRORF("%d: Runtime Exception %s - client thread killed", startupData->clientID,e.what());
 	} catch(std::exception &e) {
-		printf(ANSI_RED "%d: exception %s - client thread killed\n" ANSI_DEFAULT, startupData->clientID,e.what());
+		ERRORF("%d: exception %s - client thread killed", startupData->clientID,e.what());
 	} catch (abi::__forced_unwind&) { // http://gcc.gnu.org/bugzilla/show_bug.cgi?id=28145
-		printf(ANSI_RED "%d: forced unwind exception - client thread killed\n" ANSI_DEFAULT, startupData->clientID);
+		ERRORF("%d: forced unwind exception - client thread killed", startupData->clientID);
 		// copy &paste:
 		// printf("%d:client exit\n",startupData->clientID);
 		// pthread_cleanup_pop(true);
 		throw; // rethrow exeption bis zum pthread_create, dort isses dann aus
 	}
-	printf("%d:client exit\n",startupData->clientID);
+	DEBUGF("%d:client exit",startupData->clientID);
 
 	pthread_cleanup_pop(true);
 	return NULL;
@@ -223,7 +223,7 @@ void Server::run()
 		bzero(&newThread,sizeof(newThread));
 #ifdef NO_THREADS
 		phoneClient((void *)startupData);
-		printf("k8055 client func done: %lx\n",newThread);
+		DEBUGF("client func done: %lx\n",newThread);
 #else
 		if(int rc=pthread_create(&newThread, NULL, phoneClient, (void *)startupData) != 0) {
 			printf("error creating new thread rc=%d\n",rc);

@@ -47,6 +47,9 @@
 
 #define TAG "TCPClient"
 
+TCPClient::TCPClient(int so) : so(so) {
+	NOTICEF("TCPClient::TCPClient remote addr: %s", this->getRemoteAddr().c_str());
+}
 
 void TCPClient::prepareMessage()
 {
@@ -95,18 +98,28 @@ void TCPClient::close() {
 }
 
 std::string TCPClient::getRemoteAddr() {
+	struct sockaddr_in addr;
+	socklen_t addrlen=sizeof(addr);
+	if(getsockname(this->so, (sockaddr*) &addr, &addrlen) == 0) {
+		if(addr.sin_family == AF_INET) {
+			struct sockaddr_in peeraddr;
+			socklen_t peeraddrlen = sizeof(peeraddr);
+			getpeername(this->so, (sockaddr*) &peeraddr, &peeraddrlen);
+			std::string ret;
+			ret.resize(INET_ADDRSTRLEN+1);
+			inet_ntop(AF_INET, &(peeraddr.sin_addr), (char *) ret.c_str(), INET_ADDRSTRLEN);
+			return ret;
 #ifdef INCL_BT
-	return BTUtils::getRemoteAddr(this->so);
-#else
-	struct sockaddr_in peeraddr;
-	socklen_t peeraddrlen = sizeof(peeraddr);
-	getpeername(this->so, (sockaddr*) &peeraddr, &peeraddrlen);
-	std::string ret;
-	ret.resize(INET_ADDRSTRLEN+1);
-	inet_ntop(AF_INET, &(peeraddr.sin_addr), (char *) ret.c_str(), INET_ADDRSTRLEN);
-
-	return ret;
+		} else if(addr.sin_family == AF_BLUETOOTH) {
+			return BTUtils::getRemoteAddr(this->so);
 #endif
+		} else {
+			ERRORF("TCPClient::getRemoteAddr unknown family:%d", addr.sin_family);
+			return "unknown";
+		}
+	}
+	ERRORF("getsockname failed");
+	return "";
 }
 
 ssize_t TCPClient::read(void *buf, size_t count) {
