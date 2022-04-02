@@ -1,6 +1,10 @@
 # Akku Lok
 
-Das ist eine Anleitung um eine LGB Lok ohne Schienenstrom fahren lassen zu können. Als Hirn wird ein Raspberry Pi Zero - W verwendet, eine H Brücke am PWM Ausgang, eine USB Soundkarte mit Verstärker und ein paar FETs zum schalten der LEDs. 
+<img src="img_akku_lok.jpg" alt="Akkulok" width="300"/>
+
+Das ist eine Anleitung um eine LGB Lok ohne Schienenstrom fahren lassen zu können. Als Hirn wird ein Raspberry Pi Zero - W verwendet, eine H Brücke am PWM Ausgang, eine USB Soundkarte mit Verstärker und ein paar FETs zum schalten der LEDs.
+
+
 
 Als Raspi Image hab ich DietPi verwendet: https://dietpi.com/downloads/images/DietPi_RPi-ARMv6-Bullseye.7z
 
