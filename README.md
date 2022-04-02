@@ -13,6 +13,8 @@ Unterstütze Hardware:
 * SRCPD (mit MERG - Booster)
 * Raspberry PI PWM oder mit einer USB Platine
 
+<img src="bluetoothserver/img_akku_lok.jpg" alt="Akkulok" width="300"/>
+
 Siehe [bluetoothserver/](bluetoothserver/)
 
 ## control-android
