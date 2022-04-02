@@ -16,19 +16,19 @@ a) /boot mounten + /boot/dietpi.text bearbeiten (wifi config) 202202: hat nicht 
 https://dietpi.com/docs/usage/#how-to-do-an-automatic-base-installation-at-first-boot
 b) mit usb - ethernet Adapter booten
 
-### Wlan konfigurieren
+### DietPi konfigurieren
 dietpi-config: (startet automatisch)
-Network Options Adapters:
-	Wlan ein, key, country-code
-	IPv6 off
-    Wifi: Auto reconnect on
-Network Options Misc: Boot Net Wait: off
-Audio Options -> install alsa
-Advanced Options:
-	swap space weg
-	bluetooth on
-security options:
-	change hostname
+* Network Options Adapters:
+  - Wlan ein, key, country-code
+  - IPv6 off
+  - Wifi: Auto reconnect on
+* Network Options Misc: Boot Net Wait: off
+* Audio Options -> install alsa
+* Advanced Options:
+  - swap space weg,
+  - bluetooth on
+* security options:
+  - change hostname
 
 ### Notwendige Pakete installieren
 
