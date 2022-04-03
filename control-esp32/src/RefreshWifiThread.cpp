@@ -72,6 +72,7 @@ void RefreshWifiThread::run() {
         NOTICEF("Bluetooth device: %s  %s %d", device->getAddress().toString().c_str(), device->getName().c_str(), device->getRSSI());
         String name=String("(B) ") + device->getName().c_str();
         if(newList.find(name) == newList.end()) { // not yet in list
+          // das liefert hin und wieder nix -> eventuell muss man das discover vorher stoppen?
           std::map<int,std::string> channels=btClient.getChannels(device->getAddress());
           auto it = channels.find(30);
           if(it != channels.end()) {
