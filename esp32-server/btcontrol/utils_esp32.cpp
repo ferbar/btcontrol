@@ -252,14 +252,14 @@ void initOTA(void (*onStartCallback)() )
         type = "filesystem";
 
       // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-      NOTICEF("Start updating %s", type);
+      NOTICEF("OTA: Start updating %s", type);
       onStartCallback();
     })
     .onEnd([]() {
-      NOTICEF("Update done");
+      NOTICEF("OTA: Update done");
     })
     .onProgress([](unsigned int progress, unsigned int total) {
-      DEBUGF("Progress: %u%%", (progress / (total / 100)));
+      DEBUGF("OTA: Progress: %u%%", (progress / (total / 100)));
     })
     .onError([](ota_error_t error) {
       const char *e="unknown";
@@ -268,7 +268,7 @@ void initOTA(void (*onStartCallback)() )
       else if (error == OTA_CONNECT_ERROR) e="Connect Failed";
       else if (error == OTA_RECEIVE_ERROR) e="Receive Failed";
       else if (error == OTA_END_ERROR) e="End Failed";
-      ERRORF("Error[%u]: %s", error, e);
+      ERRORF("OTA: Error[%u]: %s", error, e);
     });
 
   // ArduinoOTA.begin startet sonst mdns mit default hostname
