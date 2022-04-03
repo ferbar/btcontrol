@@ -30,20 +30,19 @@ void RefreshWifiThread::run() {
     while(true) {  // beendet durch pthread_testcancel()
       int16_t n = WiFi.scanNetworks(); // blocking
       DEBUGF("WiFi scan done found %d networks", n);
-      Lock lock(this->listMutex);
-      this->wifiList.clear();
+      std::map <String, RefreshWifiThread::Entry> newList; // getChannel() dauert ein paar sekunden
       for(int i=0; i < n; i++) {
         wifi_ap_record_t *scanResult=(wifi_ap_record_t *)WiFi.getScanInfoByIndex(i);
         NOTICEF("  - found wifi %s rssi:%d, chan:%d, %d %d %d %d", scanResult->ssid, scanResult->rssi, scanResult->primary, scanResult->phy_11b, scanResult->phy_11g, scanResult->phy_11n, scanResult->phy_lr);
 
-        auto it = this->wifiList.find(WiFi.SSID(i));
-        if(it == this->wifiList.end()) {
-          this->wifiList[WiFi.SSID(i)] = Entry(scanResult->rssi, scanResult->phy_lr? true : false);
+        auto it = newList.find(WiFi.SSID(i));
+        if(it == newList.end()) {
+          newList[WiFi.SSID(i)] = Entry(scanResult->rssi, scanResult->phy_lr? true : false);
         } else {
           DEBUGF("  found duplicate SSID: %s (old:%d, new:%d)", WiFi.SSID(i).c_str(), it->second.rssi, WiFi.RSSI(i));
           // multiple APs for the same ssid found, use the lower rssi;
-          if(this->wifiList[WiFi.SSID(i)].rssi < WiFi.RSSI(i)) // rssi is always negative!! -40 is better than -90!
-            this->wifiList[WiFi.SSID(i)].rssi = WiFi.RSSI(i) ;
+          if(newList[WiFi.SSID(i)].rssi < WiFi.RSSI(i)) // rssi is always negative!! -40 is better than -90!
+            newList[WiFi.SSID(i)].rssi = WiFi.RSSI(i) ;
         }
       }
 #ifdef HAVE_BLUETOOTH
@@ -53,14 +52,14 @@ void RefreshWifiThread::run() {
         BTAdvertisedDevice *device=btDeviceList->getDevice(i);
         NOTICEF("Bluetooth device: %s  %s %d", device->getAddress().toString().c_str(), device->getName().c_str(), device->getRSSI());
         String name=String("(B) ") + device->getName().c_str();
-        if(this->wifiList.find(name) == this->wifiList.end()) { // not yet in list
+        if(newList.find(name) == newList.end()) { // not yet in list
           std::map<int,std::string> channels=btClient.getChannels(device->getAddress());
           auto it = channels.find(30);
           if(it != channels.end()) {
             DEBUGF("add %s", name.c_str());
-            this->wifiList[name]=Entry(device->getAddress(), 30, device->getRSSI());
+            newList[name]=Entry(device->getAddress(), 30, device->getRSSI());
           } else {
-            this->wifiList[name]=Entry(device->getAddress(), -1, device->getRSSI());
+            newList[name]=Entry(device->getAddress(), -1, device->getRSSI());
           }
 
         } else {
@@ -80,6 +79,8 @@ void RefreshWifiThread::run() {
             ERRORF("Error starting bt scan");
       }
 #endif
+      Lock lock(this->listMutex);
+      this->wifiList=newList;
       this->listChanged=true;
       lock.unlock();
       this->testcancel();
