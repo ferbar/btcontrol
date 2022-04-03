@@ -25,7 +25,7 @@ dietpi-config: (startet automatisch)
 * Network Options Misc: Boot Net Wait: off
 * Audio Options -> install alsa
 * Performance options
-  - ondemand (throttle up: 80%, sample rate 300ms)
+  - ondemand (throttle up: 80%, sample rate 300ms, initial turbo 30s)
 * Advanced Options:
   - swap space weg,
   - bluetooth on
