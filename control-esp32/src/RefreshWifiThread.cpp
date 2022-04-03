@@ -22,8 +22,27 @@ void RefreshWifiThread::run() {
 #warning mem_release(BLE) checken
   PRINT_FREE_HEAP("before btclient start");
   btClient.begin(device_name, true);
-  BTScanResults* btDeviceList = btClient.getScanResults();  // maybe accessing from different threads!
+  // there's no lock and we are on a different thread => can't access except when discover is stopped or in the callback handler!!!
+  // BTScanResults* btDeviceList = btClient.getScanResults();
+  static std::map<std::string, BTAdvertisedDeviceSet> myDiscoveredDevices;
+  static Mutex btDiscoveredDevicesMutex;
   PRINT_FREE_HEAP("after btclient start");
+
+  NOTICEF("Starting Bluetooth discoverAsync...");
+  if (btClient.discoverAsync([](BTAdvertisedDevice* pDevice) {
+            // BTAdvertisedDeviceSet*set = reinterpret_cast<BTAdvertisedDeviceSet*>(pDevice);
+            // btDeviceList[pDevice->getAddress()] = * set;
+            NOTICEF(">>>>>>>>>>>Found a new device asynchronously: %s", pDevice->toString().c_str());
+            Lock btLock(btDiscoveredDevicesMutex);
+            BTAdvertisedDeviceSet *p=reinterpret_cast<BTAdvertisedDeviceSet *>(pDevice);
+            myDiscoveredDevices[pDevice->toString()]=*p;
+            // btDeviceList.clear() ??????????
+            } )
+  ) {
+    DEBUGF("started");
+  } else {
+    ERRORF("Error starting bt scan");
+  }
 #endif
   // WiFi.mode(WIFI_OFF); => schaltet Wifi komplett ab
   try {
@@ -46,10 +65,10 @@ void RefreshWifiThread::run() {
         }
       }
 #ifdef HAVE_BLUETOOTH
-      btClient.discoverAsyncStop();
-      NOTICEF("found %d bluetooth devices", btDeviceList->getCount());
-      for (int i=0; i < btDeviceList->getCount(); i++) {
-        BTAdvertisedDevice *device=btDeviceList->getDevice(i);
+      Lock btLock(btDiscoveredDevicesMutex);
+      NOTICEF("found %d bluetooth devices", myDiscoveredDevices.size());
+      for (auto const &it : myDiscoveredDevices) {
+        BTAdvertisedDevice *device=const_cast<BTAdvertisedDeviceSet *>(&(it.second));
         NOTICEF("Bluetooth device: %s  %s %d", device->getAddress().toString().c_str(), device->getName().c_str(), device->getRSSI());
         String name=String("(B) ") + device->getName().c_str();
         if(newList.find(name) == newList.end()) { // not yet in list
@@ -66,18 +85,8 @@ void RefreshWifiThread::run() {
           DEBUGF("already in list");
         }
       }
+      btLock.unlock();
       DEBUGF("bt find done");
-      NOTICEF("Starting Bluetooth discoverAsync...");
-      if (btClient.discoverAsync([](BTAdvertisedDevice* pDevice) {
-            // BTAdvertisedDeviceSet*set = reinterpret_cast<BTAdvertisedDeviceSet*>(pDevice);
-            // btDeviceList[pDevice->getAddress()] = * set;
-            NOTICEF(">>>>>>>>>>>Found a new device asynchronously: %s", pDevice->toString().c_str());
-            } )
-            ) {
-            DEBUGF("started");
-      } else {
-            ERRORF("Error starting bt scan");
-      }
 #endif
       Lock lock(this->listMutex);
       this->wifiList=newList;
