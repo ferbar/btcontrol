@@ -12,7 +12,7 @@
 #include "utils.h"
 #include "Thread.h"
 
-#if defined ESP32 && defined DEBUG_MUTEX
+#if defined ESP32
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #endif
