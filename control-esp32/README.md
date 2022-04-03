@@ -9,7 +9,7 @@ Wlan / Bluetooth Steuerung für die Eisenbahn mit haptischem Feedback. Wlan / Lo
 ## Partlist
 
 * Lilygo ESP32 T-Display
-* Schiebepotentiometer 60mm - 70mm Gehäuse, 45mm Schiebeweg
+* Schiebepotentiometer 60mm - 70mm Gehäuse, 45mm Schiebeweg, linear (B10K -> SC4521N)
 * Stiftleiste (eventuell beim ESP32 dabei)
 * Ein paar Taster (3 für mein .svg)
 * Ein paar Schalter (3 für mein .svg)
