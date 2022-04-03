@@ -135,6 +135,13 @@ void Thread::testcancel() {
 }
 
 int Thread::self() {
+// 2022 workaround for esp idf 4.4 -> crash if called from main loop() thread
+//      getName returns "loop"
+#ifdef ESP32
+	if(! STREQ(pcTaskGetName(NULL), "pthread")) {
+		return 0;
+	}
+#endif
 	return pthread_self();
 }
 
@@ -162,22 +169,16 @@ Mutex::~Mutex() {
 void Mutex::lock() {
 #ifdef DEBUG_MUTEX
 	if(this->lockedby) {
-		DEBUGF("mutex locked by %0x", this->lockedby);
+		DEBUGF("mutex already locked by %0x", this->lockedby);
 	}
+	DEBUGF("try mutex lock by %0x", Thread::self());
 #endif
 	if(pthread_mutex_lock(&this->m) != 0 ) {
 		throw std::runtime_error("error Mutex::lock()");
 	}
 #ifdef DEBUG_MUTEX
-#ifdef ESP32
-	// esp32 crashes if pthread_self() is called in main loop!!! => getName returns "loop"
-	if(STREQ(pcTaskGetName(NULL), "pthread"))
-#endif
-		this->lockedby=pthread_self();
-#ifdef ESP32
-	else
-		this->lockedby=-1;
-#endif
+	DEBUGF("mutex locked by %0x", Thread::self());
+	this->lockedby=Thread::self();
 #endif
 }
 
@@ -186,6 +187,7 @@ void Mutex::unlock() {
 		throw std::runtime_error("error Mutex::unlock()");
 	}
 #ifdef DEBUG_MUTEX
+	DEBUGF("mutex unlocked by %0x", Thread::self());
 	this->lockedby=0;
 #endif
 }

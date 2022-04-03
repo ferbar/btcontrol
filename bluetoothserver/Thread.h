@@ -7,7 +7,7 @@ public:
 	Thread() : thread(0),exited(false),autodelete(false) {};
 	virtual ~Thread() {};
 	void start();
-	int self();
+	static int self();
 	void cancel(bool join);
 	bool isRunning();
 	void testcancel();
