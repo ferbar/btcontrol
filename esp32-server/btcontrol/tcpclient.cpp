@@ -106,8 +106,7 @@ void TCPClient::flushMessage() {
 }
 
 std::string TCPClient::getRemoteAddr() {
-	ERRORF("TCPClient::getRemoteAddr() not implemented!");
-	abort();
+	return this->client.remoteIP().toString().c_str();
 }
 
 ssize_t TCPClient::read(void *buf, size_t count) {
