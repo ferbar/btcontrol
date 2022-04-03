@@ -22,10 +22,11 @@ public:
   virtual void close() {};
   virtual void init() {};
   virtual const char * which() const { return "GuiView" ; };
-  static void drawPopup(const char*msg);
+  static void drawPopup(const String &msg);
 protected:
   static long lastKeyPressed;         // power off after POWER_DOWN_IDLE_TIMEOUT, init mit 0 => system boot
   void drawButtons();
+  void drawButtons(const char *top1, const char *top2, const char *bottom1, const char *bottom2);
 };
 
 class GuiViewSelectWifi : public GuiView {
@@ -151,3 +152,12 @@ private:
 };
 
 void resetButtons();
+
+class GuiViewInfo : public GuiView {
+public:
+	GuiViewInfo()  { };
+	void init();
+	void close();
+	void loop();
+	const char * which() const { return "GuiViewInfo"; };
+};

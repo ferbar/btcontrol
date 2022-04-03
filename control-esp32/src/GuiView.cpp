@@ -142,15 +142,19 @@ void GuiView::runLoop() {
 }
 
 void GuiView::drawButtons() {
+  GuiView::drawButtons(" ^", ">>", " v", "off");
+}
+
+void GuiView::drawButtons(const char *top1, const char *top2, const char *bottom1, const char *bottom2) {
   tft.setTextDatum(MC_DATUM);
   tft.setFreeFont(NULL);
   tft.setTextColor(TFT_BLACK, TFT_WHITE);
   tft.setTextDatum(TR_DATUM);
-  tft.drawString(" ^", tft.width(), 0);
-  tft.drawString(">>", tft.width(), tft.fontHeight());
+  tft.drawString(top1, tft.width(), 0);
+  tft.drawString(top2, tft.width(), tft.fontHeight());
   tft.setTextDatum(BR_DATUM);
-  tft.drawString(" v", tft.width(), tft.height());
-  tft.drawString("off", tft.width(), tft.height() - tft.fontHeight());
+  tft.drawString(bottom1, tft.width(), tft.height());
+  tft.drawString(bottom2, tft.width(), tft.height() - tft.fontHeight());
 
   tft.setTextColor(TFT_GREEN, TFT_BLACK);
   tft.setTextSize(1);
@@ -161,7 +165,7 @@ void GuiView::drawButtons() {
      */
 }
 
-void GuiView::drawPopup(const char *msg) {
+void GuiView::drawPopup(const String &msg) {
   tft.setTextDatum(MC_DATUM);
   tft.setTextColor(TFT_YELLOW, TFT_BLACK);
   tft.setTextSize(1);
@@ -377,7 +381,7 @@ void GuiViewSelectWifi::buttonCallbackLongPress(Button2 &b) {
             String ssid=it->first;
             bool LR=it->second.have_LR;
 
-            GuiView::drawPopup("connecting ...");
+            GuiView::drawPopup(String("connecting to ") + ssid);
 
   		      GuiView::startGuiView(new GuiViewConnectWifi(ssid, password, LR));
           } else {
@@ -388,7 +392,7 @@ void GuiViewSelectWifi::buttonCallbackLongPress(Button2 &b) {
           DEBUGF("bt connect to %s - %d", it->second.addr.toString().c_str(), it->second.channel);
           // disable WiFi
           // adc_power_off();
-          GuiView::drawPopup("connecting ...");
+          GuiView::drawPopup(String("connecting to ")+it->first);
           GuiView::startGuiView(new GuiViewConnectServer(it->second.addr, it->second.channel));
 #endif
         }
@@ -978,6 +982,12 @@ void GuiViewControlLoco::init() {
 		}
 	}
 	tft.fillScreen(TFT_BLACK);
+
+  btn1.setClickHandler([](Button2& b) {
+		GuiView::startGuiView(new GuiViewInfo());
+	}
+	);
+
  	btn1.setLongClickDetectedHandler([](Button2&b) {
 		DEBUGF("GuiViewControlLoco::btn1.setLongClickHandler back");
 		// back to wifi list
@@ -1038,6 +1048,8 @@ void GuiViewControlLoco::loop() {
         if(now > last+200) { // jede 0,2 refreshen
           last=millis();
 
+          this->drawButtons("!!", "<<", "", "off");
+          /*
           tft.setFreeFont(NULL);
           tft.setTextColor(TFT_BLACK, TFT_WHITE);
           tft.setTextDatum(TR_DATUM);
@@ -1046,6 +1058,7 @@ void GuiViewControlLoco::loop() {
           tft.drawString("off",tft.width(), tft.height() - tft.fontHeight());
           tft.setTextDatum(TL_DATUM);
           tft.setTextColor(TFT_GREEN, TFT_BLACK);
+          */
           // ping stats:
           std::string info=utils::format( "ping: ~%4.2f (%4.2f) drop: %d ", ((float)controlClientThread.pingAvg)/controlClientThread.pingCount/1000.0, controlClientThread.pingMax/1000.0, droppedCommands);
           // bat info:
@@ -1354,4 +1367,64 @@ void GuiViewPowerDown::loop() {
 		delay(500);
 		esp_deep_sleep_start();
 	}
+}
+
+// ============================================================= Info ========================
+void GuiViewInfo::init() {
+  DEBUGF("GuiViewInfo::init()");
+  btn1.setClickHandler([](Button2& b) {
+		GuiView::startGuiView(new GuiViewControlLoco());
+  });
+}
+void GuiViewInfo::close() {
+  DEBUGF("GuiViewInfo::close()");
+  resetButtons();
+}
+void GuiViewInfo::loop() {
+  static long last=0;
+  if(millis() > last + 1*1000) { // 1 sekunden
+    last=millis();
+  	tft.setTextColor(TFT_GREEN, TFT_BLACK);
+		tft.fillScreen(TFT_BLACK);
+    tft.setTextDatum(TL_DATUM);
+		tft.setTextSize(1);
+    tft.setCursor(0, 0);
+
+    tft.println();
+    tft.println(String("device name: ")+device_name);
+
+
+    if(WiFi.status() == WL_CONNECTED) {
+      tft.println(String("WiFi: CONNECTED channel: ") + WiFi.channel() + " " + WiFi.localIP().toString());
+    }
+    if(controlClientThread.isRunning() ) {
+      tft.println("connected");
+      tft.println(String(" to:") + controlClientThread.client->getRemoteAddr().c_str());
+    }
+    tft.printf("freeHeap: %d (minfree: %d, maxalloc: %d)\n",
+       ESP.getFreeHeap(), heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL), ESP.getMaxAllocHeap());
+
+/*
+		WiFi
+    tft.println();
+    //     tft.setTextDatum(MC_DATUM);
+				tft.drawString("client thread running!!!", tft.width() / 2, tft.height() / 2);
+*/
+    tft.println("known Wifis:");
+    for(auto it : wifiConfig) {
+      tft.print(it.ssid);
+      tft.print(", ");
+    }
+    tft.println();
+    tft.println( String("compile flags: POWER_DOWN_IDLE_TIMEOUT:") + POWER_DOWN_IDLE_TIMEOUT
+#ifdef OTA_UPDATE
+       + " OTA_UPDATE"
+#endif
+
+#ifdef HAVE_BLUETOOTH
+       + " HAVE_BLUETOOTH"
+#endif
+    );
+
+  }
 }
