@@ -4,7 +4,7 @@
 function logtail() {
 	port=$1
 	stty -F $port 115200 -icanon -echo time 0 min 0 -echoe -echok -echoctl -echoke -iexten -icrnl
-	tail -f $port | xargs -IL date +"%Y%m%d_%H%M%S:L"
+	stdbuf -oL tail -f $port | stdbuf -oL xargs -IL date +"%H:%M:%S L"
 }
 
 if [ "$1" ] ; then
