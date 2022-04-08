@@ -368,7 +368,7 @@ void GuiViewSelectWifi::buttonCallbackLongPress(Button2 &b) {
       usable=GuiViewSelectWifi::passwordForSSID(it->first);
 #ifdef HAVE_BLUETOOTH
     } else {
-      usable=it->second.channel != 0;
+      usable=it->second.channel == 30;
 #endif
     }
     if(usable) {
