@@ -176,7 +176,7 @@ install:
 					echo "bluez compat mode already enabled" ; \
 				else \
 					echo "!!! modification of /etc/systemd/system/dbus-org.bluez.service required !!!" ; \
-					echo "change ExecStart=/usr/lib/bluetooth/bluetoothd to ExecStart=/usr/lib/bluetooth/bluetoothd --compat" ; \
+					echo "change ExecStart=/usr/libexec/bluetooth/bluetoothd to ExecStart=/usr/libexec/bluetooth/bluetoothd --compat" ; \
 					echo "reload systemd afterwards: systemctl daemon-reload; systemctl restart bluetooth" ; \
 					exit 1 ; \
 				fi ; \
