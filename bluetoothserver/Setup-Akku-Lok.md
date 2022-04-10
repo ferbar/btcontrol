@@ -34,6 +34,13 @@ dietpi-config: (startet automatisch)
 
 ### Notwendige Pakete installieren
 
+seit 2022 ----- neu:
+```
+apt-get install git build-essential pkg-config libpigpio-dev libbluetooth-dev libasound2-dev \
+libboost-all-dev avahi-daemon
+```
+
+vor 2022 ---- alt!!!!:
 ```
 apt-get install git build-essential pkg-config wiringpi libbluetooth-dev libasound2-dev \
 libboost-all-dev avahi-daemon
@@ -41,7 +48,7 @@ libboost-all-dev avahi-daemon
 
 Für Entwicklung:
 ```
-apt-get install vim less openssh-client lsof gdb
+apt-get install vim less openssh-client lsof gdb pigpio-tools ODER raspi-gpio
 ```
 
 ### btcontroll installieren
