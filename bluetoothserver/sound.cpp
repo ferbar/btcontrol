@@ -79,17 +79,142 @@ void Sound::init(int mode)
 		DEBUGF("Playback open error: %s", snd_strerror(err));
 		throw std::runtime_error(std::string("Sound::init() Playback open error: ") + snd_strerror(err));
 	}
-	DEBUGF("Sound::[%p] init() bits:%d, sample_rate:%d", this->handle, this->bits, this->sample_rate);
-	if ((err = snd_pcm_set_params(this->handle,
-					this->bits,							// format
-					SND_PCM_ACCESS_RW_INTERLEAVED,		// access
-					1,									// channels
-					this->sample_rate,					// rate
-					1,									// soft resample: allow
-					500000)) < 0) {   /* 0.5sec */
-		ERRORF("Playback open error - error setting params %s", snd_strerror(err));
-		abort();
+
+	// workaround DietPi + I2S DAC 202204: snd_pcm_set_params doesn't work
+/*
+	snd_pcm_hw_params_t *params;
+	snd_pcm_hw_params_alloca(&params);
+	if (( err = snd_pcm_hw_params_any(handle, params) ) < 0) {
+		throw std::runtime_error("Sound::init() error getting default parameters");
 	}
+	unsigned int val;
+	snd_pcm_uframes_t frames;
+	err = snd_pcm_hw_params_get_period_size(params, &frames, NULL);
+	ERRORF("snd_pcm_hw_param_get err=%d, val=%d", err, frames);
+	if ((err = snd_pcm_hw_params_get_period_time_max(params, &val, NULL)) < 0) {
+		throw std::runtime_error("Sound::init() error getting period time max");
+	}
+	unsigned int period_time=std::min(val, 500000u); // either 0.5s or less if hardware doesn't like it
+	DEBUGF("Sound::[%p] init() bits:%d, sample_rate:%d, max period_time: %u", this->handle, this->bits, this->sample_rate, period_time);
+	if ((err = snd_pcm_set_params(this->handle,
+					this->bits,				// format
+					SND_PCM_ACCESS_RW_INTERLEAVED,		// access
+					1,					// channels
+					this->sample_rate,			// rate
+					1,					// soft resample: allow
+					period_time)) < 0) {			// 0.5sec
+		throw std::runtime_error(utils::format("Sound::init() error error setting params %s", snd_strerror(err)));
+	}
+*/
+
+	snd_pcm_hw_params_t *params;
+	snd_pcm_hw_params_alloca(&params);
+
+	snd_pcm_hw_params_any(this->handle, params);
+
+	/* Set parameters */
+	if ((err = snd_pcm_hw_params_set_access(this->handle, params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0) {
+		throw std::runtime_error(utils::format("ERROR: Can't set interleaved mode. %s", snd_strerror(err)));
+	}
+
+	if ((err = snd_pcm_hw_params_set_format(this->handle, params, SND_PCM_FORMAT_S16_LE)) < 0) {
+		throw std::runtime_error(utils::format("ERROR: Can't set format. %s", snd_strerror(err)));
+	}
+
+	if ((err = snd_pcm_hw_params_set_channels(this->handle, params, 1)) < 0) {
+		throw std::runtime_error(utils::format("ERROR: Can't set channels number. %s", snd_strerror(err)));
+	}
+
+	if ((err = snd_pcm_hw_params_set_rate_near(this->handle, params, (unsigned int *) &this->sample_rate, 0)) < 0) {
+		throw std::runtime_error(utils::format("ERROR: Can't set rate. %s", snd_strerror(err)));
+	}
+
+	/* set the buffer time */
+  snd_pcm_uframes_t     period_size_min;
+  snd_pcm_uframes_t     period_size_max;
+  snd_pcm_uframes_t     buffer_size_min;
+  snd_pcm_uframes_t     buffer_size_max;
+  unsigned int       buffer_time = 0;	            /* ring buffer length in us */
+  unsigned int       period_time = 0;	            /* period time in us */
+  unsigned int       nperiods    = 4;                  /* number of periods */
+  snd_pcm_uframes_t  buffer_size;
+  snd_pcm_uframes_t  period_size;
+
+  err = snd_pcm_hw_params_get_buffer_size_min(params, &buffer_size_min);
+  err = snd_pcm_hw_params_get_buffer_size_max(params, &buffer_size_max);
+  err = snd_pcm_hw_params_get_period_size_min(params, &period_size_min, NULL);
+  err = snd_pcm_hw_params_get_period_size_max(params, &period_size_max, NULL);
+  printf("Buffer size range from %lu to %lu\n",buffer_size_min, buffer_size_max);
+  printf("Period size range from %lu to %lu\n",period_size_min, period_size_max);
+  if (period_time > 0) {
+    printf("Requested period time %u us\n", period_time);
+    err = snd_pcm_hw_params_set_period_time_near(handle, params, &period_time, NULL);
+    if (err < 0) {
+      throw std::runtime_error(utils::format("Unable to set period time %u us for playback: %s\n",
+	     period_time, snd_strerror(err)));
+    }
+  }
+  if (buffer_time > 0) {
+    printf(("Requested buffer time %u us\n"), buffer_time);
+    err = snd_pcm_hw_params_set_buffer_time_near(handle, params, &buffer_time, NULL);
+    if (err < 0) {
+      throw std::runtime_error(utils::format("Unable to set buffer time %u us for playback: %s\n",
+	     buffer_time, snd_strerror(err)));
+    }
+  }
+  if (! buffer_time && ! period_time) {
+    buffer_size = buffer_size_max;
+    if (! period_time)
+      buffer_size = (buffer_size / nperiods) * nperiods;
+    printf(("Using max buffer size %lu\n"), buffer_size);
+    err = snd_pcm_hw_params_set_buffer_size_near(handle, params, &buffer_size);
+    if (err < 0) {
+      throw std::runtime_error(utils::format("Unable to set buffer size %lu for playback: %s\n",
+	     buffer_size, snd_strerror(err)));
+    }
+  }
+  if (! buffer_time || ! period_time) {
+    printf(("Periods = %u\n"), nperiods);
+    err = snd_pcm_hw_params_set_periods_near(handle, params, &nperiods, NULL);
+    if (err < 0) {
+      throw std::runtime_error(utils::format("Unable to set nperiods %u for playback: %s\n",
+	     nperiods, snd_strerror(err)));
+    }
+  }
+
+  /* write the parameters to device */
+  err = snd_pcm_hw_params(handle, params);
+  if (err < 0) {
+    throw std::runtime_error(utils::format("Unable to set hw params for playback: %s\n", snd_strerror(err)));
+  }
+
+  snd_pcm_hw_params_get_buffer_size(params, &buffer_size);
+  snd_pcm_hw_params_get_period_size(params, &period_size, NULL);
+  printf(("was set period_size = %lu\n"),period_size);
+  printf(("was set buffer_size = %lu\n"),buffer_size);
+  if (2*period_size > buffer_size) {
+    throw std::runtime_error(utils::format("buffer to small, could not use\n"));
+  }
+
+	/* Write parameters */
+	if ((err = snd_pcm_hw_params(this->handle, params)) < 0) {
+		throw std::runtime_error(utils::format("ERROR: Can't set harware parameters. %s", snd_strerror(err)));
+	}
+
+	/* Resume information */
+	DEBUGF("PCM name: '%s'", snd_pcm_name(this->handle));
+
+	DEBUGF("PCM state: %s", snd_pcm_state_name(snd_pcm_state(this->handle)));
+
+	unsigned int tmp;
+	snd_pcm_hw_params_get_channels(params, &tmp);
+	DEBUGF("channels: %i", tmp);
+
+	snd_pcm_hw_params_get_rate(params, &tmp, 0);
+	DEBUGF("rate: %d bps", tmp);
+
+
+
 
 	if(false) {
 		// snd_pcm_uframes_t buffer_size = 1024*8;
@@ -106,7 +231,7 @@ void Sound::init(int mode)
 		snd_pcm_sw_params(this->handle, sw_params);
 		snd_pcm_sw_params_free (sw_params);
 	}
-
+	// snd_pcm_hw_params_free(params);
 }
 
 Sound::~Sound() {
