@@ -50,6 +50,8 @@ struct __attribute__((packed)) WavHeader
 
 
 const char *device = "default";                        /* playback device */
+//static char *device = "default";
+//static char *device = "plughw:0,0";
 snd_output_t *output = NULL;
 
 SoundType *FahrSound::soundFiles=NULL;
@@ -57,6 +59,134 @@ bool FahrSound::soundFilesLoaded=false;
 snd_pcm_format_t Sound::bits=SND_PCM_FORMAT_UNKNOWN;
 int Sound::sample_rate=0;
 int Sound::soundObjects=0;
+
+snd_pcm_uframes_t periodsize = 4096;    /* Periodsize (bytes) */
+
+/**
+ * https://stackoverflow.com/questions/40346132/how-to-properly-set-up-alsa-device
+ * @param bits:
+ * SND_PCM_FORMAT_U8
+ * SND_PCM_FORMAT_S16_LE
+ */
+int setup_alsa(snd_pcm_t *handle, unsigned int rate, snd_pcm_format_t bits)
+{
+    int rc;
+    snd_pcm_uframes_t periods;          /* Number of fragments/periods */
+    snd_pcm_hw_params_t *params;
+    snd_pcm_sw_params_t *sw_params;
+    unsigned int exact_rate;
+
+    /* Allocate a hardware parameters object. */
+    snd_pcm_hw_params_malloc(&params);
+
+    /* Fill it in with default values. */
+    if (snd_pcm_hw_params_any(handle, params) < 0)
+    {
+        fprintf(stderr, "Can not configure this PCM device.\n");
+        snd_pcm_close(handle);
+        return(-1);
+    }
+
+    /* Set the desired hardware parameters. */
+    /* Non-Interleaved mode */
+    snd_pcm_hw_params_set_access(handle, params, SND_PCM_ACCESS_RW_NONINTERLEAVED);
+    snd_pcm_hw_params_set_format(handle, params, bits);
+
+    /* 44100 bits/second sampling rate (CD quality) */
+    /* Set sample rate. If the exact rate is not supported */
+    /* by the hardware, use nearest possible rate.         */
+    exact_rate = rate;
+    if (snd_pcm_hw_params_set_rate_near(handle, params, &exact_rate, 0) < 0)
+    {
+        fprintf(stderr, "Error setting rate.\n");
+        snd_pcm_close(handle);
+        return(-1);
+    }
+
+    if (rate != exact_rate)
+    {
+        fprintf(stderr, "The rate %d Hz is not supported by your hardware.\n==> Using %d Hz instead.\n", rate, exact_rate);
+    }
+
+    /* Set number of channels to 1 */
+    if( snd_pcm_hw_params_set_channels(handle, params, 1 ) < 0 )
+    {
+        fprintf(stderr, "Error setting channels.\n");
+        snd_pcm_close(handle);
+        return(-1);
+    }
+
+    /* Set number of periods. Periods used to be called fragments. */
+    periods = 4;
+    if ( snd_pcm_hw_params_set_periods(handle, params, periods, 0) < 0 )
+    {
+        fprintf(stderr, "Error setting periods.\n");
+        snd_pcm_close(handle);
+        return(-1);
+    }
+
+    snd_pcm_uframes_t size = (periodsize * periods) >> 2;
+    if( (rc = snd_pcm_hw_params_set_buffer_size_near( handle, params, &size )) < 0)
+    {
+        fprintf(stderr, "Error setting buffersize: [%s]\n", snd_strerror(rc) );
+        snd_pcm_close(handle);
+        return(-1);
+    }
+    else
+    {
+        printf("Buffer size = %lu\n", (unsigned long)size);
+    }
+
+    /* Write the parameters to the driver */
+    rc = snd_pcm_hw_params(handle, params);
+    if (rc < 0)
+    {
+        fprintf(stderr, "unable to set hw parameters: %s\n", snd_strerror(rc));
+        snd_pcm_close(handle);
+        return -1;
+    }
+
+    snd_pcm_hw_params_free(params);
+
+    /* Allocate a software parameters object. */
+    rc = snd_pcm_sw_params_malloc(&sw_params);
+    if( rc < 0 )
+    {
+        fprintf (stderr, "cannot allocate software parameters structure (%s)\n", snd_strerror(rc) );
+        return(-1);
+    }
+
+    rc = snd_pcm_sw_params_current(handle, sw_params);
+    if( rc < 0 )
+    {
+        fprintf (stderr, "cannot initialize software parameters structure (%s)\n", snd_strerror(rc) );
+        return(-1);
+    }
+
+    if((rc = snd_pcm_sw_params_set_avail_min(handle, sw_params, 1024)) < 0)
+    {
+        fprintf (stderr, "cannot set minimum available count (%s)\n", snd_strerror (rc));
+        return(-1);
+    }
+
+    rc = snd_pcm_sw_params_set_start_threshold(handle, sw_params, 1);
+    if( rc < 0 )
+    {
+        fprintf(stderr, "Error setting start threshold\n");
+        snd_pcm_close(handle);
+        return -1;
+    }
+
+    if((rc = snd_pcm_sw_params(handle, sw_params)) < 0)
+    {
+        fprintf (stderr, "cannot set software parameters (%s)\n", snd_strerror (rc));
+        return(-1);
+    }
+
+    snd_pcm_sw_params_free(sw_params);
+
+    return 0;
+}
 
 /**
  * initialisiert alsa - kann beim raspi anscheinend auch mehrmals paralell passieren !!!
@@ -79,6 +209,9 @@ void Sound::init(int mode)
 		DEBUGF("Playback open error: %s", snd_strerror(err));
 		throw std::runtime_error(std::string("Sound::init() Playback open error: ") + snd_strerror(err));
 	}
+
+setup_alsa(this->handle, this->sample_rate, this->bits);
+return;
 
 	// workaround DietPi + I2S DAC 202204: snd_pcm_set_params doesn't work
 /*
@@ -107,12 +240,14 @@ void Sound::init(int mode)
 	}
 */
 
+// another try ....
+/*
 	snd_pcm_hw_params_t *params;
 	snd_pcm_hw_params_alloca(&params);
 
 	snd_pcm_hw_params_any(this->handle, params);
 
-	/* Set parameters */
+	// Set parameters
 	if ((err = snd_pcm_hw_params_set_access(this->handle, params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0) {
 		throw std::runtime_error(utils::format("ERROR: Can't set interleaved mode. %s", snd_strerror(err)));
 	}
@@ -129,14 +264,14 @@ void Sound::init(int mode)
 		throw std::runtime_error(utils::format("ERROR: Can't set rate. %s", snd_strerror(err)));
 	}
 
-	/* set the buffer time */
+	// set the buffer time
   snd_pcm_uframes_t     period_size_min;
   snd_pcm_uframes_t     period_size_max;
   snd_pcm_uframes_t     buffer_size_min;
   snd_pcm_uframes_t     buffer_size_max;
-  unsigned int       buffer_time = 0;	            /* ring buffer length in us */
-  unsigned int       period_time = 0;	            /* period time in us */
-  unsigned int       nperiods    = 4;                  /* number of periods */
+  unsigned int       buffer_time = 0;	            // ring buffer length in us
+  unsigned int       period_time = 0;	            // period time in us
+  unsigned int       nperiods    = 4;                  // number of periods
   snd_pcm_uframes_t  buffer_size;
   snd_pcm_uframes_t  period_size;
 
@@ -182,7 +317,7 @@ void Sound::init(int mode)
     }
   }
 
-  /* write the parameters to device */
+  // write the parameters to device
   err = snd_pcm_hw_params(handle, params);
   if (err < 0) {
     throw std::runtime_error(utils::format("Unable to set hw params for playback: %s\n", snd_strerror(err)));
@@ -196,12 +331,12 @@ void Sound::init(int mode)
     throw std::runtime_error(utils::format("buffer to small, could not use\n"));
   }
 
-	/* Write parameters */
+	// Write parameters
 	if ((err = snd_pcm_hw_params(this->handle, params)) < 0) {
 		throw std::runtime_error(utils::format("ERROR: Can't set harware parameters. %s", snd_strerror(err)));
 	}
 
-	/* Resume information */
+	// Resume information
 	DEBUGF("PCM name: '%s'", snd_pcm_name(this->handle));
 
 	DEBUGF("PCM state: %s", snd_pcm_state_name(snd_pcm_state(this->handle)));
@@ -213,7 +348,7 @@ void Sound::init(int mode)
 	snd_pcm_hw_params_get_rate(params, &tmp, 0);
 	DEBUGF("rate: %d bps", tmp);
 
-
+*/
 
 
 	if(false) {
