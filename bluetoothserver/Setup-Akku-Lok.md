@@ -34,13 +34,13 @@ dietpi-config: (startet automatisch)
 
 ### Notwendige Pakete installieren
 
-seit 2022 ----- neu:
+seit 2022 mit pigpio (geht nicht mit I2S DAC)
 ```
 apt-get install git build-essential pkg-config libpigpio-dev libbluetooth-dev libasound2-dev \
 libboost-all-dev avahi-daemon
 ```
 
-vor 2022 ---- alt!!!!:
+mit wiringPi (wiringPi muss von https://github.com/WiringPi/WiringPi mit git clone + build + build install installiert werden)
 ```
 apt-get install git build-essential pkg-config wiringpi libbluetooth-dev libasound2-dev \
 libboost-all-dev avahi-daemon
