@@ -219,7 +219,7 @@ install:
 		fi ; \
 		echo "########### setting hostapd config ###########" ; \
 		if [ ! -f /hostapd/hostapd.conf ] ; then \
-			eval echo "'$$(cat $$PWD/etc/hostapd/hostapd.conf)'" > /etc/hostapd/hostapd.conf ; \
+			eval "echo \"$$(cat $$PWD/etc/hostapd/hostapd.conf)\"" > /etc/hostapd/hostapd.conf ; \
 			echo "DAEMON_CONF=\"/etc/hostapd/hostapd.conf\"" > /etc/default/hostapd ; \
 		fi ; \
 		echo "########### setting lighttpd config ###########" ; \
