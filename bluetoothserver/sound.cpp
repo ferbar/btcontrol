@@ -50,13 +50,139 @@ struct __attribute__((packed)) WavHeader
 
 
 const char *device = "default";                        /* playback device */
-snd_output_t *output = NULL;
+//const char *device = "softvol";
+//const char *device = "plughw:0,0";
+//snd_output_t *output = NULL;
 
 SoundType *FahrSound::soundFiles=NULL;
 bool FahrSound::soundFilesLoaded=false;
 snd_pcm_format_t Sound::bits=SND_PCM_FORMAT_UNKNOWN;
 int Sound::sample_rate=0;
 int Sound::soundObjects=0;
+
+snd_pcm_uframes_t periodsize = 4096;    /* Periodsize (bytes) */
+
+/**
+ * https://stackoverflow.com/questions/40346132/how-to-properly-set-up-alsa-device
+ * @param bits:
+ * SND_PCM_FORMAT_U8
+ * SND_PCM_FORMAT_S16_LE
+ */
+int setup_alsa(snd_pcm_t *handle, unsigned int rate, snd_pcm_format_t bits)
+{
+    int rc;
+    snd_pcm_uframes_t periods;          /* Number of fragments/periods */
+    snd_pcm_hw_params_t *params;
+    snd_pcm_sw_params_t *sw_params;
+    unsigned int exact_rate;
+
+    /* Allocate a hardware parameters object. */
+    snd_pcm_hw_params_alloca(&params);
+
+    /* Fill it in with default values. */
+    if (snd_pcm_hw_params_any(handle, params) < 0)
+    {
+        fprintf(stderr, "Can not configure this PCM device.\n");
+        snd_pcm_close(handle);
+        return(-1);
+    }
+
+    /* Set the desired hardware parameters. */
+    /* Non-Interleaved mode */
+    //snd_pcm_hw_params_set_access(handle, params, SND_PCM_ACCESS_RW_NONINTERLEAVED);
+    snd_pcm_hw_params_set_access(handle, params, SND_PCM_ACCESS_RW_INTERLEAVED);
+    snd_pcm_hw_params_set_format(handle, params, bits);
+
+    /* 44100 bits/second sampling rate (CD quality) */
+    /* Set sample rate. If the exact rate is not supported */
+    /* by the hardware, use nearest possible rate.         */
+    exact_rate = rate;
+    if (snd_pcm_hw_params_set_rate_near(handle, params, &exact_rate, 0) < 0)
+    {
+        fprintf(stderr, "Error setting rate.\n");
+        snd_pcm_close(handle);
+        return(-1);
+    }
+
+    if (rate != exact_rate)
+    {
+        fprintf(stderr, "The rate %d Hz is not supported by your hardware.\n==> Using %d Hz instead.\n", rate, exact_rate);
+    }
+
+    /* Set number of channels to 1 */
+    if( snd_pcm_hw_params_set_channels(handle, params, 1 ) < 0 )
+    {
+        fprintf(stderr, "Error setting channels.\n");
+        snd_pcm_close(handle);
+        return(-1);
+    }
+
+    /* Set number of periods. Periods used to be called fragments. */
+    periods = 4;
+    if ( snd_pcm_hw_params_set_periods(handle, params, periods, 0) < 0 )
+    {
+        fprintf(stderr, "Error setting periods.\n");
+        snd_pcm_close(handle);
+        return(-1);
+    }
+
+    snd_pcm_uframes_t size = (periodsize * periods) >> 2;
+    if( (rc = snd_pcm_hw_params_set_buffer_size_near( handle, params, &size )) < 0)
+    {
+        fprintf(stderr, "Error setting buffersize: [%s]\n", snd_strerror(rc) );
+        snd_pcm_close(handle);
+        return(-1);
+    }
+    else
+    {
+        printf("Buffer size = %lu\n", (unsigned long)size);
+    }
+
+    /* Write the parameters to the driver */
+    rc = snd_pcm_hw_params(handle, params);
+    if (rc < 0)
+    {
+        fprintf(stderr, "unable to set hw parameters: %s\n", snd_strerror(rc));
+        snd_pcm_close(handle);
+        return -1;
+    }
+
+    // snd_pcm_hw_params_free(params);
+
+    /* Allocate a software parameters object. */
+    snd_pcm_sw_params_alloca(&sw_params);
+
+    rc = snd_pcm_sw_params_current(handle, sw_params);
+    if( rc < 0 )
+    {
+        fprintf (stderr, "cannot initialize software parameters structure (%s)\n", snd_strerror(rc) );
+        return(-1);
+    }
+
+    if((rc = snd_pcm_sw_params_set_avail_min(handle, sw_params, 1024)) < 0)
+    {
+        fprintf (stderr, "cannot set minimum available count (%s)\n", snd_strerror (rc));
+        return(-1);
+    }
+
+    rc = snd_pcm_sw_params_set_start_threshold(handle, sw_params, 1);
+    if( rc < 0 )
+    {
+        fprintf(stderr, "Error setting start threshold\n");
+        snd_pcm_close(handle);
+        return -1;
+    }
+
+    if((rc = snd_pcm_sw_params(handle, sw_params)) < 0)
+    {
+        fprintf (stderr, "cannot set software parameters (%s)\n", snd_strerror (rc));
+        return(-1);
+    }
+
+    // snd_pcm_sw_params_free(sw_params);
+
+    return 0;
+}
 
 /**
  * initialisiert alsa - kann beim raspi anscheinend auch mehrmals paralell passieren !!!
@@ -65,6 +191,7 @@ int Sound::soundObjects=0;
  */
 void Sound::init(int mode)
 {
+	ERRORF("Sound::init(mode=%d, rate=%d, bits=%d)", mode, this->sample_rate, this->bits);
 	if(this->handle) {
 		DEBUGF("sound already initialized");
 		throw std::runtime_error("sound already initialized");
@@ -79,17 +206,149 @@ void Sound::init(int mode)
 		DEBUGF("Playback open error: %s", snd_strerror(err));
 		throw std::runtime_error(std::string("Sound::init() Playback open error: ") + snd_strerror(err));
 	}
-	DEBUGF("Sound::[%p] init() bits:%d, sample_rate:%d", this->handle, this->bits, this->sample_rate);
-	if ((err = snd_pcm_set_params(this->handle,
-					this->bits,							// format
-					SND_PCM_ACCESS_RW_INTERLEAVED,		// access
-					1,									// channels
-					this->sample_rate,					// rate
-					1,									// soft resample: allow
-					500000)) < 0) {   /* 0.5sec */
-		ERRORF("Playback open error - error setting params %s", snd_strerror(err));
-		abort();
+
+	if(setup_alsa(this->handle, this->sample_rate, this->bits) < 0) {
+		throw std::runtime_error("error in setup_alsa");
 	}
+return;
+
+	// DietPi + I2S DAC 202204: snd_pcm_set_params doesn't work with I2S DAC => aplay init is like setup_alsa, so skipping snd_pcm_set_params
+/*
+	snd_pcm_hw_params_t *params;
+	snd_pcm_hw_params_alloca(&params);
+	if (( err = snd_pcm_hw_params_any(handle, params) ) < 0) {
+		throw std::runtime_error("Sound::init() error getting default parameters");
+	}
+	unsigned int val;
+	snd_pcm_uframes_t frames;
+	err = snd_pcm_hw_params_get_period_size(params, &frames, NULL);
+	ERRORF("snd_pcm_hw_param_get err=%d, val=%d", err, frames);
+	if ((err = snd_pcm_hw_params_get_period_time_max(params, &val, NULL)) < 0) {
+		throw std::runtime_error("Sound::init() error getting period time max");
+	}
+	unsigned int period_time=std::min(val, 500000u); // either 0.5s or less if hardware doesn't like it
+	DEBUGF("Sound::[%p] init() bits:%d, sample_rate:%d, max period_time: %u", this->handle, this->bits, this->sample_rate, period_time);
+	if ((err = snd_pcm_set_params(this->handle,
+					this->bits,				// format
+					SND_PCM_ACCESS_RW_INTERLEAVED,		// access
+					1,					// channels
+					this->sample_rate,			// rate
+					1,					// soft resample: allow
+					period_time)) < 0) {			// 0.5sec
+		throw std::runtime_error(utils::format("Sound::init() error error setting params %s", snd_strerror(err)));
+	}
+*/
+
+// another try ....
+/*
+	snd_pcm_hw_params_t *params;
+	snd_pcm_hw_params_alloca(&params);
+
+	snd_pcm_hw_params_any(this->handle, params);
+
+	// Set parameters
+	if ((err = snd_pcm_hw_params_set_access(this->handle, params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0) {
+		throw std::runtime_error(utils::format("ERROR: Can't set interleaved mode. %s", snd_strerror(err)));
+	}
+
+	if ((err = snd_pcm_hw_params_set_format(this->handle, params, SND_PCM_FORMAT_S16_LE)) < 0) {
+		throw std::runtime_error(utils::format("ERROR: Can't set format. %s", snd_strerror(err)));
+	}
+
+	if ((err = snd_pcm_hw_params_set_channels(this->handle, params, 1)) < 0) {
+		throw std::runtime_error(utils::format("ERROR: Can't set channels number. %s", snd_strerror(err)));
+	}
+
+	if ((err = snd_pcm_hw_params_set_rate_near(this->handle, params, (unsigned int *) &this->sample_rate, 0)) < 0) {
+		throw std::runtime_error(utils::format("ERROR: Can't set rate. %s", snd_strerror(err)));
+	}
+
+	// set the buffer time
+  snd_pcm_uframes_t     period_size_min;
+  snd_pcm_uframes_t     period_size_max;
+  snd_pcm_uframes_t     buffer_size_min;
+  snd_pcm_uframes_t     buffer_size_max;
+  unsigned int       buffer_time = 0;	            // ring buffer length in us
+  unsigned int       period_time = 0;	            // period time in us
+  unsigned int       nperiods    = 4;                  // number of periods
+  snd_pcm_uframes_t  buffer_size;
+  snd_pcm_uframes_t  period_size;
+
+  err = snd_pcm_hw_params_get_buffer_size_min(params, &buffer_size_min);
+  err = snd_pcm_hw_params_get_buffer_size_max(params, &buffer_size_max);
+  err = snd_pcm_hw_params_get_period_size_min(params, &period_size_min, NULL);
+  err = snd_pcm_hw_params_get_period_size_max(params, &period_size_max, NULL);
+  printf("Buffer size range from %lu to %lu\n",buffer_size_min, buffer_size_max);
+  printf("Period size range from %lu to %lu\n",period_size_min, period_size_max);
+  if (period_time > 0) {
+    printf("Requested period time %u us\n", period_time);
+    err = snd_pcm_hw_params_set_period_time_near(handle, params, &period_time, NULL);
+    if (err < 0) {
+      throw std::runtime_error(utils::format("Unable to set period time %u us for playback: %s\n",
+	     period_time, snd_strerror(err)));
+    }
+  }
+  if (buffer_time > 0) {
+    printf(("Requested buffer time %u us\n"), buffer_time);
+    err = snd_pcm_hw_params_set_buffer_time_near(handle, params, &buffer_time, NULL);
+    if (err < 0) {
+      throw std::runtime_error(utils::format("Unable to set buffer time %u us for playback: %s\n",
+	     buffer_time, snd_strerror(err)));
+    }
+  }
+  if (! buffer_time && ! period_time) {
+    buffer_size = buffer_size_max;
+    if (! period_time)
+      buffer_size = (buffer_size / nperiods) * nperiods;
+    printf(("Using max buffer size %lu\n"), buffer_size);
+    err = snd_pcm_hw_params_set_buffer_size_near(handle, params, &buffer_size);
+    if (err < 0) {
+      throw std::runtime_error(utils::format("Unable to set buffer size %lu for playback: %s\n",
+	     buffer_size, snd_strerror(err)));
+    }
+  }
+  if (! buffer_time || ! period_time) {
+    printf(("Periods = %u\n"), nperiods);
+    err = snd_pcm_hw_params_set_periods_near(handle, params, &nperiods, NULL);
+    if (err < 0) {
+      throw std::runtime_error(utils::format("Unable to set nperiods %u for playback: %s\n",
+	     nperiods, snd_strerror(err)));
+    }
+  }
+
+  // write the parameters to device
+  err = snd_pcm_hw_params(handle, params);
+  if (err < 0) {
+    throw std::runtime_error(utils::format("Unable to set hw params for playback: %s\n", snd_strerror(err)));
+  }
+
+  snd_pcm_hw_params_get_buffer_size(params, &buffer_size);
+  snd_pcm_hw_params_get_period_size(params, &period_size, NULL);
+  printf(("was set period_size = %lu\n"),period_size);
+  printf(("was set buffer_size = %lu\n"),buffer_size);
+  if (2*period_size > buffer_size) {
+    throw std::runtime_error(utils::format("buffer to small, could not use\n"));
+  }
+
+	// Write parameters
+	if ((err = snd_pcm_hw_params(this->handle, params)) < 0) {
+		throw std::runtime_error(utils::format("ERROR: Can't set harware parameters. %s", snd_strerror(err)));
+	}
+
+	// Resume information
+	DEBUGF("PCM name: '%s'", snd_pcm_name(this->handle));
+
+	DEBUGF("PCM state: %s", snd_pcm_state_name(snd_pcm_state(this->handle)));
+
+	unsigned int tmp;
+	snd_pcm_hw_params_get_channels(params, &tmp);
+	DEBUGF("channels: %i", tmp);
+
+	snd_pcm_hw_params_get_rate(params, &tmp, 0);
+	DEBUGF("rate: %d bps", tmp);
+
+*/
+
 
 	if(false) {
 		// snd_pcm_uframes_t buffer_size = 1024*8;
@@ -106,7 +365,7 @@ void Sound::init(int mode)
 		snd_pcm_sw_params(this->handle, sw_params);
 		snd_pcm_sw_params_free (sw_params);
 	}
-
+	// snd_pcm_hw_params_free(params);
 }
 
 Sound::~Sound() {
@@ -318,7 +577,8 @@ public:
 		this->fahrsound=fahrsound;
 	};
 	~EMotorOutLoop() {
-		this->cancel(true);
+		if(this->isRunning())
+			this->cancel(true);
 	};
 	void run() {
 		if(! this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_EMOTOR]) {
@@ -609,14 +869,17 @@ int Sound::writeSound(const std::string &data, int startpos) {
 	//DEBUGF("Sound::writeSound dataLength=%zd startpos=%d\n", data.length(), startpos);
 	snd_pcm_sframes_t frames = snd_pcm_writei(this->handle, wavData, len);
 	//DEBUGF("Sound::writeSound frames=%ld\n", frames);
-	if (frames < 0) { // 2* probieren:
-		DEBUGF("Sound::[%p]writeSound recover error: %s", this->handle, snd_strerror(frames));
-		frames = snd_pcm_recover(this->handle, frames, 0);
-	}
 	if (frames == -EPIPE) {
 		/* EPIPE means underrun */
 		ERRORF("underrun occurred");
 		snd_pcm_prepare(this->handle);
+	} else if (frames == -EBADFD) {
+		ERRORF("pcm in bad state");
+	} else if (frames == -ESTRPIPE) {
+		ERRORF("a suspend event occurred");
+	} else if (frames < 0) { // 2* probieren:
+		DEBUGF("Sound::[%p] writeSound recover error: %lu = %s", this->handle, frames, snd_strerror(frames));
+		frames = snd_pcm_recover(this->handle, frames, 0);
 	}
 	/*
 	if (frames < 0) { // noch immer putt

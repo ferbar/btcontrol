@@ -17,3 +17,4 @@ alias ll='ls $LS_OPTIONS -l'
 
 alias grep='grep --color'
 
+alias ..='cd ..'

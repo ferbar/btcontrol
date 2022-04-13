@@ -1,5 +1,5 @@
 .SUFFIXES:
-.PHONY: tags clean
+.PHONY: tags clean help
 
 SHELL:=/bin/bash
 CFLAGS=-g -O0 -Wall -Wformat
@@ -13,12 +13,24 @@ CPP=g++
 
 all: btserver
 
-# extra config:
+help:
+	@echo -e "***** Bluetooth Server Help *****\n" \
+		"\n" \
+		"clean:\t cleanup object + dependencies + config\n" \
+		"all (default) rebuild\n" \
+		"tags:\t c-tags generieren\n" \
+		"config:\t rebuild config, auto generated if it doesn't exist\n" \
+		"loop:\t wait for changes and rebuild if a file has been changed\n" \
+		"install:\t setup systemd scripts etc\n" \
+		"\n"
+
+
+# extra config: - Vorsicht: -include führt dazu dass bei einem Fehler nicht abgebrochen wird!
 -include Makefile.config
 
 Makefile.config:
-	@echo -e "no Makefile.config - generating new config for you - if you want a new config: \n" \
-		"\trm Makefile.config; make"
+	@echo -e "##### no Makefile.config - generating new config for you \n" \
+	       " use make clean to update the config\n"
 	@echo "checking gcc >=4.9 (colored error messages)"
 	@if [ $$( (echo "4.9" ; gcc -dumpversion ) | sort -V | head -n1 ) == "4.9" ] ; then \
 		echo "CPP:=g++ -fdiagnostics-color" >> Makefile.config ; \
@@ -99,6 +111,12 @@ Makefile.config:
 			echo "btserver: RaspiPWM.o" >> Makefile.config;			\
 		elif [ -f /usr/include/pigpio.h ] ; then \
 			echo "found pigpio" ; 	\
+			if lsmod | grep -q i2s ; then \
+				echo "!!!!!!!!!!!!!!!!!!!!!!!!!! I2S soundcard + pigpio doesn't work !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+				echo " you have to install wiringpi sry";		\
+				rm Makefile.config ; 					\
+				exit 1 ;						\
+			fi; 								\
 			echo "CFLAGS+=-DHAVE_RASPI_PIGPIO" >> Makefile.config ; 	\
 			echo "LDFLAGS+=-lpigpio" >> Makefile.config ;			\
 			echo "btserver: RaspiPWM.o" >> Makefile.config ;		\
@@ -108,6 +126,7 @@ Makefile.config:
 	else						\
 		echo "not found - raspi ACT led disabled"	;\
 	fi
+	@echo .
 	
 	@echo -e "checking libsndfile:"
 	@sndfilelibs=$$(pkg-config --libs sndfile) ;\
@@ -118,11 +137,13 @@ Makefile.config:
 			echo "not found - zpp2zsp disabled"	;\
 		fi
 	@echo .
-	# gibts unter linux immer (am esp32 nicht)
+
+	@# gibts unter linux immer (am esp32 nicht)
 	@echo "CFLAGS+=-DHAVE_EXECINFO" >> Makefile.config
 
-btserver: fbtctl_message.o CommThread.o message_layout.o server.o tcpclient.o clientthread.o lokdef.o main.o srcp.o utils.o ParseExpr.o Thread.o USBPlatine.o BTUtils.o
-	${CPP} $+ ${LDFLAGS} -o btserver
+# Makefile.config brauch ma damit build abbricht wenn Makefile.config nicht angelegt werden kann
+btserver: Makefile.config fbtctl_message.o CommThread.o message_layout.o server.o tcpclient.o clientthread.o lokdef.o main.o srcp.o utils.o ParseExpr.o Thread.o USBPlatine.o BTUtils.o
+	${CPP} $(filter %.o, $+) ${LDFLAGS} -o btserver
 
 digispark_test: USBDigispark.cpp utils.o
 	${CPP} ${CFLAGS} ${LDFLAGS} $+ -DDIGISPARK_TEST -o digispark_test
@@ -140,12 +161,6 @@ protocol.h: protocol.dat
 	cat protocol.dat | python3 -c "import sys; sys.stdout.write(sys.stdin.read().replace('\n','\\\\n\"\n\"').replace('???','??\" \"'))" >> protocol.h
 	echo '";' >> protocol.h
 
-help:
-	@echo -e "all\t alles builden\n\
-tags\t c-tags generieren\n\
-install\t auf ibm kiste kopieren\n\
-search-ibm-desktop\t ibm kiste suchen\n\
-loop\t make bei jeder Änderung einer *.cpp *.h Datei aufrufen"
 
 loop:
 	@if ! which inotifywait ; then \
@@ -192,6 +207,26 @@ install:
 		if [ ! -f ~/.inputrc ] ; then \
 			ln -s $$PWD/etc/inputrc ~/.inputrc ; \
 		fi ; \
+		echo "########### setting udev AP config ###########" ; \
+		regex='addr ([0-9a-f:]*)' ; if [[ "$$(iw wlan0 info)" =~ $$regex ]] ; then WLAN0_MAC="$${BASH_REMATCH[1]}"; else \
+		echo "error getting wifi mac"; exit 1; fi ; \
+		CONF="$$(cat $$PWD/etc/udev/rules.d/70-persistent-net-ap.rules)" ; \
+		eval "echo \"$${CONF//\"/\\\"}\"" > /etc/udev/rules.d/70-persistent-net-ap.rules ; \
+		echo '.' ; \
+		echo "########### setting dnsmasq config ###########" ; \
+		if [ ! -f /etc/dnsmasq.d/btcontrol.conf ] ; then \
+			ln -s $$PWD/etc/dnsmasq.conf /etc/dnsmasq.d/btcontrol.conf ; \
+		fi ; \
+		echo "########### setting hostapd config ###########" ; \
+		if [ ! -f /hostapd/hostapd.conf ] ; then \
+			eval echo "'$$(cat $$PWD/etc/hostapd/hostapd.conf)'" > /etc/hostapd/hostapd.conf ; \
+			echo "DAEMON_CONF=\"/etc/hostapd/hostapd.conf\"" > /etc/default/hostapd ; \
+		fi ; \
+		echo "########### setting lighttpd config ###########" ; \
+		echo -e '# created by btcontrol make install, hostname lower case \n' \
+'   $$HTTP["host"] != "'$${HOSTNAME,,}'" { \n' \
+'        url.redirect = ("" => "http://'$${HOSTNAME,,}'/") \n' \
+'    } ' > /etc/lighttpd/conf-enabled/redirect.conf ; \
 	else \
 		cp ../ussp-push-0.11/src/ussp-push \
 			../MidpBluetoothExample2/MobileApplication/dist/btcontrol.jar \
@@ -222,6 +257,9 @@ search-ibm-desktop:
 	${CPP} ${CFLAGS_DEP} ${CFLAGS} -c -o $@  $<
 main.o : main.cpp main.h
 	${CPP} ${CFLAGS_DEP} ${CFLAGS} -c -o $@  $< -DSVNVERSION="git$$(git log --oneline | wc -l)"
+
+config: Makefile.config
+	echo "done"
 
 tags:
 	find . | grep -e '\.h$$' -e '\.c$$' -e '\.cpp$$' | \

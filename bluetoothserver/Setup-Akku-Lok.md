@@ -34,13 +34,13 @@ dietpi-config: (startet automatisch)
 
 ### Notwendige Pakete installieren
 
-seit 2022 ----- neu:
+seit 2022 mit pigpio (geht nicht mit I2S DAC)
 ```
 apt-get install git build-essential pkg-config libpigpio-dev libbluetooth-dev libasound2-dev \
 libboost-all-dev avahi-daemon
 ```
 
-vor 2022 ---- alt!!!!:
+mit wiringPi (wiringPi muss von https://github.com/WiringPi/WiringPi mit git clone + build + build install installiert werden)
 ```
 apt-get install git build-essential pkg-config wiringpi libbluetooth-dev libasound2-dev \
 libboost-all-dev avahi-daemon
@@ -178,7 +178,7 @@ dietpi-disable_rpi_camera.conf   => blacklist bcm2835_isp
 
 ## hdmi output abdrehen
 !!!!!!!!!!!!!!!!!!!!!!! TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	=> hdmi-off.service >>>>>>>>>>>>>>>>>>>>>>>>> ins make install tun
+=> hdmi-off.service >>>>>>>>>>>>>>>>>>>>>>>>> ins make install tun
 
 
 ```ln -s /run/ /var/lib/bluetooth```
@@ -193,16 +193,22 @@ dietpi-disable_rpi_camera.conf   => blacklist bcm2835_isp
 mv /etc/apt/sources.list.d/vscode.list /etc/apt/sources.list.d/vscode.list.disabled
 
 ## Setup Wlan soft - AP
-apt-get install hostapd dnsmasq lighttpd
+```
+apt-get install -y hostapd dnsmasq lighttpd
+```
 
 Anleitung entsprechend bis zum forward, das brauch ma ned.
 https://blog.thewalr.us/2017/09/26/raspberry-pi-zero-w-simultaneous-ap-and-managed-mode-wifi/
 
 dnsmasq.conf:
+```
 + address=/#/192.168.10.1
+```
 
 hostapd.conf: (channel kann irgendwas sein, nimmt den vom verbundenen wlan)
+```
 + multicast_to_unicast=1
+```
 
 lighttpd:
 

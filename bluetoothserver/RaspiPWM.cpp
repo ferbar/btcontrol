@@ -19,7 +19,8 @@
 // wiringpi defines:
 #define pinMode gpioSetMode
 #define OUTPUT PI_OUTPUT
-#define digitalWrite gpioWrite
+#define digitalWrite(pin, value) gpioWrite(pin, value)
+#define pwmWrite(cfg_pinPWM, pwm) gpioHardwarePWM(cfg_pinPWM,  20000, pwm*1000000/256)
 void softPwmCreate(unsigned pin, int value, int maxrange) {
 	gpioSetPWMrange(pin, maxrange);
 	gpioSetPWMfrequency(pin, 1000);
@@ -81,12 +82,21 @@ void RaspiPWM::init() {
 	printf("RaspiPWM::init()\n");
 	wiringPiSetupGpio();
 #elif HAVE_RASPI_PIGPIO
+// macht I2S Audio hin, wir brauchen keinen wav sound generator
+// https://github.com/joan2937/pigpio/issues/87
+	// gpioCfgClock(5, 0, 0); => dann geht PWM nicht ....
+	std::string kernelModules = readFile("/proc/modules");
+	if(kernelModules.find("i2s") ) {
+		ERRORF("I2S sound + pigpio doesn't work! Setup wiringpi");
+		abort();
+	}
 	if (gpioInitialise() < 0) {
 		ERRORF("gpioInitialise failed");
 		abort();
 	} else {
 		DEBUGF("pigpio initialised okay.");
 	}
+
 #endif
 
 	std::string tmp = config.get("digispark.motorStart");
@@ -176,11 +186,7 @@ void RaspiPWM::setPWM(int f_speed) {
 	// int result = 0;
 	if(this->pwm!=pwm) {
 		printf("setting pwm: %d\n", pwm);
-#ifdef HAVE_RASPI_WIRINGPI
 		pwmWrite(cfg_pinPWM, pwm);
-#else
-		gpioHardwarePWM(cfg_pinPWM,  20000, pwm*1000000/256);
-#endif
 		this->pwm=pwm;
 	}
 
