@@ -4,7 +4,7 @@ set_bash_prompt(){
     PS1='\[\033[01;32m\]\u@\h${fs_mode:+($fs_mode)}\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
 }
 
-alias ro='history -a ; sudo fake-hwclock save ; sudo mount -o remount,ro / ; sudo mount -o remount,ro /boot'
+alias ro=$'history -a ; sudo fake-hwclock save ; sudo mount -o remount,ro / || lsof / | awk \'NR==1 || $4~/[0-9]+u/\' ; sudo mount -o remount,ro /boot'
 alias rw='sudo mount -o remount,rw / ; sudo mount -o remount,rw /boot'
 
 # setup fancy prompt"
