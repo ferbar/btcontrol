@@ -207,6 +207,26 @@ install:
 		if [ ! -f ~/.inputrc ] ; then \
 			ln -s $$PWD/etc/inputrc ~/.inputrc ; \
 		fi ; \
+		echo "########### setting udev AP config ###########" ; \
+		regex='addr ([0-9a-f:]*)' ; if [[ "$$(iw wlan0 info)" =~ $$regex ]] ; then WLAN0_MAC="$${BASH_REMATCH[1]}"; else \
+		echo "error getting wifi mac"; exit 1; fi ; \
+		CONF="$$(cat $$PWD/etc/udev/rules.d/70-persistent-net-ap.rules)" ; \
+		eval "echo \"$${CONF//\"/\\\"}\"" > /etc/udev/rules.d/70-persistent-net-ap.rules ; \
+		echo '.' ; \
+		echo "########### setting dnsmasq config ###########" ; \
+		if [ ! -f /etc/dnsmasq.d/btcontrol.conf ] ; then \
+			ln -s $$PWD/etc/dnsmasq.conf /etc/dnsmasq.d/btcontrol.conf ; \
+		fi ; \
+		echo "########### setting hostapd config ###########" ; \
+		if [ ! -f /hostapd/hostapd.conf ] ; then \
+			eval echo "'$$(cat $$PWD/etc/hostapd/hostapd.conf)'" > /etc/hostapd/hostapd.conf ; \
+			echo "DAEMON_CONF=\"/etc/hostapd/hostapd.conf\"" > /etc/default/hostapd ; \
+		fi ; \
+		echo "########### setting lighttpd config ###########" ; \
+		echo -e '# created by btcontrol make install, hostname lower case \n' \
+'   $$HTTP["host"] != "'$${HOSTNAME,,}'" { \n' \
+'        url.redirect = ("" => "http://'$${HOSTNAME,,}'/") \n' \
+'    } ' > /etc/lighttpd/conf-enabled/redirect.conf ; \
 	else \
 		cp ../ussp-push-0.11/src/ussp-push \
 			../MidpBluetoothExample2/MobileApplication/dist/btcontrol.jar \
