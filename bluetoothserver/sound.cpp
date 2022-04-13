@@ -50,9 +50,9 @@ struct __attribute__((packed)) WavHeader
 
 
 const char *device = "default";                        /* playback device */
-//static char *device = "default";
-//static char *device = "plughw:0,0";
-snd_output_t *output = NULL;
+//const char *device = "softvol";
+//const char *device = "plughw:0,0";
+//snd_output_t *output = NULL;
 
 SoundType *FahrSound::soundFiles=NULL;
 bool FahrSound::soundFilesLoaded=false;
@@ -77,7 +77,7 @@ int setup_alsa(snd_pcm_t *handle, unsigned int rate, snd_pcm_format_t bits)
     unsigned int exact_rate;
 
     /* Allocate a hardware parameters object. */
-    snd_pcm_hw_params_malloc(&params);
+    snd_pcm_hw_params_alloca(&params);
 
     /* Fill it in with default values. */
     if (snd_pcm_hw_params_any(handle, params) < 0)
@@ -89,7 +89,8 @@ int setup_alsa(snd_pcm_t *handle, unsigned int rate, snd_pcm_format_t bits)
 
     /* Set the desired hardware parameters. */
     /* Non-Interleaved mode */
-    snd_pcm_hw_params_set_access(handle, params, SND_PCM_ACCESS_RW_NONINTERLEAVED);
+    //snd_pcm_hw_params_set_access(handle, params, SND_PCM_ACCESS_RW_NONINTERLEAVED);
+    snd_pcm_hw_params_set_access(handle, params, SND_PCM_ACCESS_RW_INTERLEAVED);
     snd_pcm_hw_params_set_format(handle, params, bits);
 
     /* 44100 bits/second sampling rate (CD quality) */
@@ -146,15 +147,10 @@ int setup_alsa(snd_pcm_t *handle, unsigned int rate, snd_pcm_format_t bits)
         return -1;
     }
 
-    snd_pcm_hw_params_free(params);
+    // snd_pcm_hw_params_free(params);
 
     /* Allocate a software parameters object. */
-    rc = snd_pcm_sw_params_malloc(&sw_params);
-    if( rc < 0 )
-    {
-        fprintf (stderr, "cannot allocate software parameters structure (%s)\n", snd_strerror(rc) );
-        return(-1);
-    }
+    snd_pcm_sw_params_alloca(&sw_params);
 
     rc = snd_pcm_sw_params_current(handle, sw_params);
     if( rc < 0 )
@@ -183,7 +179,7 @@ int setup_alsa(snd_pcm_t *handle, unsigned int rate, snd_pcm_format_t bits)
         return(-1);
     }
 
-    snd_pcm_sw_params_free(sw_params);
+    // snd_pcm_sw_params_free(sw_params);
 
     return 0;
 }
@@ -195,6 +191,7 @@ int setup_alsa(snd_pcm_t *handle, unsigned int rate, snd_pcm_format_t bits)
  */
 void Sound::init(int mode)
 {
+	ERRORF("Sound::init(mode=%d, rate=%d, bits=%d)", mode, this->sample_rate, this->bits);
 	if(this->handle) {
 		DEBUGF("sound already initialized");
 		throw std::runtime_error("sound already initialized");
@@ -210,10 +207,12 @@ void Sound::init(int mode)
 		throw std::runtime_error(std::string("Sound::init() Playback open error: ") + snd_strerror(err));
 	}
 
-setup_alsa(this->handle, this->sample_rate, this->bits);
+	if(setup_alsa(this->handle, this->sample_rate, this->bits) < 0) {
+		throw std::runtime_error("error in setup_alsa");
+	}
 return;
 
-	// workaround DietPi + I2S DAC 202204: snd_pcm_set_params doesn't work
+	// DietPi + I2S DAC 202204: snd_pcm_set_params doesn't work with I2S DAC => aplay init is like setup_alsa, so skipping snd_pcm_set_params
 /*
 	snd_pcm_hw_params_t *params;
 	snd_pcm_hw_params_alloca(&params);
@@ -578,7 +577,8 @@ public:
 		this->fahrsound=fahrsound;
 	};
 	~EMotorOutLoop() {
-		this->cancel(true);
+		if(this->isRunning())
+			this->cancel(true);
 	};
 	void run() {
 		if(! this->fahrsound->soundFiles->funcSound[CFG_FUNC_SOUND_EMOTOR]) {
@@ -869,14 +869,17 @@ int Sound::writeSound(const std::string &data, int startpos) {
 	//DEBUGF("Sound::writeSound dataLength=%zd startpos=%d\n", data.length(), startpos);
 	snd_pcm_sframes_t frames = snd_pcm_writei(this->handle, wavData, len);
 	//DEBUGF("Sound::writeSound frames=%ld\n", frames);
-	if (frames < 0) { // 2* probieren:
-		DEBUGF("Sound::[%p]writeSound recover error: %s", this->handle, snd_strerror(frames));
-		frames = snd_pcm_recover(this->handle, frames, 0);
-	}
 	if (frames == -EPIPE) {
 		/* EPIPE means underrun */
 		ERRORF("underrun occurred");
 		snd_pcm_prepare(this->handle);
+	} else if (frames == -EBADFD) {
+		ERRORF("pcm in bad state");
+	} else if (frames == -ESTRPIPE) {
+		ERRORF("a suspend event occurred");
+	} else if (frames < 0) { // 2* probieren:
+		DEBUGF("Sound::[%p] writeSound recover error: %lu = %s", this->handle, frames, snd_strerror(frames));
+		frames = snd_pcm_recover(this->handle, frames, 0);
 	}
 	/*
 	if (frames < 0) { // noch immer putt
