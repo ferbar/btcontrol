@@ -94,7 +94,7 @@ void Thread::cancel(bool join) {
 		int s = pthread_cancel(this->thread);
 		if (s != 0) {
 			perror("pthread_cancel");
-			throw std::runtime_error("error pthread_cancel");
+			throw std::runtime_error("pthread_cancel failed");
 		}
 #endif
 		if(join) {
