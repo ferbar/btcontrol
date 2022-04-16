@@ -1,10 +1,61 @@
 # Akku Lok
 
-<img src="img_akku_lok.jpg" alt="Akkulok" width="300"/>
+<img src="img_akku_lok.jpg" alt="Akkulok" height="250" alt="RhB 182"/> <img src="img_akku_kroko.jpg" alt="Akkulok" height="250" alt="LGB RhB Krokodil G 6/6"/>
+
+Handarbeit RhB 182 und LGB RhB Krokodil mit einem Raspberry Pi Zero-W umgebaut auf Akkubetrieb.
 
 Das ist eine Anleitung um eine LGB Lok ohne Schienenstrom fahren lassen zu können. Als Hirn wird ein Raspberry Pi Zero - W verwendet, eine H Brücke am PWM Ausgang, eine USB Soundkarte mit Verstärker und ein paar FETs zum schalten der LEDs.
 
+## Partlist
 
+| Anzahl | Bauteil | | |
+| ------ | ------- | -- | -- |
+| 1     | Raspberry Pi Zero W (Alt: A+) | Die Platine passt perfekt auf einen A+ natürlich kann man auch einen B+ nehmen.
+| 1     | SD Karte	2GB oder mehr |
+| ~~alt~~ | USB Wlan Dongle | Wlan im Raspberry Pi Zero W schon eingebaut!!!!<br>einer der unter Linux funktioniert (Linux Support steht bei vielen schon drauf!)<br>realtek chipsatz: Digitus 300N | DN-7042 | edimax N150 nano |<br>mediatek sind generell eher problematisch |
+| ~~alt~~ | Bluetooth Dongle | ist im Zero-W schon eingebaut. ESP32 Control Pad geht nur mit Bluetooth 4.0 dongle. Empfehlung Class 1 (z.b. Hama)
+| ~~optional~~ | usb soundkarte	| Vorzugsweise mit eingebautem Verstärker | neuhold |
+| ~~optional~~ | Verstärker | PAM8406 (oder PAM8403) |
+| 1 | optional MAX98357 I2S | NEU: I2S 'Soundkarte' hat einen Verstärker eingebaut, damit entfällt der PAM |
+| 1 | optional INA219 | NEU: I2C Strom/Spannungssensor |
+| 4 | IRFML8244	| Mosfet Rds on 20 mohm für die LED Ausgänge | farnell |
+| 7 | 1k R 1206	| SMD R	9335757 ??????? |
+| 1 | Lochraster Platine |
+| 1 | Buchsenleiste 20x2 | fürn Raspberry Pi - eventuell längere nehmen und kürzen | link |
+| 1 | Buchsenleiste 3x1 | Motoranschluss,3* 2x1 für Beleuchtung | neuhold |
+| 1 + X | Stiftleiste 3x1 | für Power Anschluss (Mitte=+) |
+| 1 | Schalter        | zum ausschalten falls was schief gehen sollte |
+| 1 | Polyswitch Sicherung 2,5A | 250 ... sicher ist sicher |
+| 1 | Akku Pack	| Ikea Eneby ? |
+| 1 | 5V Schaltregler | Recom 78e5.0 / HLK-K7805 / TR05S05 oder kleines 5V Schaltregler Board | neuhold rs-components |
+| 1+1 | Stecker / Buchse zu den Akkus 4.2mm 5557/5559 Wire Cable Connector
+
+### H - Brücke:
+
+#### für 3A:
+| Anzahl | Bauteil |    |    |
+| ------ | ------- | -- | -- |
+| 1 | L6203 | fixfertige H-Brücke | farnell oder im 5er Pack via eBay aus China (viel billiger)
+| 3 | 22nF | Kondensator mit Haxen |
+| 2 | 100nF | Kondensator mit Haxen |	
+| 1 | 10-50 Ohm R | Widerstand mit Haxen ????? |
+
+#### 30A (202204 keine boards verfügbar)
+
+VNH5019a board
+
+#### LiPo Akkus	
+| Anzahl | Bauteil |    |    |
+| ------ | ------- | -- | -- |
+| 3-4 | LiPo Akku | Protected 18650 Battery | china shop |
+| 1 | optional: LiPo protection board 3S / 4S | eines was unter 3V abschaltet |
+| 1 | 3S oder 4S Battery Holder | da gibts welche mit Federn - die sind länger und es passen auch die "Protected Batteries" rein |
+
+
+## Hardware
+
+
+## Setup Software Raspberry PI
 
 Als Raspi Image hab ich DietPi verwendet: https://dietpi.com/downloads/images/DietPi_RPi-ARMv6-Bullseye.7z
 
