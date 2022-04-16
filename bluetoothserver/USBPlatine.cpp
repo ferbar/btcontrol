@@ -9,6 +9,27 @@
 
 #define TAG "USBPlatine"
 
+USBPlatine::USBPlatine(bool debug) : debug(debug)
+{
+	std::string voltageFile = config.get("powerMonitor.voltage.file");
+	if(voltageFile != NOT_SET) {
+		std::string initFile = config.get("powerMonitor.init.file");
+		std::string initValue = config.get("powerMonitor.init.value");
+		if(initFile != NOT_SET) {
+			writeFile(initFile, initValue);
+		}
+		std::string min = config.get("powerMonitor.voltage.min");
+		if(min != NOT_SET) {
+			this->powerMonitoringVoltageMin=stoi(min);
+		}
+		std::string max = config.get("powerMonitor.voltage.max");
+		if(max != NOT_SET) {
+			this->powerMonitoringVoltageMax=stoi(max);
+		}
+		this->powerMonitorVoltageFile=voltageFile;
+	}
+}
+
 void USBPlatine::sendLoco(int addr_index, bool emergencyStop) {
 	assert(addr_index >= 0);
 	DEBUGF("USBPlatine::sendLoco(%d=>%d)", addr_index, lokdef[addr_index].addr);
@@ -61,16 +82,27 @@ void USBPlatine::sendLoco(int addr_index, bool emergencyStop) {
 
 int USBPlatine::sendPOM(int addr, int cv, int value) {
 
-				#ifdef HAVE_ALSA
-					if(cv==266) {
-					    Sound::setMasterVolume(value);
-						return 1;
-					} else {
-				#endif
-						return -1;
-				#ifdef HAVE_ALSA
-					}
-				#endif
+#ifdef HAVE_ALSA
+	if(cv == CV_CV_SOUND_VOL) {
+		return CV_SOUND_VOL;
+	}
+	if(cv==CV_SOUND_VOL) {
+		Sound::setMasterVolume(value);
+		return 1;
+	}
+#endif
+	if(this->powerMonitorVoltageFile != "") {
+		if(cv == CV_CV_BAT) {
+			return CV_BAT;
+		}
+		if(cv == CV_BAT) {
+			std::string voltage=readFile(this->powerMonitorVoltageFile);
+			int i = stoi(voltage);
+			DEBUGF("BAT Voltage raw value: %d",i);
+			return (i - this->powerMonitoringVoltageMin) * 255 / (this->powerMonitoringVoltageMax - this->powerMonitoringVoltageMin);
+		}	
+	}
+	return -1;
 }
 
 int USBPlatine::sendPOMBit(int addr, int cv, int bitNr, bool value) {

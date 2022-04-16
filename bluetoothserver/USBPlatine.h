@@ -6,7 +6,7 @@
 
 class USBPlatine : public Hardware {
 public:
-	USBPlatine(bool debug) {};
+	USBPlatine(bool debug);
 	virtual ~USBPlatine() {};
 	/// @param f_speed 0...255
 	virtual void setPWM(int f_speed)=0;
@@ -35,5 +35,8 @@ public:
 private:
 
 	int debug ;
+	std::string powerMonitorVoltageFile ;
+	int powerMonitoringVoltageMin;
+	int powerMonitoringVoltageMax;
 };
 #endif // define USBPLATINE_H
