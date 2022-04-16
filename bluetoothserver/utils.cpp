@@ -234,35 +234,47 @@ std::RuntimeExceptionWithBacktrace::~RuntimeExceptionWithBacktrace() throw ()
  * @param filename - das was eingelesen wird, kopie(!!)
  */
 #if not defined ESP_PLATFORM
-std::string readFile(std::string filename)
+std::string readFile(const std::string &filename)
 {
 	std::string ret;
+	const char *cf=filename.c_str();
+	std::string filename2;
 	struct stat buf;
-	if(stat(filename.c_str(), &buf) != 0) {
+	if(stat(cf, &buf) != 0) {
 		char execpath[MAXPATHLEN];
 		if(readlink("/proc/self/exe", execpath, sizeof(execpath)) <= 0) {
 			printf("error reading /proc/self/exe\n");
 			abort();
 		}
 		char *linkpath=dirname(execpath);
-		filename.insert(0,std::string(linkpath) + '/');
-		if(stat(filename.c_str(), &buf) != 0) {
-			fprintf(stderr,"error stat file %s\n",filename.c_str());
-			throw std::runtime_error("error stat file");
+		filename2 = std::string(linkpath) + '/' + filename ;
+		cf=filename2.c_str();
+		if(stat(cf, &buf) != 0) {
+			throw std::runtime_error(utils::format("error stat file %s",cf));
 		}
 	}
 	ret.resize(buf.st_size,'\0');
-	FILE *f=fopen(filename.c_str(),"r");
+	FILE *f=fopen(cf,"r");
 	if(!f) {
-		fprintf(stderr,"error reading file %s\n",filename.c_str());
-		throw std::runtime_error("error reading file");
+		throw std::runtime_error(utils::format("error reading file %s",filename.c_str()));
 	} else {
 		const char *data=ret.data(); // mutig ...
 		fread((void*)data,1,buf.st_size,f);
 		fclose(f);
-		printf("%s:%lu bytes\n",filename.c_str(),buf.st_size);
+		DEBUGF("reading %s %lu bytes",filename.c_str(),buf.st_size);
 	}
 	return ret;
+}
+
+void writeFile(const std::string &filename, const std::string &data) {
+	FILE *f=fopen(filename.c_str(),"w");
+	if(!f) {
+		throw std::runtime_error(utils::format("error writing file %s",filename.c_str()));
+	} else {
+		fwrite((void*)data.data(),1,data.size(),f);
+		fclose(f);
+		DEBUGF("written @%s %u bytes\n",filename.c_str(),data.size());
+	}
 }
 #endif
 

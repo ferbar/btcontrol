@@ -10,7 +10,8 @@
 #include "utils_esp32.h"
 #endif
 
-std::string readFile(std::string filename);
+std::string readFile(const std::string &filename);
+void writeFile(const std::string &filename, const std::string &data);
 
 #define STREQ(s1,s2) (strcmp(s1,s2)==0)
 
