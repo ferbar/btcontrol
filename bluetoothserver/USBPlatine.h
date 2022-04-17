@@ -2,6 +2,7 @@
 #ifndef USBPLATINE_H
 #define USBPLATINE_H
 
+#include <string>
 #include "Hardware.h"
 
 class USBPlatine : public Hardware {
