@@ -17,7 +17,7 @@ sound.level=180
 
 # bei dem Wert fahrt die Lok los
 digispark.motorStart=40
-#digispark.motorFullSpeed=180
+digispark.motorFullSpeed=180
 #digispark.motorFullSpeedBoost=200
 
 # Power Meter / Akkustand
