@@ -2,7 +2,7 @@
 // all available ssids + password
 #define WIFI_CONFIG { \
   { .ssid="ap2", .password="PASSWORD" },            \
-  { .ssid="esp32-diesel", .password="top-secret" },   \
+  { .ssid="esp32-diesel", .password="btcontrol" },   \
 }
 
 // power down after XYZs inactivity

@@ -99,7 +99,7 @@ void printDirectory()
 	}
 }
 
-std::string readFile(std::string filename)
+std::string readFile(const std::string &filename)
 {
   DEBUGF("readFile(%s)",filename.c_str());
 	if(filename == "protocol.dat") {
@@ -129,23 +129,26 @@ std::string readFile(std::string filename)
 		"500, battery level,\n"
 		"510, wifi AP switch\n";
 	} else {
+		const char *cf=filename.c_str();
+		std::string tmpFilename;
 		if(filename.at(0) != '/') {
-			filename="/" + filename;
+			tmpFilename = "/" + filename;
+			cf=tmpFilename.c_str();
 		}
-    if(!SPIFFS.exists(filename.c_str())) {
-      ERRORF("file %s doesn't exist", filename.c_str());
-      return "";
-    }
-		File f = SPIFFS.open(filename.c_str(), "r");
+		if(!SPIFFS.exists(cf)) {
+			ERRORF("file %s doesn't exist", cf);
+			return "";
+		}
+		File f = SPIFFS.open(cf, "r");
 		size_t size=f.size();
-		DEBUGF("file:%s size:%d", filename.c_str(), size);
+		DEBUGF("file:%s size:%d", cf, size);
 		if(size < 10000) {
 			std::string ret;
 			ret.resize(size);
 			// wir schreiben direkt in den string buffer!
 			int dataRead=f.read((uint8_t *) &ret[0], size);
 			if(dataRead != size) {
-				ERRORF("error reading %s", filename.c_str());
+				ERRORF("error reading %s", cf);
 				return "";
 			}
 			return ret;

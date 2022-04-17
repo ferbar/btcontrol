@@ -6,6 +6,7 @@
 #  Kommentare und Leerzeilen werden ignoriert
 
 # erste Message vom server -> client
+# TODO: bei Protokoll Änderung jedem Command eine ID geben z.b. 1:HELO und nach der Versionsnummer gehen
 HELO=protohash:I,name:S,version:S
 HELO_ERR=protohash:I,doupdate:I
 
@@ -26,7 +27,6 @@ DIR=addr:I,dir:I
 # stop
 STOP=addr:I
 
-# TODO: speed setzen über target-speed-CV-register
 ACC_MULTI=list:A{addr:I}
 BREAK_MULTI=list:A{addr:I}
 DIR_MULTI=dir:I,list:A{addr:I}
@@ -46,14 +46,15 @@ GETFUNCTIONS_REPLY=info:A{name:S,value:I,imgname:S}
 GETLOCOS=
 GETLOCOS_REPLY=info:A{name:S,addr:I,imgname:S,speed:I,functions:I}
 
-# value -1 = nix ändern nur wert liefern
+# value -1 = nix ändern, nur Wert liefern
 POM=addr:I,cv:I,value:I
-# 0=fehler(???) 1=ok 2021 todo: ret=wert, -1 => fehler
+# 0=fehler(???) 1=ok 2021 ret=wert, -1 => fehler
 POM_REPLY=value:I
 
 POMBIT=addr:I,cv:I,bit:I,value:I
 POMBIT_REPLY=value:I
 
+# liefert eine Datei (mini icon) | TODO: CVs.csv => CV liste
 GETIMAGE=imgname:S
 GETIMAGE_REPLY=img:S
 

@@ -243,7 +243,12 @@ void GuiViewSelectWifi::close() {
 
 const char *GuiViewSelectWifi::passwordForSSID(const String &ssid) {
 	for(int i=0; i < wifiConfigSize; i++) {
-		if(ssid==wifiConfig[i].ssid) {
+    int savedSSIDLen=strlen(wifiConfig[i].ssid);
+    if(wifiConfig[i].ssid[savedSSIDLen-1]=='*') {
+      if(strncmp(wifiConfig[i].ssid, ssid.c_str(), savedSSIDLen-1) == 0) {
+        return wifiConfig[i].password;
+      }
+    } else if(ssid==wifiConfig[i].ssid) {
 			return wifiConfig[i].password;
 		}
 	}
