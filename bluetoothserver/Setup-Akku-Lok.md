@@ -164,7 +164,7 @@ mit 0 am Ende von / und /boot den fsck on boot disablen
 fsck on boot raus aus der config / cmdline.txt => notwendig?
 
 
-## boot delay auf 0 setzen (default ist 1, viel kanns nicht bringen, von der sd karte abhängig)
+### boot delay auf 0 setzen (default ist 1, viel kanns nicht bringen, von der sd karte abhängig)
 ```
 vi /boot/config.txt
 boot_delay=0
@@ -212,7 +212,7 @@ Kopiert logs von /var/tmp nach /var/log ... brauchen wir nicht
 systemctl disable dietpi-ramlog.service
 ```
 
-## sound config
+### sound config
 => usb soundkarte wird standardmässig nicht als default genommen
 Fehlermeldung:
 aplay: set_params:1339: Sample format non available
@@ -283,3 +283,16 @@ btcontrol.service:
 requires network | bluetooth (!!!! nicht multiuser - wir brauchen keine ntpd zeit !!!!)
 systemctl enable btcontrol
 systemctl enable btcontrol-initbt
+
+### Stromsensor - INA219 testen
+
+```
+echo ina219 0x40 > /sys/bus/i2c/devices/i2c-1/new_device
+watch cat /sys/bus/i2c/devices/i2c-1/1-0040/hwmon/hwmon2/in1_input
+```
+Current Sensor: Die breakout Borards haben einen 0,1 Ohm shunt, default mässig geht das Kernel Modul von 0,01 Ohm aus, daher müssen wir den Shunt anpassen:
+```
+echo 100000 > shunt_resistor
+```
+	
+Shunt resistance(uOhm)
