@@ -3,9 +3,10 @@
 
 ## Akku Lok
 Eine Einsatzmöglichkeit ist ein Raspberry PI Zero W mit einer H-Brücke und Mosfets zur Ansteuerung für Lichter.
+<img src="img_akku_lok.jpg" alt="Akkulok" height="250" alt="RhB 182"/>
 
 Als H-Brücke kann z.b. ein L6203 oder ein VNH5019A verwendet werden. FETs für Lampen: IRFML8244. Statt dem 
-Raspberry PI PWM0 (GPIO18) kann auch ein digispark (Attiny85) verwendet werden. Sound kann über eine USB Soundkarte und
+Raspberry PI PWM0 (GPIO18) kann auch ein digispark (Attiny85) verwendet werden. Sound kann über einen I2S DAC (MAX98357) oder eine USB Soundkarte und
 Verstärker generiert werden.
 
 Setup mit Raspbian (DietPI) siehe [Setup-Akku-Lok.md](Setup-Akku-Lok.md)
@@ -20,10 +21,6 @@ cpp-programm, zum kompilieren wird benötigt:
 * suse 11.2: libusb-dev bzw libusb-compat-devel, bluez-devel
 * auf ubuntu: libbluetooth-dev, libusb-dev, libasound-dev, libboost-dev
 * am raspi: libusb-1.0-0-dev libbluetooth-dev libasound2-dev libboost-serialization-dev | für raspi pwm: wiringpi (seit jessie als paket, davor: git clone git://git.drogon.net/wiringPi)
-* k8055 git submodule downloaden:
-```
-git submodule update --init
-```
 
   im server.cpp ist die Adresse vom SRCPD hardcoded auf 127.0.0.1
 
@@ -32,6 +29,10 @@ git submodule update --init
 
 ## Handy Steuerung für Analog Loks:
 Velleman k8055: uralt Variante um PWM direkt auf die Schienen zu legen
+* k8055 git submodule downloaden:
+```
+git submodule update --init
+```
 
 *********************** F9: MotorBoost
 
@@ -75,12 +76,6 @@ Neu:
 ```
 systemctl enable btcontrol
 ```
-
-Alt:
-```
-update-rc.d btcontrol defaults
-```
-
 
 
 
