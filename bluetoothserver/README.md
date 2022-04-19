@@ -24,11 +24,14 @@ cpp-programm, zum kompilieren wird benötigt:
 
   im server.cpp ist die Adresse vom SRCPD hardcoded auf 127.0.0.1
 
+## Merg - selbstbau - Bosster über Serielle Schnittstelle
 
+[NB1A_partlist.txt](../NB1A_partlist.txt)
+Partlist für den http://merg.co.uk - booster
 
 
 ## Handy Steuerung für Analog Loks:
-Velleman k8055: uralt Variante um PWM direkt auf die Schienen zu legen
+Velleman k8055: uralt Variante um PWM direkt auf die Schienen zu legen (für analog Loks)
 * k8055 git submodule downloaden:
 ```
 git submodule update --init
