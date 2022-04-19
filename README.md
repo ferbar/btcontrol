@@ -47,12 +47,6 @@ Für Akku Loks mit einem ESP32, siehe [esp32-server](esp32-server)
 
 <img src="esp32-server/img_putz_done.jpg" alt="Putzlok" width="300"/>
 
-## NB1A_partlist.txt
-Partlist für den http://merg.co.uk - booster
-
-## usb k8055
-Lib um eine Viessman - platine anzusteuern, früher für PWM verwendet (ohne DCC)
-
 ## ussp-push-0.11
 ussp-push -> ussp-push-0.11/src/ussp-push
 obex - push programm, programm um dateien über bluetooth an ein handy zu senden
