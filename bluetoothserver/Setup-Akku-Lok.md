@@ -48,7 +48,7 @@ VNH5019a board
 | Anzahl | Bauteil |    |    |
 | ------ | ------- | -- | -- |
 | 3-4 | LiPo Akku | Protected 18650 Battery | china shop |
-| 1 | optional: LiPo protection board 3S / 4S | eines was unter 3V abschaltet |
+| 1 | optional: LiPo protection board 3S / 4S | z.b. BM3451   TNDC-T20B |
 | 1 | 3S oder 4S Battery Holder | da gibts welche mit Federn - die sind länger und es passen auch die "Protected Batteries" rein |
 
 
