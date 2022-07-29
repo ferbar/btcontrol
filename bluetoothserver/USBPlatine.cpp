@@ -11,6 +11,8 @@
 
 USBPlatine::USBPlatine(bool debug) : debug(debug)
 {
+#ifndef ESP_PLATFORM
+  // I2C ADC initen:
 	std::string voltageFile = config.get("powerMonitor.voltage.file");
 	if(voltageFile != NOT_SET) {
 		std::string initFile = config.get("powerMonitor.init.file");
@@ -28,6 +30,7 @@ USBPlatine::USBPlatine(bool debug) : debug(debug)
 		}
 		this->powerMonitorVoltageFile=voltageFile;
 	}
+#endif
 }
 
 void USBPlatine::sendLoco(int addr_index, bool emergencyStop) {
@@ -91,6 +94,7 @@ int USBPlatine::sendPOM(int addr, int cv, int value) {
 		return 1;
 	}
 #endif
+#ifndef ESP32
 	if(this->powerMonitorVoltageFile != "") {
 		if(cv == CV_CV_BAT) {
 			return CV_BAT;
@@ -102,6 +106,7 @@ int USBPlatine::sendPOM(int addr, int cv, int value) {
 			return (i - this->powerMonitoringVoltageMin) * 255 / (this->powerMonitoringVoltageMax - this->powerMonitoringVoltageMin);
 		}	
 	}
+#endif
 	return -1;
 }
 
