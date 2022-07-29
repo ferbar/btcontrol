@@ -15,6 +15,10 @@
 #if defined ESP32
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+// für arduino sdk 1.0.6
+#define TO_LONG_FORMAT (unsigned long)
+#else
+#define TO_LONG_FORMAT
 #endif
 
 #define TAG "Thread"
@@ -85,7 +89,7 @@ void Thread::start() {
 }
 
 void Thread::cancel(bool join) {
-	NOTICEF("Thread::cancel(join=%d) thread=%0lx", join, this->thread);
+	NOTICEF("Thread::cancel(join=%d) thread=%0lx", join, TO_LONG_FORMAT this->thread);
 	if(this->thread) {
 #ifdef ESP32
     // ESP lib kennt kein pthread_cancel
@@ -100,12 +104,12 @@ void Thread::cancel(bool join) {
 		if(join) {
 			void *ret=NULL;
 			// %lu => linux ist pthread_ unsigned long
-			DEBUGF("Thread::[%0lx] cancel() waiting to exit", this->thread);
+			DEBUGF("Thread::[%0lx] cancel() waiting to exit", TO_LONG_FORMAT this->thread);
 			int rc = pthread_join(this->thread, &ret);
 			if(ret == PTHREAD_CANCELED) {
-				NOTICEF("Thread::[%0lx] cancel() join=true thread was canceled", this->thread);
+				NOTICEF("Thread::[%0lx] cancel() join=true thread was canceled", TO_LONG_FORMAT this->thread);
 			} else if(ret != NULL) { // if this is malloced value we create a memory leak
-				ERRORF("Thread::[%0lx] cancel() join=true, ret=%p", this->thread, ret);
+				ERRORF("Thread::[%0lx] cancel() join=true, ret=%p", TO_LONG_FORMAT this->thread, ret);
 				abort();
 			}			
 			if(rc != 0) {
@@ -126,7 +130,7 @@ bool Thread::isRunning() {
 void Thread::testcancel() {
 #ifdef ESP32
 	if(this->cancelstate) {
-		DEBUGF("Thread::[%0lx] quitting thread with an exception", this->getMyId());
+		DEBUGF("Thread::[%0lx] quitting thread with an exception", TO_LONG_FORMAT this->getMyId());
 		throw std::runtime_error("thread canceled from testcancel()"); // pthread_testcancel macht auch nur exception
 	}
 #else
@@ -135,9 +139,9 @@ void Thread::testcancel() {
 }
 
 int Thread::self() {
-// 2022 workaround for esp idf 4.4 -> crash if called from main loop() thread
+// 2022 workaround for esp idf 4.4 -> crash if called from main loop() thread  ESP_ARDUINO_VERSION_MINOR
 //      getName returns "loop"
-#ifdef ESP32
+#if defined ESP32 && ESP_IDF_VERSION_MAJOR >= 4
 	if(! STREQ(pcTaskGetName(NULL), "pthread")) {
 		return 0;
 	}
@@ -266,4 +270,3 @@ void Condition::signal() {
 		throw std::runtime_error(utils::format("Condition::signal() error %s", strerror(signal_rv)));
 	}
 }
-
