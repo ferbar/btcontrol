@@ -9,9 +9,9 @@ class TCPClient : public ClientStream {
 public:
 	TCPClient() : client() {};
 	TCPClient(WiFiClient &client) : client(client) {
-		numClients++; // sollte atomic sein
+//		numClients++; // sollte atomic sein
 		this->client.setTimeout(10); // in sekunden
-		// ohne dem hat man zwischen 2 esp32 einen ping von 200-500ms
+		// ohne dem hat man zwischen 2 esp32 einen ping von 200-500ms - kann auch das esp 1.0.6 sdk!!
 		this->client.setNoDelay(1);
 	};
 	void connect(const IPAddress &host, int port);
@@ -31,8 +31,8 @@ public:
 		return this->client.connected();
 	};
 
-	// anzahl clients die gerade laufen
-	static int numClients;
+	// anzahl clients die gerade laufen => CommThread.h
+//	static int numClients;
 private:
 	WiFiClient client;
 };

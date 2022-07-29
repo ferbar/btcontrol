@@ -12,7 +12,7 @@
 
 #define TAG "tcpclient"
 
-int TCPClient::numClients=0;
+// int TCPClient::numClients=0;
 
 TCPClient::~TCPClient() {
 }
