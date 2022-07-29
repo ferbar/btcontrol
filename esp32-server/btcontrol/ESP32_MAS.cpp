@@ -15,6 +15,7 @@
 
 #ifdef HAVE_SOUND
 
+
 #include <Arduino.h>
 #include <FS.h>
 #include <driver/i2s.h>
@@ -22,6 +23,14 @@
 #include "ESP32_MAS.h"
 #include "SPIFFS.h"
 #include "xtensa/core-macros.h"
+
+// sound geht nur mit arduino sdk 1.0.6
+#if not defined ESP_IDF_VERSION_MAJOR
+#error no ESP_IDF_VERSION
+#endif
+#if ESP_IDF_VERSION_MAJOR >= 4
+#error HAVE_SOUND not yet supported with IDF 4, downgrade to arduino sdk 1.0.6!
+#endif
 
 #warning test
 #include <driver/dac.h>
