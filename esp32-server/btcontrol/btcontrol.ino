@@ -432,13 +432,13 @@ void startClientThread(void *s) {
     delete(startupData);
     NOTICEF("%d: ============= client thread done =============", clientID);
 #if not defined SOFTAP
-    if(TCPClient::numClients == 0) {
+    if(CommThread::numClients == 0) {
         DEBUGF("enable wifi power saving");
         esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
     }
 #endif
 #ifdef HAVE_SOUND
-    if(TCPClient::numClients == 0) {
+    if(CommThread::numClients == 0) {
         Audio.stop();
     }
 #endif
