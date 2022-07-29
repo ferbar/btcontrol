@@ -465,14 +465,14 @@ void ESP32PWM::commit() {
 #ifdef HEADLIGHT_2_PIN
       DEBUGF("********************** set headlight dir=%d, func[0]=%d pins: (%d %d)", this->dir, this->currentFunc[0], HEADLIGHT_1_PIN, HEADLIGHT_2_PIN);
       if(this->dir) {
-        ledcWrite(2, this->currentFunc[0] ? HEADLIGHT_1_PWM_DUTY : 0);
-        ledcWrite(3, 0);
+        ledcWrite(2, this->currentFunc[0] ? HEADLIGHT_1_PWM_DUTY : HEADLIGHT_2_PWM_DUTY_OFF);
+        ledcWrite(3, HEADLIGHT_2_PWM_DUTY_OFF);
       } else {
-        ledcWrite(2, 0);
-        ledcWrite(3, this->currentFunc[0] ? HEADLIGHT_2_PWM_DUTY : 0);
+        ledcWrite(2, HEADLIGHT_2_PWM_DUTY_OFF);
+        ledcWrite(3, this->currentFunc[0] ? HEADLIGHT_2_PWM_DUTY : HEADLIGHT_2_PWM_DUTY_OFF);
       }
 #else
-      ledcWrite(2, func[0] ? HEADLIGHT_1_PWM_DUTY : 0);
+      ledcWrite(2, func[0] ? HEADLIGHT_1_PWM_DUTY : HEADLIGHT_2_PWM_DUTY_OFF);
 #endif
       this->headlight = this->currentFunc[0];
     }
