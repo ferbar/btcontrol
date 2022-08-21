@@ -368,6 +368,8 @@ void setup(void)
 
     DEBUGF("spi filesystem files:");
     printDirectory();
+    
+    DEBUGF("setup() done");
 }
 
 class StartupData {
@@ -401,14 +403,15 @@ void startClientThread(void *s) {
     DEBUGF("disable wifi power saving");
     esp_wifi_set_ps(WIFI_PS_NONE);
 #endif
-#ifdef HAVE_SOUND
-    // Audio.begin(); => wwill always start sounds
-    // will start sounds only if F3 == true:
-    Audio.startPlayFuncSound();
-#endif
     ClientThread *clientThread=NULL;
     try {
         clientThread = new ClientThread(clientID, TIMEOUT_SERVER);
+#ifdef HAVE_SOUND
+        // Audio.begin(); => will always start sounds
+        // will start sounds only if F3 == true:
+		// new ClientThread sets ::numClients
+        Audio.startPlayFuncSound();
+#endif
         clientThread->begin(new TCPClient(startupData->client), true);
         clientThread->run();
 /* workaround esp 4.4 idf throw problem
