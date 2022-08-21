@@ -6,7 +6,7 @@
 * ESP8266 power shield
 * ESP8266 motor shield
 * Lautsprecher
-* PAM8403 Board
+* PAM8302 Board (mono, vorzugsweise mit Poti) oder PAM8403 Board (die ham 2 Kanäle, wir bräuchten nur einen, Spannungsteiler 1k:10k löten, 2. Kanal auf Masse)
 * LiPo Akkus mit Schutzschaltung, 803450 *3 geht sich im Anbau hinten gut aus, in einen Schrumpfschlauch verpacken
 * Ein/Ausschalter für den Rauchfang
 * Kabel mit verpolungssicherem Stecker
