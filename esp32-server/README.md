@@ -12,3 +12,11 @@ Beschreibung: [LGB Putzlok](Setup-Putzlok.md)
 [Playmobil Lok](Setup-Playmobillok.md)
 
 <img src="img_playmobil_inside.jpg" alt="Playmobil Lok ESP32" width="300"/>
+
+
+## CVs:
+| CV | Beschreibung |
+|---|---|
+| 266 | Gesamtlautstärke (0..255) => besser das auf 255 und Spannungsteiler beim Verstärker|
+| 500 | BAT Value |
+| 510 | wifi AP / client |
