@@ -20,6 +20,8 @@ public:
 	static const int CV_CV_BAT=-20;
 	static const int CV_CV_WIFI_CLIENT_SWITCH=-30;
 	static const int CV_SOUND_VOL=266;
+	static const int CV_SOUND_VOL_MOTOR=267;
+	static const int CV_SOUND_VOL_HORN=268;
 	static const int CV_BAT=500;
 	static const int CV_WIFI_CLIENT_SWITCH=510;
 	// @return: -1 => Fehler, 0..255 current CV Value

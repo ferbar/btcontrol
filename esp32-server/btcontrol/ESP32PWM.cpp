@@ -420,7 +420,13 @@ void ESP32PWM::fullstop(bool stopAll, bool emergencyStop) {
  * FIXME: in *func steht das selbe wie in lokdef[0].func
  */
 void ESP32PWM::setFunction(int nFunc, bool *func) {
-  DEBUGF("=================setFunction ");
+#ifndef NODEBUG
+  String debugFunc;
+  for(int i=0; i < nFunc; i++) {
+    debugFunc+=utils::format("[%d]=%d ", i, func[i]).c_str();
+  }
+#endif
+  DEBUGF("=================setFunction: %s", debugFunc.c_str());
 
   this->nFunc=nFunc;
   memcpy(&this->currentFunc, func, sizeof(this->currentFunc));
@@ -490,9 +496,17 @@ int ESP32PWM::sendPOM(int addr, int cv, int value) {
     return CV_SOUND_VOL;
   }
   if(cv==CV_SOUND_VOL) {
-    Audio.setVolume(value);
-    return 1;
+    return Audio.setVolume(value);
   }
+
+  if(cv==CV_SOUND_VOL_MOTOR) {
+    return Audio.setVolumeMotor(value);
+  }
+
+  if(cv==CV_SOUND_VOL_HORN) {
+    return Audio.setVolumeHorn(value);
+  }
+
 #endif
 #ifdef BAT_ADC_PIN1
   if(cv == CV_CV_BAT) {

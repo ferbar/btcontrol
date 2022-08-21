@@ -24,7 +24,9 @@ public:
   void stop();
   bool initialized=false;
   void startPlayFuncSound();
-  void setVolume(uint8_t volume);
+  int setVolume(int volume);
+  int setVolumeMotor(int volume);
+  int setVolumeHorn(int volume);
 };
 extern ESP32_MAS_Speed Audio;
 #endif

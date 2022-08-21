@@ -115,6 +115,19 @@ void ESP32_MAS::run() {
   };
   //-----------------------------------------------------------------------------------open I2S
   if (this->I2S_noDAC) {
+    // test: prefill dma buffer: => crasht
+/*
+    Serial.println("prefill dma buffer");
+    size_t ret;
+    for(int i=0; i < buf_len_8/2; i++) {
+      // 0
+      out_buf_8[i*2+1]=0x80;
+      out_buf_8[i*2]=0;
+    }
+    if(i2s_write(this->I2S_PORT, (const char *)&out_buf_8, buf_len_8, &ret, portMAX_DELAY) != ESP_OK) {
+      Serial.printf("i2s_write failed\n");
+    }
+*/
     Serial.println("RUN noDAC ");
     printf("i2s_driver_install: port_num=%d dma_buf_len=%d\n",this->I2S_PORT, i2s_config_noDAC.dma_buf_len);
     if(i2s_driver_install(this->I2S_PORT, &i2s_config_noDAC, 0, NULL) != ESP_OK) {
@@ -122,7 +135,7 @@ void ESP32_MAS::run() {
       abort(); 
     }
     Serial.println("init noDAC");
-    // [chris] 
+    // [chris]
     i2s_set_pin(this->I2S_PORT, NULL);
     if(i2s_config_noDAC.channel_format == I2S_CHANNEL_FMT_ONLY_RIGHT) {
       i2s_set_dac_mode(I2S_DAC_CHANNEL_RIGHT_EN);
@@ -132,19 +145,24 @@ void ESP32_MAS::run() {
       Serial.println("invalid channel format");
       abort();
     }
-    i2s_zero_dma_buffer(this->I2S_PORT);
+
+    // Pushes zero-byte samples into the TX DMA buffer, until it is full.
+    //i2s_zero_dma_buffer(this->I2S_PORT);
 
     // soft boot 0 ... 0x80
-    for(int i=0; i < buf_len_8/2; i++) {
-      // sägezahn 0 .. 255
-      out_buf_8[i*2+1]=128 * i / (buf_len_8/2) ;
-      out_buf_8[i*2]=0;
+    for(int j=0; j < 2; j++) {
+      for(int i=0; i < buf_len_8/2; i++) {
+        // sägezahn 0 .. 255
+        out_buf_8[i*2+1]=128 * (i+j*buf_len_8/2) / (buf_len_8*2/2) ;
+        out_buf_8[i*2]=0;
+      }
+      // 0->0x80
+      size_t ret;
+      if(i2s_write(this->I2S_PORT, (const char *)&out_buf_8, buf_len_8, &ret, portMAX_DELAY) != ESP_OK) {
+        Serial.printf("i2s_write failed!\n");
+      }
     }
-    // 0x80
-    size_t ret;
-    if(i2s_write(this->I2S_PORT, (const char *)&out_buf_8, buf_len_8, &ret, portMAX_DELAY) != ESP_OK) {
-      Serial.printf("i2s_write failed!\n");
-    }
+    /*
     for(int i=0; i < buf_len_8/2; i++) {
       // 0
       out_buf_8[i*2+1]=0x80;
@@ -153,6 +171,7 @@ void ESP32_MAS::run() {
     if(i2s_write(this->I2S_PORT, (const char *)&out_buf_8, buf_len_8, &ret, portMAX_DELAY) != ESP_OK) {
       Serial.printf("i2s_write failed\n");
     }
+    */
     
     //i2s_set_clk(mas->I2S_PORT, i2s_config_noDAC.sample_rate, i2s_config_noDAC.bits_per_sample, (i2s_channel_t) 1);
     //i2s_set_sample_rates(mas->I2S_PORT, 22050);
@@ -219,14 +238,18 @@ void ESP32_MAS::run() {
           //--------------------------------------------------------------------------file emty
           if (this->Channel[h] < 5 && this->Channel[h] > 1) {
             //--------------------------------------------------------------------open new file
+#ifdef DEBUG_MAS
             uint32_t fopen1 = XTHAL_GET_CCOUNT();
+#endif
             this->openFile(h, aiff_file[h]);
             if(! aiff_file[h]) {
               printf("[%d] Error opening file!\n", h);
               this->stopDAC();
               break;
             }
+#ifdef DEBUG_MAS
             uint32_t fopen2 = XTHAL_GET_CCOUNT();
+#endif
 
             //-------------------------------------------------------read new file to to buffer
             int available=aiff_file[h].available();
@@ -405,21 +428,53 @@ void ESP32_MAS::run() {
     }
     vTaskDelay(10);
   }//                                                                         AUDIO PLAYER LOOP
-  i2s_driver_uninstall(this->I2S_PORT); //stop & destroy i2s driver
   if (this->I2S_noDAC) {
-    printf("-------------------- this->I2S_noDAC writing 0x0\n");
+    printf("-------------------- this->I2S_noDAC writing 0x80 => 0x0\n");
+    size_t ret;
+    for(int j=0; j < 2; j++) {
+      for(int i=0; i < buf_len_8/2; i++) {
+        // sägezahn 0 .. 255
+        out_buf_8[i*2+1]=128 * (buf_len_8*2/2 - i - j*(buf_len_8/2) ) / (buf_len_8*2/2) ;
+        out_buf_8[i*2]=0;
+      }
+      // 0x80 => 0
+      if(i2s_write(this->I2S_PORT, (const char *)&out_buf_8, buf_len_8, &ret, portMAX_DELAY) != ESP_OK) {
+        Serial.printf("i2s_write failed!\n");
+      }
+    }
+Serial.println("write 0");
+    for(int j=0; j < 16 ; j++) {
+      for(int i=0; i < buf_len_8/2; i++) {
+        out_buf_8[i*2+1]=0 ;
+        out_buf_8[i*2]=0;
+      }
+      // 0
+      if(i2s_write(this->I2S_PORT, (const char *)&out_buf_8, buf_len_8, &ret, portMAX_DELAY) != ESP_OK) {
+        Serial.printf("i2s_write failed!\n");
+      }
+    }
+    delay(500); // daumen mal pi ... warten bis alles ausgegeben wurde, i2s_buffer_finished find ich nicht
+
+Serial.println("i2c disable");
     dac_i2s_disable();
-    // macht lechte knackser
+    
+    // analog 1,7V, beim i2s_driver_install wird der pin immer auf 0V gesetzt => knackst von 50% => 0V
     // dacWrite(DAC1,0x80);
+
 /*
     dac_output_enable(DAC_GPIO25_CHANNEL);
-    dac_output_voltage(DAC_GPIO25_CHANNEL, 100);
+    dac_output_voltage(DAC_GPIO25_CHANNEL, 128);
 */
-    // stille:
+
+
+Serial.println("0V");
+    // 0V / Stille (macht aber an Knackser):
     pinMode(25, OUTPUT);
     digitalWrite(25, 0);
-    Serial.println("stop noDAC done");
+  
   }
+  i2s_driver_uninstall(this->I2S_PORT); //stop & destroy i2s driver
+  Serial.println("stop i2s done");
 }//                                                                           VOID AUDIO PLAYER
 
 ESP32_MAS::ESP32_MAS() {

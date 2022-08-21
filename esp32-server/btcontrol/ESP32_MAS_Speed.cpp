@@ -3,6 +3,7 @@
 #include "lokdef.h"
 #include "utils_esp32.h"
 #include "clientthread.h"
+#include "Hardware.h"
 
 #define TAG "ESP32_MAS_SPEED"
 
@@ -110,11 +111,14 @@ void ESP32_MAS_Speed::begin() {
   }
   if(!this->isRunning()) {
     Audio.setFahrstufe(0);
-    Audio.setGain(0,80);  // Motor sound
-    // Audio.setGain(1,100);  // Horn -> default 128
+    int volumeMotor=readEEPROM(EEPROM_SOUND_VOLUME_MOTOR);
+    Audio.setGain(0,volumeMotor);  // Motor sound
+    int volumeHorn=readEEPROM(EEPROM_SOUND_VOLUME_HORN);
+    Audio.setGain(1,volumeHorn);  // Horn -> default 128
     Audio.loopFile(0,""); // openFile handles the filenames
     int volume=readEEPROM(EEPROM_SOUND_VOLUME);
-    NOTICEF("############# Sound Volume: %d (CV:266) ###########################", volume);
+    NOTICEF("############# Sound Volume: %d (CV:%d) Motor: %d (CV:%d) Horn: %d (CV:%d) ###########################", volume, Hardware::CV_SOUND_VOL, 
+        volumeMotor, Hardware::CV_SOUND_VOL_MOTOR, volumeHorn, Hardware::CV_SOUND_VOL_HORN);
     Audio.setVolume(volume); // 255=max
     Audio.startDAC();
     DEBUGF("DAC init done");
@@ -154,10 +158,31 @@ void ESP32_MAS_Speed::startPlayFuncSound() {
 }
 
 
-void ESP32_MAS_Speed::setVolume(uint8_t volume) {
+int ESP32_MAS_Speed::setVolume(int volume) {
   DEBUGF("ESP32_MAS_Speed::setVolume(%d)", volume);
+  if(volume < 0)
+    return readEEPROM(EEPROM_SOUND_VOLUME);
   ESP32_MAS::setVolume(volume);
   writeEEPROM(EEPROM_SOUND_VOLUME, volume, EEPROM_SOUND_SET, 1);
+  return volume;
+}
+
+int ESP32_MAS_Speed::setVolumeMotor(int volume) {
+  DEBUGF("ESP32_MAS_Speed::setVolumeMotor(%d)", volume);
+  if(volume < 0)
+    return readEEPROM(EEPROM_SOUND_VOLUME_MOTOR);
+  ESP32_MAS::setGain(0,volume);
+  writeEEPROM(EEPROM_SOUND_VOLUME_MOTOR, volume);
+  return volume;
+}
+
+int ESP32_MAS_Speed::setVolumeHorn(int volume) {
+  DEBUGF("ESP32_MAS_Speed::setVolumeHorn(%d)", volume);
+  if(volume < 0)
+    return readEEPROM(EEPROM_SOUND_VOLUME_HORN);
+  ESP32_MAS::setGain(1,volume);
+  writeEEPROM(EEPROM_SOUND_VOLUME_HORN, volume);
+  return volume;
 }
 
 ESP32_MAS_Speed Audio;
