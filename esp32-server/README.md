@@ -2,7 +2,7 @@
 
 ## LGB Putzlok
 
-LGB Putzlok mit Ikea Akkus und ESP32 (ESPDuino und Dual-VNH5019 Motor Shield9 als Elektronik
+LGB Putzlok mit Ikea Akkus und ESP32 (ESPDuino und Dual-VNH5019 Motor Shield) als Elektronik
 
 Beschreibung: [LGB Putzlok](Setup-Putzlok.md)
 
