@@ -33,3 +33,10 @@ howto bCNC: TODO **************************
 
 ## ESP32 Create Memory map file
 https://everythingesp.com/esp32-arduino-creating-a-memory-map-file/
+
+
+## Workarounds
+
+### tto display startet nach power on nicht
+=> Kondensator entfernen
+<img src="ttgo-t-display-gpio0-capacitor.jpg" alt="gpio0 capacitor" width="300"/>
