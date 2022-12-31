@@ -21,4 +21,5 @@ Beschreibung: [LGB Putzlok](Setup-Putzlok.md)
 | 267 | Lautstärke Motor (0..255) |
 | 268 | Lautstärke Horn (0..255) |
 | 500 | BAT Value |
+| 501 | Raw BAT Value |
 | 510 | wifi AP=0 / client=1 |
