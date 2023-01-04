@@ -6,7 +6,9 @@ stepdown 5V
 streifen leiterplatine - abmessungen siehe sketch
 Licht hinten + Führerhaus: 2* FET + 4* 100Ohm + 2* LEDs
 Licht vorne LED + 100Ohm
-
+4* 14500 protected lipo akku
+4* bat halter
+optional kabel stecker
 
 * esp32 cam
    1. flashen
@@ -16,6 +18,8 @@ Licht vorne LED + 100Ohm
    4. antennen R umlöten
 
 * platine schneiden + bohrungen machen + leiterbahnen unterbrechen
+
+<img src="img_stainz_platine.jpg" alt="Ikea Braunit & Pins" width="300"/>
 
 * schaltregler auf der unterseite drauflöten
    checken ob die 5V dort sind wo sie hingehören
