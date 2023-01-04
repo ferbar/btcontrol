@@ -23,6 +23,7 @@ public:
 	static const int CV_SOUND_VOL_MOTOR=267;
 	static const int CV_SOUND_VOL_HORN=268;
 	static const int CV_BAT=500;
+	static const int CV_BAT_RAW=501;
 	static const int CV_WIFI_CLIENT_SWITCH=510;
 	// @return: -1 => Fehler, 0..255 current CV Value
 	// CV -1  => get hardware ID
