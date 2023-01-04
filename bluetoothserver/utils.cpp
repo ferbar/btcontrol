@@ -380,7 +380,7 @@ void utils::Log::init(bool softAP) {
   } else {
     NOTICEF("enabling syslog server @%s:%d", SYSLOG_SERVER, SYSLOG_PORT);
     syslog.server(SYSLOG_SERVER, SYSLOG_PORT);
-    syslog.deviceHostname(lok_name);
+    syslog.deviceHostname(LOK_NAME);
     syslog.appName("btcontrol");
     syslog.defaultPriority(LOG_KERN);
   }
