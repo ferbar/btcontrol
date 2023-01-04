@@ -51,8 +51,13 @@ void USBPlatine::sendLoco(int addr_index, bool emergencyStop) {
 				}
 				this->setFunction(lokdef[addr_index].nFunc, func);
 
-				this->setDir(lokdef[addr_index].currdir < 0 ? 1 : 0 );
-				this->setPWM(f_speed);
+				if(emergencyStop) {
+					this->fullstop(true, true);
+				} else {
+					this->setDir(lokdef[addr_index].currdir < 0 ? 1 : 0 );
+					this->setPWM(f_speed);
+				}
+
 				/*
 				// int ia2=lokdef[addr_index].currdir < 0 ? 255 : 0; // 255 -> relais zieht an
 				int ia2=0;
