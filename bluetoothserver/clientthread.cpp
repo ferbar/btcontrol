@@ -213,6 +213,7 @@ continue;
 				lokdef[addr_index].currspeed=0;
 				sendStatusReply(lastStatus);
 				changedAddrIndex[addr_index]=true;
+				emergencyStop=true;
 			} else if(cmd.isType("ACC_MULTI")) {
 				int n=cmd["list"].getArraySize();
 				int addr=cmd["list"][0]["addr"].getIntVal();
@@ -265,6 +266,7 @@ continue;
 					changedAddrIndex[addr_index]=true;
 				}
 				sendStatusReply(lastStatus);
+				emergencyStop=true;
 			} else if(cmd.isType("SETFUNC")) {
 				int addr=cmd["addr"].getIntVal();
 				int addr_index=getAddrIndex(addr);
@@ -460,6 +462,7 @@ continue;
 				int addr_index=i;
 				lokdef[addr_index].lastClientID = this->clientID;
 				hardware->sendLoco(addr_index, emergencyStop);
+				emergencyStop=false;
 			}
 		}
 		// DEBUGF("processing message done in %ldms", millis()-start);
