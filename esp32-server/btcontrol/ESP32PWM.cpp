@@ -53,9 +53,12 @@ const int enpin[MOTOR_OUTPUTS] = {27, 19}; // open drain output vom VNH5019, boa
 const int inApin[MOTOR_OUTPUTS] = {13}; // INA + PWM
 const int inBpin[MOTOR_OUTPUTS] = {12}; // INB + PWM
 
-#define MOTOR_FREQUENCY 16000
+#define MOTOR_FREQUENCY 20000
 #define MOTOR_NR 0
-#define MOTOR_IN_BRAKE HIGH
+// LOW ist leiser, Stromverbrauch müsste in der Theorie geringer sein
+#define MOTOR_IN_BRAKE LOW
+// HIGH ist für geringe Drehzahl besser
+//#define MOTOR_IN_BRAKE HIGH
 
 // ============================================================================================================================= I2C Monster Shield
 #elif defined LOLIN_I2C_MOTOR_SHIELD
@@ -162,7 +165,7 @@ delay(100);
 /**
  * wird mit new im btcontrol::setup() gestartet
  */
-ESP32PWM::ESP32PWM() : USBPlatine(false), dir(0), pwm(0), motorStart(MOTOR_START), motorFullSpeed(255), ledToggle(0), nFunc(0) {
+ESP32PWM::ESP32PWM() : USBPlatine(false), dir(0), pwm(0), motorStart(MOTOR_START), motorFullSpeed(MOTOR_MAX), ledToggle(0), nFunc(0) {
   DEBUGF("ESP32PWM::ESP32PWM()");
   this->currentFunc[0]=1; // F0 beim booten ein
   for(int i=1; i < MAX_NFUNC; i++) {
@@ -230,6 +233,10 @@ ESP32PWM::ESP32PWM() : USBPlatine(false), dir(0), pwm(0), motorStart(MOTOR_START
   ledcSetup(3, 5000, 8);
   ledcAttachPin(HEADLIGHT_2_PIN, 3);
 #endif
+#ifdef CABLIGHT_PIN
+  ledcSetup(4, 5000, 8);
+  ledcAttachPin(CABLIGHT_PIN, 4);
+#endif
 #ifdef PUTZLOK_BLINK_1_PIN
   pinMode(PUTZLOK_BLINK_1_PIN, OUTPUT);
 #endif
@@ -292,6 +299,9 @@ void ESP32PWM::dumpConfig() {
 #ifdef HEADLIGHT_2_PIN
   DEBUGF("HEADLIGHT_2_PIN %d", HEADLIGHT_2_PIN);
 #endif
+#ifdef CABLIGHT_PIN
+  DEBUGF("CABLIGHT_PIN %d", CABLIGHT_PIN);
+#endif
 #ifdef PUTZLOK_BLINK_1_PIN
   DEBuGF("PUTZLOK_BLINK_1_PIN %d", PUTZLOK_BLINK_1_PIN);
 #endif
@@ -321,6 +331,9 @@ void ESP32PWM::loop() {
 
 void ESP32PWM::setPWM(int f_speed) {
   long start=millis();
+#if MOTOR_IN_BRAKE==HIGH
+  int oldpwm=this->pwm;
+#endif
   if(f_speed > 0) {
     this->pwm = f_speed*((double)this->motorFullSpeed - this->motorStart)/255 + this->motorStart;
   } else {
@@ -352,11 +365,23 @@ void ESP32PWM::setPWM(int f_speed) {
 #endif // outputs
 #endif // Putzlok
 #else
-  if(this->dir) {
-    ledcWrite(0, this->pwm);
-  } else {
-    ledcWrite(1,  f_speed/3*((double)this->motorFullSpeed - this->motorStart)/255 + this->motorStart );
+  DEBUGF("ESP32PWM::setPWM set[%d] => %d", this->dir, this->pwm);
+  #if MOTOR_IN_BRAKE==HIGH
+  if(oldpwm==255 && f_speed) {  // von 0 => fahren
+    if(this->dir==0) {
+      ledcAttachPin(inApin[0], 0);
+    } else {
+      ledcAttachPin(inBpin[0], 1);
+    }
+  } else if(oldpwm!=255 && f_speed==0) { // von fahren => stop
+    ledcDetachPin(inApin[0]);
+    ledcDetachPin(inBpin[0]);
+    digitalWrite(inApin[0], MOTOR_IN_BRAKE);
+    digitalWrite(inBpin[0], MOTOR_IN_BRAKE);
   }
+  #endif
+  ledcWrite(this->dir, this->pwm);
+  
 #endif
 
 #ifdef HAVE_SOUND
@@ -402,15 +427,23 @@ void ESP32PWM::fullstop(bool stopAll, bool emergencyStop) {
 #elif defined WEMOS_I2C_MOTOR_SHIELD
   motor->setmotor(_STOP);
 #else
-#ifdef HAVE_PWM_PIN
-	ledcWrite(MOTOR_NR, 0);
-#ifdef PUTZLOK
-  ledcWrite(1, 0);
-#endif // PUTZLOK
-#else
-  ledcWrite(0,255);
-  ledcWrite(1,255);
-#endif
+  #ifdef HAVE_PWM_PIN
+    ledcWrite(MOTOR_NR, 0);
+    #ifdef PUTZLOK
+      ledcWrite(1, 0);
+    #endif // PUTZLOK
+  #else
+    // drv8871 coast==0, brake==HIGH
+    ledcWrite(0,0);
+    ledcWrite(1,0);
+    #if MOTOR_IN_BRAKE==HIGH
+    // bug mit esp32 arduino lib von 26.3.2021: 255 != max, daher pins händisch auf '1' setzen
+    ledcDetachPin(inApin[0]);
+    ledcDetachPin(inBpin[0]);
+    digitalWrite(inApin[0], HIGH); // MOTOR_IN_BRAKE);
+    digitalWrite(inBpin[0], HIGH); // MOTOR_IN_BRAKE);
+    #endif
+  #endif
 #endif
   lokdef[0].currspeed=0;
 }
@@ -470,17 +503,25 @@ void ESP32PWM::commit() {
       DEBUGF("set LEDC headlight %d", this->currentFunc[0]);
 #ifdef HEADLIGHT_2_PIN
       DEBUGF("********************** set headlight dir=%d, func[0]=%d pins: (%d %d)", this->dir, this->currentFunc[0], HEADLIGHT_1_PIN, HEADLIGHT_2_PIN);
+      // bug in altem esp32-arduino: 255 != 100% ein, 255==0%
       if(this->dir) {
-        ledcWrite(2, this->currentFunc[0] ? HEADLIGHT_1_PWM_DUTY : HEADLIGHT_2_PWM_DUTY_OFF);
+        ledcWrite(2, this->currentFunc[0] ? HEADLIGHT_1_PWM_DUTY : HEADLIGHT_1_PWM_DUTY_OFF);
         ledcWrite(3, HEADLIGHT_2_PWM_DUTY_OFF);
       } else {
-        ledcWrite(2, HEADLIGHT_2_PWM_DUTY_OFF);
+        ledcWrite(2, HEADLIGHT_1_PWM_DUTY_OFF);
         ledcWrite(3, this->currentFunc[0] ? HEADLIGHT_2_PWM_DUTY : HEADLIGHT_2_PWM_DUTY_OFF);
       }
 #else
-      ledcWrite(2, func[0] ? HEADLIGHT_1_PWM_DUTY : HEADLIGHT_2_PWM_DUTY_OFF);
+      // nur eine LED => nicht richtungsabhängig
+      ledcWrite(2, func[0] ? HEADLIGHT_1_PWM_DUTY : HEADLIGHT_1_PWM_DUTY_OFF);
 #endif
       this->headlight = this->currentFunc[0];
+    }
+#endif
+#ifdef CABLIGHT_PIN
+    if(this->cablight != (this->currentFunc[0] && !this->pwm) ) { // das wird ned gehn wenn PWM_IN_BREAK=HIGH
+      this->cablight = this->currentFunc[0] && !this->pwm;
+      ledcWrite(4, this->cablight ? CABLIGHT_PWM_DUTY : CABLIGHT_PWM_DUTY_OFF);
     }
 #endif
   }
@@ -534,6 +575,11 @@ int ESP32PWM::sendPOM(int addr, int cv, int value) {
         DEBUGF("############# Battery voltage: took %ld ms result:%d/255", millis() - readStart, a_p);
         // return (a_p < b_p) ? ( a_p ) : ( b_p );
         return a_p;
+    }
+    if(cv==CV_BAT_RAW) {
+        int a=analogRead(BAT_ADC_PIN1); // => keine korrektur, wir messen einfach 12V und 16,4V
+        DEBUGF("battery voltage, results: a:%d", a);
+        return a;
     }
 #endif
   if(cv == CV_CV_WIFI_CLIENT_SWITCH) {

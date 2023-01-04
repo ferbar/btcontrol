@@ -33,6 +33,9 @@ private:
 #ifdef HEADLIGHT_1_PIN
   bool headlight=false;
 #endif
+#ifdef CABLIGHT_PIN
+  bool cablight=false;
+#endif
 #ifdef PUTZLOK
   bool doPutz=false;
 #endif
