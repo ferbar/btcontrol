@@ -13,6 +13,12 @@ Beschreibung: [LGB Putzlok](Setup-Putzlok.md)
 
 <img src="img_playmobil_inside.jpg" alt="Playmobil Lok ESP32" width="300"/>
 
+## Stainz
+[Stainz](Setup-Stainz.md)
+
+<img src="img_stainz_platine.jpg" alt="Playmobil Lok ESP32" width="300"/>
+
+
 
 ## CVs:
 | CV | Beschreibung |
