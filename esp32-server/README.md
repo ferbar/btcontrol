@@ -17,8 +17,9 @@ Beschreibung: [LGB Putzlok](Setup-Putzlok.md)
 ## CVs:
 | CV | Beschreibung |
 |---|---|
-| 266 | Gesamtlautstärke (0..255) => besser das auf 255 und Spannungsteiler beim Verstärker |
+| 266 | Gesamtlautstärke (0..255) => besser das auf 255 und Spannungsteiler beim Verstärker. Vorsicht: wenn Motor + Horn + gesamt auf 255 sind wird der Sound übersteuern / knacksen !!! |
 | 267 | Lautstärke Motor (0..255) |
 | 268 | Lautstärke Horn (0..255) |
 | 500 | BAT Value |
-| 510 | wifi AP / client |
+| 501 | Raw BAT Value |
+| 510 | wifi AP=0 / client=1 |
