@@ -17,6 +17,9 @@ optional kabel stecker
    3. flash led runterlöten / rauskratzen
    4. antennen R umlöten
 
+* Stainz zerlegen
+   http://atw.huebsch.at/Modell/G-Spur/LGB_Stainz.htm
+
 * platine schneiden + bohrungen machen + leiterbahnen unterbrechen
 
 <img src="img_stainz_platine.jpg" alt="Ikea Braunit & Pins" width="300"/>
