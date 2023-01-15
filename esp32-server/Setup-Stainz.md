@@ -18,7 +18,7 @@ optional kabel stecker
    4. antennen R umlöten
 
 * Stainz zerlegen
-   http://atw.huebsch.at/Modell/G-Spur/LGB_Stainz.htm
+   http://atw.huebsch.at/Modell/G-Spur/LGB_Stainz.htm https://www.gartenbahnprofi.de/16101/GB_0123_Demontage_Stainz.pdf
 
 * platine schneiden + bohrungen machen + leiterbahnen unterbrechen
 
