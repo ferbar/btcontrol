@@ -23,7 +23,7 @@
    5. Antennenkabel kürzen für weniger Kabelsalat
 
 ### Stainz zerlegen
-   http://atw.huebsch.at/Modell/G-Spur/LGB_Stainz.htm https://www.gartenbahnprofi.de/16101/GB_0123_Demontage_Stainz.pdf
+   http://atw.huebsch.at/Modell/G-Spur/LGB_Stainz.htm https://www.gartenbahnprofi.de/16101/GB_0123_Demontage_Stainz.pdf (ich würde keinen Schraubendreher zum Raushebeln verwenden da man sonst Kratzer verursacht, besser irgendwas aus Plastik nehmen, z.b. zur Handy Reparatur)
 
 ### Platine löten
 * platine schneiden + bohrungen machen + leiterbahnen unterbrechen
