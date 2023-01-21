@@ -28,6 +28,7 @@ Wlan / Bluetooth Steuerung für die Eisenbahn mit haptischem Feedback. Wlan / Lo
 * bCNC
 * 2 abgezwickte Schrauben für die TTGO - Display - Taster - 2,8mm Durchmesser, 6mm lang ohne Gewinde, Ende abgeschliffen
 * 3 Messing Nagerl zum Befestigen vom TTGO - Display
+* 4* 1,6x8 versenk Schrauben
 
 howto bCNC: TODO **************************
 
