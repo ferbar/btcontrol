@@ -1,5 +1,6 @@
 {
     "files.associations": {
         "functional": "cpp"
-    }
+    },
+    "platformio-ide.customPATH": "/home/chris/.platformio/penv/bin/"
 }
