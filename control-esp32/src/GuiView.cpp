@@ -1073,7 +1073,7 @@ void GuiViewControlLoco::loop() {
             this->refreshBatLevel();
           }
           if(this->batLevel>=0) {
-            info += utils::format(" bat: %d/255  ", this->batLevel);
+            info += utils::format(" bat: %d%%  ", this->batLevel*100/255);
           }
           tft.drawString(info.c_str(),
             0, tft.height() - tft.fontHeight() );
