@@ -446,6 +446,7 @@ void ESP32PWM::fullstop(bool stopAll, bool emergencyStop) {
   #endif
 #endif
   lokdef[0].currspeed=0;
+  Audio.setFahrstufe(0);
 }
 
 /**
