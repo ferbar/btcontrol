@@ -201,6 +201,12 @@ void init_wifi_softap() {
   */  
     //delay(2000); // VERY IMPORTANT  https://github.com/espressif/arduino-esp32/issues/2025 --- 20210627: nicht notwendig
     WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
+    // 20MHz wifi channel bandwidth, im Arduino-ESP 1.0.6 gibts keine 
+    if(esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_BW_HT20) != ESP_OK) {
+      // continue ...
+      ERRORF("error setting esp_wifi_set_bandwidth to 20MHz");
+    }
+    
     // bool softAP(const char* ssid, const char* passphrase = NULL, int channel = 1, int ssid_hidden = 0, int max_connection = 4);
     WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
     Serial.print("softAPmacAddress: ");
