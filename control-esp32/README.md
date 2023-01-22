@@ -1,6 +1,6 @@
 # ESP32 Control Pad
 
-<img src="img_control_pad.jpg" alt="Putzlok" width="300"/>
+<img src="img_control_pad.jpg" alt="Control Pad" width="300"/>
 
 Wlan / Bluetooth Steuerung für die Eisenbahn mit haptischem Feedback. Wlan / Lok Auswahl übers Display, Geschwindigkeit und Funktionen über das Schiebepotentiometer bzw die Taster.
 
@@ -14,7 +14,7 @@ Wlan / Bluetooth Steuerung für die Eisenbahn mit haptischem Feedback. Wlan / Lo
 * Ein paar Taster (3 für mein .svg)
 * Ein paar Schalter (3 für mein .svg)
 * Lochrasterplatine oder gefräste Plexiglas Front
-* Akku mit passendem Stecker für das T-Display (JST-PH 1,25mm), oder 18650 Akku
+* Akku mit passendem Stecker für das T-Display (JST-PH 1,25mm), oder 14500 AA Lipo Akku + Bat halter
 * Visual Studio Code + USB C Kabel
 
 ## Plexiglas Frontplatte
@@ -28,9 +28,16 @@ Wlan / Bluetooth Steuerung für die Eisenbahn mit haptischem Feedback. Wlan / Lo
 * bCNC
 * 2 abgezwickte Schrauben für die TTGO - Display - Taster - 2,8mm Durchmesser, 6mm lang ohne Gewinde, Ende abgeschliffen
 * 3 Messing Nagerl zum Befestigen vom TTGO - Display
-* 4* 1,6x8 versenk Schrauben
 
 howto bCNC: TODO **************************
+
+## 3D Print Boden
+<img src="img_control_pad_3d_boden.jpg" alt="Control Pad - Boden" width="300"/>
+
+* 4* 1,6x8 versenk Schrauben
+
+howto: TODO **************************
+
 
 ## ESP32 Create Memory map file
 https://everythingesp.com/esp32-arduino-creating-a-memory-map-file/
