@@ -11,8 +11,8 @@
 * streifen leiterplatine - abmessungen siehe sketch
 * Licht hinten + Führerhaus: 2* FET + 4* 100Ohm + 2* LEDs
 * Licht vorne LED + 100Ohm
-* 4* 14500 protected lipo akku
-* 4* bat halter
+* 4* 14500 protected lipo akku (hab genommen 900mAh von trustfire)
+* vierfach AA Bat Halter
 * optional kabel stecker
 
 ### esp32 cam vorbereiten
