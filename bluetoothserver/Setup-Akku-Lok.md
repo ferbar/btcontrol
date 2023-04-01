@@ -136,11 +136,18 @@ make install
 
 Die Handy / Android App sollte jetzt die Lok finden.
 
+btcontrol.service:
+requires network | bluetooth (!!!! nicht multiuser - wir brauchen keine ntpd zeit !!!!)
+```
+systemctl enable btcontrol
+systemctl enable btcontrol-initbt
+```
+
 ### DietPi für Akku optimieren (readonly filesystem)
 
 ```
 dietpi-services
-  cron -> inactive (202304: ok)
+  cron -> inactive + mask (202304: ok)
 -systemctl disable cron-
 
 rm -rf /var/lib/dhcp /var/lib/misc
@@ -225,6 +232,8 @@ systemctl disable dietpi-ramlog.service
 ```
 
 ### sound config
+sound config für I2S siehe adafruit link
+
 => usb soundkarte wird standardmässig nicht als default genommen
 Fehlermeldung:
 aplay: set_params:1339: Sample format non available
@@ -291,10 +300,6 @@ dietpi-services
 
 serial0 abdrehen? => verhindert cpu throttle / stromsparen
 	
-btcontrol.service:
-requires network | bluetooth (!!!! nicht multiuser - wir brauchen keine ntpd zeit !!!!)
-systemctl enable btcontrol
-systemctl enable btcontrol-initbt
 
 ### Stromsensor - INA219 testen
 
