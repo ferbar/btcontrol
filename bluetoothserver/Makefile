@@ -99,9 +99,18 @@ Makefile.config:
 	@echo .
 	
 	@# -lwiringPi HAVE_RASPI_ACT_LED | HAVE_RASPI_WIRINGPI
-	@echo -e "checking raspi ACT led:"
-	@if [ -f "/sys/class/leds/led0/brightness" ] ; then \
-		echo "found" ;\
+	@echo -e "checking raspi:"
+	@if grep -q ID=raspbian /etc/os-release ; then \
+		echo "found" ; \
+		echo "checking ACT led"; \
+		if [ -f "/sys/class/leds/led0/brightness" ] ; then \
+			echo "CFLAGS+=-DACT_LED=/sys/class/leds/led0/brightness" >> Makefile.config ; \
+		elif [ -f /sys/class/leds/ACT/brightness ] ; then \
+			echo "CFLAGS+=-DACT_LED=/sys/class/leds/ACT/brightnes" >> Makefile.config ; \
+		else \
+			echo "error: not found!" ; \
+			exit 1; \
+		fi ; \
 		echo "CFLAGS+=-DHAVE_RASPI_ACT_LED" >> Makefile.config ; \
 		echo -e "checking for wiringPI:" ; \
 		if [ -f "/usr/local/lib/libwiringPi.so" -o -f "/usr/lib/libwiringPi.so" ] ; then \
@@ -214,19 +223,31 @@ install:
 		eval "echo \"$${CONF//\"/\\\"}\"" > /etc/udev/rules.d/70-persistent-net-ap.rules ; \
 		echo '.' ; \
 		echo "########### setting dnsmasq config ###########" ; \
-		if [ ! -f /etc/dnsmasq.d/btcontrol.conf ] ; then \
-			ln -s $$PWD/etc/dnsmasq.conf /etc/dnsmasq.d/btcontrol.conf ; \
+		if [ -d /etc/dnsmasq.d/ ] ; then \
+			if [ ! -f /etc/dnsmasq.d/btcontrol.conf ] ; then \
+				ln -s $$PWD/etc/dnsmasq.conf /etc/dnsmasq.d/btcontrol.conf ; \
+			fi ; \
+		else \
+			echo "not installed, skipped" ; \
 		fi ; \
 		echo "########### setting hostapd config ###########" ; \
-		if [ ! -f /hostapd/hostapd.conf ] ; then \
-			eval "echo \"$$(cat $$PWD/etc/hostapd/hostapd.conf)\"" > /etc/hostapd/hostapd.conf ; \
-			echo "DAEMON_CONF=\"/etc/hostapd/hostapd.conf\"" > /etc/default/hostapd ; \
+		if [ -d /etc/hostapd/ ] ; then \
+			if [ ! -f /etc/hostapd/hostapd.conf ] ; then \
+				eval "echo \"$$(cat $$PWD/etc/hostapd/hostapd.conf)\"" > /etc/hostapd/hostapd.conf ; \
+				echo "DAEMON_CONF=\"/etc/hostapd/hostapd.conf\"" > /etc/default/hostapd ; \
+			fi ; \
+		else \
+			echo "not installed, skipped" ; \
 		fi ; \
 		echo "########### setting lighttpd config ###########" ; \
-		echo -e '# created by btcontrol make install, hostname lower case \n' \
+		if [ -d /etc/lighttpd/ ] ; then \
+			echo -e '# created by btcontrol make install, hostname lower case \n' \
 '   $$HTTP["host"] != "'$${HOSTNAME,,}'" { \n' \
 '        url.redirect = ("" => "http://'$${HOSTNAME,,}'/") \n' \
 '    } ' > /etc/lighttpd/conf-enabled/redirect.conf ; \
+		else \
+			echo "not installed, skipped" ; \
+		fi ; \
 	else \
 		cp ../ussp-push-0.11/src/ussp-push \
 			../MidpBluetoothExample2/MobileApplication/dist/btcontrol.jar \
