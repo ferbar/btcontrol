@@ -100,6 +100,10 @@ void RaspiPWM::init() {
 #endif
 
 	std::string tmp = config.get("digispark.motorStart");
+	if(tmp == NOT_SET) {
+		ERRORF("digispark.motorStart missing");
+		abort();
+	}
 	this->motorStart=utils::stoi(tmp);
 	tmp = config.get("digispark.motorFullSpeed");
 	if(tmp == NOT_SET) {
