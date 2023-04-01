@@ -63,29 +63,40 @@ Als Raspi Image hab ich DietPi verwendet: https://dietpi.com/downloads/images/Di
 
 * DietPi Image auf eine SD-Karte kopieren (Linux: dd_rescue)
 
-a) /boot mounten + /boot/dietpi.text bearbeiten (wifi config) 202202: hat nicht funktioniert
+a) /boot mounten + /boot/dietpi.text bearbeiten (wifi config)
 https://dietpi.com/docs/usage/#how-to-do-an-automatic-base-installation-at-first-boot
+```
+AUTO_SETUP_ACCEPT_LICENSE=1
+AUTO_SETUP_KEYBOARD_LAYOUT=de
+AUTO_SETUP_TIMEZONE=Europe/xyz
+AUTO_SETUP_NET_WIFI_ENABLED=1
+AUTO_SETUP_NET_WIFI_COUNTRY_CODE=DE
+AUTO_SETUP_NET_HOSTNAME=raspi-99-6001
+```
++ SSID + pass in dietpi-wifi.txt
+
 b) mit usb - ethernet Adapter booten
 
 ### DietPi konfigurieren
 dietpi-config: (startet automatisch)
+* Audio Options -> install alsa
+  - bei I2S Sound (max98357) hifiberry-dac auswählen
+* Performance options
+  - ondemand (throttle up: 80%, sample rate 300ms, initial turbo 30s)
+* Advanced Options:
+  - -swap space weg,- (manuell machen)
+  - bluetooth on
+* security options:
+  - change hostname
 * Network Options Adapters:
   - Wlan ein, key, country-code
   - IPv6 off
   - Wifi: Auto reconnect on
 * Network Options Misc: Boot Net Wait: off
-* Audio Options -> install alsa
-* Performance options
-  - ondemand (throttle up: 80%, sample rate 300ms, initial turbo 30s)
-* Advanced Options:
-  - swap space weg,
-  - bluetooth on
-* security options:
-  - change hostname
 
 ### Notwendige Pakete installieren
 
-seit 2022 mit pigpio (geht nicht mit I2S DAC)
+mit pigpio (geht nicht mit I2S DAC)
 ```
 apt-get install git build-essential pkg-config libpigpio-dev libbluetooth-dev libasound2-dev \
 libboost-all-dev avahi-daemon
@@ -93,7 +104,7 @@ libboost-all-dev avahi-daemon
 
 mit wiringPi (wiringPi muss von https://github.com/WiringPi/WiringPi mit git clone + build + build install installiert werden)
 ```
-apt-get install git build-essential pkg-config wiringpi libbluetooth-dev libasound2-dev \
+apt-get install git build-essential pkg-config libbluetooth-dev libasound2-dev \
 libboost-all-dev avahi-daemon
 ```
 
@@ -129,9 +140,10 @@ Die Handy / Android App sollte jetzt die Lok finden.
 
 ```
 dietpi-services
-disable cron (haut ned hin)
-systemctl disable cron
-rm -rf /var/lib/dhcp
+  cron -> inactive (202304: ok)
+-systemctl disable cron-
+
+rm -rf /var/lib/dhcp /var/lib/misc
 ln -s /run/ /var/lib/dhcp
 ln -s /run /var/lib/run
 ln -s /run /var/lib/misc
