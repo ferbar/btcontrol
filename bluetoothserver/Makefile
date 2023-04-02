@@ -106,7 +106,7 @@ Makefile.config:
 		if [ -f "/sys/class/leds/led0/brightness" ] ; then \
 			echo "CFLAGS+=-DRASPI_ACT_LED=/sys/class/leds/led0/brightness" >> Makefile.config ; \
 		elif [ -f /sys/class/leds/ACT/brightness ] ; then \
-			echo "CFLAGS+=-DRASPI_ACT_LED=/sys/class/leds/ACT/brightnes" >> Makefile.config ; \
+			echo "CFLAGS+=-DRASPI_ACT_LED=/sys/class/leds/ACT/brightness" >> Makefile.config ; \
 		else \
 			echo "error: not found!" ; \
 			exit 1; \
