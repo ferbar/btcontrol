@@ -4,7 +4,7 @@
 
 Handarbeit RhB 182 und LGB RhB Krokodil mit einem Raspberry Pi Zero-W umgebaut auf Akkubetrieb.
 
-Das ist eine Anleitung um eine LGB Lok ohne Schienenstrom fahren lassen zu können. Als Hirn wird ein Raspberry Pi Zero - W verwendet, eine H Brücke am PWM Ausgang, eine USB Soundkarte mit Verstärker und ein paar FETs zum schalten der LEDs.
+Das ist eine Anleitung um eine LGB Lok ohne Schienenstrom fahren lassen zu können. Als Hirn wird ein Raspberry Pi Zero - W verwendet, eine H Brücke am PWM Ausgang, ein MAX98357 I2S DAC + Verstärker (oder eine USB Soundkarte mit extra Verstärker) und ein paar FETs zum schalten der LEDs. Sollte ein Raspberry Pi Zero ohne W verwendet werden kann mit einem Bluetooth oder Wlan-Dongle gearbeitet werden.
 
 ## Partlist
 
