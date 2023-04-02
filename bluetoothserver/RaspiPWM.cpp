@@ -231,7 +231,7 @@ void RaspiPWM::fullstop(bool stopAll, bool emergencyStop) {
 void RaspiPWM::dumpPins() {
 	printf("RaspiPWM::dumpPins()\n");
 	for(const auto &element: this->pins) {
-		printf("%d: %s (%d)\n", element.first, element.second.function.c_str(), element.second.pwm);
+		printf("%d: %s (pwm:%d)\n", element.first, element.second.function.c_str(), element.second.pwm);
 	}
 }
 
@@ -247,41 +247,46 @@ void RaspiPWM::commit(bool force) {
 	auto it=this->pins.begin();
 	while (it!=this->pins.end()) {
 		int pin=it->first;
-		if(logPins) DEBUGF("%d\n", pin);
+		if(logPins) DEBUGF("%d", pin);
 		PinCtl *pinCtl=&it->second;
 		bool value=false;
 		do {
 			if(parseExpr->getResult(it->second.function, this->dir, this->pwm, this->currentFunc)) {
-				if(logPins) DEBUGF("   %s [true, last:%d]\n", it->second.function.c_str(), it->second.lastState);
+				if(logPins) DEBUGF("   %s [true, last:%d]", it->second.function.c_str(), it->second.lastState);
 				value=true;
 				pinCtl=&it->second;
 			} else {
-				if(logPins) DEBUGF("   %s [false, last:%d]\n", it->second.function.c_str(), it->second.lastState);
+				if(logPins) DEBUGF("   %s [false, last:%d]", it->second.function.c_str(), it->second.lastState);
 				if(it->second.lastState) {
 					if(it->second.pwm != 100) {
-						if(logPins) DEBUGF("  soft pwm stop\n");
+						if(logPins) DEBUGF("  soft pwm stop");
 						softPwmStop(it->first);
 					} else {
 						digitalWrite(pin, value);
 					}
 					it->second.lastState=false;
+					// pin ist jetzt off, wenn value=true wirds unten wieder eingeschalten.
+					pinCtl->lastState=false;
 				}
 			}
 			++it;
 		} while((it != this->pins.end() ) && (it->first == pin));
-		if(logPins) DEBUGF("%d: %s =>%d (pwm:%d last:%d)\n", pin, pinCtl->function.c_str(),value,pinCtl->pwm,pinCtl->lastState);
+		if(logPins) DEBUGF("%d: %s =>%d (pwm:%d last:%d)", pin, pinCtl->function.c_str(),value,pinCtl->pwm,pinCtl->lastState);
 		if(force || value != pinCtl->lastState) {
 			if(pinCtl->pwm != 100) {
 				if(value) {
-					if(logPins) NOTICEF("  soft pwm create\n");
+					if(logPins) NOTICEF("  soft pwm create (pwm:%d)", pinCtl->pwm);
 					softPwmCreate(pin, pinCtl->pwm, 100);
+					// workaround 20230402: softPwmCreate [value] setzt den wert nicht ....
+					softPwmWrite(pin, pinCtl->pwm);
 				}
 			} else {
+				if(logPins) NOTICEF("  digital (%d)", value);
 				digitalWrite(pin, value);
 			}
 			pinCtl->lastState=value;
 		} else {
-			if(logPins) NOTICEF("  commit: no force\n");
+			if(logPins) NOTICEF("  commit: no force");
 		}
 	}
 }
