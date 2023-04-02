@@ -61,7 +61,12 @@ static void *startCommThread(void *data)
 	bool forceRead=false;
 
 	// raspi - ping:
-	FILE *fRaspiLed = fopen("/sys/class/leds/led0/brightness", "w");
+	FILE *fRaspiLed = 
+#ifdef RASPI_ACT_LED
+		fopen(_STR(RASPI_ACT_LED), "w");
+#else
+		NULL;
+#endif
 	if(fRaspiLed) {
 		printf("can write to Raspberry ACT led1\n");
 	} else {

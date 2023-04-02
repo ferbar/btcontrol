@@ -104,14 +104,13 @@ Makefile.config:
 		echo "found" ; \
 		echo "checking ACT led"; \
 		if [ -f "/sys/class/leds/led0/brightness" ] ; then \
-			echo "CFLAGS+=-DACT_LED=/sys/class/leds/led0/brightness" >> Makefile.config ; \
+			echo "CFLAGS+=-DRASPI_ACT_LED=/sys/class/leds/led0/brightness" >> Makefile.config ; \
 		elif [ -f /sys/class/leds/ACT/brightness ] ; then \
-			echo "CFLAGS+=-DACT_LED=/sys/class/leds/ACT/brightnes" >> Makefile.config ; \
+			echo "CFLAGS+=-DRASPI_ACT_LED=/sys/class/leds/ACT/brightnes" >> Makefile.config ; \
 		else \
 			echo "error: not found!" ; \
 			exit 1; \
 		fi ; \
-		echo "CFLAGS+=-DHAVE_RASPI_ACT_LED" >> Makefile.config ; \
 		echo -e "checking for wiringPI:" ; \
 		if [ -f "/usr/local/lib/libwiringPi.so" -o -f "/usr/lib/libwiringPi.so" ] ; then \
 			echo "found" ;		\

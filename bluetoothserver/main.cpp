@@ -213,8 +213,8 @@ int main(int argc, char *argv[])
 #ifdef INCL_BT
 				printf("+INCL_BT ");
 #endif
-#ifdef HAVE_RASPI_ACT_LED
-				printf("+HAVE_RASPI_ACT_LED ");
+#ifdef RASPI_ACT_LED
+				printf("+RASPI_ACT_LED=" _STR(RASPI_ACT_LED) " ");
 #endif
 #ifdef INCL_X11
 				printf("+X11 ");

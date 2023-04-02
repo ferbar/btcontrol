@@ -156,7 +156,7 @@ void RaspiPWM::init() {
 		printf("WARN: no pin definitions found\n");
 	}
 
-	this->fRaspiLed = fopen("/sys/class/leds/led0/brightness", "w");
+	this->fRaspiLed = fopen(_STR(RASPI_ACT_LED), "w");
 	if(this->fRaspiLed) {
 		printf("can write to Raspberry ACT led1\n");
 	} else {
