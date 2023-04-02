@@ -16,7 +16,7 @@ Das ist eine Anleitung um eine LGB Lok ohne Schienenstrom fahren lassen zu könn
 | ~~alt~~ | Bluetooth Dongle | ist im Zero-W schon eingebaut. ESP32 Control Pad geht nur mit Bluetooth 4.0 dongle. Empfehlung Class 1 (z.b. Hama)
 | ~~optional~~ | usb soundkarte	| Vorzugsweise mit eingebautem Verstärker | neuhold |
 | ~~optional~~ | Verstärker | PAM8406 (oder PAM8403) |
-| 1 | optional MAX98357 I2S | NEU: I2S 'Soundkarte' hat einen Verstärker eingebaut, damit entfällt der PAM |
+| 1 | optional MAX98357 I2S | NEU: I2S 'Soundkarte' hat einen Verstärker eingebaut, damit entfällt der PAM. [Verkabelung + Setup](https://learn.adafruit.com/adafruit-max98357-i2s-class-d-mono-amp/raspberry-pi-wiring) |
 | 1 | optional INA219 | NEU: I2C Strom/Spannungssensor |
 | 4 | IRFML8244	| Mosfet Rds on 20 mohm für die LED Ausgänge | farnell |
 | 7 | 1k R 1206	| SMD R	9335757 ??????? |
