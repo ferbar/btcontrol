@@ -1,4 +1,3 @@
-
 #include <WiFi.h>
 #include "RefreshWifiThread.h"
 #include "utils.h"
@@ -28,8 +27,16 @@ void RefreshWifiThread::run() {
   static Mutex btDiscoveredDevicesMutex;
   PRINT_FREE_HEAP("after btclient start");
 
-  NOTICEF("Starting Bluetooth discoverAsync...");
-  if (btClient.discoverAsync([](BTAdvertisedDevice* pDevice) {
+#endif
+  // WiFi.mode(WIFI_OFF); => schaltet Wifi komplett ab
+  try {
+    while(true) {  // beendet durch pthread_testcancel()
+#ifdef HAVE_BLUETOOTH
+      if(btClient.discoverInProgress()) {
+        DEBUGF("BT discover in progress");
+      } else {
+        NOTICEF("Starting Bluetooth discoverAsync...");
+        if (btClient.discoverAsync([](BTAdvertisedDevice* pDevice) {
             // BTAdvertisedDeviceSet*set = reinterpret_cast<BTAdvertisedDeviceSet*>(pDevice);
             // btDeviceList[pDevice->getAddress()] = * set;
             NOTICEF(">>>>>>>>>>>Found a new device asynchronously: %s", pDevice->toString().c_str());
@@ -38,15 +45,14 @@ void RefreshWifiThread::run() {
             myDiscoveredDevices[pDevice->toString()]=*p;
             // btDeviceList.clear() ??????????
             } )
-  ) {
-    DEBUGF("started");
-  } else {
-    ERRORF("Error starting bt scan");
-  }
+        ) {
+          DEBUGF("started");
+        } else {
+          ERRORF("Error starting bt scan");
+        }
+      }
 #endif
-  // WiFi.mode(WIFI_OFF); => schaltet Wifi komplett ab
-  try {
-    while(true) {  // beendet durch pthread_testcancel()
+
       int16_t n = WiFi.scanNetworks(); // blocking
       DEBUGF("WiFi scan done found %d networks", n);
       std::map <String, RefreshWifiThread::Entry> newList; // getChannel() dauert ein paar sekunden
@@ -94,7 +100,7 @@ void RefreshWifiThread::run() {
       this->listChanged=true;
       lock.unlock();
       this->testcancel();
-	  for(int i=0; i < 5; i++) {
+      for(int i=0; i < 5; i++) {
         sleep(1);
         // DEBUGF("sleep done");
         this->testcancel();
@@ -102,7 +108,7 @@ void RefreshWifiThread::run() {
     }
   } catch(...) {
 #ifdef HAVE_BLUETOOTH
-    DEBUGF("::run() Exception - stopping discover");
+    DEBUGF("::run() Exception - stopping bluetooth discover");
     btClient.discoverAsyncStop();
 #endif
     this->wifiList.clear();
