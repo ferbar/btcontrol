@@ -29,6 +29,9 @@
 #include <ArduinoOTA.h>
 #endif
 
+#include "ControlClientThread.h"
+extern ControlClientThread controlClientThread;
+
 #define TAG "btcontrol"
 bool cfg_debug=false;
 
@@ -98,12 +101,22 @@ void showVoltage()
         //tft.fillScreen(TFT_BLACK);
         //tft.setTextDatum(TL_DATUM);
         // tft.drawString(voltage,  tft.width() / 2, tft.height() / 2 );
-        int rssi=0;
+        int rssi=-1;
+        const char *prefix=" -";
         wifi_ap_record_t ap_info;
         if(esp_wifi_sta_get_ap_info(&ap_info) == ESP_OK) {
           rssi=ap_info.rssi;
+          prefix=" W:";
+#ifdef HAVE_BLUETOOTH
+        } else {
+          // isConnected throws an exception if not yet initialized.
+          if(controlClientThread.client && controlClientThread.client->isConnected()) {
+            rssi=btClient.getRssi();
+            prefix=" Bt:";
+          }
+#endif
         }
-        tft.drawString(" W:" + String(rssi) + " B:" + String(battery_voltage) + "V",  tft.width()-5 * 3, 0 );  // NULL = monospace font
+        tft.drawString(prefix + String(rssi) + " B:" + String(battery_voltage) + "V",  tft.width()-5 * 3, 0 );  // NULL = monospace font
     }
 }
 
@@ -198,7 +211,7 @@ void setup()
     printf("ESP_IDF Version: %s\n", esp_get_idf_version());
     FlashMode_t ideMode = ESP.getFlashChipMode();
     if(ideMode != FM_QIO) {
-      ERRORF("WARNING: Flash not in QIO mode!");
+      NOTICEF("WARNING: Flash not in QIO mode!"); // 202304: QIO hat am ttgo display nicht funktioniert
     }
 
     /*
@@ -226,7 +239,7 @@ void setup()
 
     tft.setSwapBytes(true);
     tft.pushImage(0, 0,  240, 135, bootlogo);
-    espDelay(5000);
+    espDelay(2000);
 
 
     tft.setRotation(1);
