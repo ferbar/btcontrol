@@ -311,12 +311,12 @@ void GuiViewSelectWifi::loop() {
 					  	  value.second.have_LR ? " LR" : "");
 #ifdef HAVE_BLUETOOTH
             } else {
-   		  		  snprintf(buff,sizeof(buff),
-	  		  			"[%d] %s-%d (%d)",
+              snprintf(buff,sizeof(buff),
+                "[%d] %s (c%d %d)",
                 n,
-			  		  	value.first.c_str(),
-                value.second.rssi,
-				  		  value.second.channel);
+                value.first.c_str(),
+                value.second.channel,
+                value.second.rssi);
 #endif
             }
 
@@ -332,7 +332,7 @@ void GuiViewSelectWifi::loop() {
 			}
       int maxwidth=tft.width()-10;
       if(n < this->lastFoundWifis) {
-        DEBUGF("cleaning unused lines: start n:%d y:%d, height:%d", n, tft.fontHeight()*n, tft.height()-tft.fontHeight()*n);
+        // DEBUGF("cleaning unused lines: start n:%d y:%d, height:%d", n, tft.fontHeight()*n, tft.height()-tft.fontHeight()*n);
         tft.fillRect(0, tft.fontHeight()*n, maxwidth, tft.height()-tft.fontHeight()*n, TFT_BLACK);
       }
       this->lastFoundWifis=n;
@@ -425,7 +425,8 @@ void GuiViewConnectWifi::init() {
 #ifdef HAVE_BLUETOOTH
         // free up ~100kb bluetooth - ram, this can only be reverted with a reset
         PRINT_FREE_HEAP("before BT disable");
-        btClient.end(true);
+//        btClient.end(true);
+        btClient.end();
         PRINT_FREE_HEAP("after BT disable");
 #endif
 	this->lastWifiStatus=0;
@@ -589,7 +590,7 @@ IPAddress GuiViewConnectServer::host;
 int GuiViewConnectServer::port;
 #ifdef HAVE_BLUETOOTH
 int GuiViewConnectServer::channel;
-BTAddress GuiViewConnectServer::addr;
+BTAddress GuiViewConnectServer::btAddr;
 #endif
 
 void GuiViewConnectServer::init() {
@@ -598,14 +599,15 @@ void GuiViewConnectServer::init() {
 	try {
 		assert(!controlClientThread.isRunning());
 #ifdef HAVE_BLUETOOTH
-    if(this->addr) {
+    if(this->btAddr) {
       // free up 20kB wifi ram
       PRINT_FREE_HEAP("before wifi disable");
       WiFi.disconnect(true);
       WiFi.mode(WIFI_OFF);
       PRINT_FREE_HEAP("after wifi disable");
+      // 202304: ein sleep da macht den connect auch nicht zuverlässiger
 
-      btClient.connect(this->addr, this->channel);
+      btClient.connect(this->btAddr, this->channel);
   		controlClientThread.begin(&btClient, false);
     } else 
 #endif
@@ -621,8 +623,8 @@ void GuiViewConnectServer::init() {
     if(client)
       delete(client);
 #ifdef HAVE_BLUETOOTH
-    if(this->addr) {
-      GuiView::startGuiView(new GuiViewErrorMessage(String("Error connecting to ") + this->addr.toString().c_str() + " :" + this->channel + "\n" + e.what()));
+    if(this->btAddr) {
+      GuiView::startGuiView(new GuiViewErrorMessage(String("Error connecting to\n ") + this->btAddr.toString().c_str() + " c" + this->channel + "\n" + e.what()));
     } else
 #endif
 		GuiView::startGuiView(new GuiViewErrorMessage(String("Error connecting to ") + this->host.toString() + ":\n" + e.what()));
@@ -667,6 +669,15 @@ void GuiViewConnectServer::loop() {
   }
   delay(100);
 }
+
+bool GuiViewConnectServer::canRetryConnect() {
+#ifdef HAVE_BLUETOOTH
+  if(GuiViewConnectServer::btAddr != BTAddress()) return true;
+#endif
+  if(WiFi.status() == WL_CONNECTED) return true;
+  return false;
+}
+
 // ============================================================= GuiViewControlLocoSelectLoco ======
 bool GuiViewControlLocoSelectLoco::needUpdate=false;
 int GuiViewControlLocoSelectLoco::firstLocoDisplayed=0;
@@ -769,8 +780,8 @@ void drawCachedImage(const char*imgname, int x, int y) {
         PRINT_FREE_HEAP("read image");
         TFT_eSprite &spr=it->second;
         // imgPair.second;
-        if(data.length() > 5000 || ESP.getMaxAllocHeap() < 20000) {
-          ERRORF("image %s too big (%d)",imgname, data.length());
+        if(data.length() > 5000 || ESP.getMaxAllocHeap() < 32000 /* == TINFL_LZ_DICT_SIZE */ ) {
+          ERRORF("image %s too big (%d, free heap:%d)",imgname, data.length(), ESP.getMaxAllocHeap());
           spr.createSprite(0,0);
           return;
         }
@@ -1097,36 +1108,46 @@ void GuiViewControlLoco::loop() {
               }
             }
           }
-          tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
 
+// Top
           tft.setFreeFont(FSSP7);
-
-          if(WiFi.status() == WL_CONNECTED) {
-            int powerDownSec =  (GuiViewControlLoco::lastKeyPressed+POWER_DOWN_IDLE_TIMEOUT*1000 - millis())/1000;
-            static int lastWidth=0;
-            int width=0;
-            if(powerDownSec < 30) {
-              tft.setTextColor(TFT_BLACK, TFT_RED);
-              width=tft.drawString(String("Power down in ") + powerDownSec + "s", 0, 0 );
-              tft.setTextColor(TFT_WHITE, TFT_BLACK);
-            } else {
+          tft.setTextColor(TFT_WHITE, TFT_BLACK);
+          static int lastTopWidth=0;
+          int width=0;
+          int powerDownSec =  (GuiViewControlLoco::lastKeyPressed+POWER_DOWN_IDLE_TIMEOUT*1000 - millis())/1000;
+          if(powerDownSec < 30) {
+            tft.setTextColor(TFT_BLACK, TFT_RED);
+            width=tft.drawString(String("Power down in ") + powerDownSec + "s", 0, 0 );
+            tft.setTextColor(TFT_WHITE, TFT_BLACK);
+          } else {
+            if(WiFi.status() == WL_CONNECTED) {
               if( WiFi.SSID() != controlClientThread.getCurrLok().name) {  // AP nur anzeigen wenn lokname != AP
                 width=tft.drawString(String("AP: ") + WiFi.SSID(), 0, 0 );
               } else {
                 width=0;
               }
+#ifdef HAVE_BLUETOOTH
+            } else if(controlClientThread.client == &btClient) {
+              if(controlClientThread.client->isConnected()) {
+                tft.setTextColor(TFT_BLACK, TFT_BLUE);
+              } else {
+                tft.setTextColor(TFT_BLACK, TFT_RED);
+              }
+              width=tft.drawString(String("(B) "), 0, 0 );
+#endif
+            } else {
+              tft.setTextColor(TFT_RED, TFT_BLACK);
+              width=tft.drawString(String("!!!: ") + WiFi.SSID(), 0, 0 );
             }
-            if(width < lastWidth) {
-              tft.fillRect(width-1, 0, lastWidth-width, tft.fontHeight(), TFT_BLACK);
-            }
-            lastWidth=width;
-          } else {
-            tft.setTextColor(TFT_RED, TFT_BLACK);
-            tft.drawString(String("!!!: ") + WiFi.SSID(), 0, 0 );
-            tft.setTextColor(TFT_GREEN, TFT_BLACK);
           }
+          if(width < lastTopWidth) {
+            tft.fillRect(width-1, 0, lastTopWidth-width, tft.fontHeight(), TFT_BLACK);
+          }
+          lastTopWidth=width;
 
+// 2. Zeile:
+          tft.setTextColor(TFT_GREEN, TFT_BLACK);
           drawCachedImage(controlClientThread.getCurrLok().imgname, 0, tft.fontHeight() );
 
           tft.drawString(String() + controlClientThread.getCurrLok().name + "   ", 20, tft.fontHeight());
@@ -1143,7 +1164,7 @@ void GuiViewControlLoco::loop() {
           // Line
           tft.drawFastHLine(0, 50, tft.width(), color);
           // Speed-Bar
-          int width=tft.width()* (long) controlClientThread.getCurrLok().currspeed/255;
+          width=tft.width()* (long) controlClientThread.getCurrLok().currspeed/255;
           tft.fillRect(0, 51, width, 10, color);
           tft.fillRect(width, 51, tft.width() - width, 10, TFT_BLACK);
           // ^          => fixme: braucht zuviel höhe
@@ -1251,16 +1272,18 @@ void GuiViewControlLoco::loop() {
 int GuiViewErrorMessage::retries=0;
 
 void GuiViewErrorMessage::init() {
-	DEBUGF("GuiViewErrorMessage::init message:\"%s\"", this->errormessage.c_str());
+  DEBUGF("GuiViewErrorMessage::init message:\"%s\"", this->errormessage.c_str());
 }
 
 void GuiViewErrorMessage::loop() {
-	static long last=0;
-	if(this->needUpdate) {
-		this->needUpdate=false;
-		tft.fillScreen(TFT_BLACK);
-		tft.setTextDatum(MC_DATUM);
-		tft.setTextSize(1);
+  static long last=0;
+  if(this->needUpdate) {
+    this->needUpdate=false;
+    tft.fillScreen(TFT_BLACK);
+    tft.setTextDatum(MC_DATUM);
+    tft.setTextColor(TFT_YELLOW, TFT_BLACK);
+    tft.setFreeFont(FSSP7);
+    tft.setTextSize(1);
     int pos=0;
     int n=0;
     while(pos < this->errormessage.length()) {
@@ -1278,13 +1301,14 @@ void GuiViewErrorMessage::loop() {
     if(WiFi.status() != WL_CONNECTED) {
       tft.drawString(String("lost wifi connection, retries=")+retries, 0, tft.height()/2+tft.fontHeight()*n);
     }
-		last=millis();
+    last=millis();
 	}
 	if(millis() > last + 1*1000) { // 1 sekunden
 		last=millis();
-		DEBUGF("GuiViewErrorMessage::loop() restarting, retries=%d wifi status=%d...", retries, WiFi.status());
-		if(WiFi.status() == WL_CONNECTED) {
-			if(retries < 10) {
+
+		if(GuiViewConnectServer::canRetryConnect() ) {
+      DEBUGF("GuiViewErrorMessage::loop() restarting, retries=%d wifi status=CONNECTED...", retries);
+      if(retries < 10) {
         retries++;
 				GuiView::startGuiView(new GuiViewConnectServer());
         return;
@@ -1293,7 +1317,10 @@ void GuiViewErrorMessage::loop() {
 				GuiView::startGuiView(new GuiViewSelectWifi() );
         return;
 			}
+
 		} else {
+
+      DEBUGF("GuiViewErrorMessage::loop() restarting, retries=%d wifi status=%d...", retries, WiFi.status());
       if(retries >= 20) { // nach 20 sekunden zum select wifi
         retries=0;
         GuiView::startGuiView(new GuiViewSelectWifi() );
@@ -1302,7 +1329,7 @@ void GuiViewErrorMessage::loop() {
 		}
     retries++;
     this->needUpdate=true;
-	}
+  }
 };
 
 // ============================================================= PowerDown ========================
@@ -1389,14 +1416,15 @@ void GuiViewInfo::loop() {
   static long last=0;
   if(millis() > last + 1*1000) { // 1 sekunden
     last=millis();
-  	tft.setTextColor(TFT_GREEN, TFT_BLACK);
-		tft.fillScreen(TFT_BLACK);
+    tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    tft.fillScreen(TFT_BLACK);
     tft.setTextDatum(TL_DATUM);
-		tft.setTextSize(1);
+    tft.setTextSize(1);
     tft.setCursor(0, 0);
 
     tft.println();
-    tft.println(String("device name: ")+device_name);
+    tft.println(String("device name: ")+device_name+" Build: "  __DATE__ " " __TIME__ );
+    tft.println(String("ESP_IDF Version: ")+esp_get_idf_version()+" "+ARDUINO);
 
 
     if(WiFi.status() == WL_CONNECTED) {

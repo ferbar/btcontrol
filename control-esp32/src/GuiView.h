@@ -73,11 +73,11 @@ class GuiViewConnectServer : public GuiView {
 public:
   GuiViewConnectServer(IPAddress host, int port) { this->host=host; this->port=port; 
 #ifdef HAVE_BLUETOOTH
-    this->addr=BTAddress();
+    this->btAddr=BTAddress();
 #endif
   };
 #ifdef HAVE_BLUETOOTH
-  GuiViewConnectServer(const BTAddress &addr, int channel) { this->addr=addr; this->channel=channel; this->host=IPAddress(); };
+  GuiViewConnectServer(const BTAddress &addr, int channel) { this->btAddr=addr; this->channel=channel; this->host=IPAddress(); };
 #endif
   GuiViewConnectServer() {};
   void init();
@@ -85,13 +85,14 @@ public:
   void loop();
   // void loop(); - default
   const char * which() const { return "GuiViewConnectServer"; };
+  static bool canRetryConnect();
 protected:
   static int nLokdef;
   static IPAddress host;
   static int port;
   int abortConnect=0;
 #ifdef HAVE_BLUETOOTH
-  static BTAddress addr;
+  static BTAddress btAddr;
   static int channel;
 #endif
 };
@@ -161,3 +162,4 @@ public:
 	void loop();
 	const char * which() const { return "GuiViewInfo"; };
 };
+
