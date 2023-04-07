@@ -1,4 +1,4 @@
-#define device_name "esp32-btcontrol"
+#define DEVICE_NAME "esp32-btcontrol"
 // all available ssids + password
 #define WIFI_CONFIG { \
   { .ssid="ap2", .password="PASSWORD" },            \
@@ -10,6 +10,9 @@
 
 // enable update OTA
 #define OTA_UPDATE
+
+// enable bluetooth esp32-android sdk: git@github.com:ferbar/arduino-esp32.git checkout pr_btserial
+#define HAVE_BLUETOOTH
 
 // comment-out to disable
 // espduino, esp32-minikit
