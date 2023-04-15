@@ -51,6 +51,7 @@ Arduino sdk selber kompilieren:
 * git clone arduino-esp32 -> irgendeinen release branch welcher IDF 4.4.4 verwendet
 * unter components/arduino softlink auf arduino-esp32 anlegen
 * die ./arduino-lib-builder/defaultconf.esp32 nach esp32-arduino-lib-builder/configs/ verlinken
+* Build reduzieren: in configs/builds.json unter "target": "esp32" nur "bootloaders":[ ["dio","40m"] ] über lassen, "mem_variants":[ ["dio","80m"] ]
 * die ./arduino-lib-builder/build-chris.sh nach esp32-arduino-lib-builder/ verlinken
 * build-chris.sh im esp32-arduino-lib-builder/ aufrufen, kopiert die object files nach .platformio/packages/framework-arduinoespressif32
 * tools/sdk/esp32/sdkconfig checken ob BLE abgedreht ist (CONFIG_BTDM_CTRL_MODE_BR_EDR_ONLY=y)
