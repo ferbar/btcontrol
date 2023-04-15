@@ -28,8 +28,8 @@
 // see buttonConfig_t
 #define BUTTON_CONFIG { \
   { .when=on_off, .gpio=12, .action=sendFullStop },            \
-  { .when=on,     .gpio=13, .action=sendFunc, .funcNr=1},      \
-  { .when=on,     .gpio=15, .action=sendFunc, .funcNr=2 },     \
+  { .when=on,     .gpio=15, .action=sendFunc, .funcNr=1},      \
+  { .when=on,     .gpio=13, .action=sendFunc, .funcNr=2 },     \
   { .when=on_off, .gpio=2,  .action=direction },               \
   { .when=on_off, .gpio=17, .action=sendFunc, .funcNr=0 },     \
   { .when=on_off, .gpio=22, .action=sendFunc, .funcNr=3 },     \
