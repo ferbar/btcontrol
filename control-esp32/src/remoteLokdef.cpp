@@ -12,6 +12,7 @@ bool refreshLokdef=false;
 lokdef_t *initLokdef(FBTCtlMessage &reply)
 {
 	DEBUGF("initLokdef");
+	PRINT_FREE_HEAP("initLokdef");
 	lokdef_t *tmplokdef=NULL;
 	int nLocos=reply["info"].getArraySize();
 	DEBUGF("initLokdef n=%d+1, need: %dB", nLocos, sizeof(lokdef_t) * (nLocos+1));
@@ -38,6 +39,7 @@ lokdef_t *initLokdef(FBTCtlMessage &reply)
 	}
 	refreshLokdef=true;
 	DEBUGF("init lokdef done");
+	PRINT_FREE_HEAP("initLokdef done");
 	return tmplokdef;
 }
 
