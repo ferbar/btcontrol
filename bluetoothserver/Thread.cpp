@@ -27,6 +27,7 @@ void *Thread::startupThread(void *ptr) {
 	Thread *t=(Thread *) ptr;
 	// %lu => linux ist pthread_ unsigned long
 	NOTICEF("Thread::[%x] @%p startupThread name=%s ========================================", t->getMyId(), t, t->which());
+	PRINT_FREE_HEAP("startupThread()");
 	t->exited=false;
 	try {
 		t->run();
@@ -43,7 +44,7 @@ void *Thread::startupThread(void *ptr) {
 		ERRORF("?: Runtime Exception %s - client thread killed", e.what());
 #endif
 	} catch(const std::exception &e) {
-		ERRORF("?: exception %s - client thread killed", e.what());
+		ERRORF("?: exception \"%s\" - client thread finished with an exception", e.what());
 #ifndef ESP32
 	} catch (abi::__forced_unwind&) { // http://gcc.gnu.org/bugzilla/show_bug.cgi?id=28145
 		ERRORF("Thread::[%d] done: forced unwind exception - client thread killed", t->getMyId());
@@ -66,6 +67,7 @@ void *Thread::startupThread(void *ptr) {
 		DEBUGF("deleting object %p", t);
 		delete t;
 	}
+	PRINT_FREE_HEAP("startupThread() done");
 	return NULL;
 }
 
