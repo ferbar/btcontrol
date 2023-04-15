@@ -6,7 +6,7 @@
 #include "utils.h"
 #include "config.h"
 // für RSSI
-#include "esp_gap_bt_api.h"
+#include <esp_gap_bt_api.h>
 
 
 #define TAG "BTClient"
@@ -22,6 +22,25 @@ void gap_callback (esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param) {
     DEBUGF("gap_callback ESP_BT_GAP_READ_RSSI_DELTA_EVT = %d", param->read_rssi_delta.rssi_delta);
     btClient.lastRSSI=param->read_rssi_delta.rssi_delta;
   }
+}
+
+bool BTClient::begin(const char* devicename) {
+  DEBUGF("BTClient::begin %s", devicename);
+  bool ret = BluetoothSerial::begin(devicename, true, true);
+  this->setDiscoverable(false);
+// ----------- clean -----------  esp_bt_gap_set_scan_mode(ESP_BT_NON_CONNECTABLE, ESP_BT_NON_DISCOVERABLE);
+  return ret;
+}
+
+void BTClient::end() {
+  DEBUGF("BTClient::end");
+  PRINT_FREE_HEAP("before BT disable");
+  BluetoothSerial::end();
+  PRINT_FREE_HEAP("after BT disable");
+  // free up ~100kb bluetooth - ram, this can only be reverted with a reset
+  BluetoothSerial::memrelease();
+  NOTICEF("disabling BT to get some ram... BT will be unavailable til next restart");
+  PRINT_FREE_HEAP("after BT disable");
 }
 
 /**

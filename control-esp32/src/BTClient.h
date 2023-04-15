@@ -23,8 +23,9 @@ public:
 	virtual int read() { return BluetoothSerial::read(); };
 	virtual ssize_t write(const void *buf, size_t count);
 
+	bool begin(const char *name);
+	void end();
 /* => BluetoothSerial
-	begin(name);
 	void discoverAsync(std::function< void(BTAdvertisedDevice* pDevice) >& deviceFoundCallback);
 	void discoverAsyncStop(); => BluetoothSerial
 */
