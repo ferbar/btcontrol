@@ -63,6 +63,9 @@ mit platformio gibts unter .pio/build/wemos_d1_mini32/firmware.map immer ein .ma
 
 Analyse z.b. mit fpvgcc --sar .pio/build/wemos_d1_mini32/firmware.map
 
+Zeigt Grösse von Funktionen und statischen Variablen an:
+
+memstat.sh
 
 ## Workarounds
 
