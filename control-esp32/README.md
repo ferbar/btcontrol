@@ -53,7 +53,7 @@ Arduino sdk selber kompilieren:
 * die ./arduino-lib-builder/defaultconf.esp32 nach esp32-arduino-lib-builder/configs/ verlinken
 * die ./arduino-lib-builder/build-chris.sh nach esp32-arduino-lib-builder/ verlinken
 * build-chris.sh im esp32-arduino-lib-builder/ aufrufen, kopiert die object files nach .platformio/packages/framework-arduinoespressif32
-* tools/sdk/esp32/sdkconfig checken ob BLE abgedreht ist
+* tools/sdk/esp32/sdkconfig checken ob BLE abgedreht ist (CONFIG_BTDM_CTRL_MODE_BR_EDR_ONLY=y)
 
 
 ## ESP32 Create Memory map file
