@@ -15,6 +15,9 @@
 #include <Button2.h>        // works with version 1.6
 #include <esp_wifi.h>
 
+#ifndef CONFIG_BTDM_CTRL_MODE_BR_EDR_ONLY
+#warning Images won't work with bluetooth connections due to lack of free ram. Please build the arduino librady with arduino-lib-builder. See README.md
+#endif
 
 #include "esp_adc_cal.h"
 #include "bmp.h"
@@ -205,14 +208,20 @@ void setup()
     PRINT_FREE_HEAP("setup()");
 
     print_wakeup_reason();
-    
+
     WiFi.persistent(false);
     
-    printf("ESP_IDF Version: %s\n", esp_get_idf_version());
+    NOTICEF("ESP_IDF Version: %s\n", esp_get_idf_version());
     FlashMode_t ideMode = ESP.getFlashChipMode();
     if(ideMode != FM_QIO) {
       NOTICEF("WARNING: Flash not in QIO mode!"); // 202304: QIO hat am ttgo display nicht funktioniert
     }
+    NOTICEF("ESP Arduino sdk: " _STR(ESP_ARDUINO_VERSION_MAJOR) "." _STR(ESP_ARDUINO_VERSION_MINOR) "."
+      _STR(ESP_ARDUINO_VERSION_PATCH) "");
+
+    uint32_t frequency = getCpuFrequencyMhz();
+    NOTICEF("ESP @%dmHz", frequency);
+
 
     /*
     ADC_EN is the ADC detection enable port
@@ -346,14 +355,14 @@ ERRORF("try/catch test done");
   GuiView::startGuiView(new GuiViewSelectWifi());
   btn1.setLongClickTime(1000);
   btn2.setLongClickTime(1000);
-  PRINT_FREE_HEAP("setup()");
+  PRINT_FREE_HEAP("setup() done");
 }
 
 void loop()
 {
     static long last=0;
     if(last + 1000 < millis() ) {
-        PRINT_FREE_HEAP("loop");
+        PRINT_FREE_HEAP("loop()");
         last=millis();
     }
 
