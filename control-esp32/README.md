@@ -38,9 +38,30 @@ howto bCNC: TODO **************************
 
 howto: TODO **************************
 
+## Kompilieren
+
+getestet mit platformio/framework-arduinoespressif32@^3.20007.0
+
+Optional: das IDF wird im Arduino SDK mit komplett aktivierten BT + BLE + A2DP + HFP kompiliert was extrem viel RAM + Flash benötigt. Images können sonst über eine BT Verbindung nicht angezeigt werden.
+
+Arduino sdk selber kompilieren:
+
+* git clone esp32-idf -> IDF 4.4.4 branch
+* git clone https://github.com/espressif/esp32-arduino-lib-builder.git -> IDF 4.4 branch
+* git clone arduino-esp32 -> irgendeinen release branch welcher IDF 4.4.4 verwendet
+* unter components/arduino softlink auf arduino-esp32 anlegen
+* die ./arduino-lib-builder/defaultconf.esp32 nach esp32-arduino-lib-builder/configs/ verlinken
+* die ./arduino-lib-builder/build-chris.sh nach esp32-arduino-lib-builder/ verlinken
+* build-chris.sh im esp32-arduino-lib-builder/ aufrufen, kopiert die object files nach .platformio/packages/framework-arduinoespressif32
+* tools/sdk/esp32/sdkconfig checken ob BLE abgedreht ist
+
 
 ## ESP32 Create Memory map file
-https://everythingesp.com/esp32-arduino-creating-a-memory-map-file/
+-https://everythingesp.com/esp32-arduino-creating-a-memory-map-file/-
+
+mit platformio gibts unter .pio/build/wemos_d1_mini32/firmware.map immer ein .map file
+
+Analyse z.b. mit fpvgcc --sar .pio/build/wemos_d1_mini32/firmware.map
 
 
 ## Workarounds
