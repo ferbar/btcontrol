@@ -44,7 +44,7 @@ getestet mit platformio/framework-arduinoespressif32@^3.20007.0
 
 Optional: das IDF wird im Arduino SDK mit komplett aktivierten BT + BLE + A2DP + HFP kompiliert was extrem viel RAM + Flash benötigt. Images können sonst über eine BT Verbindung nicht angezeigt werden.
 
-Arduino sdk selber kompilieren:
+Arduino sdk ohne A2DP und BLE selber kompilieren -> spart 300kB flash und 50kB ram:
 
 * git clone esp32-idf -> IDF 4.4.4 branch
 * git clone https://github.com/espressif/esp32-arduino-lib-builder.git -> IDF 4.4 branch + setup + git submodule init
