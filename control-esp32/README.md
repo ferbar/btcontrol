@@ -42,6 +42,8 @@ howto: TODO **************************
 
 getestet mit platformio/framework-arduinoespressif32@^3.20007.0
 
+### esp32 Arduino SDK kompilieren
+
 Optional: das IDF wird im Arduino SDK mit komplett aktivierten BT + BLE + A2DP + HFP kompiliert was extrem viel RAM + Flash benötigt. Images können sonst über eine BT Verbindung nicht angezeigt werden.
 
 Arduino sdk ohne A2DP und BLE selber kompilieren -> spart 300kB flash und 50kB ram:
@@ -57,7 +59,7 @@ Arduino sdk ohne A2DP und BLE selber kompilieren -> spart 300kB flash und 50kB r
 * tools/sdk/esp32/sdkconfig checken ob BLE abgedreht ist (CONFIG_BTDM_CTRL_MODE_BR_EDR_ONLY=y)
 
 
-## ESP32 Create Memory map file
+### ESP32 Create Memory map file
 -https://everythingesp.com/esp32-arduino-creating-a-memory-map-file/-
 
 mit platformio gibts unter .pio/build/wemos_d1_mini32/firmware.map immer ein .map file
@@ -67,6 +69,24 @@ Analyse z.b. mit fpvgcc --sar .pio/build/wemos_d1_mini32/firmware.map
 Zeigt Grösse von Funktionen und statischen Variablen an:
 
 memstat.sh
+
+### Call-graphs: (von wo wird welche funktion aufgerufen)
+
+Anleitung für radare2: https://reverseengineering.stackexchange.com/questions/16081/how-to-generate-the-call-graph-of-a-binary-file
+
+```
+afl | grep BTAddress
+s 0x400eb128
+agf
+```
+
+output.dot mit less anschaun und nach funktionsname suchen, dann nach `-> "func-adresse"` dann sieht man wo die funktion aufgerufen wurde.
+
+xdot.py ist nur bedingt hilfreich
+
+## Hardware:
+
+5V Stromanschulss: keine Strom-Rund Buchse montieren, GND -> GND, +5V -> 1Ohm R -> Kondensator am TTGO-T-Display Board (siehe Bild)
 
 ## Workarounds
 
