@@ -10,7 +10,7 @@
 
 class BTClient : public ClientStream, public BluetoothSerial {
 public:
-	BTClient() :remoteAddress("") {};
+	BTClient() :remoteAddress() {};
 	void connect(const BTAddress &address, int channel);
 	virtual void close();
 	virtual ~BTClient();
