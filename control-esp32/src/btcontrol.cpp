@@ -16,7 +16,7 @@
 #include <esp_wifi.h>
 
 #ifndef CONFIG_BTDM_CTRL_MODE_BR_EDR_ONLY
-#warning Images won't work with bluetooth connections due to lack of free ram. Please build the arduino librady with arduino-lib-builder. See README.md
+#warning Images will not work with bluetooth connections due to lack of free ram. Please build the arduino librady with arduino-lib-builder. See README.md
 #endif
 
 #include "esp_adc_cal.h"
