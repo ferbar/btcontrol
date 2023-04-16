@@ -90,7 +90,7 @@ void ControlClientThread::run()
 		}
 
 		while(true) {
-			PRINT_FREE_HEAP("TCPClient::readSelect()");
+			PRINT_FREE_HEAP("ControlClientThread::run() loop");
 
 			CallbackCmdFunction callback=NULL;
 			// wait until item in queue or 2s
@@ -114,7 +114,7 @@ void ControlClientThread::run()
 			this->pingAvg+=timetaken;
 			this->pingCount++;
 
-			DEBUGF("/%d: received message in %ldms", this->msgNum, timetaken);
+			DEBUGF("/%d: received message %s in %ldms", this->msgNum, messageTypeName(reply.getType()).c_str(), timetaken);
 			// reply.dump();
 			if(callback) {
 				DEBUGF("/%d: calling query callback for message type %s", this->msgNum, messageTypeName(reply.getType()).c_str());
@@ -174,7 +174,7 @@ int ControlClientThread::getQueueLength()
 
 bool ControlClientThread::waitForItemInQueueTimeout()
 {
-	DEBUGF("ControlClientThread::waitForItemInQueueTimeout()");
+	//DEBUGF("ControlClientThread::waitForItemInQueueTimeout()");
 	if(this->getQueueLength() > 0)
 		return true;
 	return this->condition.timeoutWait(2);
