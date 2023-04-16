@@ -1,6 +1,18 @@
 {
     "files.associations": {
-        "functional": "cpp"
+        "functional": "cpp",
+        "array": "cpp",
+        "*.tcc": "cpp",
+        "deque": "cpp",
+        "forward_list": "cpp",
+        "string": "cpp",
+        "unordered_map": "cpp",
+        "unordered_set": "cpp",
+        "vector": "cpp",
+        "string_view": "cpp",
+        "memory": "cpp",
+        "random": "cpp",
+        "initializer_list": "cpp"
     },
     "platformio-ide.customPATH": "/home/chris/.platformio/penv/bin/"
 }
