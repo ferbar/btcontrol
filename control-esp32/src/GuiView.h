@@ -50,6 +50,9 @@ private:
   int lastFoundWifis=0;
 };
 
+/**
+ * select Wifi / BT Device
+ */
 class GuiViewConnectWifi : public GuiView {
 public:
   GuiViewConnectWifi(const String &ssid, const char *password, bool LR) : ssid(ssid), password(password), LR(LR), connectingStartedAt(millis()) {};
@@ -142,11 +145,14 @@ private:
 
 class GuiViewPowerDown : public GuiView {
 public:
-	GuiViewPowerDown() : startTime(millis()), done(false) {};
+	GuiViewPowerDown(GuiView *viewIfButtonPressed) : startTime(millis()), done(false) {
+    GuiViewPowerDown::viewIfButtonPressed=viewIfButtonPressed;
+  };
 	void init();
 	void close();
 	void loop();
 	const char * which() const { return "GuiViewPowerDown"; };
+  static GuiView *viewIfButtonPressed;
 private:
 	long startTime;
 	bool done;
@@ -161,5 +167,7 @@ public:
 	void close();
 	void loop();
 	const char * which() const { return "GuiViewInfo"; };
+  int page=0;
+  bool forceRefresh=false;
 };
 

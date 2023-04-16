@@ -220,7 +220,7 @@ void GuiViewSelectWifi::init() {
   btn2.setLongClickDetectedHandler([](Button2 &b) {
     DEBUGF("GuiViewSelectWifi::btn2.setLongClickHandler");
     // off
-    GuiView::startGuiView(new GuiViewPowerDown());
+    GuiView::startGuiView(new GuiViewPowerDown(new GuiViewSelectWifi));
   });
   btn1.setPressedHandler([](Button2&b) {
     GuiViewSelectWifi::lastKeyPressed=millis();
@@ -236,7 +236,8 @@ void GuiViewSelectWifi::close() {
   // DEBUGF("GuiViewSelectWifi::close()");
   PRINT_FREE_HEAP("GuiViewSelectWifi::close()");
   // wait for thread to cancel to free up stack memory + wait for bt / wifi usage done
-  refreshWifiThread.cancel(true);
+  if(refreshWifiThread.isRunning())
+    refreshWifiThread.cancel(true);
   resetButtons();
   PRINT_FREE_HEAP("after GuiViewSelectWifi::close()");
 }
@@ -340,7 +341,7 @@ void GuiViewSelectWifi::loop() {
 	} else {
     if(millis() > GuiViewSelectWifi::lastKeyPressed+POWER_DOWN_IDLE_TIMEOUT*1000) { // nach 5min power down
       DEBUGF("GuiViewSelectWifi::loop() powerDown");
-      GuiView::startGuiView(new GuiViewPowerDown());
+      GuiView::startGuiView(new GuiViewPowerDown(new GuiViewSelectWifi));
     }
 
 	}
@@ -394,11 +395,17 @@ void GuiViewSelectWifi::buttonCallbackLongPress(Button2 &b) {
           }
 #ifdef HAVE_BLUETOOTH
         } else {
-          DEBUGF("bt connect to %s - %d", it->second.addr.toString().c_str(), it->second.channel);
+          DEBUGF("bt connect to %s c%d", it->second.addr.toString().c_str(), it->second.channel);
           // disable WiFi
           // adc_power_off();
           GuiView::drawPopup(String("connecting to ")+it->first);
-          GuiView::startGuiView(new GuiViewConnectServer(it->second.addr, it->second.channel));
+          #warning test: zuerst wifi thread stoppen + free dann new GuiViewConnectServer => mem fragmentation reduzieren, wird aber close 2* aufrufen
+          BTAddress btAddr=it->second.addr;
+          int channel=it->second.channel;
+          currGuiView->close();
+          DEBUGF("wifi thead stopped");
+          // GuiView::startGuiView(new GuiViewConnectServer(it->second.addr, it->second.channel));
+          GuiView::startGuiView(new GuiViewConnectServer(btAddr, channel));
 #endif
         }
         return ;
@@ -423,11 +430,7 @@ void GuiViewConnectWifi::init() {
 	}
 	);*/
 #ifdef HAVE_BLUETOOTH
-        // free up ~100kb bluetooth - ram, this can only be reverted with a reset
-        PRINT_FREE_HEAP("before BT disable");
-//        btClient.end(true);
         btClient.end();
-        PRINT_FREE_HEAP("after BT disable");
 #endif
 	this->lastWifiStatus=0;
 	DEBUGF("setting Wifi to WIFI_STA + disable power saving");
@@ -463,7 +466,7 @@ void GuiViewConnectWifi::init() {
   btn2.setLongClickDetectedHandler([](Button2&b) {
     DEBUGF("GuiViewSelectWifi::btn2.setLongClickHandler");
     // off
-    GuiView::startGuiView(new GuiViewPowerDown());
+    GuiView::startGuiView(new GuiViewPowerDown(new GuiViewSelectWifi));
   } );
   btn1.setPressedHandler([](Button2&b) {
     GuiView::lastKeyPressed=millis();
@@ -598,20 +601,29 @@ void GuiViewConnectServer::init() {
   TCPClient *client=NULL;
 	try {
 		assert(!controlClientThread.isRunning());
+    if(controlClientThread.client != NULL
+#ifdef HAVE_BLUETOOTH
+      && controlClientThread.client != &btClient
+#endif
+     ) {
+      delete(controlClientThread.client);
+      controlClientThread.client=NULL;
+    }
 #ifdef HAVE_BLUETOOTH
     if(this->btAddr) {
+      DEBUGF("connecting to %s c%d", this->btAddr.toString().c_str(), channel);
       // free up 20kB wifi ram
       PRINT_FREE_HEAP("before wifi disable");
       WiFi.disconnect(true);
       WiFi.mode(WIFI_OFF);
       PRINT_FREE_HEAP("after wifi disable");
       // 202304: ein sleep da macht den connect auch nicht zuverlässiger
-
       btClient.connect(this->btAddr, this->channel);
   		controlClientThread.begin(&btClient, false);
     } else 
 #endif
     {
+      DEBUGF("connecting to %s:%d", this->host.toString().c_str(), this->port);
       client=new TCPClient();
       client->connect(this->host, this->port);
   		controlClientThread.begin(client, true );
@@ -619,9 +631,11 @@ void GuiViewConnectServer::init() {
     DEBUGF("starting controlClientThread");
     controlClientThread.start();
 	} catch (std::runtime_error &e) {
-		DEBUGF("error connecting / starting client thread");
-    if(client)
+		NOTICEF("error connecting / starting client thread (%s)", e.what());
+    if(client) {
       delete(client);
+      controlClientThread.client=NULL;
+    }
 #ifdef HAVE_BLUETOOTH
     if(this->btAddr) {
       GuiView::startGuiView(new GuiViewErrorMessage(String("Error connecting to\n ") + this->btAddr.toString().c_str() + " c" + this->channel + "\n" + e.what()));
@@ -730,7 +744,7 @@ void GuiViewControlLocoSelectLoco::init() {
   // Power down
   btn2.setLongClickDetectedHandler([](Button2& b) {
     DEBUGF("GuiViewSelectWifi::btn2.setLongClickHandler");
-    GuiView::startGuiView(new GuiViewPowerDown());
+    GuiView::startGuiView(new GuiViewPowerDown(new GuiViewSelectWifi));
   }
   );
   tft.fillScreen(TFT_BLACK);
@@ -780,7 +794,7 @@ void drawCachedImage(const char*imgname, int x, int y) {
         PRINT_FREE_HEAP("read image");
         TFT_eSprite &spr=it->second;
         // imgPair.second;
-        if(data.length() > 5000 || ESP.getMaxAllocHeap() < 32000 /* == TINFL_LZ_DICT_SIZE */ ) {
+        if(data.length() > 5000 || ESP.getMaxAllocHeap() < 36000 /* == TINFL_LZ_DICT_SIZE + some overhead */ ) {
           ERRORF("image %s too big (%d, free heap:%d)",imgname, data.length(), ESP.getMaxAllocHeap());
           spr.createSprite(0,0);
           return;
@@ -914,6 +928,7 @@ void GuiViewControlLoco::refreshBatLevel() {
     if(this->batLevelAddr == -1) {
       this->batLevelAddr=controlClientThread.getCurrLok().addr;
       if(this->batLevelAddr < 0) {
+        DEBUGF("skipped, no addr");
         return;
       }
 
@@ -1016,7 +1031,7 @@ void GuiViewControlLoco::init() {
  	btn2.setLongClickDetectedHandler([](Button2&b) {
 		DEBUGF("GuiViewControlLoco::btn2.setLongClickHandler power off");
 		// off
-		GuiView::startGuiView(new GuiViewPowerDown());
+		GuiView::startGuiView(new GuiViewPowerDown(new GuiViewControlLoco));
 	}
 	);
 
@@ -1095,15 +1110,16 @@ void GuiViewControlLoco::loop() {
             String func;
             int x_pos=0;
             // func+=controlClientThread.getCurrLok().nFunc; func+=" ";
-            for(int i=0; i < controlClientThread.getCurrLok().nFunc; i++) {
-              if(controlClientThread.getCurrLok().func[i].name[0]) {
-                if(controlClientThread.getCurrLok().func[i].ison) {
+            lokdef_t &currLok=controlClientThread.getCurrLok();
+            for(int i=0; i < currLok.nFunc; i++) {
+              if(currLok.func[i].name[0]) {
+                if(currLok.func[i].ison) {
                   tft.setTextColor(TFT_BLACK, TFT_WHITE);
                 } else {
                   tft.setTextColor(TFT_WHITE, TFT_BLACK);
                 }
               
-                func=(char) toupper(controlClientThread.getCurrLok().func[i].name[0]);
+                func=(char) toupper(currLok.func[i].name[0]);
                 x_pos+=tft.drawString(func, x_pos, tft.height() - tft.fontHeight()*2 )*2;
               }
             }
@@ -1263,7 +1279,7 @@ void GuiViewControlLoco::loop() {
  
   if(millis() > GuiViewControlLoco::lastKeyPressed+POWER_DOWN_IDLE_TIMEOUT*1000) { // nach 5min power down
     DEBUGF("GuiViewControlLoco::loop() powerDown");
-    GuiView::startGuiView(new GuiViewPowerDown());
+    GuiView::startGuiView(new GuiViewPowerDown(new GuiViewControlLoco));
     return;
   }
 }
@@ -1333,9 +1349,11 @@ void GuiViewErrorMessage::loop() {
 };
 
 // ============================================================= PowerDown ========================
+GuiView *GuiViewPowerDown::viewIfButtonPressed=NULL;
 void guiViewPowerDownBackToControl(Button2 &b) {
-  DEBUGF("guiViewPowerDownBackToControl() changed: %d, pressed:%d", b.getAttachPin(), b.isPressed() );
-  GuiView::startGuiView(new GuiViewControlLoco());
+  DEBUGF("guiViewPowerDownBackToControl() changed: %d, pressed:%d, starting:%s", b.getAttachPin(), b.isPressed(),
+    GuiViewPowerDown::viewIfButtonPressed->which() );
+  GuiView::startGuiView(GuiViewPowerDown::viewIfButtonPressed);
 }
 
 void GuiViewPowerDown::init() {
@@ -1407,6 +1425,12 @@ void GuiViewInfo::init() {
   btn1.setClickHandler([](Button2& b) {
 		GuiView::startGuiView(new GuiViewControlLoco());
   });
+  btn2.setClickHandler([this](Button2& b) {
+		this->page=(this->page + 1) & 1;
+    this->forceRefresh=true;
+  });
+
+  tft.fillScreen(TFT_BLACK);
 }
 void GuiViewInfo::close() {
   DEBUGF("GuiViewInfo::close()");
@@ -1414,28 +1438,35 @@ void GuiViewInfo::close() {
 }
 void GuiViewInfo::loop() {
   static long last=0;
-  if(millis() > last + 1*1000) { // 1 sekunden
+  if(millis() > last + 1*1000 || this->forceRefresh) { // 1 sekunden
     last=millis();
-    tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    tft.fillScreen(TFT_BLACK);
+    this->drawButtons("<<", "", " v", "");
+    if(this->forceRefresh) {
+      tft.fillScreen(TFT_BLACK);
+    }
+    tft.setFreeFont(NULL);
     tft.setTextDatum(TL_DATUM);
     tft.setTextSize(1);
     tft.setCursor(0, 0);
 
     tft.println();
-    tft.println(String("device name: ")+device_name+" Build: "  __DATE__ " " __TIME__ );
-    tft.println(String("ESP_IDF Version: ")+esp_get_idf_version()+" "+ARDUINO);
+    if(page==0) {
+      tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      tft.println("source github.com/ferbar/btcontrol");
+      tft.setTextColor(TFT_GREEN, TFT_BLACK);
+      tft.println(String("device name: ")+device_name+" Build: "  __DATE__ " " __TIME__ );
+      tft.println(String("ESP_IDF Version: ")+esp_get_idf_version()+" "+ARDUINO);
 
 
-    if(WiFi.status() == WL_CONNECTED) {
-      tft.println(String("WiFi: CONNECTED channel: ") + WiFi.channel() + " " + WiFi.localIP().toString());
-    }
-    if(controlClientThread.isRunning() ) {
-      tft.println("connected");
-      tft.println(String(" to:") + controlClientThread.client->getRemoteAddr().c_str());
-    }
-    tft.printf("freeHeap: %d (minfree: %d, maxalloc: %d)\n",
-       ESP.getFreeHeap(), heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL), ESP.getMaxAllocHeap());
+      if(WiFi.status() == WL_CONNECTED) {
+        tft.println(String("WiFi: CONNECTED channel: ") + WiFi.channel() + " " + WiFi.localIP().toString());
+      }
+      if(controlClientThread.isRunning() ) {
+        tft.println("connected");
+        tft.println(String(" to:") + controlClientThread.client->getRemoteAddr().c_str());
+      }
+      tft.printf("freeHeap: %d (minfree: %d, maxalloc: %d)\n",
+        ESP.getFreeHeap(), heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL), ESP.getMaxAllocHeap());
 
 /*
 		WiFi
@@ -1443,21 +1474,36 @@ void GuiViewInfo::loop() {
     //     tft.setTextDatum(MC_DATUM);
 				tft.drawString("client thread running!!!", tft.width() / 2, tft.height() / 2);
 */
-    tft.println("known Wifis:");
-    for(auto it : wifiConfig) {
-      tft.print(it.ssid);
-      tft.print(", ");
-    }
-    tft.println();
-    tft.println( String("compile flags: POWER_DOWN_IDLE_TIMEOUT:") + POWER_DOWN_IDLE_TIMEOUT
+      tft.println("known Wifis:");
+      for(auto it : wifiConfig) {
+        tft.print(it.ssid);
+        tft.print(", ");
+      }
+      tft.println();
+      tft.println( String("compile flags: POWER_DOWN_IDLE_TIMEOUT:") + POWER_DOWN_IDLE_TIMEOUT
 #ifdef OTA_UPDATE
-       + " OTA_UPDATE"
+         + " OTA_UPDATE"
 #endif
 
 #ifdef HAVE_BLUETOOTH
-       + " HAVE_BLUETOOTH"
+         + " HAVE_BLUETOOTH"
 #endif
-    );
-
+      );
+    } else {
+      tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      if(lokdef) {
+        lokdef_t &currLok=controlClientThread.getCurrLok();
+        tft.println(String(currLok.name) + " functions");
+        tft.setTextColor(TFT_GREEN, TFT_BLACK);
+        for(int i=0; i < currLok.nFunc; i++) {
+          if(currLok.func[i].name) {
+            tft.println(utils::format("[%i] %s = %d", i, currLok.func[i].name, (currLok.func[i].ison) ? 1 :0 ).c_str() );
+          }
+        }
+      } else {
+        tft.println("no lokdef");
+      }
+    }
+    this->forceRefresh=false;
   }
 }
