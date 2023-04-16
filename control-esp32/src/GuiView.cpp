@@ -1349,11 +1349,10 @@ void GuiViewErrorMessage::loop() {
 };
 
 // ============================================================= PowerDown ========================
-GuiView *GuiViewPowerDown::viewIfButtonPressed=NULL;
-void guiViewPowerDownBackToControl(Button2 &b) {
+void guiViewPowerDownBackToControl(GuiViewPowerDown *guiView, Button2 &b) {
   DEBUGF("guiViewPowerDownBackToControl() changed: %d, pressed:%d, starting:%s", b.getAttachPin(), b.isPressed(),
-    GuiViewPowerDown::viewIfButtonPressed->which() );
-  GuiView::startGuiView(GuiViewPowerDown::viewIfButtonPressed);
+    guiView->viewIfButtonPressed->which() );
+  GuiView::startGuiView(guiView->viewIfButtonPressed);
 }
 
 void GuiViewPowerDown::init() {
@@ -1368,8 +1367,12 @@ void GuiViewPowerDown::init() {
     controlClientThread.sendStop();
   }
 
-  btn1.setClickHandler(guiViewPowerDownBackToControl);
-  btn2.setClickHandler(guiViewPowerDownBackToControl);
+  btn1.setClickHandler([this](Button2 &b) {
+    guiViewPowerDownBackToControl(this, b);
+  } );
+  btn2.setClickHandler([this](Button2 &b) {
+    guiViewPowerDownBackToControl(this, b);
+  } );
   
   for(int i=0; i < buttonConfigSize; i++) {
     assert(buttons[i]==NULL);
@@ -1377,9 +1380,13 @@ void GuiViewPowerDown::init() {
     buttons[i]=new Button2Data<buttonConfig_t &>(buttonConfig[i].gpio, buttonConfig[i]);
     // bug: ist ein button vor init '1', wird initialisiert mit setChangedHandler wird der handler aufgerufen .....
     if(buttons[i]->isPressedRaw() )
-      buttons[i]->setReleasedHandler(guiViewPowerDownBackToControl);
+      buttons[i]->setReleasedHandler([this](Button2 &b) {
+        guiViewPowerDownBackToControl(this, b);
+      });
     else
-      buttons[i]->setPressedHandler(guiViewPowerDownBackToControl);
+      buttons[i]->setPressedHandler([this](Button2 &b) {
+        guiViewPowerDownBackToControl(this, b);
+      });
   }
   GuiViewPowerDown::startTime=millis();
 }

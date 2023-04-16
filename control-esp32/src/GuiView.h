@@ -152,7 +152,7 @@ public:
 	void close();
 	void loop();
 	const char * which() const { return "GuiViewPowerDown"; };
-  static GuiView *viewIfButtonPressed;
+  GuiView *viewIfButtonPressed=NULL;
 private:
 	long startTime;
 	bool done;
