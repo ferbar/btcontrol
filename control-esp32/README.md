@@ -47,7 +47,7 @@ Optional: das IDF wird im Arduino SDK mit komplett aktivierten BT + BLE + A2DP +
 Arduino sdk selber kompilieren:
 
 * git clone esp32-idf -> IDF 4.4.4 branch
-* git clone https://github.com/espressif/esp32-arduino-lib-builder.git -> IDF 4.4 branch
+* git clone https://github.com/espressif/esp32-arduino-lib-builder.git -> IDF 4.4 branch + setup + git submodule init
 * git clone arduino-esp32 -> irgendeinen release branch welcher IDF 4.4.4 verwendet
 * unter components/arduino softlink auf arduino-esp32 anlegen
 * die ./arduino-lib-builder/defaultconf.esp32 nach esp32-arduino-lib-builder/configs/ verlinken
