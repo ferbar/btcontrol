@@ -49,6 +49,8 @@ private:
 		std::string function;
 		bool lastState;
 		int pwm;
+		int maxTime; // 0 == unendlich ein
+		time_t lastChangeTime;
 		typedef std::pair<int, PinCtl> pair;
 	};
 	std::multimap<int, PinCtl> pins;

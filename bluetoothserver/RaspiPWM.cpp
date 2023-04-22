@@ -122,6 +122,11 @@ void RaspiPWM::init() {
 		printf("RaspiPWM::init() ---- motorFullSpeedBoost %d\n", this->motorFullSpeedBoost);
 	}
 
+	// wiringpi.pin.4=expression für Ausgänge oder 'pwm' => Motor PWM Ausgang
+	//    optional:
+	//    wiringpi.pin.4.a für alternativausgang zum Dimmen im Stand z.b.
+	//                  .pwm=20 => Ausgang auf 20% dimmen
+	//                  .maxtime => Ausgang nach \d+ Sekunden immer auf force 0 setzen (Rauchfang)
 	for (auto it=config.begin(); it!=config.end(); ++it) {
 		if(utils::startsWith(it->first,"wiringpi.pin.")) {
 			int pin = stoi(it->first.substr(strlen("wiringpi.pin.")));
@@ -147,7 +152,13 @@ void RaspiPWM::init() {
 						abort();
 					}
 				}
-				this->pins.insert(PinCtl::pair(pin,{.function=it->second, .lastState=false, .pwm=pwm}));
+				int maxtime=0;
+				std::string conf_maxrime=config.get(it->first + ".maxtime");
+				if(conf_maxtime != NOT_SET) {
+					maxtime=stoi(conf_maxtime);
+					printf("RaspiPWM::init() ---- maxtime pin %d=>%d\n",pin,maxtime);
+				}
+				this->pins.insert(PinCtl::pair(pin,{.function=it->second, .lastState=false, .pwm=pwm, .maxtime=maxtime}));
 				// this->pins[pin]=new PinCtl(it->second);
 			}
 		}
@@ -285,8 +296,14 @@ void RaspiPWM::commit(bool force) {
 				digitalWrite(pin, value);
 			}
 			pinCtl->lastState=value;
+			pinCtl->lastChangeTime=time(NULL);
 		} else {
 			if(logPins) NOTICEF("  commit: no force");
+			// check ob maxTime für einen Pin definiert ist
+			if(pinCtl->maxTime && value && (value == pinCtl->lastState) && (time() + pinCtl->maxTime) > pinCtl->lastState) {
+				NOTICEF("disabling pin after maxTime %d", pinCtl->maxTime);
+				digitalWrite(pin, 0);
+			}
 		}
 	}
 }

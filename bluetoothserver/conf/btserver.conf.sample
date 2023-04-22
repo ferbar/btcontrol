@@ -19,7 +19,7 @@ digispark.motorStart=70
 #digispark.motorFullSpeed=180
 #digispark.motorFullSpeedBoost=200
 
-# wenn RaspiPWM verwendet wird:
+# wenn RaspiPWM verwendet wird. Expressions siehe ParseExpr.cpp
 wiringpi.pin.18=pwm
 # richtungs pin für die brücke
 wiringpi.pin.27=dir
@@ -39,6 +39,10 @@ wiringpi.pin.17.pwm=10
 # Führerhaus Beleuchtung
 #wiringpi.pin.8=!speed
 #wiringpi.pin.8.pwm=50
-# Rauchfang
-#wiringpi.pin.9=accel+15s
-#wiringpi.pin.10=accel+10s
+# Rauchfang - Heizelement
+#wiringpi.pin.10=(accel+10s) || (F3)
+# Rauchfang - Ventilator
+#wiringpi.pin.9=(accel+15s) || (F3)
+# in Sekunden
+#wiringpi.pin.9.maxtime=90
+## Rauchfang
