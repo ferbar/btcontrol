@@ -1,10 +1,15 @@
 /**
  * expression parser
+ * !! Whitespaces werden nicht rausgefiltert, das muss genau passen !!
+ *
  * es funktioniert:
- *     F\d => func ein/aus
- *     "(expr) && (expr)" bzw "(expr) || (expr)"    => wichtig auf die spaces achten!
+ *     F[0-9] => func ein/aus               z.b.  "F4"
+ *     (expr) && (expr)                   z.b.  "(accel+10s) || (F3)"
+ *     (expr) || (expr)    => wichtig auf die spaces achten!
+ *     die strings unten                    z.b.  "!dir && F0"
+ *     pwm                 => wird für Motor PWM verwendet, kommt nicht daher weil nicht funktions pin
+ *
  *     wird ein Pin öfters definiert wird ein or gemacht - wie (expr) || (expr)
- *     die strings unten
  */
 #include <string>
 #include <stdexcept>
