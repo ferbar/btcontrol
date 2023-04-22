@@ -152,13 +152,13 @@ void RaspiPWM::init() {
 						abort();
 					}
 				}
-				int maxtime=0;
-				std::string conf_maxrime=config.get(it->first + ".maxtime");
+				int maxTime=0;
+				std::string conf_maxtime=config.get(it->first + ".maxtime");
 				if(conf_maxtime != NOT_SET) {
-					maxtime=stoi(conf_maxtime);
-					printf("RaspiPWM::init() ---- maxtime pin %d=>%d\n",pin,maxtime);
+					maxTime=stoi(conf_maxtime);
+					printf("RaspiPWM::init() ---- maxtime pin %d=>%d\n",pin,maxTime);
 				}
-				this->pins.insert(PinCtl::pair(pin,{.function=it->second, .lastState=false, .pwm=pwm, .maxtime=maxtime}));
+				this->pins.insert(PinCtl::pair(pin,{.function=it->second, .lastState=false, .pwm=pwm, .maxTime=maxTime, .lastChangeTime=0}));
 				// this->pins[pin]=new PinCtl(it->second);
 			}
 		}
@@ -300,8 +300,9 @@ void RaspiPWM::commit(bool force) {
 		} else {
 			if(logPins) NOTICEF("  commit: no force");
 			// check ob maxTime für einen Pin definiert ist
-			if(pinCtl->maxTime && value && (value == pinCtl->lastState) && (time() + pinCtl->maxTime) > pinCtl->lastState) {
-				NOTICEF("disabling pin after maxTime %d", pinCtl->maxTime);
+			if(pinCtl->maxTime && value && (value == pinCtl->lastState) && 
+					((time(NULL)>>1) == (pinCtl->lastChangeTime + pinCtl->maxTime)>>1 ) ) {
+				NOTICEF("disabling pin %d after maxTime %d (on since %ds)", pin, pinCtl->maxTime, (int) (time(NULL) - pinCtl->lastChangeTime) );
 				digitalWrite(pin, 0);
 			}
 		}
