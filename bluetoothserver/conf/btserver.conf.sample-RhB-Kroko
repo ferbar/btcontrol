@@ -27,7 +27,7 @@ powerMonitor.voltage.file=/sys/bus/i2c/devices/i2c-1/1-0040/hwmon/hwmon2/in1_inp
 powerMonitor.voltage.max=16800
 powerMonitor.voltage.min=13600
 
-# wenn RaspiPWM verwendet wird:
+# wenn RaspiPWM verwendet wird. Expressions siehe ParseExpr.cpp
 wiringpi.pin.12=pwm
 # richtungs pin für die brücke
 wiringpi.pin.17=dir
@@ -49,6 +49,7 @@ wiringpi.pin.24=dir && F0 && !speed
 wiringpi.pin.24.pwm=30
 wiringpi.pin.23=!dir && F0 && !speed
 wiringpi.pin.23.pwm=30
-# Rauchfang
-#wiringpi.pin.9=accel+15s
-#wiringpi.pin.10=accel+10s
+# Rauchfang - Heizelement
+#wiringpi.pin.10=(accel+10s) || (F3)
+# Rauchfang - Ventilator
+#wiringpi.pin.9=(accel+15s) || (F3)
