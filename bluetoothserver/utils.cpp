@@ -273,7 +273,7 @@ void writeFile(const std::string &filename, const std::string &data) {
 	} else {
 		fwrite((void*)data.data(),1,data.size(),f);
 		fclose(f);
-		DEBUGF("written @%s %u bytes\n",filename.c_str(),data.size());
+		DEBUGF("written @%s %zd bytes\n",filename.c_str(),data.size());
 	}
 }
 #endif
