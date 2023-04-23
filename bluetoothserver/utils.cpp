@@ -371,6 +371,8 @@ std::string utils::trim(const std::string &s)
 }
 
 void utils::Log::init(bool softAP) {
+	setlinebuf(stdout);
+	setlinebuf(stderr);
 #ifdef SYSLOG_SERVER
   DEBUGF("~~~~~~~~~~~~~~~ init syslog server @%s:%d", SYSLOG_SERVER, SYSLOG_PORT);
   udpClient.stop();

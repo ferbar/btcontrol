@@ -260,6 +260,8 @@ int main(int argc, char *argv[])
 
 	// FBTCtlMessage test(FBTCtlMessage::STRUCT)
 	try {
+		utils::log.init(false);
+
 		config.init("conf/btserver.conf");
 		messageLayouts.load();
 		DEBUGF("---------------protohash = %d",messageLayouts.protocolHash);

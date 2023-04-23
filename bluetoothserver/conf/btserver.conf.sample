@@ -44,5 +44,5 @@ wiringpi.pin.17.pwm=10
 # Rauchfang - Ventilator
 #wiringpi.pin.9=(accel+15s) || (F3)
 # in Sekunden
-#wiringpi.pin.9.maxtime=90
-## Rauchfang
+#wiringpi.pin.9.maxtime=95
+#wiringpi.pin.10.maxtime=90
