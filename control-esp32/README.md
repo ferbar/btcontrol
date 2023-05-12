@@ -74,6 +74,14 @@ memstat.sh
 
 Anleitung für radare2: https://reverseengineering.stackexchange.com/questions/16081/how-to-generate-the-call-graph-of-a-binary-file
 
+Übern Browser:
+
+´``
+r2 -c=H .pio/build/wemos_d1_mini32/firmware.elf
+```
+
+
+Auf der Konsole:
 ```
 afl | grep BTAddress
 s 0x400eb128
