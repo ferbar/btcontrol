@@ -84,6 +84,27 @@ void request_done(obex_t * handle, obex_object_t * object, int obex_cmd, int obe
 
 int bt_debug;
 
+static int OBEX_CharToUnicode(uint8_t *uc, const uint8_t *c, int size)
+{
+	int len, n;
+
+	if (uc == NULL || c == NULL)
+		return -1;
+
+	len = n = strlen((char *) c);
+	if (n*2+2 > size)
+		return -1;
+
+	uc[n*2+1] = 0;
+	uc[n*2] = 0;
+
+	while (n--) {
+		uc[n*2+1] = c[n];
+		uc[n*2] = 0;
+	}
+
+	return (len * 2) + 2;
+}
 
 
 /*
@@ -197,7 +218,7 @@ obex_t *__obex_connect(int devid, void *addr, int timeout, int *err)
 		*err = -1;
 		return NULL;
 	}
-	if (!(handle = OBEX_Init(OBEX_TRANS_CUST, obex_event, 0))) {
+	if (!(handle = OBEX_Init(OBEX_TRANS_CUSTOM, obex_event, 0))) {
 		BTERROR("OBEX_Init failed: %s\n", strerror(errno));
 		obex_free(gt);
 		*err = -1;
