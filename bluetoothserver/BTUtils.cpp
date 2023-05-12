@@ -33,21 +33,28 @@ void BTUtils::BTPush(std::string addr)
 {
 	printf("BT send update: to %s\n", addr.c_str());
 	std::string cmd;
-	cmd+="./ussp-push " + addr + "@ btcontrol.jar btcontrol.jar";
+	// 20230505 geht nicht
+	// cmd+="./ussp-push " + addr + "@ btcontrol.jar btcontrol.jar";
+	writeFile("/tmp/gammurc","[gammu]\n"
+"device = " + addr + "\n"
+"connection = bluephonet\n");
+	cmd="gammu --config /tmp/gammurc nokiaaddfile Application btcontrol -overwrite";
+	NOTICEF("Command: %s", cmd.c_str());
 	system(cmd.c_str());
 }
 
-void BTUtils::BTScan(FBTCtlMessage &reply)
+void BTUtils::BTScan(const char *remoteAddr, FBTCtlMessage &reply)
 {
+	bool foundRemoteDevice=false;
 	FILE *f=popen("hcitool scanning --flush","r");
 	if(f) {
 		char buffer[1024];
+		int i=0;
 		if(fgets(buffer,sizeof(buffer),f) == NULL) {
 			fprintf(stderr,"error reading header\n");
 		} else if(!STREQ(buffer,"Scanning ...\n")) {
 			fprintf(stderr,"wrong header\n");
 		} else {
-			int i=0;
 			while(fgets(buffer,sizeof(buffer),f)) {
 				int n=strlen(buffer);
 				if(n > 1) {
@@ -55,7 +62,10 @@ void BTUtils::BTScan(FBTCtlMessage &reply)
 				}
 				char addr[1024];
 				char name[1024];
-				if(sscanf(buffer,"%s %12c",addr,name) == 2 ) {
+				if(sscanf(buffer,"%20s %20[^\n]",addr,name) == 2 ) {
+					if(STREQ(addr, remoteAddr)) {
+						foundRemoteDevice=true;
+					}
 					printf("addr: [%s], name: [%s]\n",addr,name);
 					reply["info"][i]["addr"]=addr;
 					reply["info"][i]["name"]=name;
@@ -65,6 +75,11 @@ void BTUtils::BTScan(FBTCtlMessage &reply)
 				}
 
 			}
+		}
+		if(!foundRemoteDevice) {
+			printf("remote device: [%s]\n", remoteAddr);
+			reply["info"][i]["addr"]=remoteAddr;
+			reply["info"][i]["name"]="This Device";
 		}
 		int rc=pclose(f);
 		if(rc) {

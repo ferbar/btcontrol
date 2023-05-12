@@ -6,7 +6,7 @@
 
 namespace BTUtils {
 	void BTPush(std::string addr);
-	void BTScan(FBTCtlMessage &reply);
+	void BTScan(const char *remoteAddr, FBTCtlMessage &reply);
 	std::string getRemoteAddr(int so);
 }
 
