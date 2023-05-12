@@ -57,8 +57,8 @@ void ClientThreadX11::run()
 {
 	// startupdata_t *startupdata=(startupdata_t *)data;
 
-	NOTICEF("%d:socket accepted sending welcome msg",this->clientID);
 	utils::setThreadClientID(this->clientID);
+	NOTICEF("%d:socket accepted sending welcome msg",this->clientID);
 	FBTCtlMessage heloReply(messageTypeID("HELO"));
 	heloReply["name"]="my bt server";
 	heloReply["version"]="0.9";
@@ -83,6 +83,7 @@ void ClientThreadX11::run()
 		// addr_index sollte immer gültig sin - sonst gibts an segv ....
 	
 		// bool emergencyStop=false;
+
 
 		FBTCtlMessage cmd=this->readMessage();
 
@@ -310,11 +311,11 @@ void ClientThreadX11::run()
 				int protohash=cmd["protohash"].getIntVal();
 				int doupdate=cmd["doupdate"].getIntVal();
 				ERRORF("hash=%d (me:%d), doupdate=%d",protohash,messageLayouts.protocolHash,doupdate);
-				this->sendClientUpdate();
+				this->sendClientUpdate(NOT_SET);
 #ifdef INCL_BT
 			} else if(cmd.isType("BTSCAN")) { // liste mit eingetragenen loks abrufen, format: <name>;<adresse>;...\n
 				FBTCtlMessage reply(messageTypeID("BTSCAN_REPLY"));
-				BTUtils::BTScan(reply);
+				BTUtils::BTScan(this->client->getRemoteAddr().c_str(), reply);
 				// reply.dump();
 				sendMessage(reply);
 			} else if(cmd.isType("BTPUSH")) { // sendUpdate
@@ -323,7 +324,7 @@ void ClientThreadX11::run()
 				std::string addr=cmd["addr"].getStringVal();
 				// TODO: ussppush oder gammu push 
 				// int type=cmd["type"].getIntVal();
-				BTUtils::BTPush(addr);
+				this->sendClientUpdate(addr);
 
 				// reply.dump();
 				reply["rc"]=1;

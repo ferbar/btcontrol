@@ -20,7 +20,7 @@ public:
 	void setLokStatus(FBTCtlMessage &reply, lastStatus_t *lastStatus);
 	void sendStatusReply(lastStatus_t *lastStatus);
 
-	void sendClientUpdate();
+	void sendClientUpdate(std::string target);
 };
 
 #endif

@@ -86,15 +86,21 @@ void ClientThread::sendStatusReply(lastStatus_t *lastStatus)
  * prog an ein handy senden
  *
  */
-void ClientThread::sendClientUpdate()
+void ClientThread::sendClientUpdate(std::string target)
 {
 #ifdef INCL_BT
 	std::string clientAddr = this->client->getRemoteAddr();
-	for(int i=0; i < 10; i++) {
-		DEBUGF(".");
-		sleep(1);
+	if(target==NOT_SET) {
+		target=clientAddr;
 	}
-	BTUtils::BTPush(clientAddr);
+	if(clientAddr == target) {
+		DEBUGF("target == clientAddr, sleeping 10s");
+		for(int i=0; i < 10; i++) {
+			DEBUGF(".");
+			sleep(1);
+		}
+	}
+	BTUtils::BTPush(target);
 #else
 	ERRORF("ClientThread::sendClientUpdate ohne BT\n");
 	abort();
@@ -376,11 +382,11 @@ continue;
 				int protohash=cmd["protohash"].getIntVal();
 				int doupdate=cmd["doupdate"].getIntVal();
 				ERRORF("hash=%d (me:%d), doupdate=%d",protohash,messageLayouts.protocolHash,doupdate);
-				this->sendClientUpdate();
+				this->sendClientUpdate(NOT_SET);
 #ifdef INCL_BT
 			} else if(cmd.isType("BTSCAN")) { // liste mit eingetragenen loks abrufen, format: <name>;<adresse>;...\n
 				FBTCtlMessage reply(messageTypeID("BTSCAN_REPLY"));
-				BTUtils::BTScan(reply);
+				BTUtils::BTScan(this->client->getRemoteAddr().c_str(), reply);
 				// reply.dump();
 				sendMessage(reply);
 			} else if(cmd.isType("BTPUSH")) { // sendUpdate
@@ -389,7 +395,7 @@ continue;
 				std::string addr=cmd["addr"].getStringVal();
 				// TODO: ussppush oder gammu push 
 				// int type=cmd["type"].getIntVal();
-				BTUtils::BTPush(addr);
+				this->sendClientUpdate(addr);
 
 				// reply.dump();
 				reply["rc"]=1;
