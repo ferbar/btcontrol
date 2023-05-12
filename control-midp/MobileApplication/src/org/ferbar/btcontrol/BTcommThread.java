@@ -54,6 +54,7 @@ public class BTcommThread extends Thread {
 		public OutputStream openOutputStream() throws java.io.IOException ;
 		public void connect() throws java.io.IOException;
 		public String toString();
+                public String getLocalAddress();
 	}
 	
 	// me4se kann das nicht:
@@ -417,6 +418,10 @@ public class BTcommThread extends Thread {
 		// debugForm.debug("rx Msg"); msg.dump(debugForm);
 		return msg;
 	}
+        
+        public String getLocalAddress() {
+            return this.BTStreamConnection.getLocalAddress();
+        }
 	
 	/**
 	 * der thread
@@ -486,9 +491,11 @@ public class BTcommThread extends Thread {
 			}
 			Debuglog.debugln("server:"+heloMsg.get("name").getStringVal()+
 				" version:"+heloMsg.get("version").getStringVal()+
-				" protoHash:"+heloMsg.get("protohash").getIntVal());
+				" protoHash:"+heloMsg.get("protohash").getIntVal()+
+                                " myProtoHash:"+ MessageLayouts.hash);
 			int protocolHash=heloMsg.get("protohash").getIntVal();
 			if(MessageLayouts.hash != protocolHash) {
+                            Debuglog.debugln("protocolHash missmatch");
 				Object notifyObject=new Object();
 				YesNoAlert yesNo=new YesNoAlert("old version","update java midlet? (altes bitte löschen)",notifyObject);
 				btrailClient.display.setCurrent(yesNo);

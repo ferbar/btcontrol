@@ -13,7 +13,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with btcontroll.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Grafische ausgabe
+ * GUI
  *
  * Created on 4. September 2007, 18:58
  */
@@ -22,9 +22,12 @@ package org.ferbar.btcontrol;
 
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.Date;
 import javax.microedition.lcdui.*;
 import java.util.Hashtable;
 import java.io.InputStream;
+import javax.bluetooth.BluetoothStateException;
+import javax.bluetooth.LocalDevice;
 
 import protocol.FBTCtlMessage;
 import protocol.MessageLayouts;
@@ -43,14 +46,13 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 				
 	private Command exitCommand = new Command("Exit", Command.BACK, 1);
 	private Command emergencyStopCommand = new Command("STOP", Command.ITEM,1);
-	private Command locoListCommand = new Command("loks", Command.ITEM, 5);
+	private Command locoListCommand = new Command("Lokomotiven", Command.ITEM, 5);
 	private Command funcListCommand = new Command("Functions", Command.ITEM,6);
 	private Command pwrOffCommand = new Command("Aus", Command.ITEM,7);
 	private Command pwrOnCommand = new Command("Ein", Command.ITEM,8);
 
-	private Command BTScanCommand = new Command("btcontroll push", Command.SCREEN,9);
-	private Command BTPushCommand = new Command("obex push", Command.ITEM, 1);
-	private Command BTGammuPushCommand = new Command("gammu push", Command.ITEM, 2);
+	private Command BTScanCommand = new Command("App Update", Command.SCREEN,9);
+	private Command BTPushCommand = new Command("Update", Command.ITEM, 1);
 	
 	// loco list
 	private Command locoListCMDSelect = new Command("Select", Command.ITEM,1);
@@ -91,6 +93,10 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 
 	// FillThread speichert da die letzte liste
 	FBTCtlMessage lastReply;
+        
+        // 
+        long lastKeyPressed=0;
+        
 	// ... damit eine gedrückte taste öfter gezählt wird
 	Timer timer;
 	Object timerwait;
@@ -208,6 +214,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	}
 
 	public void update(BTcommThread btcomm)  {
+       		lastKeyPressed=System.currentTimeMillis();
 		this.btcomm=btcomm;
 		this.btcomm.pingCallback=this;
 		// this.
@@ -318,11 +325,18 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		// lokauswahl - liste anzeigen wenn currAddr == 0
 		try {
 			if(this.currAddr==0 && this.btcomm != null && !this.btcomm.connError()) // wenn keine adresse gesetzt + verbunden
-				btrailClient.display.setCurrent(get_locoList());
+				btrailClient.display.setCurrent(get_locoList(true));
 		} catch(Exception e) {
 			this.infoMsg="paint err:"+e.toString();
 			System.out.println( "Exception:" +e.toString() );
 		}
+                if(lastKeyPressed < System.currentTimeMillis() - 5*60*1000) {
+                    Debuglog.debugln("power off timeout");
+                    btrailClient.display.setCurrent(backForm);
+                    if(btcomm!=null) {
+                        btcomm.close(true);
+                    }
+                }
 	}
 
 	boolean shiftKey=false;
@@ -330,7 +344,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	 * Called when a key is pressed.
 	 * note: stop = commandAction
 	 */
-	protected  void keyPressed(int keyCode) {
+	protected void keyPressed(int keyCode) {
 		final String msgLockFunctionInfo="press * to lock Fn";
 		if(btcomm!=null) {
 			if(this.infoMsg != null) {
@@ -464,6 +478,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			this.infoMsg="keyPressed err: no btcomm";
 		}
 		this.repaint();
+                lastKeyPressed=System.currentTimeMillis();
 	}
 
 	void updateTitle()
@@ -587,17 +602,21 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 	}
 
 	/**
-	 * befüllt eine List View mit werten (keine ahnung mehr warum das async ist)
+	 * befüllt eine List View mit Werten (keine ahnung mehr warum das async ist)
 	 */
 	class FillListThread extends Thread
 	{
-		private String title;
 		private FBTCtlMessage cmd;
 		private String fieldDisplay;
 		private String fieldValue;
 		private String fieldImage;
-		public FillListThread(String title, FBTCtlMessage cmd, String fieldDisplay, String fieldValue, String fieldImage) {
-			this.title=title;
+                /**
+                 * @param cmd          GETLOCOS | GETFUNCTIONS
+                 * @param fieldDisplay feldnamen im reply
+                 * @param fieldValue
+                 * @param fieldImage 
+                 */
+		public FillListThread(FBTCtlMessage cmd, String fieldDisplay, String fieldValue, String fieldImage) {
 			this.cmd=cmd;
 			this.fieldDisplay=fieldDisplay;
 			this.fieldValue=fieldValue;
@@ -607,6 +626,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		public void run()
 		{
 			try {
+				String orgTitle=selectList.getTitle();
 				selectList.setTitle("reading...");
 				selectList.deleteAll(); // sollte eigentlich eh leer sein 
 				FBTCtlMessage reply=btcomm.execCmd(cmd);
@@ -655,41 +675,64 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 					last = pos+1;
 				}
 				*/
-				selectList.setTitle(this.title);
+				selectList.setTitle(orgTitle);
 			} catch(Exception e) {
 				selectList.setTitle("ex:"+e.toString());
 				Debuglog.debugln("|||"+e.getMessage());
 			}
 		}
 	}
+        
+        /**
+         * wählt die erste Lok aus wenns nur eine gibt
+         */
+        class FillListThreadAutoSelect extends FillListThread {
+            MIDPCanvas parent;
 
+            public FillListThreadAutoSelect(MIDPCanvas parent, FBTCtlMessage cmd, String fieldDisplay, String fieldValue, String fieldImage) {
+                super(cmd, fieldDisplay, fieldValue, fieldImage);
+                this.parent=parent;
+            }
+            public void run()
+		{
+                    super.run();
+                    if(selectList.size()==1)
+                        parent.commandAction(parent.locoListCMDSelect,null);
+                }
+        }
+        
 	/**
 	 * startet einen eigenen thread zum befüllen der liste - blockiert sonst commandAction
 	 */
-	public List get_locoList() throws Exception
+	public List get_locoList(boolean autoSelect) throws Exception
 	{
-		selectList = new ValueList("Loks", Choice.IMPLICIT);
+		selectList = new ValueList("Lokomotiven", Choice.IMPLICIT);
 		selectList.setCommandListener(this);
 		//selectList.setSelectedFlags(new boolean[0]);
 		selectList.setSelectCommand(locoListCMDSelect);
 		selectList.addCommand(locoListCMDBack);
 		FBTCtlMessage msg = new FBTCtlMessage();
 		msg.setType(MessageLayouts.messageTypeID("GETLOCOS"));
-		Thread th = new FillListThread("Loks",msg,"name","addr","imgname");
+		Thread th;
+                if(autoSelect) {
+                    th = new FillListThreadAutoSelect(this, msg, "name", "addr", "imgname");
+                } else {
+                    th = new FillListThread(msg, "name", "addr", "imgname");
+                }
 		th.start();
 		return selectList;
 	}  		
 
 	public List get_locoListMultiControll() throws Exception
 	{
-		selectList = new ValueList("Loks", Choice.MULTIPLE);
+		selectList = new ValueList("Lokomotiven", Choice.MULTIPLE);
 		selectList.setCommandListener(this);
 		//selectList.setSelectedFlags(new boolean[0]);
 		selectList.addCommand(locoListMultiCMDSelect);
 		selectList.addCommand(locoListCMDBack);
 		FBTCtlMessage msg = new FBTCtlMessage();
 		msg.setType(MessageLayouts.messageTypeID("GETLOCOS"));
-		Thread th = new FillListThread("Loks",msg,"name","addr","imgname");
+		Thread th = new FillListThread(msg, "name", "addr", "imgname");
 		th.start();
 		return selectList;
 	}  		
@@ -705,7 +748,7 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		FBTCtlMessage msg = new FBTCtlMessage();
 		msg.setType(MessageLayouts.messageTypeID("GETFUNCTIONS"));
 		msg.get("addr").set(this.currAddr);
-		Thread th = new FillListThread("funclist",msg,"name",null,"imgname");
+		Thread th = new FillListThread(msg, "name", null, "imgname");
 		th.start();
 		return selectList;
 	}  
@@ -790,11 +833,10 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 		selectList.setSelectCommand(this.BTPushCommand);
 		selectList.addCommand(locoListCMDBack);
 		selectList.addCommand(this.BTPushCommand);
-		selectList.addCommand(this.BTGammuPushCommand);
 
 		FBTCtlMessage msg = new FBTCtlMessage();
 		msg.setType(MessageLayouts.messageTypeID("BTSCAN"));
-		Thread th = new FillListThread("BTDevices",msg,"name","addr",null);
+		Thread th = new FillListThread(msg,"name","addr",null);
 		th.start();
 		return selectList;
 	}
@@ -841,19 +883,42 @@ public class MIDPCanvas extends Canvas implements CommandListener, BTcommThread.
 			// btscan am server starten:
 			} else if(command==this.BTScanCommand) {
 				btrailClient.display.setCurrent(get_BTDevicesList());
-			} else if((command==this.BTPushCommand) || (command==this.BTPushCommand)) {
-				this.setTitle("obex push");
+			} else if(command==this.BTPushCommand) {
+				this.setTitle("Update App");
 				FBTCtlMessage msg = new FBTCtlMessage();
 				msg.setType(MessageLayouts.messageTypeID("BTPUSH"));
 				int n=selectList.getSelectedIndex();
 				msg.get("addr").set((String)this.selectList.getValue(n));
-				msg.get("type").set((command==this.BTPushCommand) ? 0 : 1);
-				btcomm.addCmdToQueue(msg,this);
-				btrailClient.display.setCurrent(this);
+                                
+                                // selbst-update, dann warten bis queue leer ist und beenden, app kann nicht geupdatet werden solangs lauft.
+                                String localAddress = btcomm.getLocalAddress();
+                                    // getBluetoothAddress() liefert ohne :
+                                    String updateMacOhne=((String)this.selectList.getValue(n));
+                                    if(updateMacOhne.length()==17) {
+                                        updateMacOhne=updateMacOhne.substring(0, 2)+updateMacOhne.substring(3, 5)+updateMacOhne.substring(6, 8)+
+                                            updateMacOhne.substring(9, 11)+updateMacOhne.substring(12, 14)+updateMacOhne.substring(15, 17);
+                                    }
+                                
+                                    Debuglog.debugln("Update: "+updateMacOhne+" local:"+localAddress);
+                                    if(updateMacOhne.equals(localAddress) ) {
+        				msg.get("type").set(1);
+        				btcomm.addCmdToQueue(msg,this);
+                                        Thread.sleep(100);
+                                        btcomm.close(true);
+                                        btcomm.doupdate=true;
+                                        btrailClient.btrailClient.exitMIDlet();
+                                    } else {
+                                        Alert alert;
+                                    	alert = new Alert("Update Device","Update: "+updateMacOhne+" local:"+localAddress,null,null);
+                			alert.setTimeout(Alert.FOREVER);
+                                	btrailClient.display.setCurrent(alert);
+                			msg.get("type").set(0);
+        				btcomm.addCmdToQueue(msg,this);
+                                    }
 
 			// loco list
 			} else if(command==this.locoListCommand) {
-				btrailClient.display.setCurrent(get_locoList());
+				btrailClient.display.setCurrent(get_locoList(false));
 			} else if(command==this.locoListCMDSelect) {
 				btrailClient.display.getCurrent();
 				this.setAvailLocos(this.lastReply,this.selectList);

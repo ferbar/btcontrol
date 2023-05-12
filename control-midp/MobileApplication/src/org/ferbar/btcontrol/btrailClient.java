@@ -54,8 +54,10 @@ import protocol.MessageLayouts;
  */
 public class btrailClient extends MIDlet implements CommandListener, PrintClient.iAddAvailService
 {
+    LocalDevice localDevice;
     
 	static public Display display;
+        static public btrailClient btrailClient;
 	
 	private int orgDiscoverable;
 	private float btApiVersion;
@@ -244,9 +246,10 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 	/** This method initializes UI of the application.//GEN-BEGIN:MVDInitBegin
 	 */
 	private void initialize() {//GEN-END:MVDInitBegin
-        // Insert pre-init code here
-        System.out.println("System.out.println");
-        
+            this.btrailClient = this;
+            // Insert pre-init code here
+            System.out.println("System.out.println");
+
 		getDisplay().setCurrent(this.get_listServer());//GEN-LINE:MVDInitInit
 
 		
@@ -290,22 +293,26 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 			}
 		}
 		
-		LocalDevice local;
+		
 		try {
-			local = LocalDevice.getLocalDevice();
+			localDevice = LocalDevice.getLocalDevice();
 		} catch (BluetoothStateException e) {
 			debugForm.setTitle("no bt?");
 			debugForm.append("no bluetooth?");
-			return;
+                        e.printStackTrace();
 		}
 		
 
 		
 		// Insert post-init code here
 		try {
+                    if(localDevice != null) {
 			// wenn BT verbindong offen ist und die services von diesem handy abgefragt werden ist eventuell die verbindung weg - deswegen auf unsichtbar setzen
-			this.orgDiscoverable=local.getDiscoverable();
-			local.setDiscoverable(DiscoveryAgent.NOT_DISCOVERABLE);
+			this.orgDiscoverable=localDevice.getDiscoverable();
+			localDevice.setDiscoverable(DiscoveryAgent.NOT_DISCOVERABLE);
+                    } else {
+                        Debuglog.debugln("no BT");
+                    }
 		} catch (BluetoothStateException e) {
 			Debuglog.debugln("bt.setDiscoverable(NOT_DISCOVERABLE) not supported");
 		}
@@ -338,8 +345,9 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 	}
     
 	class MidpStream implements BTcommThread.PlattformStream {
-		MidpStream(String BTCtlServerURL) {
+		MidpStream(String BTCtlServerURL, LocalDevice localDevice) {
 			this.BTCtlServerURL=BTCtlServerURL;
+                        this.localDevice=localDevice;
 		}
 		public void close() throws java.io.IOException {
 			this.BTStreamConnection.close();
@@ -353,11 +361,18 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 		public void connect() throws IOException {
 			this.BTStreamConnection = (StreamConnection)Connector.open(this.BTCtlServerURL);
 		}
+                public String getLocalAddress() {
+                    if(this.localDevice != null)
+                        return this.localDevice.getBluetoothAddress();
+                    else
+                        return "no bluetooth";
+                }
 		public String toString() {
 			return "url:"+this.BTCtlServerURL;
 		}
 		StreamConnection BTStreamConnection;
 		public String BTCtlServerURL;
+                LocalDevice localDevice;
 	}
 
 	class ConnectThread extends Thread {
@@ -401,7 +416,9 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
         // Insert global pre-action code here
 		try {
 // debugForm -----------------------------------------------------------------------------------------
-		if (displayable == debugForm) {//GEN-BEGIN:MVDCABody
+                    if (command == exitCommand) {
+                        exitMIDlet();
+                    } else if (displayable == debugForm) {//GEN-BEGIN:MVDCABody
 			if (command == helpCommand1) {//GEN-LINE:MVDCACase3
 				// Insert pre-action code here
 				getDisplay().setCurrent(get_help(), getDebugForm());//GEN-LINE:MVDCAAction8
@@ -424,9 +441,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 			}
 // listServer -----------------------------------------------------------------------------------------
 		} else if (displayable == listServer) {
-			if (command == exitCommand) {
-				exitMIDlet();
-			} else if (command == btScanCommand) {  // neue BT suche
+			if (command == btScanCommand) {  // neue BT suche
 				debugForm.setTitle("bt scan...");
 				Debuglog.debugln("bt scan started");
 
@@ -488,7 +503,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 							btcomm=null;
 						}
 						debugForm.append("starting ConnectThread");
-						ConnectThread connectThread = new ConnectThread(new MidpStream(connectionURL));
+						ConnectThread connectThread = new ConnectThread(new MidpStream(connectionURL, localDevice));
 						connectThread.start();
 						// DataInputStream input = (InputConnection) connection.openDataInputStream();
 						// DataOutputStream output = connection.openDataOutputStream();
@@ -555,7 +570,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 
 					String connectionURL;
 					connectionURL = "socket://"+this.newTCPConnForm_host.getString()+":3030";
-					ConnectThread connectThread = new ConnectThread(new MidpStream(connectionURL));
+					ConnectThread connectThread = new ConnectThread(new MidpStream(connectionURL, localDevice));
 					connectThread.start();
 
 				} else {
@@ -592,11 +607,11 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
      */
     public void exitMIDlet() {//GEN-FIRST:MVDExitMidlet
         try {
-			LocalDevice local=LocalDevice.getLocalDevice();
-			local.setDiscoverable(this.orgDiscoverable);
-		} catch(Exception e) {
-		}
-		getDisplay().setCurrent(null);
+            localDevice.setDiscoverable(this.orgDiscoverable);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        getDisplay().setCurrent(null);
         destroyApp(true);
         notifyDestroyed();
     }//GEN-LAST:MVDExitMidlet
@@ -639,6 +654,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 				Debuglog.debugln("getNewTCPConnForm:"+e.toString());
 			}
 			newTCPConnForm = new Form("form", new Item[] { newTCPConnForm_host });
+                        // mit 2 commands will der select button nicht in die mitte
 			newTCPConnForm.addCommand(getBack2ListCommand());
 			newTCPConnForm.addCommand(screenCommand_startControllCanvas);
 			newTCPConnForm.setCommandListener(this);
@@ -761,6 +777,7 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
     
     public void pauseApp() {
 		// schätzometrisch tät das eh nur timeout machen ...
+                btcomm.close(true);
 		btcomm=null;
     }
     
@@ -878,6 +895,5 @@ public class btrailClient extends MIDlet implements CommandListener, PrintClient
 		}
 		Debuglog.debugln(s + " scanned");
 	}
-
 
 }
