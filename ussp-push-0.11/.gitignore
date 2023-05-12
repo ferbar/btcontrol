@@ -1,0 +1,11 @@
+autom4te.cache/
+config.h
+config.h.in~
+config.log
+config.status
+libtool
+Makefile
+doc/Makefile
+src/Makefile
+src/.deps/
+src/ussp-push
