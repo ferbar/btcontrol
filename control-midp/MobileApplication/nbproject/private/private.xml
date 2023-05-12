@@ -24,13 +24,11 @@
     </editor-bookmarks>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/home/chris/dev/btcontrol/control-midp/MobileApplication/src/org/ferbar/btcontrol/YesNoAlert.java</file>
             <file>file:/home/chris/dev/btcontrol/control-midp/MobileApplication/src/protocol/FBTCtlMessage.java</file>
             <file>file:/home/chris/dev/btcontrol/control-midp/MobileApplication/src/org/ferbar/btcontrol/ValueList.java</file>
             <file>file:/home/chris/dev/btcontrol/control-midp/MobileApplication/src/org/ferbar/btcontrol/BTcommThread.java</file>
             <file>file:/home/chris/dev/btcontrol/control-midp/MobileApplication/src/org/ferbar/btcontrol/Debuglog.java</file>
             <file>file:/home/chris/dev/btcontrol/control-midp/MobileApplication/src/org/ferbar/btcontrol/MIDPCanvas.java</file>
-            <file>file:/home/chris/dev/btcontrol/control-midp/MobileApplication/src/org/ferbar/btcontrol/PrintClient.java</file>
             <file>file:/home/chris/dev/btcontrol/control-midp/MobileApplication/src/org/ferbar/btcontrol/btrailClient.java</file>
         </group>
     </open-files>
