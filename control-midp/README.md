@@ -37,3 +37,9 @@ oder ussp-push (20161002 hat nicht mehr funktioniert)
 
 Im emulator funktioniert alles ohne Bluetooth ohne Probleme (dort TCP connect verwenden). Bluetooth Probleme können nur mit 
 debugForm.append() geloggt und angeschaut werden. Vor langer Zeit hat der wtk emulator mit Bluetooth einmal funktioniert.
+
+### netbeans Emulator -> output broken:
+
+strace -s 100 -e write -p $(pgrep zayit) 2>&1 | grep 'write(1'
+
+
