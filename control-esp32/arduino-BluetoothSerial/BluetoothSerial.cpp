@@ -591,7 +591,7 @@ static void esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *pa
             break;
 
         case ESP_BT_GAP_MODE_CHG_EVT:
-            log_i("ESP_BT_GAP_MODE_CHG_EVT: mode: %d", param->mode_chg.mode);
+            log_i("ESP_BT_GAP_MODE_CHG_EVT: remote addr: %s, mode: %d", bda2str(param->mode_chg.bda, bda_str, sizeof(bda_str)), param->mode_chg.mode);
             break;
 
         default:
