@@ -8,3 +8,4 @@ src/config.h
 src/config-wifi.h
 
 output.map
+bluetoothtest/
