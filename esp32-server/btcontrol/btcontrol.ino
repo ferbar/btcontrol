@@ -331,6 +331,11 @@ void setup(void)
     if(ideMode != FM_QIO) {
 //      ERRORF("WARNING: Flash not in QIO mode!");
     }
+#if CONFIG_SPIRAM_SUPPORT
+    Serial.printf("PSRAM found:     %d\r\n", psramFound());
+    Serial.printf("PSRAM first 4MB size: %u bytes\r\n", ESP.getPsramSize());
+    Serial.printf("PSRAM available: %u\r\n", ESP.getFreePsram());
+#endif
         /* Print chip information */
     esp_chip_info_t chip_info;
     esp_chip_info(&chip_info);
@@ -352,7 +357,6 @@ void setup(void)
     printf("ESP_IDF Version: %s\n", esp_get_idf_version());
 
     ESP32PWM::dumpConfig();
-
     init_wifi();
 
     NOTICEF("loading message layouts");
@@ -494,6 +498,7 @@ void loop(void)
     Serial.print("/");
     Serial.println(ESP.getMaxAllocHeap());
 */
+
     if(hardware) {
       ESP32PWM *esp32pwm=(ESP32PWM *) hardware;
       esp32pwm->loop();
