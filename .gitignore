@@ -1,6 +1,7 @@
 *.o
 .*.d
 .*.swp
+*.FCStd1
 bluetoothserver/Makefile.config
 bluetoothserver/btserver
 bluetoothserver/zpp2zsp
