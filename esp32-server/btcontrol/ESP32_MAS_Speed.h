@@ -1,5 +1,5 @@
 #ifdef HAVE_SOUND
-#include <SD.h>
+// 20231026 ???? #include <SD.h>
 #include "SPIFFS.h"
 #include "ESP32_MAS.h"
 
