@@ -29,7 +29,64 @@ Wlan / Bluetooth Steuerung für die Eisenbahn mit haptischem Feedback. Wlan / Lo
 * 2 abgezwickte Schrauben für die TTGO - Display - Taster - 2,8mm Durchmesser, 6mm lang ohne Gewinde, Ende abgeschliffen
 * 3 Messing Nagerl zum Befestigen vom TTGO - Display
 
-howto bCNC: TODO **************************
+### howto bCNC
+mit >= python3.8
+pip3 install bCNC
+
+Control-Pad-plexiglas-löcher-zu-klein.ngc !!! fixme: checken !!
+
+### howto ngc Datei im bCNC
+'Case - front - with border - taster 6.7mm switch 6mm.svg' importieren
+
+CAM -> EndMill Durchmesser checken (1,5mm)
+CAM -> Material: Feed 40, Plunge Feed 20 depth Increment 0.5
+Probe -> Tool -> "Manual Tool Change" Policy: "Manual Tool Change (NoProbe)" Change: -10.0 -10.0 **MZ: 25**  <<<< das ist MPOS und nicht WPOS !!!!
+checken ob die pos erreichbar ist ( keinen endkontakt erreicht)
+
+die 3 positionierungs Kastel löschen
+
+alle Löcher auswählen die durchgebohrt werden sollen (2 Taster + 3 Taster + 3 Schalter + 3 Schiebepoti)
+
+**bug 2025:** offset für die löcher muss a) für jedes loch einzeln gemacht werden b) es müssen im editor alle neuen Pocket blöcke bis auf den ersten abgehackt werden
+
+**Wichtig: wo gehört das dazu???*** die materialstärke besser auf +0.5mm dazu setzen, dann muss das werkstück nicht 100% plan liegen und die löcher sind trozdem komplett durchgebohrt
+Offset -> End Mill 1.5mm auswählen
+
+mit Tool: Rooler kann man checken dass der Durchmesser der Löcher jetzt um 1,5 kleiner ist
+
+Cut -> Target Depth: -3 (die Dicke der Frontplatte) (ramp, ramplenght. 2)
+
+bei Editor checken ob die gefrästen Löcher auch nur einmal gemacht werden und nicht 6*
+
+die Schalterkerben auswählen die nur oberflächlich gefräst werden sollen (3)
+
+Offset -> End Mill 1mm
+
+siehe bug oben!!!
+
+Cut -> Target Depth -1.0
+
+die Display Löcher auswählen (3)
+
+Drill -> Target Depth -1.0
+
+die Sachen mit dem 1mm Bit umpositionieren im Editor (move down)
+
+Add block "tool change" command: M6
+
+https://github.com/vlachoudis/bCNC/wiki/Tutorials:-Tool-Change-with-bCNC,-FreeCAD-&-grbl
+
+
+fürs einspannen einen 13mm und 18mm schraubenschlüssel herrichten, ein dünnes holzrestl um den fräser wieder sauber zu krigen schadet auch nicht
+
+**VORSICHT** fräser kann einen plexiglas klumpen machen welcher auf dem Fräser picken bleibt
+wassertropfen mit einer spritze hin tun, ein 3mm dicken holzrest zum putzen bereit halten
+
+**FIXME** die kerben für die schalter 3,5mm breit
+
+
+
+
 
 ## 3D Print Boden
 <img src="img_control_pad_3d_boden.jpg" alt="Control Pad - Boden" width="300"/>
