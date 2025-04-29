@@ -133,7 +133,7 @@ Anleitung für radare2: https://reverseengineering.stackexchange.com/questions/1
 
 Übern Browser:
 
-´``
+```
 r2 -c=H .pio/build/wemos_d1_mini32/firmware.elf
 ```
 
