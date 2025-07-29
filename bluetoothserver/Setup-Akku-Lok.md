@@ -63,7 +63,7 @@ Als Raspi Image hab ich DietPi verwendet: https://dietpi.com/downloads/images/Di
 
 * DietPi Image auf eine SD-Karte kopieren (Linux: dd_rescue)
 
-a) /boot mounten + /boot/dietpi.text bearbeiten (wifi config)
+a) /boot mounten + /boot/dietpi.txt bearbeiten (wifi config)
 https://dietpi.com/docs/usage/#how-to-do-an-automatic-base-installation-at-first-boot
 ```
 AUTO_SETUP_ACCEPT_LICENSE=1
@@ -103,10 +103,6 @@ libboost-all-dev avahi-daemon
 ```
 
 mit wiringPi (wiringPi muss von https://github.com/WiringPi/WiringPi mit git clone + build + build install installiert werden)
-```
-apt-get install git build-essential pkg-config libbluetooth-dev libasound2-dev \
-libboost-all-dev avahi-daemon
-```
 
 Für Entwicklung:
 ```
