@@ -63,7 +63,7 @@ Als Raspi Image hab ich DietPi verwendet: https://dietpi.com/downloads/images/Di
 
 * DietPi Image auf eine SD-Karte kopieren (Linux: dd_rescue)
 
-a) /boot mounten + /boot/dietpi.txt bearbeiten (wifi config)
+a) **NOCH IM PC** /boot mounten + /boot/dietpi.txt bearbeiten (wifi config)
 https://dietpi.com/docs/usage/#how-to-do-an-automatic-base-installation-at-first-boot
 ```
 AUTO_SETUP_ACCEPT_LICENSE=1
@@ -80,7 +80,7 @@ b) mit usb - ethernet Adapter booten
 ### DietPi konfigurieren
 dietpi-config: (startet automatisch)
 * Audio Options -> install alsa
-  - bei I2S Sound (max98357) hifiberry-dac auswählen
+  - bei I2S Sound (max98357) hifiberry-dac auswählen (nachher /etc/asound.conf von adafruit eintragen)
 * Performance options
   - ondemand (throttle up: 80%, sample rate 300ms, initial turbo 30s)
 * Advanced Options:
@@ -106,7 +106,7 @@ mit wiringPi (wiringPi muss von https://github.com/WiringPi/WiringPi mit git clo
 
 Für Entwicklung:
 ```
-apt-get install vim less openssh-client lsof gdb pigpio-tools ODER raspi-gpio
+apt-get install vim less screen openssh-client lsof gdb pigpio-tools ODER raspi-gpio
 ```
 
 ### btcontroll installieren
@@ -153,6 +153,22 @@ ln -s /run /var/lib/misc
 rm /etc/resolv.conf && ln -s /run/resolv.conf /etc/
 mv /var/tmp/ /var/tmp-org/ && ln -s /tmp /var/tmp
 ```
+in die /etc/bash.bashrc
+´´`
+# set variable identifying the filesystem you work in (used in the prompt below)
+set_bash_prompt(){
+    fs_mode=$(mount | sed -n -e "s/^\/dev\/.* on \/ .*(\(r[w|o]\).*/\1/p")
+    PS1='\[\033[01;32m\]\u@\h${fs_mode:+($fs_mode)}\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+}
+
+alias ro='sudo mount -o remount,ro / ; sudo mount -o remount,ro /boot'
+alias rw='sudo mount -o remount,rw / ; sudo mount -o remount,rw /boot'
+
+# setup fancy prompt"
+PROMPT_COMMAND=set_bash_prompt
+´´´
+Siehe: https://hallard.me/raspberry-pi-read-only/
+
 
 Anpassungen /lib/systemd/system/systemd-timesyncd.service
 ```
@@ -256,11 +272,44 @@ dietpi-disable_rpi_camera.conf   => blacklist bcm2835_isp
 -mappt /boot/dietpi ins ram => wozu-
 ``` systemctl disable vmtouch```
 
+## bluetooth am Raspberry PI Zero
+
+Der Bluetooth chip hängt am TX0 und RX0
+mit dietpi-config -> Advanced Options -> Serial/UART -> ttyAMA0 console Off
+```
+# scheint notwendig zu sein:
+apt-get install pi-bluetooth
+```
 
 ## remove ms repo, don't need on raspi-lok. (installed by raspi-sys-something repo) 202203: ist schon weg
 mv /etc/apt/sources.list.d/vscode.list /etc/apt/sources.list.d/vscode.list.disabled
 
 ## Setup Wlan soft - AP
+**Wichtig** Umbedingt Tastatur und HDMI Capture Card / Bildschirm organisieren
+### timesync abdrehen
+* dietpi-config -> Network Options: Misc -> Boot wait for network: Off
+* dietpi-config -> Advances -> Time sync mode: Custom
+
+### mit dietpi-gui
+manuell vorher:
+```
+apt-get install -y hostapd isc-dhcp-server lighttpd screen
+# vi /etc/dhcp/dhcpd.conf
+...
+subnet 192.168.0.0 netmask 255.255.255.0 {
+  range 192.168.0.10 192.168.0.19;
+  option routers rtr-239-0-1.example.org, rtr-239-0-2.example.org;
+}
+...
+
+```
+**WICHTIG:** dietpi-config im screen starten!
+
+**Hint:** das hat noch nie ohne probleme hingehaut weil der schon vorm installieren der Pakete das wlan abdreht ...
+wenns doch geht war die IP 192.168.0.100
+
+
+### manuell
 ```
 apt-get install -y hostapd dnsmasq lighttpd
 ```
@@ -303,9 +352,10 @@ serial0 abdrehen? => verhindert cpu throttle / stromsparen
 echo ina219 0x40 > /sys/bus/i2c/devices/i2c-1/new_device
 watch cat /sys/bus/i2c/devices/i2c-1/1-0040/hwmon/hwmon2/in1_input
 ```
-Current Sensor: Die breakout Borards haben einen 0,1 Ohm shunt, default mässig geht das Kernel Modul von 0,01 Ohm aus, daher müssen wir den Shunt anpassen:
+Current Sensor: Die breakout Boards haben einen 0,1 Ohm shunt, default mässig geht das Kernel Modul von 0,01 Ohm aus, daher müssen wir den Shunt anpassen:
 ```
-echo 100000 > shunt_resistor
+echo 100000 > /sys/bus/i2c/devices/i2c-1/1-0040/hwmon/hwmon2/shunt_resistor
+watch cat /sys/bus/i2c/devices/i2c-1/1-0040/hwmon/hwmon2/curr1_input
 ```
 	
 Shunt resistance(uOhm)
@@ -323,7 +373,7 @@ hint: raspberry pi3 + wlan + ntp hat einen Bug, siehe google suche nach TOS flag
 
 bluez 5 hat neues Interface um ein Service zu registrieren, siehe lib/systemd/system/bluetooth.service
 
-### raspbian aufräumen: (in der Zwischenzeit gibt's eine lite Version)
+### VERALTET (in der Zwischenzeit gibt's eine lite Version) raspbian aufräumen:
  
 ```
  apt-get remove --purge wolfram-engine triggerhappy anacron logrotate dphys-swapfile xserver-common lightdm x11-utils xinit x11-xkb-utils xdg-utils x11-common \
@@ -385,4 +435,14 @@ blacklist snd_bcm2835
 ```
 # Keep snd-usb-audio from beeing loaded as first soundcard
 #options snd-usb-audio index=-2
+```
+
+### Abschluss
+
+```
+rw
+systemctl enable btcontrol
+umount /boot
+fsck /dev/mmcblk0p1
+reboot
 ```
