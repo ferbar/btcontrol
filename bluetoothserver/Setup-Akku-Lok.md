@@ -292,6 +292,8 @@ mv /etc/apt/sources.list.d/vscode.list /etc/apt/sources.list.d/vscode.list.disab
 
 ### mit dietpi-gui
 manuell vorher:
+WLAN0 IP Adresse auf 192.168.0.1 ändern (.1 findet man eher)
+
 ```
 apt-get install -y hostapd isc-dhcp-server lighttpd screen
 # vi /etc/dhcp/dhcpd.conf
@@ -301,12 +303,21 @@ subnet 192.168.0.0 netmask 255.255.255.0 {
   option routers rtr-239-0-1.example.org, rtr-239-0-2.example.org;
 }
 ...
-
 ```
+
 **WICHTIG:** dietpi-config im screen starten!
 
 **Hint:** das hat noch nie ohne probleme hingehaut weil der schon vorm installieren der Pakete das wlan abdreht ...
-wenns doch geht war die IP 192.168.0.100
+die default IP ist IP 192.168.0.100 (wenns nicht geändert wurde)
+
+hostapd.conf checken: (202507 hat das dietpi das wpa nicht eingeschalten
+```
+wpa=2
+wpa_passphrase=YourPassPhraseHere
+wpa_key_mgmt=WPA-PSK
+wpa_pairwise=TKIP CCMP
+rsn_pairwise=CCMP
+```
 
 
 ### manuell
