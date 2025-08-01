@@ -154,7 +154,7 @@ rm /etc/resolv.conf && ln -s /run/resolv.conf /etc/
 mv /var/tmp/ /var/tmp-org/ && ln -s /tmp /var/tmp
 ```
 in die /etc/bash.bashrc
-´´`
+```
 # set variable identifying the filesystem you work in (used in the prompt below)
 set_bash_prompt(){
     fs_mode=$(mount | sed -n -e "s/^\/dev\/.* on \/ .*(\(r[w|o]\).*/\1/p")
@@ -166,7 +166,7 @@ alias rw='sudo mount -o remount,rw / ; sudo mount -o remount,rw /boot'
 
 # setup fancy prompt"
 PROMPT_COMMAND=set_bash_prompt
-´´´
+```
 Siehe: https://hallard.me/raspberry-pi-read-only/
 
 
@@ -198,8 +198,9 @@ fsck on boot raus aus der config / cmdline.txt => notwendig?
 ### boot delay auf 0 setzen (default ist 1, viel kanns nicht bringen, von der sd karte abhängig)
 ```
 vi /boot/config.txt
-boot_delay=0
+boot_delay=0 fsck.mode=skip
 ```
+fastboot raus
 
 das sollte mit fstab -> '0' nicht notwendig sein
 ```
@@ -290,7 +291,11 @@ mv /etc/apt/sources.list.d/vscode.list /etc/apt/sources.list.d/vscode.list.disab
 * dietpi-config -> Network Options: Misc -> Boot wait for network: Off
 * dietpi-config -> Advances -> Time sync mode: Custom
 
-### mit dietpi-gui
+### mit dietpi-gui 2025: NICHT SO MACHEN!!!!
+**Hint:** das hat noch nie ohne probleme hingehaut weil der schon vorm installieren der Pakete das wlan abdreht ...
+die default IP ist IP 192.168.0.100 (wenns nicht geändert wurde)
+control-android: JmDNSImpl.java braucht einen patch wenn der isc-dhcp-server verwendet wird (siehe control-android/README.md)
+
 manuell vorher:
 WLAN0 IP Adresse auf 192.168.0.1 ändern (.1 findet man eher)
 
@@ -307,8 +312,6 @@ subnet 192.168.0.0 netmask 255.255.255.0 {
 
 **WICHTIG:** dietpi-config im screen starten!
 
-**Hint:** das hat noch nie ohne probleme hingehaut weil der schon vorm installieren der Pakete das wlan abdreht ...
-die default IP ist IP 192.168.0.100 (wenns nicht geändert wurde)
 
 hostapd.conf checken: (202507 hat das dietpi das wpa nicht eingeschalten
 ```
@@ -320,25 +323,51 @@ rsn_pairwise=CCMP
 ```
 
 
-### manuell
+### halbautomatisiert (2025: SO MACHEN)
+genaue Beschreibung (NICHT machen) : https://blog.thewalr.us/2017/09/26/raspberry-pi-zero-w-simultaneous-ap-and-managed-mode-wifi/
+
 ```
 apt-get install -y hostapd dnsmasq lighttpd
+# hostap + udev + dnsmasq + lighttp config anlegen:
+cd btcontrol/bluetoothserver
+make install
+```
+Hostapd Passwort (bzw in der /etc/hostapd/hostapd.conf anpassen)
+```########### setting hostapd config ###########
+hostap config: ssid: raspi-11 wpa_passphrase=**btcontrol**
 ```
 
-Anleitung entsprechend bis zum forward, das brauch ma ned.
-https://blog.thewalr.us/2017/09/26/raspberry-pi-zero-w-simultaneous-ap-and-managed-mode-wifi/
+Beispiel /etc/network/interfaces
+```
+# Drop-in configs
+source interfaces.d/*
 
-dnsmasq.conf:
+# Ethernet
+wurschtjetzt
+
+# WiFi
+#allow-hotplug wlan0  << startet das client wlan, führt aber zu hacklern, kann dann händisch mit ifup wlan0 gestartet werden
+iface wlan0 inet dhcp
+        wpa-ssid "ssid-wo-wir-client-sein-wollen
+        wpa-psk wifipassword
+pre-up iw dev wlan0 set power_save off
+post-down iw dev "wlan0 set power_save on
+
+up .... iptables RAUS WENNS NICHT GEBRAUCHT!!!
+...
+```
+
+/etc/dnsmasq.conf << dort alles rauskommentieren, die config landet unter /etc/dnsmasq.d/
 ```
 + address=/#/192.168.10.1
 ```
 
-hostapd.conf: (channel kann irgendwas sein, nimmt den vom verbundenen wlan)
+macht das make install schon hostapd.conf: (channel kann irgendwas sein, nimmt den vom verbundenen wlan)
 ```
 + multicast_to_unicast=1
 ```
 
-lighttpd:
+macht das make install schon  lighttpd:
 
 /etc/lighttpd/conf-enabled/redirect.conf
 ```
@@ -347,14 +376,14 @@ lighttpd:
     }
 ```
 
-brauch ma nicht
+-brauch ma nich
 - /sbin/iw phy phy0 interface add ap0 type __ap ; /bin/ip link set ap0 address b8:27:eb:0b:78:f2 ; 
-- /bin/ip link set ap0 up; systemctl restart hostapd ; systemctl restart dnsmasq
+- /bin/ip link set ap0 up; systemctl restart hostapd ; systemctl restart dnsmasq-
 
 dietpi-services
 => hostap + dnsmasq systemd controlled machen, exclude from service restart
 
-serial0 abdrehen? => verhindert cpu throttle / stromsparen
+### serial0 abdrehen? => verhindert cpu throttle / stromsparen
 	
 
 ### Stromsensor - INA219 testen
