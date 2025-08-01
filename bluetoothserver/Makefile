@@ -21,7 +21,7 @@ help:
 		"tags:\t c-tags generieren\n" \
 		"config:\t rebuild config, auto generated if it doesn't exist\n" \
 		"loop:\t wait for changes and rebuild if a file has been changed\n" \
-		"install:\t setup systemd scripts etc\n" \
+		"install:\t setup systemd scripts, setup hostapd accesspoint config, etc\n" \
 		"\n"
 
 
@@ -187,7 +187,7 @@ loop:
 
 install:
 	# raspi setup or srcpd setup?
-	if grep -q ID=raspbian /etc/os-release ; then \
+	@if grep -q ID=raspbian /etc/os-release ; then \
 		echo "Raspi install" ; \
 		btout=$$(bluetoothctl --version) ; \
 		regex='([0-9])\.[0-9]' ; \
@@ -216,27 +216,45 @@ install:
 			ln -s $$PWD/etc/inputrc ~/.inputrc ; \
 		fi ; \
 		echo "########### setting udev AP config ###########" ; \
-		regex='addr ([0-9a-f:]*)' ; if [[ "$$(iw wlan0 info)" =~ $$regex ]] ; then WLAN0_MAC="$${BASH_REMATCH[1]}"; else \
-		echo "error getting wifi mac"; exit 1; fi ; \
+		regex='addr ([0-9a-f:]{17})' ; if [[ "$$(iw wlan0 info)" =~ $$regex ]] ; then \
+			WLAN0_MAC="$${BASH_REMATCH[1]}"; \
+       		else \
+			echo "error getting wifi mac"; exit 1; \
+	       	fi ; \
 		CONF="$$(cat $$PWD/etc/udev/rules.d/70-persistent-net-ap.rules)" ; \
 		eval "echo \"$${CONF//\"/\\\"}\"" > /etc/udev/rules.d/70-persistent-net-ap.rules ; \
-		echo '.' ; \
+		echo 'done' ; \
+		if [ ! -f etc/network/interfaces.d/ap0.conf ] ; then \
+			cp etc/network/interfaces.d/ap0.conf /etc/network/interfaces.d/ ; \
+		else \
+			echo "/etc/network/interfaces.d/ap0.conf already created, remove to recreate" ; \
+		fi ; \
+		echo "default accesspoint IP$$(grep address /etc/network/interfaces.d/ap0.conf)" ; \
+		if grep -q ap0 /etc/network/interfaces ; then \
+			echo "Error: remove ap0 config from /etc/network/interfaces!" ; \
+			exit 1; \
+		fi ; \
 		echo "########### setting dnsmasq config ###########" ; \
 		if [ -d /etc/dnsmasq.d/ ] ; then \
 			if [ ! -f /etc/dnsmasq.d/btcontrol.conf ] ; then \
 				ln -s $$PWD/etc/dnsmasq.conf /etc/dnsmasq.d/btcontrol.conf ; \
+			else \
+				echo "/etc/dnsmasq.d/btcontrol.conf already creaded, remove to recreate" ; \
 			fi ; \
 		else \
-			echo "not installed, skipped" ; \
+			echo "Error: not installed, skipped" ; \
 		fi ; \
 		echo "########### setting hostapd config ###########" ; \
 		if [ -d /etc/hostapd/ ] ; then \
 			if [ ! -f /etc/hostapd/hostapd.conf ] ; then \
 				eval "echo \"$$(cat $$PWD/etc/hostapd/hostapd.conf)\"" > /etc/hostapd/hostapd.conf ; \
 				echo "DAEMON_CONF=\"/etc/hostapd/hostapd.conf\"" > /etc/default/hostapd ; \
+			else \
+				echo "/etc/hostapd/hostapd.conf already created remove to recreate" ; \
 			fi ; \
+			echo "hostap config: ssid: $${HOSTNAME} $$(grep wpa_passphrase /etc/hostapd/hostapd.conf)" ; \
 		else \
-			echo "not installed, skipped" ; \
+			echo "Error: nor installed, skipped" ; \
 		fi ; \
 		echo "########### setting lighttpd config ###########" ; \
 		if [ -d /etc/lighttpd/ ] ; then \
