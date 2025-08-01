@@ -259,9 +259,19 @@ install:
 		echo "########### setting lighttpd config ###########" ; \
 		if [ -d /etc/lighttpd/ ] ; then \
 			echo -e '# created by btcontrol make install, hostname lower case \n' \
-'   $$HTTP["host"] != "'$${HOSTNAME,,}'" { \n' \
-'        url.redirect = ("" => "http://'$${HOSTNAME,,}'/") \n' \
-'    } ' > /etc/lighttpd/conf-enabled/redirect.conf ; \
+'   #$$HTTP["host"] != "'$${HOSTNAME,,}'" { \n' \
+'   #     url.redirect = ("" => "http://'$${HOSTNAME,,}'/") \n' \
+'   # } \n' \
+'   # fürs capture portal: \n' \
+'   server.error-handler-404   = "/index.html" \n' \
+            > /etc/lighttpd/conf-enabled/redirect.conf ; \
+			if [ ! -f /var/www/html/index.html ] ; then \
+				INDEX_HTML="$$(cat etc/lighttpd/index.html)" ; \
+				eval "echo \"$$INDEX_HTML\"" > /var/www/html/index.html ; \
+			else \
+				echo "/var/www/html/index.html already created, delete to recreate" ; \
+			fi ; \
+			cp ../control-android/bin/btcontrol.apk /var/www/html/ ; \
 		else \
 			echo "not installed, skipped" ; \
 		fi ; \
