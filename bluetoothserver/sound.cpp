@@ -62,6 +62,15 @@ int Sound::soundObjects=0;
 
 snd_pcm_uframes_t periodsize = 4096;    /* Periodsize (bytes) */
 
+const char *bits2String(snd_pcm_format_t bits) {
+	switch(bits) {
+		case SND_PCM_FORMAT_U8: return "SND_PCM_FORMAT_U8";
+		case SND_PCM_FORMAT_UNKNOWN: return "SND_PCM_FORMAT_UNKNOWN";
+		default: return "SND_PCM_FORMAT_???";
+	}
+}
+					 
+
 /**
  * https://stackoverflow.com/questions/40346132/how-to-properly-set-up-alsa-device
  * @param bits:
@@ -110,9 +119,9 @@ int setup_alsa(snd_pcm_t *handle, unsigned int rate, snd_pcm_format_t bits)
     }
 
     /* Set number of channels to 1 */
-    if( snd_pcm_hw_params_set_channels(handle, params, 1 ) < 0 )
+    if( (rc = snd_pcm_hw_params_set_channels(handle, params, 1 )) < 0 )
     {
-        fprintf(stderr, "Error setting channels.\n");
+        fprintf(stderr, "Error setting channels. rc=%d\n",rc);
         snd_pcm_close(handle);
         return(-1);
     }
@@ -191,7 +200,7 @@ int setup_alsa(snd_pcm_t *handle, unsigned int rate, snd_pcm_format_t bits)
  */
 void Sound::init(int mode)
 {
-	ERRORF("Sound::init(mode=%d, rate=%d, bits=%d)", mode, this->sample_rate, this->bits);
+	ERRORF("Sound::init(mode=%d, rate=%d, bits=%s)", mode, this->sample_rate, bits2String(this->bits));
 	if(this->handle) {
 		DEBUGF("sound already initialized");
 		throw std::runtime_error("sound already initialized");
@@ -227,7 +236,7 @@ return;
 		throw std::runtime_error("Sound::init() error getting period time max");
 	}
 	unsigned int period_time=std::min(val, 500000u); // either 0.5s or less if hardware doesn't like it
-	DEBUGF("Sound::[%p] init() bits:%d, sample_rate:%d, max period_time: %u", this->handle, this->bits, this->sample_rate, period_time);
+	DEBUGF("Sound::[%p] init() bits:%s, sample_rate:%d, max period_time: %u", this->handle, bits2String(this->bits), this->sample_rate, period_time);
 	if ((err = snd_pcm_set_params(this->handle,
 					this->bits,				// format
 					SND_PCM_ACCESS_RW_INTERLEAVED,		// access
