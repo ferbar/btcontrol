@@ -291,7 +291,7 @@ mv /etc/apt/sources.list.d/vscode.list /etc/apt/sources.list.d/vscode.list.disab
 * dietpi-config -> Network Options: Misc -> Boot wait for network: Off
 * dietpi-config -> Advances -> Time sync mode: Custom
 
-### mit dietpi-gui 2025:NICHT SO MACHEN!!!!
+### mit dietpi-gui 2025: NICHT SO MACHEN!!!!
 **Hint:** das hat noch nie ohne probleme hingehaut weil der schon vorm installieren der Pakete das wlan abdreht ...
 die default IP ist IP 192.168.0.100 (wenns nicht geändert wurde)
 control-android: JmDNSImpl.java braucht einen patch wenn der isc-dhcp-server verwendet wird (siehe control-android/README.md)
@@ -323,7 +323,7 @@ rsn_pairwise=CCMP
 ```
 
 
-### halbautomatisiert (2025:SO MACHEN)
+### halbautomatisiert (2025: SO MACHEN)
 genaue Beschreibung (NICHT machen) : https://blog.thewalr.us/2017/09/26/raspberry-pi-zero-w-simultaneous-ap-and-managed-mode-wifi/
 
 ```
@@ -332,9 +332,10 @@ apt-get install -y hostapd dnsmasq lighttpd
 cd btcontrol/bluetoothserver
 make install
 ```
-Hostapd Passwort anpassen:
-########### setting hostapd config ###########
+Hostapd Passwort (bzw in der /etc/hostapd/hostapd.conf anpassen)
+```########### setting hostapd config ###########
 hostap config: ssid: raspi-11 wpa_passphrase=**btcontrol**
+```
 
 Beispiel /etc/network/interfaces
 ```
