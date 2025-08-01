@@ -108,7 +108,7 @@ void RefreshWifiThread::run() {
         // BTAdvertisedDevice *device=const_cast<BTAdvertisedDeviceSet *>(&(it.second));
         BTAdvertisedDeviceSet &device=it;
         NOTICEF("Bluetooth device: %s  %s %d", device.getAddress().toString().c_str(), device.getName().c_str(), device.getRSSI());
-        String name=String("(B) ");
+        String name=String("\xA0(B) ");
         if(device.getName() == "") {
           name+=device.getAddress().toString(); 
         } else {
