@@ -21,7 +21,7 @@ int ParseExpr::getResult(const std::string &expr, int dir, int speed, bool *curr
 	if(expr.length() > 0 && expr[0] == '(') {
 		size_t exprA_end=expr.find(")",1);
 		if(exprA_end == std::string::npos) {
-			throw std::runtime_error("invalid expressionA [" + expr + "]");
+			throw std::runtime_error("invalid expressionA \"" + expr + "\"");
 		}
 		const std::string exprA=expr.substr(1,exprA_end-1);
 		// printf("parseExpr::getResult A: %s\n", exprA.c_str());
@@ -30,12 +30,12 @@ int ParseExpr::getResult(const std::string &expr, int dir, int speed, bool *curr
 			is_and=true;
 		} else if(expr.compare(exprA_end, 6, ") || (") == 0) {
 		} else {
-			throw std::runtime_error("invalid and (" + expr + ")");
+			throw std::runtime_error("invalid binary operator \"" + expr + "\" at \""+expr.substr(exprA_end)+"\"");
 		}
 		size_t exprB_start=exprA_end+6;
 		size_t exprB_end=expr.find(")",exprB_start);
 		if(exprB_end == std::string::npos) {
-			throw std::runtime_error("invalid expressionB [" + expr + "]");
+			throw std::runtime_error("invalid expressionB \"" + expr + "\"");
 		}
 
 		const std::string exprB=expr.substr(exprB_start,exprB_end - exprB_start);
@@ -90,5 +90,8 @@ int ParseExpr::getResult(const std::string &expr, int dir, int speed, bool *curr
 	if(expr == "brake+10s")  return (this->lastBrake > time(NULL) - 10 );
 	if(expr == "brake+15s")  return (this->lastBrake > time(NULL) - 15 );
 
-	throw std::runtime_error("invalid expression (" + expr + ")");
+	if(expr == "0") return 0;
+	if(expr == "1") return 1;
+
+	throw std::runtime_error("invalid expression \"" + expr + "\"");
 }
