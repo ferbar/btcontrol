@@ -62,4 +62,9 @@ public class AndroidStream implements PlattformStream {
 	public String server;
 	public int port;
 	private Socket socket;
+
+	@Override
+	public String getLocalAddress() {
+		return this.socket.getLocalAddress().toString();
+	}
 }
