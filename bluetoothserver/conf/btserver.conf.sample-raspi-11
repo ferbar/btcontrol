@@ -1,0 +1,60 @@
+#soundset=sound/EASY-DAMPF/EASYLINE_DAMPF_COL.zpr
+soundset=sound/DA_S_AT_U/DA_S_AT_U.zpr
+
+#soundset=sound/DampfDieselZimoSounds/DA_DI_R_EU_Coll1.zpr
+#soundset=sound/oebb1099/oebb1099.zpr
+#sound.name=BR218
+#sound.name=BR01-10
+sound.name=Reihe U
+#sound.horn=sound/EASY-DAMPF/Pfiffe/Volldampf/Pfiff_BR77_kurz_22_ID(1103).wav
+sound.horn=sound/DA_S_AT_U/Pfiffe/Murtal/pfiff_anfahrt2.wav
+#sound.horn=sound/oebb1099/Hupe_kurz.wav
+#sound.abfahrt=sound/oebb1099/ansprache.wav
+sound.abfahrt=sound/DA_S_AT_U/Schaffnerpfiff/pfeiferl.wav
+#sound.boil=sound/DA_DI_R_EU_Coll1/DA_DI_R_EU_Coll1/Sieden/Sieden_dumpf -leise.wav
+sound.boil=sound/DA_S_AT_U/Sieden/Sieden_11khz_vol03.wav
+sound.brake=sound/DA_S_AT_U/Bremsenqietschen/Bremsenquietschen1.wav
+sound.conf/Vorsicht Zug fährt ab.wav=F4
+
+# volume level
+#sound.level=150
+# force samplerate
+sound.samplerate=22050
+
+# bei dem Wert fahrt die Lok los
+digispark.motorStart=60
+digispark.motorFullSpeed=210
+digispark.motorFullSpeedBoost=200
+# Power Meter / Akkustand
+powerMonitor.init.value=ina219 0x40
+powerMonitor.init.file=/sys/bus/i2c/devices/i2c-1/new_device
+powerMonitor.voltage.file=/sys/bus/i2c/devices/i2c-1/1-0040/hwmon/hwmon2/in1_input
+powerMonitor.voltage.max=16800
+powerMonitor.voltage.min=10000
+
+# wenn RaspiPWM verwendet wird. Expressions siehe ParseExpr.cpp
+wiringpi.pin.13=pwm
+# richtungs pin für die brücke
+wiringpi.pin.5=dir
+# Lampen vorne
+wiringpi.pin.9=(!dir && F0) && (!speed)
+wiringpi.pin.9.pwm=10
+wiringpi.pin.9.a=(!dir && F0) && (speed)
+wiringpi.pin.9.a.pwm=40
+# Lampen hinten
+wiringpi.pin.10=(dir && F0) && (!speed)
+wiringpi.pin.10.pwm=10
+wiringpi.pin.10.a=(dir && F0) && (speed)
+wiringpi.pin.10.a.pwm=40
+# Führerhaus Beleuchtung
+wiringpi.pin.22=!speed
+wiringpi.pin.22.pwm=20
+# Rauchfang - Heizelement
+#wiringpi.pin.9=(accel+15s) || (F3)
+# Rauchfang - Ventilator
+#wiringpi.pin.10=(accel+10s) || (F3)
+# in Sekunden
+#wiringpi.pin.9.maxtime=95
+#wiringpi.pin.10.maxtime=90
+# max98357a mode/enable pin, immer auf 1 setzen, zum energiesparen auf 0 setzen
+wiringpi.pin.16=1
