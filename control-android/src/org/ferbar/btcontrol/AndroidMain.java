@@ -146,7 +146,7 @@ public class AndroidMain extends Activity {
 			// MessageLayouts.dump();
 		} catch (Exception e) {
 			Toast.makeText(this, "error loading protocol", Toast.LENGTH_LONG).show();
-			e.printStackTrace();
+			Log.e(TAG, "onCreate messageLayouts.load exception", e);
 			this.finish();
 			return;
 		}
@@ -273,6 +273,7 @@ public class AndroidMain extends Activity {
 		        	final SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
 		        	String bonjourIPAddress=settings.getString("bonjourIPAddress", null);
 		        	if(bonjourIPAddress != null) {
+		        		Log.i(TAG, "AndroidMain.initBonjour bonjourIPAddress="+bonjourIPAddress);
 		        		System.setProperty("net.mdns.interface", bonjourIPAddress);
 		        	}
 					AndroidMain.this.jmdns = JmDNS.create();  // Achtung !!! im strict mode macht das im UI thread eine Network Exception!!!
@@ -321,6 +322,7 @@ public class AndroidMain extends Activity {
 				                		bHost.setOnClickListener(new View.OnClickListener() {
 				                			public void onClick(View v) {
 				                				eHost.setText(mDNSHosts.get(bHost.getText()));
+				                				onButtonConnect(null);
 				                			}
 				                		});
 				                		list.addView(bHost);
@@ -351,7 +353,7 @@ public class AndroidMain extends Activity {
 						});
 					} // synchronized
 				} catch (IOException e) {
-					e.printStackTrace();
+					Log.e(TAG, "AndroidMain.initBonjour() "+e.getMessage(), e);
 					AndroidMain.this.notifyUser("exception:" + e.getMessage());
 				}
     	    }
@@ -374,8 +376,7 @@ public class AndroidMain extends Activity {
 	    		try {
 					this.jmdns.close();
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+					Log.e(TAG, "AndroidMain onPause() Exception", e);
 				}
 	    		this.jmdns=null;
 	    	}
@@ -400,8 +401,7 @@ public class AndroidMain extends Activity {
 					try {
 						AndroidMain.btcomm.connectedNotifyObject.lock();
 					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
+						Log.e(TAG,"ConnectThread.run() exception", e);
 					}
 				}
 				if(!btcomm.connError()) {
