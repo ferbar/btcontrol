@@ -1175,12 +1175,14 @@ void GuiViewControlLoco::loop() {
           int color=TFT_GREEN;
           if(controlClientThread.getCurrLok().currspeed > avg+5 || controlClientThread.getCurrLok().currspeed < avg-5)
             color=TFT_RED;
-          if(this->forceStop)
+          if(this->forceStop && ((millis() >> 10) & 1))
             color=TFT_YELLOW;
           // Line
           tft.drawFastHLine(0, 50, tft.width(), color);
           // Speed-Bar
           width=tft.width()* (long) controlClientThread.getCurrLok().currspeed/255;
+          if(this->forceStop)
+            width=tft.width();
           tft.fillRect(0, 51, width, 10, color);
           tft.fillRect(width, 51, tft.width() - width, 10, TFT_BLACK);
           // ^          => fixme: braucht zuviel höhe
