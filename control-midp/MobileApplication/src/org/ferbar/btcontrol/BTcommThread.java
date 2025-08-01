@@ -54,7 +54,7 @@ public class BTcommThread extends Thread {
 		public OutputStream openOutputStream() throws java.io.IOException ;
 		public void connect() throws java.io.IOException;
 		public String toString();
-                public String getLocalAddress();
+		public String getLocalAddress();
 	}
 	
 	// me4se kann das nicht:
