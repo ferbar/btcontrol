@@ -26,6 +26,9 @@ void softPwmCreate(unsigned pin, int value, int maxrange) {
 	gpioSetPWMfrequency(pin, 1000);
 	gpioPWM(pin, value);
 }
+void softPwmWrite(unsigned pin, int value) {
+	// gpioPWM(pin, value);
+}
 void softPwmStop(unsigned pin) {
 	gpioPWM(pin, 0);
 }
