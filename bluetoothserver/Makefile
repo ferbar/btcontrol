@@ -224,7 +224,7 @@ install:
 		CONF="$$(cat $$PWD/etc/udev/rules.d/70-persistent-net-ap.rules)" ; \
 		eval "echo \"$${CONF//\"/\\\"}\"" > /etc/udev/rules.d/70-persistent-net-ap.rules ; \
 		echo 'done' ; \
-		if [ ! -f etc/network/interfaces.d/ap0.conf ] ; then \
+		if [ ! -f /etc/network/interfaces.d/ap0.conf ] ; then \
 			cp etc/network/interfaces.d/ap0.conf /etc/network/interfaces.d/ ; \
 		else \
 			echo "/etc/network/interfaces.d/ap0.conf already created, remove to recreate" ; \
