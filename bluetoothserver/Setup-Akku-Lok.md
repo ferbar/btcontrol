@@ -376,7 +376,7 @@ macht das make install schon  lighttpd:
     }
 ```
 
--brauch ma nich
+#### brauch ma nicht
 - /sbin/iw phy phy0 interface add ap0 type __ap ; /bin/ip link set ap0 address b8:27:eb:0b:78:f2 ; 
 - /bin/ip link set ap0 up; systemctl restart hostapd ; systemctl restart dnsmasq-
 
