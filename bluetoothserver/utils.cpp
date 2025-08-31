@@ -117,7 +117,9 @@ bool utils::startsWith(const std::string &str, const std::string &with) {
 }
 
 bool utils::startsWith(const std::string &str, const char *with) {
-	return str.find(with) == 0;
+	size_t len=strlen(with);
+	// if(str.length() < len) return false;
+	return str.compare(0, len, with) == 0;
 }
 
 bool utils::endsWith(const std::string &str, const char *with) {
@@ -253,15 +255,33 @@ std::string readFile(const std::string &filename)
 			throw std::runtime_error(utils::format("error stat file %s",cf));
 		}
 	}
-	ret.resize(buf.st_size,'\0');
 	FILE *f=fopen(cf,"r");
 	if(!f) {
 		throw std::runtime_error(utils::format("error reading file %s",filename.c_str()));
 	} else {
-		const char *data=ret.data(); // mutig ...
-		fread((void*)data,1,buf.st_size,f);
+		size_t filelen=buf.st_size;
+		// spezialbehandlung für /proc fs dateien ...
+		if(utils::startsWith(filename, "/proc/")) {
+			filelen=0;
+			while(true) {
+				DEBUGF("----reading %s %lu bytes",filename.c_str(),filelen);
+				ret.resize(filelen+1024,'\0');
+				const char *data=ret.data()+filelen; // mutig ...
+				size_t readBytes=fread((void*)data,1,1024,f);
+				if(readBytes != 1024) {
+					filelen+=readBytes;
+					break;
+				}
+				filelen+=1024;
+			}
+			DEBUGF("file contents=%s\nsize=%d", ret.c_str(),filelen);
+		} else {
+			ret.resize(buf.st_size,'\0');
+			const char *data=ret.data(); // mutig ...
+			fread((void*)data,1,buf.st_size,f);
+		}
 		fclose(f);
-		DEBUGF("reading %s %lu bytes",filename.c_str(),buf.st_size);
+		DEBUGF("reading %s %lu bytes",filename.c_str(),filelen);
 	}
 	return ret;
 }
