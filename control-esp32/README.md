@@ -13,8 +13,11 @@ Wlan / Bluetooth Steuerung für die Eisenbahn mit haptischem Feedback. Wlan / Lo
 * Stiftleiste (eventuell beim ESP32 dabei)
 * Ein paar Taster (3 für mein .svg)
 * Ein paar Schalter (3 für mein .svg)
-* Lochrasterplatine oder gefräste Plexiglas Front
+* gefräste Plexiglas Front 10cm * 9cm
 * Akku mit passendem Stecker für das T-Display (JST-PH 1,25mm), oder 14500 AA Lipo Akku + Bat halter
+* ein/aus Schalter, 3Ohm R, usb-c buchse
+* Schrauben für die Frontplatte 1,6*8mm 4Stk
+* Nieten für die Taster
 * Visual Studio Code + USB C Kabel
 
 ## Plexiglas Frontplatte
@@ -94,6 +97,8 @@ wassertropfen mit einer spritze hin tun, ein 3mm dicken holzrest zum putzen bere
 * 4* 1,6x8 versenk Schrauben
 
 howto: TODO **************************
+**CHECKEN** 14500 Halterung muss 17mm tiefe platz ham
+**CHECKEN** loch für usb-c buchse
 
 ## Kompilieren
 
@@ -151,7 +156,7 @@ xdot.py ist nur bedingt hilfreich
 
 ## Hardware:
 
-5V Stromanschulss: keine Strom-Rund Buchse montieren, GND -> GND, +5V -> 1Ohm R -> Kondensator am TTGO-T-Display Board (siehe Bild)
+5V Stromanschulss: USB-C Buchse montieren, GND -> GND, +5V -> 3Ohm R -> Kondensator am TTGO-T-Display Board (siehe Bild)
 
 ## Workarounds
 
