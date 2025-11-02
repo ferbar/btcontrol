@@ -93,13 +93,14 @@ dietpi-config: (startet automatisch)
 * wenn die uhrzeit nicht gesetzt werden konnte: NTP Mirror -> timeserver setzen
 * Serial Console / UART -> aus, dort hängt das BT zeug dran
 * Audio Options -> install alsa
-  - bei I2S Sound (max98357) hifiberry-dac auswählen (nachher /etc/asound.conf von https://learn.adafruit.com/adafruit-max98357-i2s-class-d-mono-amp/raspberry-pi-usage eintragen)
+  - bei I2S Sound (max98357) hifiberry-dac auswählen (sound config machen wir unten dann)
 * Performance options
   - ondemand (throttle up: 80%, sample rate 300ms, initial turbo 30s)
 * Advanced Options:
   - -swap space weg,- (manuell machen)
   - Time sync mode [boot only] <<< auf never tun???
   - bluetooth on
+  - I2C on
 * security options:
   - change hostname (sollte schon gesetzt sein)
 * Network Options Adapters:
@@ -178,6 +179,11 @@ set_bash_prompt(){
     PS1='\[\033[01;32m\]\u@\h${fs_mode:+($fs_mode)}\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
 }
 
+# ab 2025:
+alias ro='sudo mount -o remount,ro / ; sudo mount -o remount,ro /boot/firmware'
+alias rw='sudo mount -o remount,rw / ; sudo mount -o remount,rw /boot/firmware'
+
+# alt
 alias ro='sudo mount -o remount,ro / ; sudo mount -o remount,ro /boot'
 alias rw='sudo mount -o remount,rw / ; sudo mount -o remount,rw /boot'
 
@@ -253,9 +259,11 @@ systemctl disable dietpi-ramlog.service
 ```
 
 ### sound config
-sound config für I2S siehe adafruit link
+#### sound config für I2S
+das meiste macht schon dietPi. Wir brauchen nur die /etc/asound.conf von https://learn.adafruit.com/adafruit-max98357-i2s-class-d-mono-amp/raspberry-pi-usage
 
-=> usb soundkarte wird standardmässig nicht als default genommen
+#### USB Soundkarte
+usb soundkarte wird standardmässig nicht als default genommen
 Fehlermeldung:
 aplay: set_params:1339: Sample format non available
 
