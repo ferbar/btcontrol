@@ -93,7 +93,7 @@ dietpi-config: (startet automatisch)
 * wenn die uhrzeit nicht gesetzt werden konnte: NTP Mirror -> timeserver setzen
 * Serial Console / UART -> aus, dort hängt das BT zeug dran
 * Audio Options -> install alsa
-  - bei I2S Sound (max98357) hifiberry-dac auswählen (nachher /etc/asound.conf von adafruit eintragen)
+  - bei I2S Sound (max98357) hifiberry-dac auswählen (nachher /etc/asound.conf von https://learn.adafruit.com/adafruit-max98357-i2s-class-d-mono-amp/raspberry-pi-usage eintragen)
 * Performance options
   - ondemand (throttle up: 80%, sample rate 300ms, initial turbo 30s)
 * Advanced Options:
