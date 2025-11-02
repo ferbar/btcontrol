@@ -266,7 +266,7 @@ das meiste macht schon dietPi.
     `dtoverlay=max98357a`
   * eventuell checken ob die raspi onboard module geladen werden
   * rebooten, sound abspielen mit aplay ERST DANN mit alsamixer checken
-  * gpio mode 27 out ; gpio write 27 1 ; aplay /usr/share/sounds/alsa/Front_Center.wav
+  * `gpio mode 27 out ; gpio write 27 1 ; aplay /usr/share/sounds/alsa/Front_Center.wav`
 
 #### USB Soundkarte
 usb soundkarte wird standardmässig nicht als default genommen
