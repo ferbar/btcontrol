@@ -16,7 +16,7 @@ Das ist eine Anleitung um eine LGB Lok ohne Schienenstrom fahren lassen zu könn
 | ~~alt~~ | Bluetooth Dongle | ist im Zero-W schon eingebaut. ESP32 Control Pad geht nur mit Bluetooth 4.0 dongle. Empfehlung Class 1 (z.b. Hama)
 | ~~optional~~ | usb soundkarte	| Vorzugsweise mit eingebautem Verstärker | neuhold |
 | ~~optional~~ | Verstärker | PAM8406 (oder PAM8403) |
-| 1 | optional MAX98357 I2S | NEU: I2S 'Soundkarte' hat einen Verstärker eingebaut, damit entfällt der PAM. [Verkabelung + Setup](https://learn.adafruit.com/adafruit-max98357-i2s-class-d-mono-amp/raspberry-pi-wiring) |
+| 1 | optional MAX98357 I2S | NEU: I2S 'Soundkarte' hat einen Verstärker eingebaut, damit entfällt der PAM, wichtig: geht nur mit wiringPi. [Verkabelung + Setup](https://learn.adafruit.com/adafruit-max98357-i2s-class-d-mono-amp/raspberry-pi-wiring) |
 | 1 | optional INA219 | NEU: I2C Strom/Spannungssensor |
 | 4 | IRFML8244	| Mosfet Rds on 20 mohm für die LED Ausgänge | farnell |
 | 7 | 1k R 1206	| SMD R	9335757 ??????? |
@@ -93,7 +93,7 @@ dietpi-config: (startet automatisch)
 * wenn die uhrzeit nicht gesetzt werden konnte: NTP Mirror -> timeserver setzen
 * Serial Console / UART -> aus, dort hängt das BT zeug dran
 * Audio Options -> install alsa
-  - bei I2S Sound (max98357) hifiberry-dac auswählen (sound config machen wir unten dann)
+  - bei I2S Sound "none" auswählen (max98357 gibts nicht) auswählen (sound config machen wir unten dann)
 * Performance options
   - ondemand (throttle up: 80%, sample rate 300ms, initial turbo 30s)
 * Advanced Options:
@@ -260,7 +260,12 @@ systemctl disable dietpi-ramlog.service
 
 ### sound config
 #### sound config für I2S
-das meiste macht schon dietPi. Wir brauchen nur die /etc/asound.conf von https://learn.adafruit.com/adafruit-max98357-i2s-class-d-mono-amp/raspberry-pi-usage
+das meiste macht schon dietPi. 
+  * /etc/asound.conf von https://learn.adafruit.com/adafruit-max98357-i2s-class-d-mono-amp/raspberry-pi-usage
+  * `vi /boot/firmware/config.txt`<br>
+    `dtoverlay=max98357a`
+  * eventuell checken ob die raspi onboard module geladen werden
+  * rebooten, sound abspielen mit aplay ERST DANN mit alsamixer checken
 
 #### USB Soundkarte
 usb soundkarte wird standardmässig nicht als default genommen
