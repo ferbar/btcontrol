@@ -68,38 +68,55 @@ https://dietpi.com/docs/usage/#how-to-do-an-automatic-base-installation-at-first
 ```
 AUTO_SETUP_ACCEPT_LICENSE=1
 AUTO_SETUP_KEYBOARD_LAYOUT=de
-AUTO_SETUP_TIMEZONE=Europe/xyz
+AUTO_SETUP_TIMEZONE=Europe/Berlin
 AUTO_SETUP_NET_WIFI_ENABLED=1
 AUTO_SETUP_NET_WIFI_COUNTRY_CODE=DE
 AUTO_SETUP_NET_HOSTNAME=raspi-99-6001
+AUTO_SETUP_BOOT_WAIT_FOR_NETWORK=0
+
+# optional
+  AUTO_SETUP_SSH_PUBKEY=
+
+CONFIG_CHECK_DIETPI_UPDATES=0
+CONFIG_CHECK_APT_UPDATES=0
+
+# das brauch ma fürs erste update -> nicht abdrehn
+# CONFIG_NTP_MODE=0
+CONFIG_ENABLE_IPV6=0
 ```
 + SSID + pass in dietpi-wifi.txt
 
-b) mit usb - ethernet Adapter booten
+b) mit etwas glück taucht der Raspi im netzwerk dank wlan auf. wenn nicht: mit usb - ethernet Adapter () booten (es gibt USB-Ethernet + 3 USB ports)
 
 ### DietPi konfigurieren
 dietpi-config: (startet automatisch)
+* wenn die uhrzeit nicht gesetzt werden konnte: NTP Mirror -> timeserver setzen
+* Serial Console / UART -> aus, dort hängt das BT zeug dran
 * Audio Options -> install alsa
   - bei I2S Sound (max98357) hifiberry-dac auswählen (nachher /etc/asound.conf von adafruit eintragen)
 * Performance options
   - ondemand (throttle up: 80%, sample rate 300ms, initial turbo 30s)
 * Advanced Options:
   - -swap space weg,- (manuell machen)
+  - Time sync mode [boot only] <<< auf never tun???
   - bluetooth on
 * security options:
-  - change hostname
+  - change hostname (sollte schon gesetzt sein)
 * Network Options Adapters:
-  - Wlan ein, key, country-code
-  - IPv6 off
+  - Wlan ein, key, country-code (sollte schon sein)
+  - IPv6 off (sollte schon sein)
   - Wifi: Auto reconnect on
 * Network Options Misc: Boot Net Wait: off
 
 ### Notwendige Pakete installieren
 
+```
+apt-get install git build-essential pkg-config libbluetooth-dev libasound2-dev \
+libboost-all-dev avahi-daemon
+```
 mit pigpio (geht nicht mit I2S DAC)
 ```
-apt-get install git build-essential pkg-config libpigpio-dev libbluetooth-dev libasound2-dev \
-libboost-all-dev avahi-daemon
+yum install libpigpio-dev 
 ```
 
 mit wiringPi (wiringPi muss von https://github.com/WiringPi/WiringPi mit git clone + build + build install installiert werden)
@@ -153,7 +170,7 @@ ln -s /run /var/lib/misc
 rm /etc/resolv.conf && ln -s /run/resolv.conf /etc/
 mv /var/tmp/ /var/tmp-org/ && ln -s /tmp /var/tmp
 ```
-in die /etc/bash.bashrc
+vi /etc/bash.bashrc
 ```
 # set variable identifying the filesystem you work in (used in the prompt below)
 set_bash_prompt(){
@@ -206,15 +223,6 @@ das sollte mit fstab -> '0' nicht notwendig sein
 ```
  vi /boot/cmdline.txt
 fsck.repair=yes auf fsck.repair=no
-```
-
-
-### DietPi Updates disablen:
-
-vi /boot/dietpi.txt
-```
-CONFIG_CHECK_DIETPI_UPDATES=0
-CONFIG_CHECK_APT_UPDATES=0
 ```
 
 ### vim config tunen (mouse aus)
@@ -288,7 +296,6 @@ mv /etc/apt/sources.list.d/vscode.list /etc/apt/sources.list.d/vscode.list.disab
 ## Setup Wlan soft - AP
 **Wichtig** Umbedingt Tastatur und HDMI Capture Card / Bildschirm organisieren
 ### timesync abdrehen
-* dietpi-config -> Network Options: Misc -> Boot wait for network: Off
 * dietpi-config -> Advances -> Time sync mode: Custom
 
 ### mit dietpi-gui 2025: NICHT SO MACHEN!!!!
