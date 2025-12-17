@@ -164,14 +164,13 @@ dietpi-services
   cron -> inactive + mask (202304: ok)
 -systemctl disable cron-
 
-rm -rf /var/lib/dhcp /var/lib/misc
-ln -s /run/ /var/lib/dhcp
+rm -rf /var/lib/dhcp /var/lib/misc && ln -s /run/ /var/lib/dhcp
 ln -s /run /var/lib/run
 ln -s /run /var/lib/misc
 rm /etc/resolv.conf && ln -s /run/resolv.conf /etc/
 mv /var/tmp/ /var/tmp-org/ && ln -s /tmp /var/tmp
 ```
-vi /etc/bash.bashrc
+##### ~~vi /etc/bash.bashrc~~ (macht das make install schon)
 ```
 # set variable identifying the filesystem you work in (used in the prompt below)
 set_bash_prompt(){
