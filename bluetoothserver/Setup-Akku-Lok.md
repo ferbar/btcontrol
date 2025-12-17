@@ -91,7 +91,6 @@ b) mit etwas glück taucht der Raspi im netzwerk dank wlan auf. wenn nicht: mit 
 ### DietPi konfigurieren
 dietpi-config: (startet automatisch)
 * wenn die uhrzeit nicht gesetzt werden konnte: NTP Mirror -> timeserver setzen
-* Serial Console / UART -> aus, dort hängt das BT zeug dran
 * Audio Options -> install alsa
   - bei I2S Sound "none" auswählen (max98357 gibts nicht) auswählen (sound config machen wir unten dann)
 * Performance options
@@ -99,6 +98,7 @@ dietpi-config: (startet automatisch)
 * Advanced Options:
   - -swap space weg,- (manuell machen)
   - Time sync mode [boot only] <<< auf never tun???
+  - Serial/UART -> ttyAMA0 console Off (dort hängt das BT zeug dran) ttyS0 brauchen wir nicht kann man somit auch abdrehen
   - bluetooth on
   - I2C on
 * security options:
