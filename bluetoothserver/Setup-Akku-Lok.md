@@ -63,7 +63,7 @@ Als Raspi Image hab ich DietPi verwendet: https://dietpi.com/downloads/images/Di
 
 * DietPi Image auf eine SD-Karte kopieren (Linux: dd_rescue)
 
-a) **NOCH IM PC** /boot mounten + /boot/dietpi.txt bearbeiten (wifi config)
+#### **NOCH IM PC** /boot mounten + /boot/dietpi.txt bearbeiten (wifi config)
 https://dietpi.com/docs/usage/#how-to-do-an-automatic-base-installation-at-first-boot
 ```
 AUTO_SETUP_ACCEPT_LICENSE=1
@@ -73,6 +73,8 @@ AUTO_SETUP_NET_WIFI_ENABLED=1
 AUTO_SETUP_NET_WIFI_COUNTRY_CODE=DE
 AUTO_SETUP_NET_HOSTNAME=raspi-99-6001
 AUTO_SETUP_BOOT_WAIT_FOR_NETWORK=0
+AUTO_SETUP_SWAPFILE_SIZE=0
+SURVEY_OPTED_IN=0
 
 # optional
   AUTO_SETUP_SSH_PUBKEY=
@@ -84,7 +86,12 @@ CONFIG_CHECK_APT_UPDATES=0
 # CONFIG_NTP_MODE=0
 CONFIG_ENABLE_IPV6=0
 ```
-+ SSID + pass in dietpi-wifi.txt
+#### SSID + pass in dietpi-wifi.txt
+```
+aWIFI_SSID[0]='WIFI-NAME'
+# - WiFi key: If no key/open, leave this blank
+aWIFI_KEY[0]='PASSWORD'
+```
 
 b) mit etwas glück taucht der Raspi im netzwerk dank wlan auf. wenn nicht: mit usb - ethernet Adapter () booten (es gibt USB-Ethernet + 3 USB ports)
 
