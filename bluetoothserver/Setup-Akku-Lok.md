@@ -212,7 +212,7 @@ reboot
 rw    # -> disk rw mounten
 vi /etc/fstab
 ```
-mit 0 am Ende von / und /boot den fsck on boot disablen
+bei / und /boot letztes Feld auf 0 setzen => fsck on boot disablen
 
 fsck on boot raus aus der config / cmdline.txt => notwendig?
 
