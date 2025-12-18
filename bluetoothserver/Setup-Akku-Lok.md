@@ -301,13 +301,23 @@ dietpi-disable_rpi_camera.conf   => blacklist bcm2835_isp
 -mappt /boot/dietpi ins ram => wozu-
 ``` systemctl disable vmtouch```
 
-## bluetooth am Raspberry PI Zero
+## Bluetooth am Raspberry PI Zero
 
 Der Bluetooth chip hängt am TX0 und RX0
 mit dietpi-config -> Advanced Options -> Serial/UART -> ttyAMA0 console Off
 ```
 # scheint notwendig zu sein:
 apt-get install pi-bluetooth
+```
+### Raspberry PI Zero W Bluetooth geht nicht Kernel 6.1.21
+checken: ```ls -la /dev/serial*```
+
+Text: https://github.com/timg236/raspberrypi-sys-mods/blob/serial0/etc.armhf/udev/rules.d/99-com.rules#L14
+
+wenn die /dev/serial1 fehlt dann:
+````
+cat /etc/udev/rules.d/99-com.rules
+KERNEL=="ttyAMA0", SYMLINK+="serial1" 
 ```
 
 ## remove ms repo, don't need on raspi-lok. (installed by raspi-sys-something repo) 202203: ist schon weg
