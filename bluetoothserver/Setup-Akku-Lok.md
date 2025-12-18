@@ -63,7 +63,7 @@ Als Raspi Image hab ich DietPi verwendet: https://dietpi.com/downloads/images/Di
 
 * DietPi Image auf eine SD-Karte kopieren (Linux: dd_rescue)
 
-a) **NOCH IM PC** /boot mounten + /boot/dietpi.txt bearbeiten (wifi config)
+#### **NOCH IM PC** /boot mounten + /boot/dietpi.txt bearbeiten (wifi config)
 https://dietpi.com/docs/usage/#how-to-do-an-automatic-base-installation-at-first-boot
 ```
 AUTO_SETUP_ACCEPT_LICENSE=1
@@ -73,6 +73,8 @@ AUTO_SETUP_NET_WIFI_ENABLED=1
 AUTO_SETUP_NET_WIFI_COUNTRY_CODE=DE
 AUTO_SETUP_NET_HOSTNAME=raspi-99-6001
 AUTO_SETUP_BOOT_WAIT_FOR_NETWORK=0
+AUTO_SETUP_SWAPFILE_SIZE=0
+SURVEY_OPTED_IN=0
 
 # optional
   AUTO_SETUP_SSH_PUBKEY=
@@ -84,14 +86,18 @@ CONFIG_CHECK_APT_UPDATES=0
 # CONFIG_NTP_MODE=0
 CONFIG_ENABLE_IPV6=0
 ```
-+ SSID + pass in dietpi-wifi.txt
+#### SSID + pass in dietpi-wifi.txt
+```
+aWIFI_SSID[0]='WIFI-NAME'
+# - WiFi key: If no key/open, leave this blank
+aWIFI_KEY[0]='PASSWORD'
+```
 
 b) mit etwas glück taucht der Raspi im netzwerk dank wlan auf. wenn nicht: mit usb - ethernet Adapter () booten (es gibt USB-Ethernet + 3 USB ports)
 
 ### DietPi konfigurieren
 dietpi-config: (startet automatisch)
 * wenn die uhrzeit nicht gesetzt werden konnte: NTP Mirror -> timeserver setzen
-* Serial Console / UART -> aus, dort hängt das BT zeug dran
 * Audio Options -> install alsa
   - bei I2S Sound "none" auswählen (max98357 gibts nicht) auswählen (sound config machen wir unten dann)
 * Performance options
@@ -99,6 +105,7 @@ dietpi-config: (startet automatisch)
 * Advanced Options:
   - -swap space weg,- (manuell machen)
   - Time sync mode [boot only] <<< auf never tun???
+  - Serial/UART -> ttyAMA0 console Off (dort hängt das BT zeug dran) ttyS0 brauchen wir nicht kann man somit auch abdrehen
   - bluetooth on
   - I2C on
 * security options:
@@ -164,14 +171,13 @@ dietpi-services
   cron -> inactive + mask (202304: ok)
 -systemctl disable cron-
 
-rm -rf /var/lib/dhcp /var/lib/misc
-ln -s /run/ /var/lib/dhcp
+rm -rf /var/lib/dhcp /var/lib/misc && ln -s /run/ /var/lib/dhcp
 ln -s /run /var/lib/run
 ln -s /run /var/lib/misc
 rm /etc/resolv.conf && ln -s /run/resolv.conf /etc/
 mv /var/tmp/ /var/tmp-org/ && ln -s /tmp /var/tmp
 ```
-vi /etc/bash.bashrc
+##### ~~vi /etc/bash.bashrc~~ (macht das make install schon)
 ```
 # set variable identifying the filesystem you work in (used in the prompt below)
 set_bash_prompt(){
@@ -213,7 +219,7 @@ reboot
 rw    # -> disk rw mounten
 vi /etc/fstab
 ```
-mit 0 am Ende von / und /boot den fsck on boot disablen
+bei / und /boot letztes Feld auf 0 setzen => fsck on boot disablen
 
 fsck on boot raus aus der config / cmdline.txt => notwendig?
 
@@ -295,13 +301,24 @@ dietpi-disable_rpi_camera.conf   => blacklist bcm2835_isp
 -mappt /boot/dietpi ins ram => wozu-
 ``` systemctl disable vmtouch```
 
-## bluetooth am Raspberry PI Zero
+## Bluetooth am Raspberry PI Zero
 
 Der Bluetooth chip hängt am TX0 und RX0
 mit dietpi-config -> Advanced Options -> Serial/UART -> ttyAMA0 console Off
 ```
 # scheint notwendig zu sein:
 apt-get install pi-bluetooth
+```
+
+### Raspberry PI Zero W Bluetooth geht nicht Kernel 6.1.21
+checken: ```ls -la /dev/serial*```
+
+Text: https://github.com/timg236/raspberrypi-sys-mods/blob/serial0/etc.armhf/udev/rules.d/99-com.rules#L14
+
+wenn die /dev/serial1 fehlt dann:
+```
+cat /etc/udev/rules.d/99-com.rules
+KERNEL=="ttyAMA0", SYMLINK+="serial1" 
 ```
 
 ## remove ms repo, don't need on raspi-lok. (installed by raspi-sys-something repo) 202203: ist schon weg
