@@ -199,7 +199,7 @@ PROMPT_COMMAND=set_bash_prompt
 Siehe: https://hallard.me/raspberry-pi-read-only/
 
 
-Anpassungen /lib/systemd/system/systemd-timesyncd.service
+#### ~~Anpassungen /lib/systemd/system/systemd-timesyncd.service~~ (macht schon make install)
 ```
 #PrivateTmp=yes
 StateDirectory=run/timesync
