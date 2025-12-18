@@ -309,13 +309,14 @@ mit dietpi-config -> Advanced Options -> Serial/UART -> ttyAMA0 console Off
 # scheint notwendig zu sein:
 apt-get install pi-bluetooth
 ```
+
 ### Raspberry PI Zero W Bluetooth geht nicht Kernel 6.1.21
 checken: ```ls -la /dev/serial*```
 
 Text: https://github.com/timg236/raspberrypi-sys-mods/blob/serial0/etc.armhf/udev/rules.d/99-com.rules#L14
 
 wenn die /dev/serial1 fehlt dann:
-````
+```
 cat /etc/udev/rules.d/99-com.rules
 KERNEL=="ttyAMA0", SYMLINK+="serial1" 
 ```
