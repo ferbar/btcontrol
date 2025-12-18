@@ -289,6 +289,8 @@ install:
 	cp etc/avahi/services/btcontrol.service /etc/avahi/services/
 	cp etc/systemd/system/btcontrol.service /etc/systemd/system/
 	cp etc/systemd/system/btcontrol-initbt.service /etc/systemd/system/
+	if [ ! -f /etc/systemd/system/systemd-timesyncd.service.d/override.conf ] ; then mkdir -p /etc/systemd/system/systemd-timesyncd.service.d/ && \
+		cp etc/systemd/system/systemd-timesyncd.service.d/override.conf /etc/systemd/system/systemd-timesyncd.service.d/ ; fi
 	@echo "checking bluetooth discoverable on boot"
 	@if grep '^DiscoverableTimeout' /etc/bluetooth/main.conf ; then \
 		echo "already set!" ;			\
