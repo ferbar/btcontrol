@@ -252,6 +252,7 @@ set mouse=
 ### Services die wir nicht brauchen abdrehen
 ```
 systemctl mask systemd-rfkill.service
+systemctl mask systemd-rfkill.socket
 ```
 
 wird bei schlechtem empfang mehr ärger machen als es bringt => wifi soft AP weiter unten
@@ -263,6 +264,8 @@ Kopiert logs von /var/tmp nach /var/log ... brauchen wir nicht
 ```
 systemctl disable dietpi-ramlog.service
 ```
+
+jetzt im dietpi-config das ntpd timesync abdrehn!
 
 ### sound config
 #### sound config für I2S
