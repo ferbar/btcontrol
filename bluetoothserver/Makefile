@@ -291,6 +291,7 @@ install:
 	cp etc/systemd/system/btcontrol-initbt.service /etc/systemd/system/
 	if [ ! -f /etc/systemd/system/systemd-timesyncd.service.d/override.conf ] ; then mkdir -p /etc/systemd/system/systemd-timesyncd.service.d/ && \
 		cp etc/systemd/system/systemd-timesyncd.service.d/override.conf /etc/systemd/system/systemd-timesyncd.service.d/ ; fi
+	if [ ! -f /etc/modprobe.d/99-blacklist-btcontrol.conf ] ; then cp etc/modprobe.d/99-blacklist-btcontrol.conf /etc/modprobe.d/ ; fi
 	@echo "checking bluetooth discoverable on boot"
 	@if grep '^DiscoverableTimeout' /etc/bluetooth/main.conf ; then \
 		echo "already set!" ;			\
