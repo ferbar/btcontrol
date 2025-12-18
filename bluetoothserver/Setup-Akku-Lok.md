@@ -249,7 +249,7 @@ let skip_defaults_vim = 1
 set mouse=
 ```
 
-
+### Services die wir nicht brauchen abdrehen
 ```
 systemctl mask systemd-rfkill.service
 ```
