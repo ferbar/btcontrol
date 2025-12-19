@@ -35,22 +35,20 @@ powerMonitor.voltage.min=10000
 # wenn RaspiPWM verwendet wird. Expressions siehe ParseExpr.cpp
 wiringpi.pin.13=pwm
 # richtungs pin für die brücke
-wiringpi.pin.24=dir
-# motor disable pin
-wiringpi.pin.22=0
+wiringpi.pin.5=dir
 # Lampen vorne
-wiringpi.pin.5=(!dir && F0) && (!speed)
-wiringpi.pin.5.pwm=10
-wiringpi.pin.5.a=(!dir && F0) && (speed)
-wiringpi.pin.5.a.pwm=40
+wiringpi.pin.9=(!dir && F0) && (!speed)
+wiringpi.pin.9.pwm=10
+wiringpi.pin.9.a=(!dir && F0) && (speed)
+wiringpi.pin.9.a.pwm=40
 # Lampen hinten
-wiringpi.pin.6=(dir && F0) && (!speed)
-wiringpi.pin.6.pwm=10
-wiringpi.pin.6.a=(dir && F0) && (speed)
-wiringpi.pin.6.a.pwm=40
+wiringpi.pin.10=(dir && F0) && (!speed)
+wiringpi.pin.10.pwm=10
+wiringpi.pin.10.a=(dir && F0) && (speed)
+wiringpi.pin.10.a.pwm=40
 # Führerhaus Beleuchtung
-wiringpi.pin.25=!speed
-wiringpi.pin.25.pwm=20
+wiringpi.pin.22=!speed
+wiringpi.pin.22.pwm=20
 # Rauchfang - Heizelement
 #wiringpi.pin.9=(accel+15s) || (F3)
 # Rauchfang - Ventilator
