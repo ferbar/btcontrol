@@ -268,7 +268,7 @@ systemctl disable dietpi-ramlog.service
 jetzt im dietpi-config das ntpd timesync abdrehn!
 
 ### sound config
-#### sound config für I2S
+#### max98357a sound config I2S
 das meiste macht schon dietPi. 
   * /etc/asound.conf von https://learn.adafruit.com/adafruit-max98357-i2s-class-d-mono-amp/raspberry-pi-usage
   * `vi /boot/firmware/config.txt`<br>
