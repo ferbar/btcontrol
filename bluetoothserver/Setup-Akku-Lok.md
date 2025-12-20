@@ -120,7 +120,7 @@ dietpi-config: (startet automatisch)
 
 ```
 apt-get install git build-essential pkg-config libbluetooth-dev libasound2-dev \
-libboost-all-dev avahi-daemon
+libboost-all-dev avahi-daemon openssh-sftp-server
 ```
 mit pigpio (geht nicht mit I2S DAC)
 ```
