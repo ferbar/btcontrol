@@ -110,13 +110,15 @@ Optional: das IDF wird im Arduino SDK mit komplett aktivierten BT + BLE + A2DP +
 
 Arduino sdk ohne A2DP und BLE selber kompilieren -> spart 300kB flash und 50kB ram:
 
+(ins ~/bin/esp32 z.B.)
 * git clone esp32-idf -> IDF 4.4.4 branch
-* git clone https://github.com/espressif/esp32-arduino-lib-builder.git -> IDF 4.4 branch + setup + git submodule init
+* git clone https://github.com/espressif/esp32-arduino-lib-builder.git -> checkout release/v4.4 + setup + git submodule init
 * git clone arduino-esp32 -> irgendeinen release branch welcher IDF 4.4.4 verwendet
-* unter components/arduino softlink auf arduino-esp32 anlegen
-* die ./arduino-lib-builder/defaultconf.esp32 nach esp32-arduino-lib-builder/configs/ verlinken
-* Build reduzieren: in configs/builds.json unter "target": "esp32" nur "bootloaders":[ ["dio","40m"] ] über lassen, "mem_variants":[ ["dio","80m"] ]
-* die ./arduino-lib-builder/build-chris.sh nach esp32-arduino-lib-builder/ verlinken
+(im esp32-arduino-lib-builder checkout:)
+* ln -s ~/dev/btcontrol/control-esp32/arduino-lib-builder ./configs/defaultconf.esp32
+* ln -s ~/dev/btcontrol/control-esp32/arduino-lib-builder/build-chris.sh
+* ln -s ~/.platformio/packages/framework-arduinoespressif32 components/arduino
+* Build reduzieren: in configs/builds.json unter "target": "esp32" nur "bootloaders":[ ["dio","40m"] ] über lassen, "mem_variants":[ ["dio","80m"] ] das andere kann man ja in bootloaders_disabled und mem_variants_diabled lassen
 * build-chris.sh im esp32-arduino-lib-builder/ aufrufen, kopiert die object files nach .platformio/packages/framework-arduinoespressif32
 * tools/sdk/esp32/sdkconfig checken ob BLE abgedreht ist (CONFIG_BTDM_CTRL_MODE_BR_EDR_ONLY=y)
 
