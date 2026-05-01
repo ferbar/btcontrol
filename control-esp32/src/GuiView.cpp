@@ -166,15 +166,34 @@ void GuiView::drawButtons(const char *top1, const char *top2, const char *bottom
 }
 
 void GuiView::drawPopup(const String &msg) {
-  tft.setTextDatum(MC_DATUM);
+  tft.setTextDatum(TC_DATUM); // Top centre, linewrap geht ned
   tft.setTextColor(TFT_YELLOW, TFT_BLACK);
   tft.setTextSize(1);
   tft.setFreeFont(FSSP7);
   // int textLen=tft.textWidth(msg);
-  // int n=1;
-  tft.fillRect(1, tft.height() / 2 - tft.fontHeight() / 2 - 4, tft.width()-2, tft.fontHeight()+8, TFT_BLACK);
-  tft.drawRect(0, tft.height() / 2 - tft.fontHeight() / 2 - 5, tft.width(), tft.fontHeight()+10, TFT_WHITE);
-  tft.drawString(msg, tft.width() / 2, tft.height() / 2);
+  int lines=std::count(msg.begin(), msg.end(),'\n') + 1;
+  int xpadding=10;
+  int ypadding=4;
+  int ystart=tft.height() / 2 - tft.fontHeight()*lines / 2;
+  int height=tft.fontHeight()*lines;
+  tft.fillRect(xpadding,   ystart - ypadding,     tft.width()-xpadding*2, height+ypadding*2, TFT_BLACK);
+  tft.drawRect(xpadding-1, ystart - ypadding - 1, tft.width()-(xpadding+1)*2,  height+(ypadding+1)*2, TFT_WHITE);
+  size_t start = 0;
+  size_t end = msg.indexOf('\n');
+  int linenum=0;
+  while (end != -1) {
+    String line = msg.substring(start, end - start);
+    // DEBUGF("drawPopup line: %s (%d->%d) ystart:%d", line.c_str(), start, end, ystart);
+    // tft.setTextWrap(true); // geht ned
+    tft.drawString(line, tft.width() / 2, ystart+tft.fontHeight()*linenum); // orientierung==Center
+    start = end + 1;
+    end = msg.indexOf('\n', start);
+    linenum++;
+  }
+  String line = msg.substring(start);
+  // DEBUGF("drawPopup line: %s (%d->%d) ystart:%d", line.c_str(), start, end, ystart);
+  tft.drawString(line, tft.width() / 2, ystart+tft.fontHeight()*linenum); // orientierung==Center
+
 }
 
 // ============================================================= SelectWifi =============================
@@ -196,8 +215,8 @@ void GuiViewSelectWifi::init() {
   tft.setTextSize(1);
   tft.setFreeFont(FSSP7);
   // 20210922 setTextDatum(MC) scheint die 0 pos vom string in die mitte vom string zu setzen. Koordinaten 0/0 sind trozdem links oben
-  tft.drawString("Scanning...", tft.width()/2, tft.fontHeight() * 4);
-  this->lastFoundWifis=5; // to clear "scanning ..."
+  this->drawPopup("Scanning...");
+  this->lastFoundWifis=-1; // to clear "scanning ..."
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);  // 34kB heap
   if(esp_wifi_set_protocol( WIFI_IF_STA, WIFI_PROTOCOL_11B| WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_LR ) != ESP_OK ) {
@@ -257,25 +276,28 @@ const char *GuiViewSelectWifi::passwordForSSID(const String &ssid) {
 }
 
 void GuiViewSelectWifi::loop() {
-	//DEBUGF("GuiViewSelectWifi::loop()");
-	// update only if changed:
-	if(this->needUpdate || refreshWifiThread.listChanged ) {
-		DEBUGF("##################GuiViewSelectWifi::loop() needUpdate");
-		this->needUpdate=false;
+  //DEBUGF("GuiViewSelectWifi::loop()");
+  // update only if changed:
+  if(this->needUpdate || refreshWifiThread.listChanged ) {
+    DEBUGF("##################GuiViewSelectWifi::loop() needUpdate");
+    this->needUpdate=false;
+    if(this->lastFoundWifis==-1) { // alles löschen wenn das 1. mal was gefunden wurde
+      tft.fillScreen(TFT_BLACK);
+    }
     refreshWifiThread.listChanged=false;
 
-		this->drawButtons();
+    this->drawButtons();
     Lock lock(refreshWifiThread.listMutex);
     int wifiCount=refreshWifiThread.wifiList.size();
 
-		if (wifiCount == 0) {
+    if (wifiCount == 0) {
       tft.setTextDatum(MC_DATUM);
-			tft.drawString("No wifi networks found", tft.width() / 2, tft.height() * 4);
-		} else {
+      tft.drawString("No wifi networks found", tft.width() / 2, tft.height() * 4);
+    } else {
       if(this->selectedWifi > wifiCount-1) {
         this->selectedWifi = wifiCount-1;
       }
-			DEBUGF("Found %d wifi networks, selected wifi:%d", wifiCount, this->selectedWifi);
+    DEBUGF("Found %d wifi networks, selected wifi:%d", wifiCount, this->selectedWifi);
       // tft.fillScreen(TFT_BLACK); text inhalt ändert sich nicht
       this->drawButtons();
 			int n=0;
@@ -293,31 +315,36 @@ void GuiViewSelectWifi::loop() {
           // DEBUGF("  wifi network %s usable: %s", value.first.c_str(), usable ? "yes" : "no");
           // value.second.dump();
           // round 1: list APs with passwords
-          if((usable && i==0) || (!usable && i==1)) {
-  		  		int foregroundColor = usable ? TFT_GREEN : TFT_RED;
-  		  		int backgroundColor = TFT_BLACK;
-	  		  	if(n==this->selectedWifi) {
-		  		  	// backgroundColor=foregroundColor;
-              backgroundColor=TFT_BLUE;
-  			  		// foregroundColor=TFT_BLACK;
+          if ((usable && i == 0) || (!usable && i == 1))
+          {
+            int foregroundColor = usable ? TFT_GREEN : TFT_RED;
+            int backgroundColor = TFT_BLACK;
+            if (n == this->selectedWifi)
+            {
+              // backgroundColor=foregroundColor;
+              backgroundColor = TFT_BLUE;
+              // foregroundColor=TFT_BLACK;
               // foregroundColor=TFT_YELLOW;
-  		  		}
-	  		  	tft.setTextColor(foregroundColor, backgroundColor);
-            if(value.second.type==RefreshWifiThread::WIFI) {
-  		  		  snprintf(buff,sizeof(buff),
-	  		  			"[%d] %s (%d%s)",
-                n,
-			  		  	value.first.c_str(),
-				  		  value.second.rssi,
-					  	  value.second.have_LR ? " LR" : "");
+            }
+            tft.setTextColor(foregroundColor, backgroundColor);
+            if (value.second.type == RefreshWifiThread::WIFI)
+            {
+              snprintf(buff, sizeof(buff),
+                       "[%d] %s (%d%s)",
+                       n,
+                       value.first.c_str(),
+                       value.second.rssi,
+                       value.second.have_LR ? " LR" : "");
 #ifdef HAVE_BLUETOOTH
-            } else {
-              snprintf(buff,sizeof(buff),
-                "[%d] %s (c%d %d)",
-                n,
-                value.first.c_str(),
-                value.second.channel,
-                value.second.rssi);
+            }
+            else
+            {
+              snprintf(buff, sizeof(buff),
+                       "[%d] %s (c%d %d)",
+                       n,
+                       value.first.c_str(),
+                       value.second.channel,
+                       value.second.rssi);
 #endif
             }
 
@@ -329,22 +356,21 @@ void GuiViewSelectWifi::loop() {
             }
             n++;
           }
-			  }
-			}
+        }
+      }
       int maxwidth=tft.width()-10;
       if(n < this->lastFoundWifis) {
         // DEBUGF("cleaning unused lines: start n:%d y:%d, height:%d", n, tft.fontHeight()*n, tft.height()-tft.fontHeight()*n);
         tft.fillRect(0, tft.fontHeight()*n, maxwidth, tft.height()-tft.fontHeight()*n, TFT_BLACK);
       }
       this->lastFoundWifis=n;
-		}
-	} else {
+    }
+  } else {
     if(millis() > GuiViewSelectWifi::lastKeyPressed+POWER_DOWN_IDLE_TIMEOUT*1000) { // nach 5min power down
       DEBUGF("GuiViewSelectWifi::loop() powerDown");
       GuiView::startGuiView(new GuiViewPowerDown(new GuiViewSelectWifi));
     }
-
-	}
+  }
 }
 
 void GuiViewSelectWifi::buttonCallback(Button2 &b, int which) {
@@ -528,17 +554,17 @@ void GuiViewConnectWifi::loop() {
 
         static long lastRefresh=0;
         if(lastRefresh + 10*1000 < millis()) {
-  				GuiViewConnectWifi::mdnsResults = MDNS.queryService("btcontrol", "tcp");
+          GuiViewConnectWifi::mdnsResults = MDNS.queryService("btcontrol", "tcp");
           lastRefresh=millis();
         }
 
         DEBUGF("nrOfServices: %d", GuiViewConnectWifi::mdnsResults);
-				if (this->mdnsResults == 0) {
-					tft.println("No MDNS services were found.");
+        if (this->mdnsResults == 0) {
+          this->drawPopup("No MDNS services were found.");
           tft.println("Check accesspoint. MDNS works with IDF v 3.3!");
-				} else {
-					if( this->mdnsResults == 1) {
-						DEBUGF("============= connecting to %s:%d", (MDNS.IP(0).toString()).c_str(), MDNS.port(0));
+        } else {
+          if( this->mdnsResults == 1) {
+            DEBUGF("============= connecting to %s:%d", (MDNS.IP(0).toString()).c_str(), MDNS.port(0));
             tft.println(String("Hostname: ") + MDNS.hostname(0) + "IP address: " + MDNS.IP(0).toString() + "Port: " + MDNS.port(0));
 						GuiView::startGuiView(new GuiViewConnectServer(MDNS.IP(0), MDNS.port(0)));
 					} else {
@@ -553,8 +579,7 @@ void GuiViewConnectWifi::loop() {
         GuiView::startGuiView(new GuiViewSelectWifi() );
         return;
       }
-      tft.setTextColor(TFT_RED, TFT_BLACK);
-      tft.drawString(String("connecting to wifi ") + this->ssid + "...", 0, 0 );
+      GuiView::drawPopup(String("connecting to ")+this->ssid);
       tft.setTextColor(TFT_GREEN, TFT_BLACK);
       DEBUGF("waiting for wifi %s", this->ssid.c_str());
 		}
@@ -563,7 +588,13 @@ void GuiViewConnectWifi::loop() {
 	} else {
 		// DEBUGF("wifi connected");
     if(millis() > last+10*1000) { // alle 10 sekunden refresehen wenn keine taste gedrückt wurde
-      DEBUGF("##############GuiViewSelectWifi::loop - restart SelectWifi for rescan");
+      DEBUGF("##############GuiViewSelectWifi::loop - restart SelectWifi for rescan (lastWifiStatus: %d)", this->lastWifiStatus);
+      if(this->lastWifiStatus == WL_CONNECT_FAILED || this->lastWifiStatus == WL_DISCONNECTED) {
+        this->drawPopup("connect failed\ncheck WIFI password");
+      } else {
+        this->drawPopup("connect failed");
+      }
+      sleep(2);
       last=millis();
       GuiViewConnectWifi::needUpdate=true;
     }
