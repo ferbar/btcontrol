@@ -16,7 +16,7 @@ Das ist eine Anleitung um eine LGB Lok ohne Schienenstrom fahren lassen zu könn
 | ~~alt~~ | Bluetooth Dongle | ist im Zero-W schon eingebaut. ESP32 Control Pad geht nur mit Bluetooth 4.0 dongle. Empfehlung Class 1 (z.b. Hama)
 | ~~optional~~ | usb soundkarte	| Vorzugsweise mit eingebautem Verstärker | neuhold |
 | ~~optional~~ | Verstärker | PAM8406 (oder PAM8403) |
-| 1 | optional MAX98357 I2S | NEU: I2S 'Soundkarte' hat einen Verstärker eingebaut, damit entfällt der PAM. [Verkabelung + Setup](https://learn.adafruit.com/adafruit-max98357-i2s-class-d-mono-amp/raspberry-pi-wiring) |
+| 1 | optional MAX98357 I2S | NEU: I2S 'Soundkarte' hat einen Verstärker eingebaut, damit entfällt der PAM, wichtig: geht nur mit wiringPi. [Verkabelung + Setup](https://learn.adafruit.com/adafruit-max98357-i2s-class-d-mono-amp/raspberry-pi-wiring) |
 | 1 | optional INA219 | NEU: I2C Strom/Spannungssensor |
 | 4 | IRFML8244	| Mosfet Rds on 20 mohm für die LED Ausgänge | farnell |
 | 7 | 1k R 1206	| SMD R	9335757 ??????? |
@@ -63,43 +63,68 @@ Als Raspi Image hab ich DietPi verwendet: https://dietpi.com/downloads/images/Di
 
 * DietPi Image auf eine SD-Karte kopieren (Linux: dd_rescue)
 
-a) **NOCH IM PC** /boot mounten + /boot/dietpi.txt bearbeiten (wifi config)
+#### **NOCH IM PC** /boot mounten + /boot/dietpi.txt bearbeiten (wifi config)
 https://dietpi.com/docs/usage/#how-to-do-an-automatic-base-installation-at-first-boot
 ```
 AUTO_SETUP_ACCEPT_LICENSE=1
 AUTO_SETUP_KEYBOARD_LAYOUT=de
-AUTO_SETUP_TIMEZONE=Europe/xyz
+AUTO_SETUP_TIMEZONE=Europe/Berlin
 AUTO_SETUP_NET_WIFI_ENABLED=1
 AUTO_SETUP_NET_WIFI_COUNTRY_CODE=DE
 AUTO_SETUP_NET_HOSTNAME=raspi-99-6001
-```
-+ SSID + pass in dietpi-wifi.txt
+AUTO_SETUP_BOOT_WAIT_FOR_NETWORK=0
+AUTO_SETUP_SWAPFILE_SIZE=0
+SURVEY_OPTED_IN=0
 
-b) mit usb - ethernet Adapter booten
+# optional
+  AUTO_SETUP_SSH_PUBKEY=
+
+CONFIG_CHECK_DIETPI_UPDATES=0
+CONFIG_CHECK_APT_UPDATES=0
+
+# das brauch ma fürs erste update -> nicht abdrehn
+# CONFIG_NTP_MODE=0
+CONFIG_ENABLE_IPV6=0
+```
+#### SSID + pass in dietpi-wifi.txt
+```
+aWIFI_SSID[0]='WIFI-NAME'
+# - WiFi key: If no key/open, leave this blank
+aWIFI_KEY[0]='PASSWORD'
+```
+
+b) mit etwas glück taucht der Raspi im netzwerk dank wlan auf. wenn nicht: mit usb - ethernet Adapter () booten (es gibt USB-Ethernet + 3 USB ports)
 
 ### DietPi konfigurieren
 dietpi-config: (startet automatisch)
+* wenn die uhrzeit nicht gesetzt werden konnte: NTP Mirror -> timeserver setzen
 * Audio Options -> install alsa
-  - bei I2S Sound (max98357) hifiberry-dac auswählen (nachher /etc/asound.conf von adafruit eintragen)
+  - bei I2S Sound "none" auswählen (max98357 gibts nicht) auswählen (sound config machen wir unten dann)
 * Performance options
   - ondemand (throttle up: 80%, sample rate 300ms, initial turbo 30s)
 * Advanced Options:
   - -swap space weg,- (manuell machen)
+  - Time sync mode [boot only] <<< auf never tun???
+  - Serial/UART -> ttyAMA0 console Off (dort hängt das BT zeug dran) ttyS0 brauchen wir nicht kann man somit auch abdrehen
   - bluetooth on
+  - I2C on
 * security options:
-  - change hostname
+  - change hostname (sollte schon gesetzt sein)
 * Network Options Adapters:
-  - Wlan ein, key, country-code
-  - IPv6 off
+  - Wlan ein, key, country-code (sollte schon sein)
+  - IPv6 off (sollte schon sein)
   - Wifi: Auto reconnect on
 * Network Options Misc: Boot Net Wait: off
 
 ### Notwendige Pakete installieren
 
+```
+apt-get install git build-essential pkg-config libbluetooth-dev libasound2-dev \
+libboost-all-dev avahi-daemon openssh-sftp-server alsa-utils
+```
 mit pigpio (geht nicht mit I2S DAC)
 ```
-apt-get install git build-essential pkg-config libpigpio-dev libbluetooth-dev libasound2-dev \
-libboost-all-dev avahi-daemon
+yum install libpigpio-dev 
 ```
 
 mit wiringPi (wiringPi muss von https://github.com/WiringPi/WiringPi mit git clone + build + build install installiert werden)
@@ -146,14 +171,13 @@ dietpi-services
   cron -> inactive + mask (202304: ok)
 -systemctl disable cron-
 
-rm -rf /var/lib/dhcp /var/lib/misc
-ln -s /run/ /var/lib/dhcp
+rm -rf /var/lib/dhcp /var/lib/misc && ln -s /run/ /var/lib/dhcp
 ln -s /run /var/lib/run
 ln -s /run /var/lib/misc
 rm /etc/resolv.conf && ln -s /run/resolv.conf /etc/
 mv /var/tmp/ /var/tmp-org/ && ln -s /tmp /var/tmp
 ```
-in die /etc/bash.bashrc
+##### ~~vi /etc/bash.bashrc~~ (macht das make install schon)
 ```
 # set variable identifying the filesystem you work in (used in the prompt below)
 set_bash_prompt(){
@@ -161,6 +185,11 @@ set_bash_prompt(){
     PS1='\[\033[01;32m\]\u@\h${fs_mode:+($fs_mode)}\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
 }
 
+# ab 2025:
+alias ro='sudo mount -o remount,ro / ; sudo mount -o remount,ro /boot/firmware'
+alias rw='sudo mount -o remount,rw / ; sudo mount -o remount,rw /boot/firmware'
+
+# alt
 alias ro='sudo mount -o remount,ro / ; sudo mount -o remount,ro /boot'
 alias rw='sudo mount -o remount,rw / ; sudo mount -o remount,rw /boot'
 
@@ -170,7 +199,7 @@ PROMPT_COMMAND=set_bash_prompt
 Siehe: https://hallard.me/raspberry-pi-read-only/
 
 
-Anpassungen /lib/systemd/system/systemd-timesyncd.service
+#### ~~Anpassungen /lib/systemd/system/systemd-timesyncd.service~~ (macht schon make install)
 ```
 #PrivateTmp=yes
 StateDirectory=run/timesync
@@ -190,7 +219,7 @@ reboot
 rw    # -> disk rw mounten
 vi /etc/fstab
 ```
-mit 0 am Ende von / und /boot den fsck on boot disablen
+bei / und /boot letztes Feld auf 0 setzen => fsck on boot disablen
 
 fsck on boot raus aus der config / cmdline.txt => notwendig?
 
@@ -208,15 +237,6 @@ das sollte mit fstab -> '0' nicht notwendig sein
 fsck.repair=yes auf fsck.repair=no
 ```
 
-
-### DietPi Updates disablen:
-
-vi /boot/dietpi.txt
-```
-CONFIG_CHECK_DIETPI_UPDATES=0
-CONFIG_CHECK_APT_UPDATES=0
-```
-
 ### vim config tunen (mouse aus)
 vi /etc/vim/vimrc.local
 ```
@@ -229,9 +249,10 @@ let skip_defaults_vim = 1
 set mouse=
 ```
 
-
+### Services die wir nicht brauchen abdrehen
 ```
 systemctl mask systemd-rfkill.service
+systemctl mask systemd-rfkill.socket
 ```
 
 wird bei schlechtem empfang mehr ärger machen als es bringt => wifi soft AP weiter unten
@@ -244,10 +265,20 @@ Kopiert logs von /var/tmp nach /var/log ... brauchen wir nicht
 systemctl disable dietpi-ramlog.service
 ```
 
-### sound config
-sound config für I2S siehe adafruit link
+jetzt im dietpi-config das ntpd timesync abdrehn!
 
-=> usb soundkarte wird standardmässig nicht als default genommen
+### sound config
+#### max98357a sound config I2S
+das meiste macht schon dietPi. 
+  * /etc/asound.conf von https://learn.adafruit.com/adafruit-max98357-i2s-class-d-mono-amp/raspberry-pi-usage
+  * `vi /boot/firmware/config.txt`<br>
+    `dtoverlay=max98357a`
+  * eventuell checken ob die raspi onboard module geladen werden
+  * rebooten, sound abspielen mit aplay ERST DANN mit alsamixer checken
+  * `gpio mode 27 out ; gpio write 27 1 ; aplay /usr/share/sounds/alsa/Front_Center.wav`
+
+#### USB Soundkarte
+usb soundkarte wird standardmässig nicht als default genommen
 Fehlermeldung:
 aplay: set_params:1339: Sample format non available
 
@@ -273,7 +304,7 @@ dietpi-disable_rpi_camera.conf   => blacklist bcm2835_isp
 -mappt /boot/dietpi ins ram => wozu-
 ``` systemctl disable vmtouch```
 
-## bluetooth am Raspberry PI Zero
+## Bluetooth am Raspberry PI Zero
 
 Der Bluetooth chip hängt am TX0 und RX0
 mit dietpi-config -> Advanced Options -> Serial/UART -> ttyAMA0 console Off
@@ -282,13 +313,23 @@ mit dietpi-config -> Advanced Options -> Serial/UART -> ttyAMA0 console Off
 apt-get install pi-bluetooth
 ```
 
+### Raspberry PI Zero W Bluetooth geht nicht Kernel 6.1.21
+checken: ```ls -la /dev/serial*```
+
+Text: https://github.com/timg236/raspberrypi-sys-mods/blob/serial0/etc.armhf/udev/rules.d/99-com.rules#L14
+
+wenn die /dev/serial1 fehlt dann:
+```
+cat /etc/udev/rules.d/99-com.rules
+KERNEL=="ttyAMA0", SYMLINK+="serial1" 
+```
+
 ## remove ms repo, don't need on raspi-lok. (installed by raspi-sys-something repo) 202203: ist schon weg
 mv /etc/apt/sources.list.d/vscode.list /etc/apt/sources.list.d/vscode.list.disabled
 
 ## Setup Wlan soft - AP
 **Wichtig** Umbedingt Tastatur und HDMI Capture Card / Bildschirm organisieren
 ### timesync abdrehen
-* dietpi-config -> Network Options: Misc -> Boot wait for network: Off
 * dietpi-config -> Advances -> Time sync mode: Custom
 
 ### mit dietpi-gui 2025: NICHT SO MACHEN!!!!
@@ -332,9 +373,12 @@ apt-get install -y hostapd dnsmasq lighttpd
 cd btcontrol/bluetoothserver
 make install
 ```
-Hostapd Passwort (bzw in der /etc/hostapd/hostapd.conf anpassen)
+Hostapd Passwort (in der /etc/hostapd/hostapd.conf anpassen)
 ```########### setting hostapd config ###########
-hostap config: ssid: raspi-11 wpa_passphrase=**btcontrol**
+...
+ssid: raspi-irgendwas
+wpa_passphrase=**btcontrol**
+...
 ```
 
 Beispiel /etc/network/interfaces
@@ -343,7 +387,7 @@ Beispiel /etc/network/interfaces
 source interfaces.d/*
 
 # Ethernet
-wurschtjetzt
+wurschtjetzt, lassen
 
 # WiFi
 #allow-hotplug wlan0  << startet das client wlan, führt aber zu hacklern, kann dann händisch mit ifup wlan0 gestartet werden
