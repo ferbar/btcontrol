@@ -373,9 +373,12 @@ apt-get install -y hostapd dnsmasq lighttpd
 cd btcontrol/bluetoothserver
 make install
 ```
-Hostapd Passwort (bzw in der /etc/hostapd/hostapd.conf anpassen)
+Hostapd Passwort (in der /etc/hostapd/hostapd.conf anpassen)
 ```########### setting hostapd config ###########
-hostap config: ssid: raspi-11 wpa_passphrase=**btcontrol**
+...
+ssid: raspi-irgendwas
+wpa_passphrase=**btcontrol**
+...
 ```
 
 Beispiel /etc/network/interfaces
@@ -384,7 +387,7 @@ Beispiel /etc/network/interfaces
 source interfaces.d/*
 
 # Ethernet
-wurschtjetzt
+wurschtjetzt, lassen
 
 # WiFi
 #allow-hotplug wlan0  << startet das client wlan, führt aber zu hacklern, kann dann händisch mit ifup wlan0 gestartet werden
