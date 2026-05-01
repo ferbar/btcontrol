@@ -40,7 +40,7 @@ void setTransparentColor(uint32_t color)
 }
 
 // Draw pixel - called by pngle
-void static pngle_on_draw(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t rgba[4])
+void static pngle_on_draw(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint8_t rgba[4])
 {
   TFT_eSPI_PngSprite *ptr =(TFT_eSPI_PngSprite *) pngle_get_user_data(pngle);
   assert(ptr);
