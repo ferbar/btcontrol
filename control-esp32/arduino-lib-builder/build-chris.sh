@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# !! wichtig: idf, lib builde + sfk müssen von der verion/branch her zusammen passen!
+# !! wichtig: idf, lib builder + sfk müssen von der verion/branch her zusammen passen!
 
 . ../esp-idf/export.sh
 
