@@ -26,6 +26,7 @@ void gap_callback (esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param) {
 
 bool BTClient::begin(const char* devicename) {
   DEBUGF("BTClient::begin %s", devicename);
+  // bool BluetoothSerial::begin(String localName = String(), bool isMaster = false, bool disableBLE = false);
   bool ret = BluetoothSerial::begin(devicename, true, true);
   this->setDiscoverable(false);
 // ----------- clean -----------  esp_bt_gap_set_scan_mode(ESP_BT_NON_CONNECTABLE, ESP_BT_NON_DISCOVERABLE);
