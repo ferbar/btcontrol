@@ -14,6 +14,7 @@
 #include <string>
 #include <stdexcept>
 #include <stdio.h>
+#include <time.h>
 
 #include "ParseExpr.h"
 
