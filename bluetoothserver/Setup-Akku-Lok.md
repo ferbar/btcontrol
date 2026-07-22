@@ -343,6 +343,7 @@ WLAN0 IP Adresse auf 192.168.0.1 ändern (.1 findet man eher)
 
 ```
 apt-get install -y hostapd isc-dhcp-server lighttpd screen
+systemctl unmask hostapd
 # vi /etc/dhcp/dhcpd.conf
 ...
 subnet 192.168.0.0 netmask 255.255.255.0 {
