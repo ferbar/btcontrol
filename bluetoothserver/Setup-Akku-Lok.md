@@ -138,7 +138,7 @@ apt-get install vim less screen openssh-client lsof gdb pigpio-tools ODER raspi-
 ```
 mkdir -p /root/dev/
 cd /root/dev/
-git clone git@github.com:ferbar/btcontrol  oder mit https://
+git clone https://github.com/ferbar/btcontrol oder git@github.com:ferbar/btcontrol
 ```
 
 git pager deaktivieren
@@ -148,6 +148,7 @@ git config --global --replace-all core.pager ""
 
 Kompilieren:
 ```
+cd btcontrol/bluetoothserver/
 make
 conf Verzeichnis anpassen
 make install
