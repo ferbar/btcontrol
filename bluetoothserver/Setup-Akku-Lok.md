@@ -228,7 +228,8 @@ fsck on boot raus aus der config / cmdline.txt => notwendig?
 ### boot delay auf 0 setzen (default ist 1, viel kanns nicht bringen, von der sd karte abhängig)
 ```
 vi /boot/config.txt
-boot_delay=0 fsck.mode=skip
+boot_delay=0
+fsck.mode=skip
 ```
 fastboot raus
 
