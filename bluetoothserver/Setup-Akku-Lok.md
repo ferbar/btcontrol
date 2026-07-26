@@ -452,6 +452,9 @@ allgemeine Probleme:
 
 * Uhrzeit falsch:
 ```
+# debian 13:
+systemctl start systemd-timesyncd
+# älteres:
 ntpd -gq
 ```
 hint: raspberry pi3 + wlan + ntp hat einen Bug, siehe google suche nach TOS flag
