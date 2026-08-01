@@ -334,7 +334,7 @@ mv /etc/apt/sources.list.d/vscode.list /etc/apt/sources.list.d/vscode.list.disab
 ### timesync abdrehen
 * dietpi-config -> Advances -> Time sync mode: Custom
 
-### mit dietpi-gui 2025: NICHT SO MACHEN!!!!
+### ~~mit dietpi-gui 2025: NICHT SO MACHEN!!!!~~
 **Hint:** das hat noch nie ohne probleme hingehaut weil der schon vorm installieren der Pakete das wlan abdreht ...
 die default IP ist IP 192.168.0.100 (wenns nicht geändert wurde)
 control-android: JmDNSImpl.java braucht einen patch wenn der isc-dhcp-server verwendet wird (siehe control-android/README.md)
