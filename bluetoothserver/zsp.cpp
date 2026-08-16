@@ -60,7 +60,7 @@ Sample getSample(std::string number) {
 }
 
 void Sample::load(int volumeLevel) {
-	Sound::loadSoundFile(fileName, wav, volumeLevel);
+	Sound::loadSoundFile(this->fileName, this->wav, volumeLevel);
 	if(this->loopEndPos==0) {
 		this->loopEndPos=this->wav.length();
 	}
@@ -402,3 +402,24 @@ SteamSoundType *SectionValues::parseDSet() {
 	return soundFiles;
 }
 
+void DiSoundType::loadSoundFiles() {
+	for(int step=0; step < this->nsteps; step++) {
+		if(this->steps[step].down) {
+			this->steps[step].down.load(0);
+			this->steps[step].run.load(0);
+		}
+		if(this->steps[step].up) { // bei der höchsten stufe gibts kein up
+			this->steps[step].up.load(0);
+		}
+	}
+}
+
+void SteamSoundType::loadSoundFiles() {
+	for(int step=0; step < this->nsteps; step++) {
+		for(int hml=0; hml < 3; hml ++) {
+			for(int slot=0; slot < this->nslots; slot++) {
+				this->steps[step].ch[hml][slot].load(0);
+			}
+		}
+	}
+}

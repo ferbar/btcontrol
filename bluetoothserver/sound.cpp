@@ -1242,24 +1242,3 @@ int main(int argc, char *argv[]) {
 }
 */
 
-void DiSoundType::loadSoundFiles() {
-	for(int step=0; step < this->nsteps; step++) {
-		if(this->steps[step].down) {
-			this->steps[step].down.load(0);
-			this->steps[step].run.load(0);
-		}
-		if(this->steps[step].up) { // bei der höchsten stufe gibts kein up
-			this->steps[step].up.load(0);
-		}
-	}
-}
-
-void SteamSoundType::loadSoundFiles() {
-	for(int step=0; step < this->nsteps; step++) {
-		for(int hml=0; hml < 3; hml ++) {
-			for(int slot=0; slot < this->nslots; slot++) {
-				this->steps[step].ch[hml][slot].load(0);
-			}
-		}
-	}
-}
