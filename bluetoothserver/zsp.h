@@ -75,21 +75,23 @@ public:
 	Sample run;
 	int limit; // max speed für diese Stufe, wenn darüber => nächste stufe
 	void dump() {
-		printf("up: %s, down: %s, run: %s, limit: %d\n",
+		printf("up: %s, run: %s, down: %s, limit: %d\n",
 			this->up ? this->up.fileName.c_str() : "",
+			this->run ? this->run.fileName.c_str() : "",
 			this->down ? this->down.fileName.c_str() : "",
-			this->run ? this->run.fileName.c_str() : "", this->limit);
+			this->limit);
 	}
 };
 class DiSoundType : public SoundType {
 public:
 	DiSoundType() {};
 	virtual ~DiSoundType() {};
-	static const int maxSteps=10;
+	static const int maxSteps=20;
 	int nsteps;
 	DiSoundStepType steps[maxSteps];
 	virtual void dump() {
-		for(int step=0; step < this->nsteps; step++) {
+		printf("DiSoundType::dump() nsteps:%d\n", this->nsteps);
+		for(int step=0; step < MIN(this->nsteps, maxSteps); step++) {
 			printf("Fahrstufe %d ",step);
 			this->steps[step].dump();
 		}
