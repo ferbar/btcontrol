@@ -5,6 +5,11 @@
  *   mount -t debugfs none_debugs /sys/kernel/debug
  *   tail -f /sys/kernel/debug/usbmon/0u
  * libusb debuggen: libusb_set_debug()
+ *
+ * Permissions:
+ * vi /etc/udev/rules.d/49-digistump.rules
+ *    SUBSYSTEM=="usb", ATTRS{idVendor}=="16c0", ATTRS{idProduct}=="05df", MODE="0666"
+ * sudo udevadm control --reload-rules
  */
 #include <stdio.h>
 #include <string.h>
