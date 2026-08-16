@@ -7,6 +7,8 @@
  *
  * zum binary files vergleichen: vbindiff
  *
+ * sndfile.h: libsndfile-devel
+ * boost_locale: libboost_locale1_75_0-devel
  */
 #include <string.h>
 #include <stdio.h>
@@ -139,6 +141,14 @@ int main(int argc, char *argv[]) {
 	zspFile.open(zspFilename, std::ios_base::out);
 
 	std::string data=zpp.substr(headerSize);
+
+    // name steht scheinbar immer an 0xa80 => 0xa00
+	int len=(unsigned char) data[0xa00];
+	if(len > 0) {
+		for(int i=0; i < len; i++)
+			printf("%c", data[0xa00+i]);
+		printf("\n");
+	}
 
 	// SAMPLE einlesen =========================================================================
 	for(int i = 0; i < 128; i++) {
@@ -295,18 +305,25 @@ int main(int argc, char *argv[]) {
 		printf("DiSet [%d]\n",i);
 		int offset=0x840;
 		int address=(data[offset+i*2] << 8) + data[offset+i*2+1];
-		printf("Address: %#0x\n", address + 0x80);
+		printf("Address: %#0x\n", address+headerSize);
 		if(address == 0)
 			break;
 
-		for(int j=0; j < 42; j++) {
-			printf("[%d] %02x ", j, data[address + j]);
+		/*
+		for(int k=0; k < 8; k++) {
+			printf("[%04x]: ", address + k*16+headerSize);
+			for(int j=0; j < 4; j++) {
+				unsigned int a=address + j*4 + k*16;
+				printf("%02x%02x:%02x%02x ", (unsigned char) data[a], (unsigned char) data[a+1], (unsigned char) data[a+2], (unsigned char) data[a+3] );
+			}
+			printf("\n");
 		}
-		printf("\n");
+		*/
 		int stufen=data[address+0]; // [0] oder [1]
 		int typ=data[address+1]; // [0] oder [1]
-		printf("stufen: %d, typ: %d, Mstart: %d, stand: %d, Mstop: %d\nstand->F1: %d, F1: %d, F1->stand: %d\n",
-			stufen, typ,
+		int limit=data[address+2]; // kein limit | limit CV55 | limit CV53 | limit CV51
+		printf("stufen: %d, typ: %d, limit: %d, Mstart: %d, stand: %d, Mstop: %d\nstand->F1: %d, F1: %d, F1->stand: %d\n",
+			stufen, typ, limit,
 			data[address+5], data[address+6], data[address+7],
 			data[address+8], data[address+9], data[address+10]);
 		zspFile
@@ -323,28 +340,24 @@ int main(int argc, char *argv[]) {
 			<< "\"SAMPLE\",5," << (int) data[address+10] << "\n";
 
 
-
-		if(stufen > 1) {
-			unsigned char schwelle=data[address+39];
-			printf("F2 Schwelle: %u, F1>F2: %d, F2: %d, F2->F1: %d\n",
-				schwelle,
-				data[address+11], data[address+12], data[address+13]);
+        for(int s=1 ; s < stufen ; s++) {
+			//int schwelle_addr=address+30+(stufen-1)*2+(s-1)*2;
+			int schwelle_addr=address+39+((stufen-1)/10)*30+(s-1)*2;
+			//printf("address:%#0x stufen:%d stufen/10:%d stufen/10*34:%d\n", address, stufen, stufen/10, (stufen/10)*34);
+			unsigned char schwelle=data[schwelle_addr];
+			unsigned char faktor=data[schwelle_addr+1];
+			// printf("schwelle addr: %#0x\n", headerSize+schwelle_addr);
+			printf("F%d Faktor: %u Schwelle: %u, F%d>F%d: %d, F%d: %d, F%d->F%d: %d\n",
+				s+1,
+				faktor, schwelle,
+				s+1, s+2, data[address+8+s*3],
+				s+2, data[address+9+s*3],
+				s+2, s+1, data[address+10+s*3]);
 			zspFile
-				<< "\"SCHWELLE\",1," << (int) schwelle << ",64\n"
-				<< "\"SAMPLE\",6," << (int) data[address+11] << "\n"
-				<< "\"SAMPLE\",7," << (int) data[address+12] << "\n"
-				<< "\"SAMPLE\",8," << (int) data[address+13] << "\n";
-		}
-		if(stufen > 2) {
-			unsigned char schwelle=data[address+39];
-			printf("F3 Schwelle: %u, F2>F3: %d, F3: %d, F3->F2: %d\n",
-				schwelle,
-				data[address+14], data[address+15], data[address+16]);
-			zspFile
-			<< "\"SCHWELLE\",2," << (int) schwelle << ",32\n"
-				<< "\"SAMPLE\",9," << (int) data[address+14] << "\n"
-				<< "\"SAMPLE\",10," << (int) data[address+15] << "\n"
-				<< "\"SAMPLE\",11," << (int) data[address+16] << "\n";
+				<< "\"SCHWELLE\"," << s << "," << (int) schwelle << ",64\n"
+				<< "\"SAMPLE\"," << (s*3)+3 << "," << (int) data[address+8+s*3] << "\n"
+				<< "\"SAMPLE\"," << (s*3)+4 << "," << (int) data[address+9+s*3] << "\n"
+				<< "\"SAMPLE\"," << (s*3)+5 << "," << (int) data[address+10+s*3] << "\n";
 		}
 /*
 			<< "\"SCHWELLE\",3,255,21
