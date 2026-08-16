@@ -264,7 +264,7 @@ std::string readFile(const std::string &filename)
 		if(utils::startsWith(filename, "/proc/")) {
 			filelen=0;
 			while(true) {
-				DEBUGF("----reading %s %lu bytes",filename.c_str(),filelen);
+				DEBUGF("----reading %s %zu bytes",filename.c_str(),filelen);
 				ret.resize(filelen+1024,'\0');
 				const char *data=ret.data()+filelen; // mutig ...
 				size_t readBytes=fread((void*)data,1,1024,f);
@@ -274,7 +274,7 @@ std::string readFile(const std::string &filename)
 				}
 				filelen+=1024;
 			}
-			DEBUGF("file contents=%s\nsize=%d", ret.c_str(),filelen);
+			DEBUGF("file contents=%s\nsize=%zu", ret.c_str(),filelen);
 		} else {
 			ret.resize(buf.st_size,'\0');
 			const char *data=ret.data(); // mutig ...
