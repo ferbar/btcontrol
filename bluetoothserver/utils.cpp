@@ -281,7 +281,7 @@ std::string readFile(const std::string &filename)
 			fread((void*)data,1,buf.st_size,f);
 		}
 		fclose(f);
-		DEBUGF("reading %s %lu bytes",filename.c_str(),filelen);
+		DEBUGF("reading %s %zu bytes",filename.c_str(),filelen);
 	}
 	return ret;
 }
