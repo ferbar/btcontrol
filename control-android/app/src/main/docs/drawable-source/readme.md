@@ -9,3 +9,4 @@ glow:
 breite 2
 unschärfe:13,2
 
+svg sourcen der icons sind unter docs/drawable-source

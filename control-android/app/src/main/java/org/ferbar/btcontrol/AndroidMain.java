@@ -155,7 +155,7 @@ public class AndroidMain extends Activity {
 		String text = settings.getString("server", "");
 		server.setText(text);
 
-		this.wifiManager = (android.net.wifi.WifiManager) getSystemService(android.content.Context.WIFI_SERVICE);
+		this.wifiManager = (android.net.wifi.WifiManager) getApplicationContext().getSystemService(android.content.Context.WIFI_SERVICE);
 		// this.wifiManager.getWifiState()
 
 // FIXME: E/ActivityThread(29021): Activity com.example.helloandroid.AndroidMain has leaked IntentReceiver com.example.helloandroid.AndroidMain$3@40555948 that was originally registered here. Are you missing a call to unregisterReceiver()?
