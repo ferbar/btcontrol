@@ -1,13 +1,32 @@
-# Eclipse Projekt - btcontrol Android Steuerung
+# Android-Studio Projekt - btcontrol Android Steuerung
 
 <img src="img_android_lokauswahl.png" alt="Android Steuerung" width="300"/>
 <img src="img_android_steuerung.png" alt="Android Steuerung" width="300"/>
 
 # JmDNS installieren:
-im extern Verzeichnis ein git clone https://github.com/jmdns/jmdns.git
+im jmdns-patched/ Verzeichnis ein git clone https://github.com/jmdns/jmdns.git
 commit ID: dd8985fdffe5395a40fb554bf750287140b86cb7
 
-2025:
+## 2026:
+fürs android braucht man im DNSOutgoing.java: `public void writeBytes(byte data[])` (schreit eh beim kompilieren)
+
+```
+diff --git a/src/main/java/javax/jmdns/impl/DNSOutgoing.java b/src/main/java/javax/jmdns/impl/DNSOutgoing.java
+index 03878f6..01b4395 100644
+--- a/src/main/java/javax/jmdns/impl/DNSOutgoing.java
++++ b/src/main/java/javax/jmdns/impl/DNSOutgoing.java
+@@ -53,7 +53,7 @@ public final class DNSOutgoing extends DNSMessage {
+             }
+         }
+
+-        void writeBytes(byte data[]) {
++        public void writeBytes(byte data[]) {
+             if (data != null) {
+                 writeBytes(data, 0, data.length);
+             }
+```
+
+## 2025:
 
 wird ein RaspberryPi mit isc-dhcp-server (statt dnsmasq) verwendet muss folgende Änderung in src/main/java/javax/jmdns/impl/JmDNSImpl.java gemacht werden:
 ```
