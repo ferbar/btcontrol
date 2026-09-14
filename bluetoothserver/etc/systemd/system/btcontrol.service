@@ -4,7 +4,8 @@ Description=btcontrol
 #Requires=bluetooth.service
 After=bluetooth.service
 StartLimitInterval=100
-StartLimitBurst=2
+# spi braucht länger zum laden
+StartLimitBurst=5
 
 [Service]
 #Type=oneshot
