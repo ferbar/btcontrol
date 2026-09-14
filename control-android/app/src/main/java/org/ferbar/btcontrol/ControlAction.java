@@ -409,13 +409,13 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
     
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle item selection
-        switch (item.getItemId()) {
-        case R.id.menu_selectLok: { // lok auswahl starten
-        	Intent i = new Intent(this, SelectLocoAction.class);
-        	startActivityForResult(i, ACTIVITY_SELECT_LOK);
-            return true; }
-        case R.id.menu_Power: { // Power togglen
+		// Handle item selection
+		int id = item.getItemId();
+		if (id == R.id.menu_selectLok) { // lok auswahl starten
+			Intent i = new Intent(this, SelectLocoAction.class);
+			startActivityForResult(i, ACTIVITY_SELECT_LOK);
+			return true;
+	    } else if (id == R.id.menu_Power) { // Power togglen
         	FBTCtlMessage msg = new FBTCtlMessage();
 			try {
 				msg.setType(MessageLayouts.messageTypeID("POWER"));
@@ -425,8 +425,8 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 				Log.e(TAG, "onOptionsItemSelected", e);
 				Toast.makeText(this, "error changing power state: "+e.getMessage(), Toast.LENGTH_LONG).show();
 			}
-            return true; }
-        case R.id.menu_functions: { // function dialog aufmachen
+            return true;
+		} else if (id == R.id.menu_functions) { // function dialog aufmachen
         	//List items
 
         	//Prepare the list dialog box
@@ -475,38 +475,38 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
         	//display dialog box
 
         	alert.show();
-        	return true; }
-        case R.id.menu_help: {
-        	  // Create the alert box
-            AlertDialog.Builder alertbox = new AlertDialog.Builder(this);
-            alertbox.setTitle("Hilfe");
-            // Set the message to display
-            alertbox.setMessage("Back(kurz) = power off, zurück zum Connect Dialog\n" +
-            	"Home (kurz) = power off, App zu\n" +
-            	"Menu = aktueller Zug stop\n" +
-            	"Slider drücken = V wird langsam gesetzt\n" +
-            	"Vol +/- gedrückt halten = beschleunigen/bremsen\n" +
-            	"im menü wird aktueller power-status richtig angezeigt");
-
-            // Add a neutral button to the alert box and assign a click listener
-            alertbox.setNeutralButton("Ok", new DialogInterface.OnClickListener() {
-
-                // Click listener on the neutral button of alert box
-                public void onClick(DialogInterface arg0, int arg1) {
-
-                    // The neutral button was clicked
-                    // Toast.makeText(getApplicationContext(), "'OK' button clicked", Toast.LENGTH_LONG).show();
-                }
-            });
-        
-             // show the alert box
-            alertbox.show(); }
         	return true;
-        case R.id.menu_POM_Neu: { // pom neu mit jmri dialog starten [test]
+		} else if (id == R.id.menu_help) {
+			// Create the alert box
+			AlertDialog.Builder alertbox = new AlertDialog.Builder(this);
+			alertbox.setTitle("Hilfe");
+			// Set the message to display
+			alertbox.setMessage("Back(kurz) = power off, zurück zum Connect Dialog\n" +
+					"Home (kurz) = power off, App zu\n" +
+					"Menu = aktueller Zug stop\n" +
+					"Slider drücken = V wird langsam gesetzt\n" +
+					"Vol +/- gedrückt halten = beschleunigen/bremsen\n" +
+					"im menü wird aktueller power-status richtig angezeigt");
+
+			// Add a neutral button to the alert box and assign a click listener
+			alertbox.setNeutralButton("Ok", new DialogInterface.OnClickListener() {
+
+				// Click listener on the neutral button of alert box
+				public void onClick(DialogInterface arg0, int arg1) {
+
+					// The neutral button was clicked
+					// Toast.makeText(getApplicationContext(), "'OK' button clicked", Toast.LENGTH_LONG).show();
+				}
+			});
+
+			// show the alert box
+			alertbox.show();
+			return true;
+		} else if (id == R.id.menu_POM_Neu) { // pom neu mit jmri dialog starten [test]
         	Intent i = new Intent(this, PomAction.class);
         	startActivityForResult(i, ACTIVITY_SELECT_LOK);
-            return true; }
-        case R.id.menu_POM: { // Programming on the main dialog
+            return true;
+		} else if (id == R.id.menu_POM) { // Programming on the main dialog
         	// Context mContext = getApplicationContext();
     		AvailLocosListItem lok=ControlAction.availLocos.get(ControlAction.currSelectedAddr.get(0));
     		if(lok != null) {
@@ -616,21 +616,18 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
     			Toast.makeText(this,"keine lok", Toast.LENGTH_LONG).show();
     		}
         	return true;
-        }
-        case R.id.menu_multi: { // Mehrfachsteuerung lok auswahl starten
+        } else if (id == R.id.menu_multi) { // Mehrfachsteuerung lok auswahl starten
         	Intent i = new Intent(this, SelectLocoAction.class);
         	i.putExtra("Mehrfachsteuerung", true);
         	startActivityForResult(i, ACTIVITY_SELECT_LOK);
         	return true;
-        }
-        case R.id.menu_exitNoPowerOff: {
+        } else if (id == R.id.menu_exitNoPowerOff) {
         	Intent startMain = new Intent(Intent.ACTION_MAIN);
         	startMain.addCategory(Intent.CATEGORY_HOME);
         	startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         	startActivity(startMain);
         	return true;
-        }
-        case R.id.menu_seekbarWorkaround: {
+        } else if (id == R.id.menu_seekbarWorkaround) {
         	cfg_seekBarWorkaround=!cfg_seekBarWorkaround;
         	final SharedPreferences settings = getSharedPreferences(AndroidMain.PREFS_NAME, 0);
         	SharedPreferences.Editor editor = settings.edit();
@@ -638,8 +635,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 			editor.commit();
 			this.setSeekBarWorkaround();
         	return true;
-        }
-        default:
+        } else {
             return super.onOptionsItemSelected(item);
         }
     }
@@ -712,17 +708,14 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 	public void onClickButton(View view) {
 		FBTCtlMessage msg = new FBTCtlMessage();
 		try {
-			switch(view.getId()) {
-			case R.id.buttonBREAK:
+			int id = view.getId();
+			if(id == R.id.buttonBREAK) {
 				this.setMessageAddrField(msg, "BREAK");
-				updateSpeedSlider(0,-1);
-				break;
-			case R.id.buttonACC:
+				updateSpeedSlider(0, -1);
+			} else if(id == R.id.buttonACC) {
 				this.setMessageAddrField(msg, "ACC");
-				updateSpeedSlider(0,1);
-				break;
-			case R.id.buttonDirLeft:
-			case R.id.buttonDirRight: {
+				updateSpeedSlider(0, 1);
+			} else if(id == R.id.buttonDirLeft || id == R.id.buttonDirRight) {
 				int main_addr=ControlAction.currSelectedAddr.get(0);
 				if(Math.abs(availLocos.get(main_addr).speed) > 1) {
 					Log.e(TAG, "error: changing dir only when stopped ("+availLocos.get(main_addr).speed+")");
@@ -737,7 +730,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 					this.setMessageAddrField(msg, "DIR");
 					msg.get("dir").set(val);
 				}
-				break; }
+			}
 			/* gibts nichtmehr
 			case R.id.seekBarDirection:
 				if(Math.abs(availLocos.get(this.currAddr).speed) > 1) {
@@ -753,7 +746,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 				if(val == currDir) return; // nur senden wenn sichs geändert hat
 				msg.get("dir").set(val);
 				break; */
-			default: {
+			else {
 				// check ob Fx taste gedrückt wurde:
 				int func=-1;
 				int viewid=view.getId();
@@ -783,12 +776,11 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 
 					value=this.funcStates[func] ? 0 : 1; // togglen
 					msg.get("value").set(value);
-					break;
+				} else {
+					// andere taste -> stop
+					this.setMessageAddrField(msg, "STOP");
+					this.updateSpeedSlider(0, 0);
 				}
-				// andere taste -> stop
-				this.setMessageAddrField(msg, "STOP");
-	    		this.updateSpeedSlider(0,0);
-				break; }
 			}
 			
 			// message für mehrfachsteuerung umbaun:
