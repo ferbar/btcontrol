@@ -78,6 +78,6 @@ dependencies {
     // für JmDNS
     implementation(project(":jmdns-patched"))
     // war bis API28 beim android dabei, TODO: durch HttpURLConnection (Android) ersetzen
-    implementation("org.apache.httpcomponents:httpclient:4.5.14")
+    //implementation("org.apache.httpcomponents:httpclient:4.5.14")
 }
 
