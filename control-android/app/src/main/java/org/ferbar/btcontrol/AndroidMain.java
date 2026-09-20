@@ -23,8 +23,15 @@
 
 package org.ferbar.btcontrol;
 import java.io.IOException;
+import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Hashtable;
+import java.util.List;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -167,15 +174,71 @@ public class AndroidMain extends Activity {
 		         new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
     	
     }
-    
+
+	public List<InetAddress> getInetAddresses() throws SocketException {
+		// 2026 hat überall funktioniert:
+		// InetAddress[] addresses = NetworkTopologyDiscovery.Factory.getInstance().getInetAddresses();
+		List<InetAddress> list=new ArrayList<>();
+		List<NetworkInterface> interfaces;
+		interfaces=Collections.list(NetworkInterface.getNetworkInterfaces());
+
+		for (NetworkInterface intf : interfaces) {
+			try {
+				// 1. Filter: Ignoriere Interfaces, die offline, Loopbacks oder virtuell (z.B. für VMs) sind
+				if (!intf.isUp() || intf.isLoopback() || intf.isVirtual()) {
+					Log.d(TAG, "skipping interface (because auf down/loopback) "+intf.getDisplayName());
+					continue;
+				}
+
+				// 2. Filter: Ignoriere bekannte virtuelle Namen (z.B. von Docker, KVM, vmdk, etc.)
+				String name = intf.getName().toLowerCase();
+				// rmnet ist mobilfunk
+				if (!name.contains("wlan")) {
+					Log.d(TAG, "skipping interface (because of name) "+intf.getDisplayName());
+					continue;
+				}
+
+				List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
+				for (InetAddress addr : addrs) {
+
+					// 3. Filter: IPv6 Auto-Assign (Link-Local) herausfiltern
+					if (addr instanceof Inet6Address) {
+						// fe80::/10 Adressen sind link-local (Auto-Assign ohne echtes Routing)
+						if (addr.isLinkLocalAddress() || addr.isSiteLocalAddress()) {
+							continue;
+						}
+					}
+
+					// Hier hast du eine "echte" IP-Adresse auf einem aktiven Interface
+					Log.d(TAG,"Interface: " + intf.getDisplayName() + " | IP: " + addr.getHostAddress());
+					list.add(addr);
+				}
+			} catch (Exception e) {
+				Log.e(TAG,"error getting interfaces: ",e);
+				e.printStackTrace();
+			}
+		}
+		return list;
+	}
+
     /**
      * wird beim app start 2* aufgerufen - vom wifi broadcast receiver und vom onResume
      */
     public synchronized void setIPInterfaces() {
-    	InetAddress[] addresses = NetworkTopologyDiscovery.Factory.getInstance().getInetAddresses();
-    	RadioGroup rg = (RadioGroup) this.findViewById(R.id.radioGroupIPs);
-    	rg.removeAllViews();
-    	rg.clearCheck();
+		RadioGroup rg = (RadioGroup) this.findViewById(R.id.radioGroupIPs);
+		rg.removeAllViews();
+		rg.clearCheck();
+		List<InetAddress> addresses;
+		try {
+			addresses = this.getInetAddresses();
+		} catch (SocketException e) {
+			RadioButton b = new RadioButton(this);
+			b.setText("error getting interfaces");
+			b.setId(-1);
+			rg.addView(b);
+			return;
+		}
+
     	final SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
     	String bonjourIPAddress=settings.getString("bonjourIPAddress", "");
 
