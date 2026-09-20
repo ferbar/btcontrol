@@ -27,6 +27,7 @@ public:
 	static void resampleX2(const std::string &in, std::string &out);
 
 	static void setMasterVolume(int volume);
+	static int getMasterVolume();
 	void dump_sw() {
 		snd_output_t* out;
 		snd_output_stdio_attach(&out, stderr, 0);

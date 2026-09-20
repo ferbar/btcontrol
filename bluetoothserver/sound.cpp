@@ -981,6 +981,56 @@ void Sound::setMasterVolume(int volume)
     snd_mixer_close(handle);
 }
 
+int Sound::getMasterVolume()
+{
+	DEBUGF("Sound::getMasterVolume()");
+    long min, max;
+    snd_mixer_t *handle;
+    snd_mixer_selem_id_t *sid;
+	int rc;
+
+    if((rc=snd_mixer_open(&handle, 0))) {
+		ERRORF("snd_mixer_open: %s", snd_strerror(rc));
+		abort();
+	}
+	DEBUGF("Sound::[%p]getMasterVolume()", handle);
+    if((rc=snd_mixer_attach(handle, device))) {
+		perror("snd_mixer_attach");
+		abort();
+	}
+    snd_mixer_selem_register(handle, NULL, NULL);
+    snd_mixer_load(handle);
+
+    snd_mixer_selem_id_alloca(&sid);
+
+	snd_mixer_elem_t* elem;
+	for (elem = snd_mixer_first_elem(handle); elem; elem = snd_mixer_elem_next(elem)) {
+		snd_mixer_selem_get_id(elem, sid);
+		if (!snd_mixer_selem_is_active(elem)) {
+			continue;
+		}
+		DEBUGF("Simple mixer control '%s',%i", snd_mixer_selem_id_get_name(sid), snd_mixer_selem_id_get_index(sid));
+		break;
+	}
+	if(!elem) {
+		perror("snd_mixer_find_selem");
+		abort();
+	}
+
+    snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+	DEBUGF("min:%ld max:%ld", min, max);
+	long range = max - min;
+    //snd_mixer_selem_set_playback_volume_all(elem, calcVolume + min);
+	long currentVolume;
+	snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_FRONT_LEFT, &currentVolume);
+	int calcVolume = (float)(currentVolume - min)*255/range;
+	DEBUGF("calcVolume %d => %ld", currentVolume, calcVolume);
+
+    snd_mixer_close(handle);
+
+	return calcVolume;
+}
+
 /*
 // http://www.alsa-project.org/alsa-doc/alsa-lib/_2test_2pcm_8c-example.html#a41
 static void async_callback(snd_async_handler_t *ahandler)
