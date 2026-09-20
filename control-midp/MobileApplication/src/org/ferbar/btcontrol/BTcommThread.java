@@ -55,6 +55,7 @@ public class BTcommThread extends Thread {
 		public void connect() throws java.io.IOException;
 		public String toString();
 		public String getLocalAddress();
+		public String getRemoteAddress();
 	}
 	
 	// me4se kann das nicht:
@@ -73,6 +74,7 @@ public class BTcommThread extends Thread {
 	// doClient neu starten wenn verbindung abgebrochen?
 	private boolean stop=false;
 
+	public static final int CV_MANUFACTURER=8;
     public static final int CV_CV_SOUND_VOL=-10;
     public static final int CV_CV_BAT=-20;
     public static final int CV_CV_WIFI_CLIENT_SWITCH=-30;
@@ -419,10 +421,13 @@ public class BTcommThread extends Thread {
 		return msg;
 	}
         
-        public String getLocalAddress() {
-            return this.BTStreamConnection.getLocalAddress();
-        }
-	
+	public String getLocalAddress() {
+		return this.BTStreamConnection.getLocalAddress();
+	}
+	public String getRemoteAddress() {
+		return this.BTStreamConnection.getRemoteAddress();
+	}
+
 	/**
 	 * der thread
 	 */
