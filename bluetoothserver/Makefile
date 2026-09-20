@@ -258,13 +258,7 @@ install:
 		fi ; \
 		echo "########### setting lighttpd config ###########" ; \
 		if [ -d /etc/lighttpd/ ] ; then \
-			echo -e '# created by btcontrol make install, hostname lower case \n' \
-'   #$$HTTP["host"] != "'$${HOSTNAME,,}'" { \n' \
-'   #     url.redirect = ("" => "http://'$${HOSTNAME,,}'/") \n' \
-'   # } \n' \
-'   # fürs capture portal: \n' \
-'   server.error-handler-404   = "/index.html" \n' \
-            > /etc/lighttpd/conf-enabled/redirect.conf ; \
+			cp etc/lighttpd/capture-portal.conf /etc/lighttpd/conf-enabled/ ; \
 			if [ ! -f /var/www/html/index.html ] ; then \
 				INDEX_HTML="$$(cat etc/lighttpd/index.html)" ; \
 				eval "echo \"$$INDEX_HTML\"" > /var/www/html/index.html ; \
