@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<decoder-config xmlns:xi="http://w3.org" xmlns:xsi="http://w3.org" xsi:noNamespaceSchemaLocation="http://jmri.org">
+    <decoder>
+        <!-- mfgID 255 steht bei der NMRA für Eigenbau/Do-It-Yourself -->
+        <family name="DIY Eigenbau Decoder" mfg="Developer" mfgID="255">
+            <model model="WiFi Sound Decoder">
+                <size length="0" width="0" height="0"/>
+            </model>
+        </family>
+
+        <!-- Standardbelegung für das JMRI Fahrpult und den "Functions" Tab -->
+        <functionlabels>
+            <function num="0" lockable="true">Licht ein</function>
+            <function num="1" lockable="false">Horn</function>
+            <function num="2" lockable="false">Pfeife</function>
+        </functionlabels>
+
+        <variables>
+            <!-- Sound Lautstärke Einstellungen -->
+            <variable label="Master Lautstärke" CV="266" item="SOUND_VOLUME_MASTER" default="128">
+                <decVal min="0" max="255"/>
+            </variable>
+            <variable label="Motor Lautstärke" CV="267" item="SOUND_VOLUME_MOTOR" default="128">
+                <decVal min="0" max="255"/>
+            </variable>
+            <variable label="Horn Lautstärke" CV="268" item="SOUNT_VOLUME_HORN" default="128">
+                <decVal min="0" max="255"/>
+            </variable>
+
+            <!-- System und WiFi Einstellungen -->
+            <variable label="Batteriespannung" CV="500" item="CV_BAT" readOnly="true" default="0">
+                <decVal min="0" max="255"/>
+            </variable>
+            <variable label="WiFi Client Modus" CV="510" item="CV_WIFI_CLIENT_SWITCH" default="0">
+                <enumVal>
+                    <enumChoice choice="Aus" value="0"/>
+                    <enumChoice choice="An" value="1"/>
+                </enumVal>
+            </variable>
+        </variables>
+
+        <!-- Aufteilung der Benutzeroberfläche in die gewünschten Tabs -->
+        <pane>
+            <name>Sound Levels</name>
+            <column>
+                <display item="SOUND_VOLUME_MASTER"/>
+                <display item="SOUND_VOLUME_MOTOR"/>
+                <display item="SOUNT_VOLUME_HORN"/>
+            </column>
+        </pane>
+
+        <pane>
+            <name>Config</name>
+            <column>
+                <display item="CV_BAT"/>
+                <label label=" "/> <!-- Abstandhalter -->
+                <display item="CV_WIFI_CLIENT_SWITCH"/>
+            </column>
+        </pane>
+    </decoder>
+</decoder-config>
+

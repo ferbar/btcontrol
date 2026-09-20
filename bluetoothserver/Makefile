@@ -265,6 +265,8 @@ install:
 			else \
 				echo "/var/www/html/index.html already created, delete to recreate" ; \
 			fi ; \
+			mkdir -p /var/www/html/xml/decoders/ ; \
+			cp etcd/lighttpd/www/ /var/www/html/xml/decoders/ ; \
 			cp ../control-android/bin/btcontrol.apk /var/www/html/ ; \
 		else \
 			echo "not installed, skipped" ; \
