@@ -51,7 +51,10 @@
             android:theme="@style/AppTheme"
             >
         </activity>
-        <activity android:name=".PomAction" >
+        <activity android:name=".PomAction"
+            android:launchMode="singleTop"
+            android:theme="@style/AppTheme"
+            >
         </activity>
         <activity
             android:name="org.ferbar.btcontrol.UncaughtException"
