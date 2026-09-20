@@ -12,7 +12,8 @@
 USBPlatine::USBPlatine(bool debug) : debug(debug)
 {
 #ifndef ESP_PLATFORM
-  // I2C ADC initen:
+	// I2C ADC initen:
+	try {
 	std::string voltageFile = config.get("powerMonitor.voltage.file");
 	if(voltageFile != NOT_SET) {
 		std::string initFile = config.get("powerMonitor.init.file");
@@ -30,6 +31,11 @@ USBPlatine::USBPlatine(bool debug) : debug(debug)
 		}
 		this->powerMonitorVoltageFile=voltageFile;
 	}
+	} catch(std::exception &errormsg) {
+		ERRORF("USBPlatine::USBPlatine init I2C ADC: %s",errormsg.what());
+		throw;
+	}
+
 #endif
 }
 
@@ -89,6 +95,10 @@ void USBPlatine::sendLoco(int addr_index, bool emergencyStop) {
 }
 
 int USBPlatine::sendPOM(int addr, int cv, int value) {
+
+       if(cv == CV_MANUFACTURER) {
+               return 15;
+       }
 
 #ifdef HAVE_ALSA
 	if(cv == CV_CV_SOUND_VOL) {
