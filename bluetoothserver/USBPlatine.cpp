@@ -95,8 +95,9 @@ int USBPlatine::sendPOM(int addr, int cv, int value) {
 		return CV_SOUND_VOL;
 	}
 	if(cv==CV_SOUND_VOL) {
-		Sound::setMasterVolume(value);
-		return 1;
+		if(value != -1)
+			Sound::setMasterVolume(value);
+		return Sound::getMasterVolume();
 	}
 #endif
 #ifndef ESP32
