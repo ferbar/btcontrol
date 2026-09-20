@@ -1024,7 +1024,7 @@ int Sound::getMasterVolume()
 	long currentVolume;
 	snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_FRONT_LEFT, &currentVolume);
 	int calcVolume = (float)(currentVolume - min)*255/range;
-	DEBUGF("calcVolume %d => %ld", currentVolume, calcVolume);
+	DEBUGF("calcVolume %ld => %d", currentVolume, calcVolume);
 
     snd_mixer_close(handle);
 
