@@ -77,6 +77,8 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnTouchListener;
+import android.view.ViewConfiguration;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 //import android.view.ViewParent;
@@ -84,6 +86,7 @@ import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.PopupWindow;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
@@ -100,6 +103,8 @@ import protocol.MessageLayouts;
 import org.ferbar.btcontrol.AndroidStream;
 import org.ferbar.btcontrol.BTcommThread;
 import org.ferbar.btcontrol.Debuglog;
+
+import android.widget.PopupMenu;
 
 public class ControlAction extends Activity implements BTcommThread.Callback, OnSeekBarChangeListener {
 	final static String TAG ="btcontrol.ControlAction";
@@ -173,7 +178,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 	    ControlAction.availLocos=new Hashtable<Integer, AvailLocosListItem>(); // bt.reconnect = liste wird neu übertragen
 	    
 		PowerManager pm = (PowerManager) getSystemService(ControlAction.POWER_SERVICE);
-		powerManager_wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK, "My Tag");
+		powerManager_wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK, "btcontrol:waketag");
 		
 		if(AndroidMain.btcomm == null) {
 			// FIXME: da war auch einmal eine nullpointer exception weil btcomm = null war (warum???)
@@ -197,6 +202,41 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 	    }
 	    */
         setContentView(R.layout.control);
+
+		Button soft_menu = findViewById(R.id.soft_menu_button);
+
+		if (ViewConfiguration.get(this).hasPermanentMenuKey()) {
+			// Wenn ja: Die Leiste komplett verstecken
+			soft_menu.setVisibility(View.GONE);
+		} else {
+			soft_menu.setOnClickListener(view -> {
+                PopupMenu popupMenu = new PopupMenu(this, view);
+				onCreateOptionsMenu(popupMenu.getMenu());
+				onPrepareOptionsMenu(popupMenu.getMenu());
+				popupMenu.setOnMenuItemClickListener(menuItem -> {
+					onOptionsItemSelected(menuItem);
+					return true;
+				});
+				popupMenu.setOnDismissListener(menu -> {
+					onOptionsMenuClosed(null);
+				});
+				try {
+					// Holt das interne Feld "mPopup" aus dem PopupMenu
+					java.lang.reflect.Field fieldPopup = popupMenu.getClass().getDeclaredField("mPopup");
+					fieldPopup.setAccessible(true);
+					Object menuPopupHelper = fieldPopup.get(popupMenu);
+
+					// Ruft die versteckte Methode auf, die die Icons erzwingt
+					java.lang.reflect.Method setForceShowIcon = menuPopupHelper.getClass().getMethod("setForceShowIcon", boolean.class);
+					setForceShowIcon.invoke(menuPopupHelper, true);
+				} catch (Exception e) {
+					// Falls ein Hersteller das Android-System stark verändert hat,
+					// fängt dieser Block den Fehler ab, damit die App nicht abstürzt.
+					e.printStackTrace();
+				}
+				popupMenu.show();
+			});
+		}
         
         
         if(ControlAction.currSelectedAddr.size() == 0) {
@@ -246,9 +286,9 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
         this.update_btcomm();
         
         // TODO: geht das ned vielleicht gleich übers xml ?
-        for(int i=0; i < this.viewFunctions.length; i++) {
-        	ImageButton ib=(ImageButton) this.findViewById(this.viewFunctions[i]);
-        	registerForContextMenu(ib);
+        for (int viewFunction : this.viewFunctions) {
+            ImageButton ib = (ImageButton) this.findViewById(viewFunction);
+            registerForContextMenu(ib);
         }
 	}
 
@@ -301,7 +341,8 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 	@Override
 	public void onPause() {
 		super.onPause();
-		this.fullStop();
+		if(ControlAction.currSelectedAddr.size() > 0)
+			this.fullStop();
 		PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
 		if (!pm.isScreenOn()) {
 		   this.setPower(false);
@@ -508,113 +549,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
             return true;
 		} else if (id == R.id.menu_POM) { // Programming on the main dialog
         	// Context mContext = getApplicationContext();
-    		AvailLocosListItem lok=ControlAction.availLocos.get(ControlAction.currSelectedAddr.get(0));
-    		if(lok != null) {
-            	final Dialog dialog = new Dialog(this);
-
-            	dialog.setContentView(R.layout.pom);
-            	dialog.setTitle("Programming on the Main");
-
-            	// nettes bild + lokname setzen
-            	TextView tv = (TextView) dialog.findViewById(R.id.textView1);
-            	tv.setText(lok.name);
-            	ImageView iv = (ImageView) dialog.findViewById(R.id.imageViewLok);
-    			iv.setImageBitmap(lok.img);
-    			
-    			// onChange -> valueBits updaten
-    		    ((EditText)dialog.findViewById(R.id.editTextValue)).addTextChangedListener(new TextWatcher() {
-    		        public void afterTextChanged(Editable s) {
-    		        	View v=(View)(EditText) dialog.findViewById(R.id.editTextValue);
-		        		String value=s.toString();
-		        		int vi=0;
-		        		try{
-		        			vi=Integer.parseInt(value);
-			        		if(vi > 255) {
-			        			v.getBackground().setColorFilter(0xFFFF0000, PorterDuff.Mode.MULTIPLY);
-			        		} else {
-    							v.getBackground().setColorFilter(null);
-		    		        	if(v.hasFocus()) {
-		    		        		String valueBits="";
-		    		        		for(int i=0; i < 8; i++) {
-		    		        			valueBits=(((vi >> i) & 1) == 1 ? 1 : 0 ) + valueBits;
-		    		        		}
-		    		        		EditText editTextValueBits=(EditText) dialog.findViewById(R.id.editTextValueBits);
-		    		        		editTextValueBits.setText(valueBits);
-	    		        		}
-			        		}
-		        		} catch(Exception e) {
-							v.getBackground().setColorFilter(0xFFFF0000, PorterDuff.Mode.MULTIPLY);
-		        		}
-    		        }
-    		        public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
-    		        public void onTextChanged(CharSequence s, int start, int before, int count) { }
-    		    });
-    			// onChange -> value updaten
-    		    ((EditText)dialog.findViewById(R.id.editTextValueBits)).addTextChangedListener(new TextWatcher() {
-    		        public void afterTextChanged(Editable s) {
-    		        	View v=(View)(EditText) dialog.findViewById(R.id.editTextValueBits);
-    		        	if(v.hasFocus()) {
-    		        		String valueBits=s.toString();
-    		        		int vbi;
-    		        		try {
-    		        			vbi=Integer.parseInt(valueBits,2);
-    							v.getBackground().setColorFilter(null);
-    		        		} catch(Exception e) {
-    		        			vbi=0;
-    							v.getBackground().setColorFilter(0xFFFF0000, PorterDuff.Mode.MULTIPLY);
-    		        		}
-    		        		String value=""+vbi;
-    		        		EditText editTextValueBits=(EditText) dialog.findViewById(R.id.editTextValue);
-    		        		editTextValueBits.setText(value);
-    		        	}
-    		        }
-    		        public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
-    		        public void onTextChanged(CharSequence s, int start, int before, int count) { }
-    		    });
-		        ((Button)dialog.findViewById(R.id.buttonGo)).setOnClickListener(new View.OnClickListener() {
-		        	public void onClick(View goButton) {
-		        		try {
-		        			EditText v=(EditText) dialog.findViewById(R.id.editTextCV);
-		        			String sCV=v.getText().toString();
-		        			if(sCV.length()==0) {
-		        				Toast.makeText(dialog.getContext(), "CV number empty", Toast.LENGTH_LONG).show();
-		        				return;
-		        			}
-			    			int cv=Integer.parseInt(sCV);
-
-			    			v=(EditText) dialog.findViewById(R.id.editTextValue);
-		        			String sValue=v.getText().toString();
-		        			int value;
-		        			if(sValue.length() == 0) {
-		        				value=-1;
-		        			} else {
-		        				value=Integer.parseInt(sValue);
-		        			}
-		        		
-		        			FBTCtlMessage msg = new FBTCtlMessage();
-			    			msg.setType(MessageLayouts.messageTypeID("POM"));
-			    	    	msg.get("addr").set(ControlAction.currSelectedAddr.get(0));
-			    	    	msg.get("cv").set(cv);
-			    	    	msg.get("value").set(value);
-			    	    	
-			    	    	FBTCtlMessage reply = AndroidMain.btcomm.execCmd(msg);
-			    	    	if(reply != null) {
-			    	    		Toast.makeText(dialog.getContext(), "CV "+cv+" = "+value+" gesendet", Toast.LENGTH_LONG).show();
-			    	    		v.setText(""+reply.get("value").getIntVal());
-			    	    	}
-			    		} catch (Exception e) {
-			    			// TODO Auto-generated catch block
-			    			Log.e(TAG, "POM Exception", e);
-			    			Toast.makeText(dialog.getContext(), "POM Exception "+e.getMessage(), Toast.LENGTH_SHORT).show();
-			    		}
-
-		        	}
-		        });
-            	dialog.setOwnerActivity(this);
-            	dialog.show();
-    		} else {
-    			Toast.makeText(this,"keine lok", Toast.LENGTH_LONG).show();
-    		}
+			PomDialog.show(this, "");
         	return true;
         } else if (id == R.id.menu_multi) { // Mehrfachsteuerung lok auswahl starten
         	Intent i = new Intent(this, SelectLocoAction.class);
@@ -700,7 +635,36 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 			}
 		});
     }
-    
+
+	void createPopup(View view, String popuptext) {
+		// 1. PopupWindow erstellen
+		final PopupWindow popup = new PopupWindow(this);
+
+// 2. Ein einfaches TextView für den Text erzeugen
+		TextView textView = new TextView(this);
+		textView.setText(popuptext);
+		textView.setBackgroundColor(Color.DKGRAY); // Dunkler Hintergrund wie beim Toast
+		textView.setTextColor(Color.WHITE);
+		textView.setPadding(20, 15, 20, 15); // Ein wenig Abstand um den Text
+
+		popup.setContentView(textView);
+		popup.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
+		popup.setWidth(ViewGroup.LayoutParams.WRAP_CONTENT);
+		popup.setOutsideTouchable(true); // Schließt das Popup, wenn man daneben klickt
+
+// 3. Popup direkt unter/über dem Button (view) anzeigen
+		popup.showAsDropDown(view, 0, 0);
+
+// Optional: Nach 2 Sekunden automatisch ausblenden (wie Toast.LENGTH_SHORT)
+		view.postDelayed(new Runnable() {
+			@Override
+			public void run() {
+				if (popup.isShowing()) {
+					popup.dismiss();
+				}
+			}
+		}, 2000);
+	}
 	/**
 	 * als callback funk im .xml definiert
 	 * @param view
@@ -759,6 +723,8 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 					String funcname=this.funcNames[func];
 					if(funcname.length() > 0)
 						funcname=funcname.substring(1);
+					createPopup(view, funcname);
+					/*
 					// Toast.makeText(getBaseContext(), funcname, Toast.LENGTH_SHORT).show();
 					Toast toast = Toast.makeText(this, funcname, Toast.LENGTH_SHORT);
 					toast.getView().buildDrawingCache(true); // resolveSize(size, measureSpec);
@@ -769,6 +735,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 					// toast.setText(funcname);
 					// toast.setDuration(Toast.LENGTH_LONG);
 					toast.show();
+					*/
 
 					this.setMessageAddrField(msg, "SETFUNC");
 					msg.get("funcnr").set(func);
@@ -868,7 +835,7 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
         	Log.d(TAG, "key up ("+event.toString()+")");
         	if(timer != null) // wenn die app zum onKeyDown Zeitpunkt noch nicht gelaufen ist stürzts ab ...
         		timer.cancel();
-            return true;
+        	return true;
         }
         return super.onKeyUp(keyCode, event);
     }
@@ -1244,7 +1211,6 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 	
 	/**
 	 * @param reply antwort auf GETLOCOS - da steht auch aktueller speed + func der loks drinnen
-	 * @param selectList liste die filllistthread erzeugt hat (wegen den bildern)
 	 * @throws java.lang.Exception
 	 */
 	public static void setAvailLocos(CallbackProgressRunnable callbackProgress, CallbackProgressRunnable callbackTotal, FBTCtlMessage reply) throws Exception {
@@ -1503,6 +1469,5 @@ public class ControlAction extends Activity implements BTcommThread.Callback, On
 			AndroidMain.restartConnection(loadProgressDialog, mUpdateProgressDialog);
 		}
 	}
-
 
 }

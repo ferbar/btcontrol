@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:orientation="vertical"
-    android:weightSum="1" >
+    android:weightSum="1"
+    tools:ignore="HardcodedText,UsingOnClickInXml,RtlHardcoded" >
     
    
     <RelativeLayout
@@ -92,6 +94,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_weight="1"
         android:orientation="horizontal" >
 
         <LinearLayout
@@ -499,7 +502,7 @@
                     android:paddingBottom="20dip"
                     android:paddingLeft="00dip"
                     android:paddingTop="20dip"
-				/>
+                    />
 
                 <android.widget.VerticalSeekBar
                     android:id="@+id/seekBarSpeed2"
@@ -565,5 +568,18 @@
          ImageView android:layout_width="wrap_content" android:src="@drawable/icon" 
 		android:id="@+id/imageView1" android:layout_height="match_parent" /
     -->
+    <Button
+        android:id="@+id/soft_menu_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Menü"
+        android:layout_weight="10"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginLeft="16dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="16dp"
+        />
 
 </LinearLayout>
