@@ -16,9 +16,11 @@
  *  You should have received a copy of the GNU General Public License
  *  along with btcontrol.  If not, see <http://www.gnu.org/licenses/>.
  */
-/**
- * Listenansicht für Lokauswahl
+
+/*
+ * Listenansicht für Lokauswahl, beendet sich automatisch wenn es nur eine Lok gibt
  */
+
 package org.ferbar.btcontrol;
 
 import java.util.ArrayList;
@@ -59,7 +61,7 @@ import android.view.LayoutInflater;
 
 public class SelectLocoAction extends ListActivity {
 
-	static final String TAG="btcontrol.ControlListAction";
+	static final String TAG="btcontrol.SelectLoco";
 	ArrayAdapter<AvailLocosListItemAddr> listAdapter=null;
 	Object listAdapter_notify=new Object();
 	private LayoutInflater mInflater;
@@ -246,6 +248,7 @@ public class SelectLocoAction extends ListActivity {
 	        	}
     	
     	};
+		// check: gibts nur eine Lok, dann die automatisch auswählen und Action zu machen
     	Enumeration<Integer> e = ControlAction.availLocos.keys();
     	if(ControlAction.availLocos.size() == 1) {
     		Integer addr=e.nextElement();
