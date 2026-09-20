@@ -16,17 +16,24 @@
  *  You should have received a copy of the GNU General Public License
  *  along with btcontrol.  If not, see <http://www.gnu.org/licenses/>.
  */
-/**
+
+/*
  * Programming on the Main - Interface
  * ladet die decoder definition von jmri.org runter
  */
 
 package org.ferbar.btcontrol;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -50,13 +57,16 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
+/*
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
+*/
 import org.ferbar.btcontrol.ControlAction.AvailLocosListItem;
+import org.ferbar.utils.utils;
 import org.w3c.dom.Comment;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
@@ -98,11 +108,12 @@ import android.view.KeyEvent;
 import android.view.ViewGroup;
 import android.view.LayoutInflater;
 import android.view.ViewGroup.LayoutParams;
+import android.widget.Toast;
 
 @TargetApi(8)
 public class PomAction extends Activity {
 
-	static String TAG = "btcontrol.PomAction";
+	static String TAG = "btcontrol.PomGui";
 
 	ArrayAdapter<AvailLocosListItemAddr> listAdapter = null;
 	Object listAdapter_notify = new Object();
@@ -110,8 +121,10 @@ public class PomAction extends Activity {
 
 	List<Integer> selectedLocosPos;
 
-	static final String URL = "http://jmri.org/xml/decoders/Zimo_Unified_software_MX690Sv30.xml";
+	static final String URL_ZIMO = "/xml/decoders/Zimo_Unified_software_MX690Sv30.xml";
+	static final String URL_BLUETOOTHSERVER = "/xml/decoders/bluetoothserver.xml";
 	static final String XincludeXMLns = "http://www.w3.org/2001/XInclude";
+	String xmlHost;
 
 	TabHost mTabHost;
 	TextView tvInfo;
@@ -123,6 +136,8 @@ public class PomAction extends Activity {
 	static ArrayList<Element> tabTabs = new ArrayList<Element>();
 
 	static XPath xpath = XPathFactory.newInstance().newXPath();
+
+	int manufacturer=-1;
 
 	/** Called when the activity is first created. */
 	@Override
@@ -141,132 +156,193 @@ public class PomAction extends Activity {
 
 		// JMRI decoder beschreibung laden:
 		if (doc == null) {
-			final PomAction PA=this;
+			// Löscht den Cache für erfolgreiche DNS-Abfragen sofort (0 Sekunden TTL)
+			java.security.Security.setProperty("networkaddress.cache.ttl", "0");
+			// Löscht den Cache für FEHLGESCHLAGENE DNS-Abfragen sofort (wichtig für dich!)
+			java.security.Security.setProperty("networkaddress.cache.negative.ttl", "0");
+
+			// 20260920: workaround damit das android 4.1 keine ipv6 requests macht
+			// Zwingt Java, nur noch IPv4-Sockets zu öffnen
+			System.setProperty("java.net.preferIPv4Stack", "true");
+			// Sagt Java, dass es IPv4-Adressen bei der Auflösung bevorzugen soll
+			System.setProperty("java.net.preferIPv6Addresses", "false");
+
+
+
+
+            final PomAction PA=this;
 			Thread thread = new Thread(new Runnable() {
 				@Override
 				public void run() {
 					try {
-
 						// XMLParser parser = new XMLParser();
-						String xml = PomAction.getXmlFromUrl(PomAction.URL); // getting
-																				// XML
-						PomAction.doc = PomAction.getDomElement(xml); // getting
-																		// DOM
-																		// element
+						String decoderurl;
+						String partsXMLs[]={};
+						if(manufacturer == 15) { // chris
+							xmlHost = "http://" + AndroidMain.btcomm.getRemoteAddress();
+							decoderurl = xmlHost + PomAction.URL_BLUETOOTHSERVER;
+						} else {
+							// ist von cloudflare gesperrt
+							// host="http://jmri.org";
+							xmlHost="https://raw.githubusercontent.com/JMRI/JMRI/refs/heads/master/";
+							decoderurl = xmlHost + PomAction.URL_ZIMO;
+							partsXMLs = new String[]{
+									"/xml/programmers/parts/BasicPane.xml",
+									"/xml/programmers/parts/MotorPane.xml",
+									"/xml/programmers/parts/BasicSpeedControlPane.xml",
+									"/xml/programmers/parts/SpeedTablePane.xml",
+									"/xml/programmers/parts/FunctionMapPane.xml",
+									"/xml/programmers/parts/LightsPane.xml",
+									"/xml/programmers/parts/AnalogControlsPane.xml",
+									"/xml/programmers/parts/ConsistPane.xml",
+									"/xml/programmers/parts/AdvancedPane.xml",
+									"/xml/programmers/parts/SoundPane.xml",
+									"/xml/programmers/parts/SoundLevelsPane.xml",
+									"/xml/programmers/parts/CVsPane.xml" };
+						}
+
+						{
+							String xml = PomAction.getXmlFromUrl(decoderurl); // getting
+							// XML
+							PomAction.doc = PomAction.getDomElement(xml); // getting DOM element
+							// includes aus Comprehensive.xml, an letztes child
+							// anhängen
+
+						}
 
 						// NodeList nl = doc.getElementsByTagName(KEY_ITEM);
 
 						Log.d("xml", doc.toString());
 
-						try {
 
-							PomAction.replaceIncludes(PomAction.doc, 0, "root", PA);
-							// includes aus Comprehensive.xml, an letztes child
-							// anhängen
-							String extra[] = {
-									"http://jmri.org/xml/programmers/parts/BasicPane.xml",
-									"http://jmri.org/xml/programmers/parts/MotorPane.xml",
-									"http://jmri.org/xml/programmers/parts/BasicSpeedControlPane.xml",
-									"http://jmri.org/xml/programmers/parts/SpeedTablePane.xml",
-									"http://jmri.org/xml/programmers/parts/FunctionMapPane.xml",
-									"http://jmri.org/xml/programmers/parts/LightsPane.xml",
-									"http://jmri.org/xml/programmers/parts/AnalogControlsPane.xml",
-									"http://jmri.org/xml/programmers/parts/ConsistPane.xml",
-									"http://jmri.org/xml/programmers/parts/AdvancedPane.xml",
-									"http://jmri.org/xml/programmers/parts/SoundPane.xml",
-									"http://jmri.org/xml/programmers/parts/SoundLevelsPane.xml",
-									"http://jmri.org/xml/programmers/parts/CVsPane.xml" };
-							for (String url : extra) {
-								xml = PomAction.getXmlFromUrl(url); // getting
-																	// XML
-								Document subdoc = PomAction.getDomElement(xml); // getting
-																				// DOM
-																				// element
-								NodeList list = subdoc.getChildNodes();
-								Node newChild = null;
-								if (list.item(0) instanceof Element)
-									newChild = list.item(0);
-								else if (list.item(1) instanceof Element)
-									newChild = list.item(1);
-								if (newChild != null) {
-									Node tempDoc = doc.importNode(newChild,
-											true);
-									// lastParent.appendChild(tempDoc);
-								}
+						replaceIncludes(PomAction.doc, 0, "root", PA);
+
+						for (String path : partsXMLs) {
+							Log.d(TAG,"loading url: "+xmlHost + path);
+							String xml = PomAction.getXmlFromUrl(xmlHost + path); // getting
+																// XML
+							if(xml==null) {
+								Log.w(TAG,"url "+ xmlHost+path + " didn't return a valid xml");
+								continue;
 							}
-							// Log.i(tag,"============================= dumping generated xml ===========================");
-							// dumpElement(doc);
-
-						} catch (DOMException e) {
-							Log.e(TAG, "DOMException " + e.toString(), e);
-							return;
+							Document subdoc = PomAction.getDomElement(xml); // getting
+																			// DOM
+																			// element
+							NodeList list = subdoc.getChildNodes();
+							Node newChild = null;
+							if (list.item(0) instanceof Element)
+								newChild = list.item(0);
+							else if (list.item(1) instanceof Element)
+								newChild = list.item(1);
+							if (newChild != null) {
+								Node tempDoc = doc.importNode(newChild,
+										true);
+								// lastParent.appendChild(tempDoc);
+							}
 						}
+						// Log.i(tag,"============================= dumping generated xml ===========================");
+						// dumpElement(doc);
+
 						// PomAction.dumpElement((Node) doc);
 
-						try {
-							// panes raussuchen und dann die tabs anlegen:
-							String expression = "//pane";
-							NodeList nodes;
-							nodes = (NodeList) xpath.evaluate(expression, doc,
-									XPathConstants.NODESET);
-							Log.d(TAG, nodes.toString());
-							// NodeList nodes =
-							// doc.getElementsByTagName("pane");
-							for (int i = 0; i < nodes.getLength(); i++) {
-								Node node = nodes.item(i);
-								Log.d(TAG, node.toString());
-
-								/*
-								 * NamedNodeMap baseElmnt_gold_attr =
-								 * node.getAttributes(); for (int j = 0; j <
-								 * baseElmnt_gold_attr.getLength(); ++j) { Node
-								 * attr = baseElmnt_gold_attr.item(j);
-								 * Log.d(tag, attr.getNodeName() + " = \"" +
-								 * attr.getNodeValue() + "\""); }
-								 */
-
-								if (node instanceof Element) {
-									// Element child = (Element)node;
-									// String name = child.getAttribute("name");
-									// NodeList names = (NodeList)
-									// xpath.evaluate("name", node,
-									// XPathConstants.NODESET);
-									Node nodeName = (Node) xpath.evaluate(
-											"name", node, XPathConstants.NODE);
-									/*
-									 * if(names.getLength()==0) { Log.e(tag,
-									 * "empty node name!"); } else { Element
-									 * e=(Element) names.item(0); Log.d(tag,
-									 * "Name element:" + e.toString());
-									 */
-									String name = nodeName.getTextContent();
-									Log.i(TAG, "add tab " + name);
-									PomAction.tabTabs.add((Element) node);
-									// }
-
-								}
-							}
-
-						} catch (XPathExpressionException e) {
-							Log.e(TAG, "XPathExpressionException", e);
+						// panes raussuchen und dann die tabs anlegen:
+						String expression = "//pane";
+						NodeList nodes;
+						nodes = (NodeList) xpath.evaluate(expression, doc,
+								XPathConstants.NODESET);
+						Log.d(TAG, nodes.toString());
+						// NodeList nodes =
+						// doc.getElementsByTagName("pane");
+						if(nodes.getLength()==0) {
+							throw new Exception("no panes found!");
 						}
+						for (int i = 0; i < nodes.getLength(); i++) {
+							Node node = nodes.item(i);
+							Log.d(TAG, node.toString());
+
+							/*
+							 * NamedNodeMap baseElmnt_gold_attr =
+							 * node.getAttributes(); for (int j = 0; j <
+							 * baseElmnt_gold_attr.getLength(); ++j) { Node
+							 * attr = baseElmnt_gold_attr.item(j);
+							 * Log.d(tag, attr.getNodeName() + " = \"" +
+							 * attr.getNodeValue() + "\""); }
+							 */
+
+							if (node instanceof Element) {
+								// Element child = (Element)node;
+								// String name = child.getAttribute("name");
+								// NodeList names = (NodeList)
+								// xpath.evaluate("name", node,
+								// XPathConstants.NODESET);
+								Node nodeName = (Node) xpath.evaluate(
+										"name", node, XPathConstants.NODE);
+								/*
+								 * if(names.getLength()==0) { Log.e(tag,
+								 * "empty node name!"); } else { Element
+								 * e=(Element) names.item(0); Log.d(tag,
+								 * "Name element:" + e.toString());
+								 */
+								String name = nodeName.getTextContent();
+								Log.i(TAG, "add tab " + name);
+								PomAction.tabTabs.add((Element) node);
+								// }
+
+							}
+						}
+
+						PomAction.this.runOnUiThread(new Runnable() {
+							public void run() {
+								Log.d("UI thread", "I am the UI thread");
+								for (Element node : PomAction.tabTabs) {
+									PA.setupTab(node);
+								}
+								PA.tvInfo.setText("");
+							}
+						});
 					} catch (Exception e) {
 						Log.e(TAG, "Exception", e);
+						PomAction.this.runOnUiThread(new Runnable() {
+							public void run() {
+								PA.tvInfo.setText("Error: "+e.getMessage());
+							}
+						});
+						PomAction.doc=null;
 					}
 					
-					PomAction.this.runOnUiThread(new Runnable() {
-					    public void run() {
-					        Log.d("UI thread", "I am the UI thread");
-							for (Element node : PomAction.tabTabs) {
-								PA.setupTab(node);
-							}
-							PA.tvInfo.setText("");
-					    }
-					});
 				}
 
 			});
-			thread.start();
+			Log.d(TAG,"asking for manufactorer ID");
+			try {
+				FBTCtlMessage msg = new FBTCtlMessage();
+				msg.setType(MessageLayouts.messageTypeID("POM"));
+				msg.get("addr").set(ControlAction.currSelectedAddr.get(0));
+				msg.get("cv").set(BTcommThread.CV_MANUFACTURER);
+				msg.get("value").set(-1);
+				AndroidMain.btcomm.addCmdToQueue(msg,new BTcommThread.BtCommCallback() {
+					public void BTCallback(FBTCtlMessage reply) {
+						Log.d(TAG,"got manufacturer reply");
+						try {
+							manufacturer=reply.get("value").getIntVal();
+							Log.d(TAG,"got manufacturer reply: "+manufacturer);
+						} catch (Exception e) {
+							Log.e(TAG,"failed", e);
+						}
+						thread.start();
+					}
+				} );
+			} catch (Exception e) {
+				Log.e(TAG,"query manufacturer failed", e);
+				runOnUiThread(new Runnable() {
+					@Override
+					public void run() {
+						Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
+						PA.tvInfo.setText("error: "+e.getMessage());
+					}
+				});
+				throw new RuntimeException(e);
+			}
 		} else { // nur tabs anlegen:
 			for (Element node : PomAction.tabTabs) {
 				this.setupTab(node);
@@ -292,7 +368,7 @@ public class PomAction extends Activity {
 		// android.R.layout.simple_list_item_1, mStrings));
 	}
 	
-	static public void dumpElement(final Node node) {
+	public void dumpElement(final Node node) {
 		try {
 			StringWriter writer = new StringWriter();
 			Transformer transformer;
@@ -307,20 +383,19 @@ public class PomAction extends Activity {
 			// Log.d(tag, generatedxml);
 		} catch (TransformerConfigurationException e) {
 			Log.e(TAG, "TransformerConfigurationException ", e);
+			Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
 		} catch (TransformerFactoryConfigurationError e) {
 			Log.e(TAG, "TransformerFactoryConfigurationError ", e);
+			Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
 		} catch (TransformerException e) {
 			Log.e(TAG, "TransformerException ", e);
+			Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
 		}
 	}
 
 	/**
 	 * legt ein neues tab an, tabhost muss inited sein + setup() aufgerufen
 	 * 
-	 * @param view
-	 *            -> content
-	 * @param TAG
-	 *            -> tab name
 	 */
 	private void setupTab(final Element node) {
 		Node nodeName;
@@ -328,6 +403,7 @@ public class PomAction extends Activity {
 			nodeName = (Node) xpath.evaluate("name", node, XPathConstants.NODE);
 		} catch (XPathExpressionException e) {
 			Log.e(TAG, "XPathExpressionException", e);
+			Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
 			return;
 		}
 		String tabName = nodeName.getTextContent();
@@ -399,9 +475,7 @@ public class PomAction extends Activity {
 
 	/**
 	 * legt das view dings für die Tab Seite an
-	 * 
-	 * @param TAG
-	 *            <pane name="_tag_">
+	 *
 	 * @return View
 	 */
 	private View createPOMView(Element node) {
@@ -432,6 +506,7 @@ public class PomAction extends Activity {
 
 		} catch (XPathExpressionException e) {
 			Log.e(TAG, "XPathExpressionException", e);
+			Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
 		}
 		return ret;
 	}
@@ -442,7 +517,8 @@ public class PomAction extends Activity {
 		String nodeName = node.getNodeName();
 		Log.d(TAG, "createPOMViewRecursive: nodename=" + nodeName);
 		if (nodeName.equals("column") || nodeName.equals("row")
-				|| nodeName.equals("pane")) {
+				|| nodeName.equals("pane")
+				|| nodeName.equals("grid") || nodeName.equals("griditem")) {
 			Log.d(TAG, "add view recursive");
 			LinearLayout ll_ret = new LinearLayout(this);
 			if (nodeName.equals("column")) {
@@ -469,7 +545,7 @@ public class PomAction extends Activity {
 			if (text != null) {
 				label = text.getTextContent();
 			} else {
-				label = "null";
+				label = "-----------";
 			}
 			Log.d(TAG, "add label [" + label + "]");
 			TextView tv = new TextView(this);
@@ -503,18 +579,32 @@ public class PomAction extends Activity {
 			// variable label="Acceleration" CV="3" default="12" item="Accel"
 			Element variableNode = (Element) xpath.evaluate(expression, PomAction.doc, XPathConstants.NODE);
 			if (variableNode != null) {
-				LinearLayout ll_ret = new LinearLayout(this);
-				TextView tvLabel = new TextView(this);
 				String format = variableNode.getAttribute("format");
+				String cv = variableNode.getAttribute("CV");
 				String label = "";
 				Element labelNode = (Element) xpath.evaluate("label",  variableNode, XPathConstants.NODE);
 				if(labelNode != null) {
 					label = labelNode.getTextContent();
+				} else if(variableNode.hasAttribute("label") ){
+					label = variableNode.getAttribute("label");
 				}
-				tvLabel.setText(label + " (#"	+ variableNode.getAttribute("CV") + ")");
+				String tooltip=null;
+				if(variableNode.hasAttribute("tooltip")) {
+					tooltip=variableNode.getAttribute("tooltip");
+				}
+				// zur liste hinzufügen:
+				LinearLayout ll_ret = new LinearLayout(this);
+				TextView tvLabel = new TextView(this);
+				tvLabel.setText(label + " (#"	+ cv + ")");
+				tvLabel.setOnClickListener(view -> {
+					PomDialog.show(this, cv);
+				});
 				ll_ret.addView(tvLabel);
-				TextView comment = new TextView(this);
-				ll_ret.addView(comment);
+				if(tooltip != null) {
+					TextView comment = new TextView(this);
+					comment.setText(tooltip);
+					ll_ret.addView(comment);
+				}
 				ret = ll_ret;
 			} else {
 				Log.e(TAG, "error finding " + expression);
@@ -522,8 +612,13 @@ public class PomAction extends Activity {
 				comment.setText("didn't find [" + item + "]");
 				ret = comment;
 			}
+		} else if (nodeName.equals("name")) {
+			// pane/name können wir ignorieren
+			// Log.d("ignoring 'name' tag "+ utils.getXPath(node))
+			ret = null;
 		} else {
-			Log.e(TAG, "createPOMViewRecursive: invalid nodename:" + nodeName);
+			Log.e(TAG, "createPOMViewRecursive: invalid nodename:" + utils.getXPath(node) );
+			Toast.makeText(this, "createPOMViewRecursive: invalid nodename:" + nodeName, Toast.LENGTH_LONG).show();
 			ret = null;
 		}
 		return ret;
@@ -618,16 +713,18 @@ public class PomAction extends Activity {
 	/**
 	 * Getting XML content by making HTTP Request This function will get XML by
 	 * making an HTTP Request.
+	 * @throws Exception wenn url nicht 200 macht
 	 */
 	static HashMap <String, String>xmlCache=new HashMap<String,String>();
-	public static String getXmlFromUrl(String url) {
+	public static String getXmlFromUrl(String url) throws Exception {
 		if(xmlCache.containsKey(url)) {
 			Log.i(TAG, "fetching url (cached) ... " + url);
 			return xmlCache.get(url);
 		}
+		/* mit apache lib
 		try {
 			String xml = null;
-			Log.i(TAG, "fetching url ... " + url);
+			Log.i(TAG, "fetching url ... " + surl);
 			// defaultHttpClient
 			DefaultHttpClient httpClient = new DefaultHttpClient();
 			HttpPost httpPost = new HttpPost(url);
@@ -635,7 +732,8 @@ public class PomAction extends Activity {
 			HttpResponse httpResponse = httpClient.execute(httpPost);
 			HttpEntity httpEntity = httpResponse.getEntity();
 			xml = EntityUtils.toString(httpEntity);
-			xmlCache.put(url, xml);
+
+			xmlCache.put(surl, xml);
 			return xml;
 			
 		} catch (UnsupportedEncodingException e) {
@@ -645,7 +743,10 @@ public class PomAction extends Activity {
 		} catch (IOException e) {
 			Log.e(TAG, "fetching url ... error ", e);
 		}
-		return null;
+		*/
+		String xml=utils.httpGet(url);
+		xmlCache.put(url, xml);
+		return xml;
 	}
 
 	/**
@@ -653,7 +754,7 @@ public class PomAction extends Activity {
 	 * need to get the DOM element of the XML file. Below function will parse
 	 * the XML content and will give you DOM element.
 	 */
-	public static Document getDomElement(String xml) {
+	public static Document getDomElement(String xml) throws Exception {
 		Document doc = null;
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		dbf.setIgnoringComments(true);
@@ -661,29 +762,24 @@ public class PomAction extends Activity {
 		// dbf.setXIncludeAware(true);
 		// Debuglog.debugln("isNamespaceAware: "+dbf.isNamespaceAware());
 		dbf.setNamespaceAware(true);
-		try {
 
-			DocumentBuilder db = dbf.newDocumentBuilder();
+		DocumentBuilder db = dbf.newDocumentBuilder();
 
-			InputSource is = new InputSource();
-			is.setCharacterStream(new StringReader(xml));
-			doc = db.parse(is);
-
-		} catch (ParserConfigurationException e) {
-			Log.e(TAG, "ParserConfigurationException: ", e);
-			return null;
-		} catch (SAXException e) {
-			Log.e(TAG, "SAXException: ", e);
-			return null;
-		} catch (IOException e) {
-			Log.e(TAG, "IOException: ", e);
-			return null;
+		InputSource is = new InputSource();
+		// danke windof notepad ... remove BOM:
+		if (xml != null && xml.startsWith("\uFEFF")) {
+			xml = xml.substring(1);
 		}
-		// return DOM
+		is.setCharacterStream(new StringReader(xml));
+		doc = db.parse(is);
+
 		return doc;
 	}
 
-	static public void replaceIncludes(Node startNode, int depth, String which, final PomAction PA) {
+	public void replaceIncludes(Node startNode, int depth, String which, final PomAction PA) throws Exception{
+		if(startNode == null) {
+			throw new Exception("replaceIncludes(Node startNode==null ...");
+		}
 		Log.d(TAG, "## replaceIncludes("+depth+" / " + which + ") >>>>>");
 		if(depth > 4) {
 			Log.e(TAG, "## replaceIncludes depth");
@@ -697,21 +793,15 @@ public class PomAction extends Activity {
 			// includeXMLns
 			String expression = "//xi:include";
 			NodeList nodes;
-			try {
-				nodes = (NodeList) xpath.evaluate(expression, startNode, XPathConstants.NODESET);
-			} catch (XPathExpressionException e) {
-				// TODO Auto-generated catch block
-				Log.e(TAG, "## XPathExpressionException",e);
-				return;
-			}
+			nodes = (NodeList) xpath.evaluate(expression, startNode, XPathConstants.NODESET);
 			Log.d(TAG, "## found " + nodes.getLength() + " Elements ==== " + nodes.toString());
 			for (int i = 0; i < nodes.getLength(); i++) {
 				Node node = nodes.item(i);
 
 				if (node instanceof Element) {
 					Element includeChild = (Element) node;
-					final String url = includeChild.getAttribute("href");
-					
+					final String url = includeChild.getAttribute("href").replace("http://jmri.org", xmlHost);
+
 					PA.runOnUiThread(new Runnable() {
 					    public void run() {
 							PA.tvInfo.setText("loading xml "+url);					    	
@@ -721,10 +811,11 @@ public class PomAction extends Activity {
 
 					String xmlData = PomAction.getXmlFromUrl(url); // getting
 														// XML
-					Document includeDoc = PomAction.getDomElement(xmlData); // getting
-													// DOM
-													// element
-					PomAction.replaceIncludes(includeDoc, depth+1, url, PA);
+					Document includeDoc = PomAction.getDomElement(xmlData); // getting DOM element
+					if(includeDoc == null) {
+						throw new Exception("parsing "+url+ " failed");
+					}
+					replaceIncludes(includeDoc, depth+1, url, PA);
 					NodeList list = includeDoc.getChildNodes();
 					lastParent = (Element) includeChild.getParentNode();
 					
