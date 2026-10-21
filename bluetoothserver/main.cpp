@@ -115,6 +115,11 @@ void initPlatine()
 	if(!hardware) {
 		try {
 			hardware=new RaspiPWM(cfg_debug);
+			bool func[MAX_NFUNC];
+			for(int j=0; j < lokdef[0].nFunc; j++) {
+				func[j]=lokdef[0].func[j].ison;
+			}
+			static_cast<RaspiPWM*>(hardware)->setFunction(lokdef[0].nFunc, func);
 			// Lokname immer auf RaspiPWM setzen: (unpraktisch)
 			//strncpy(lokdef[0].name,"RaspiPWM", sizeof(lokdef[0].name));
 			lokdef[1].addr=0;
