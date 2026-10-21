@@ -140,7 +140,7 @@ void RaspiPWM::init() {
 					printf("PWM on pin %d\n", pin);
 					continue;
 				}
-				// test ob parsbar
+				// test ob parsebar
 				parseExpr->getResult(it->second, 0, 0, this->currentFunc);
 				// pin mode initialisieren
 				pinMode(pin, OUTPUT);
@@ -184,7 +184,7 @@ void RaspiPWM::init() {
 #endif
 	this->setPWM(0);
 	this->setDir(0); // default dir = 0
-	// test ob parsbar + bits initialisieren
+	// test ob parsebar + bits initialisieren
 	this->commit(true);
 	this->dumpPins();
 	this->funcThread.start();
@@ -234,6 +234,7 @@ void RaspiPWM::setDir(unsigned char dir) {
 }
 
 void RaspiPWM::setFunction(int nFunc, bool *func) {
+	this->nFunc=nFunc;
 	memcpy(&this->currentFunc, func, sizeof(this->currentFunc));
 }
 
@@ -246,6 +247,10 @@ void RaspiPWM::dumpPins() {
 	printf("RaspiPWM::dumpPins()\n");
 	for(const auto &element: this->pins) {
 		printf("%d: %s (pwm:%d)\n", element.first, element.second.function.c_str(), element.second.pwm);
+	}
+	printf("RaspiPWM::dumpPins() F (%d)\n",this->nFunc);
+	for(int i=0; i < this->nFunc; i++) {
+		printf("  [%d]=%d\n", i, this->currentFunc[i]);
 	}
 }
 
@@ -273,7 +278,7 @@ void RaspiPWM::commit(bool force) {
 				if(logPins) DEBUGF("   %s [false, last:%d]", it->second.function.c_str(), it->second.lastState);
 				if(it->second.lastState) {
 					if(it->second.pwm != 100) {
-						if(logPins) DEBUGF("  soft pwm stop");
+						if(logPins) DEBUGF("%d: soft pwm stop", pin);
 						softPwmStop(it->first);
 					} else {
 						digitalWrite(pin, value);
@@ -289,19 +294,19 @@ void RaspiPWM::commit(bool force) {
 		if(force || value != pinCtl->lastState) {
 			if(pinCtl->pwm != 100) {
 				if(value) {
-					if(logPins) NOTICEF("  soft pwm create (pwm:%d)", pinCtl->pwm);
+					if(logPins) NOTICEF("%d: soft pwm create (pwm:%d)", pin, pinCtl->pwm);
 					softPwmCreate(pin, pinCtl->pwm, 100);
 					// workaround 20230402: softPwmCreate [value] setzt den wert nicht ....
 					softPwmWrite(pin, pinCtl->pwm);
 				}
 			} else {
-				if(logPins) NOTICEF("  digital (%d)", value);
+				if(logPins) NOTICEF("%d: write digital=%d", pin, value);
 				digitalWrite(pin, value);
 			}
 			pinCtl->lastState=value;
 			pinCtl->lastChangeTime=time(NULL);
 		} else {
-			if(logPins) NOTICEF("  commit: no force");
+			if(logPins) NOTICEF("  commit: no force or unchanged");
 			// check ob maxTime für einen Pin definiert ist
 			if(pinCtl->maxTime && value && (value == pinCtl->lastState) && 
 					((time(NULL)>>1) == (pinCtl->lastChangeTime + pinCtl->maxTime)>>1 ) ) {
