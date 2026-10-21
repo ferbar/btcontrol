@@ -271,13 +271,13 @@ jetzt im dietpi-config das ntpd timesync abdrehn!
 
 ### sound config
 #### max98357a sound config I2S
-das meiste macht schon dietPi. 
+das meiste macht schon dietPi. Bei meiner Platine hängt sdmode an GPIO16'
   * /etc/asound.conf von https://learn.adafruit.com/adafruit-max98357-i2s-class-d-mono-amp/raspberry-pi-usage
   * `vi /boot/firmware/config.txt`<br>
-    `dtoverlay=max98357a`
+    `dtoverlay=max98357a,sdmode-pin=16`
   * eventuell checken ob die raspi onboard module geladen werden
   * rebooten, sound abspielen mit aplay ERST DANN mit alsamixer checken
-  * `gpio mode 27 out ; gpio write 27 1 ; aplay /usr/share/sounds/alsa/Front_Center.wav`
+  * `aplay /usr/share/sounds/alsa/Front_Center.wav`
 
 #### USB Soundkarte
 usb soundkarte wird standardmässig nicht als default genommen
